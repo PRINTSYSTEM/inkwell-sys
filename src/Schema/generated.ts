@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-05-25T17:31:36.062Z */
+/* Generated at: 2026-05-28T15:38:42.219Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -91,12 +91,14 @@ export const CreatePaymentRequestSchema = schemas.CreatePaymentRequest;
 export const CreateProductionOrderRequestSchema = schemas.CreateProductionOrderRequest;
 export const CreateReturnNoteRequestSchema = schemas.CreateReturnNoteRequest;
 export const CreateSharedAddressRequestSchema = schemas.CreateSharedAddressRequest;
+export const CreateStockInFromCutRequestSchema = schemas.CreateStockInFromCutRequest;
 export const CreateStockInFromDeliveryReturnRequestSchema = schemas.CreateStockInFromDeliveryReturnRequest;
 export const CreateStockInFromProductionRequestSchema = schemas.CreateStockInFromProductionRequest;
 export const CreateStockInFromVendorRequestSchema = schemas.CreateStockInFromVendorRequest;
 export const CreateStockInRequestSchema = schemas.CreateStockInRequest;
 export const CreateStockOutForDeliveryRequestSchema = schemas.CreateStockOutForDeliveryRequest;
 export const CreateStockOutForProductionRequestSchema = schemas.CreateStockOutForProductionRequest;
+export const CreateStockOutForSpecialReasonRequestSchema = schemas.CreateStockOutForSpecialReasonRequest;
 export const CreateStockOutRequestSchema = schemas.CreateStockOutRequest;
 export const CreateUserRequestSchema = schemas.CreateUserRequest;
 export const CreateVendorRequestSchema = schemas.CreateVendorRequest;
@@ -295,6 +297,8 @@ export const VendorCountOptionResponseSchema = schemas.VendorCountOptionResponse
 export const VendorCountOptionResponseIPaginateSchema = schemas.VendorCountOptionResponseIPaginate;
 export const VendorReceiptStatisticsRowSchema = schemas.VendorReceiptStatisticsRow;
 export const VendorReceiptStatisticsRowIPaginateSchema = schemas.VendorReceiptStatisticsRowIPaginate;
+export const VendorReconciliationItemResponseSchema = schemas.VendorReconciliationItemResponse;
+export const VendorReconciliationResponseSchema = schemas.VendorReconciliationResponse;
 export const VendorResponseSchema = schemas.VendorResponse;
 export const VendorResponsePaginateSchema = schemas.VendorResponsePaginate;
 export const postApidesignsIdtimeline_BodySchema = schemas.postApidesignsIdtimeline_Body;

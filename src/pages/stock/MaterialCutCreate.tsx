@@ -115,7 +115,7 @@ function MaterialSelector({
                   />
                   <div className="flex flex-col">
                     <span className="font-medium">{m.name || m.materialTypeName}</span>
-                    <span className="text-xs text-slate-500">Tồn kho: {m.quantity?.toLocaleString() || 0}</span>
+                    <span className="text-xs text-slate-500">Tồn kho: {m.currentStock?.toLocaleString() || 0}</span>
                   </div>
                 </CommandItem>
               ))}
@@ -253,7 +253,7 @@ export default function MaterialCutCreatePage() {
                       materials={materials}
                     />
                     {selectedInputMaterial && (
-                      <p className="text-xs text-blue-600 font-medium">Tồn hiện tại: {selectedInputMaterial.quantity?.toLocaleString()} {selectedInputMaterial.unit}</p>
+                      <p className="text-xs text-blue-600 font-medium">Tồn hiện tại: {selectedInputMaterial.currentStock?.toLocaleString()} {selectedInputMaterial.unit}</p>
                     )}
                   </div>
 

@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-05-25T17:31:36.134Z */
+/* Generated at: 2026-05-28T15:38:42.268Z */
 
 import { z } from "zod";
 import { IdSchema, PagedParamsSchema } from "./Common";
@@ -642,6 +642,13 @@ export const InventoryReportLowStockParamsSchema = PagedParamsSchema.extend({
 });
 export type InventoryReportLowStockParams = z.infer<typeof InventoryReportLowStockParamsSchema>;
 
+// ==== InventoryReportMaterialHistoryExcelParams (GET /api/inventory-reports/material-history/:materialId/excel) ====
+export const InventoryReportMaterialHistoryExcelParamsSchema = z.object({
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+}).passthrough();
+export type InventoryReportMaterialHistoryExcelParams = z.infer<typeof InventoryReportMaterialHistoryExcelParamsSchema>;
+
 // ==== InventoryReportSlowMovingParams (GET /api/inventory-reports/slow-moving) ====
 export const InventoryReportSlowMovingParamsSchema = PagedParamsSchema.extend({
   warehouse: z.string().nullable().optional(),
@@ -695,6 +702,20 @@ export const InventoryReportSummaryParamsSchema = PagedParamsSchema.extend({
   itemType: z.string().nullable().optional(),
 });
 export type InventoryReportSummaryParams = z.infer<typeof InventoryReportSummaryParamsSchema>;
+
+// ==== InventoryReportVendorReconciliationExcelParams (GET /api/inventory-reports/vendor-reconciliation/:vendorId/excel) ====
+export const InventoryReportVendorReconciliationExcelParamsSchema = z.object({
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+}).passthrough();
+export type InventoryReportVendorReconciliationExcelParams = z.infer<typeof InventoryReportVendorReconciliationExcelParamsSchema>;
+
+// ==== InventoryReportVendorReconciliationParams (GET /api/inventory-reports/vendor-reconciliation/:vendorId) ====
+export const InventoryReportVendorReconciliationParamsSchema = z.object({
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+}).passthrough();
+export type InventoryReportVendorReconciliationParams = z.infer<typeof InventoryReportVendorReconciliationParamsSchema>;
 
 // ==== InventoryTransactionsParams (GET /api/inventory/transactions) ====
 export const InventoryTransactionsParamsSchema = PagedParamsSchema.extend({

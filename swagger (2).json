@@ -10872,6 +10872,18 @@
         }
       }
     },
+    "/api/materials/sync-inventory-balances": {
+      "post": {
+        "tags": [
+          "Material"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/material-cuts": {
       "post": {
         "tags": [
@@ -23833,12 +23845,6 @@
             "type": "number",
             "format": "double"
           },
-          "quantity": {
-            "maximum": 2147483647,
-            "minimum": 0,
-            "type": "integer",
-            "format": "int32"
-          },
           "vendorId": {
             "type": "integer",
             "format": "int32",
@@ -27506,7 +27512,7 @@
             "type": "number",
             "format": "double"
           },
-          "quantity": {
+          "currentStock": {
             "type": "integer",
             "format": "int32"
           },
@@ -32154,13 +32160,6 @@
             "minimum": 0,
             "type": "number",
             "format": "double",
-            "nullable": true
-          },
-          "quantity": {
-            "maximum": 2147483647,
-            "minimum": 0,
-            "type": "integer",
-            "format": "int32",
             "nullable": true
           },
           "vendorId": {

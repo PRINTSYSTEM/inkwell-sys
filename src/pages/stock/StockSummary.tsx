@@ -373,7 +373,7 @@ export default function StockSummary() {
                               </div>
                             </TableCell>
                             <TableCell className="text-right py-3 font-bold tabular-nums text-slate-800">
-                              {(item.quantity || 0).toLocaleString()}
+                              {(item.currentStock || 0).toLocaleString()}
                             </TableCell>
                             <TableCell className="text-right py-3 pr-4 font-bold tabular-nums text-slate-700">
                               {item.unitPrice != null ? formatCurrency(item.unitPrice) : "—"}
@@ -473,7 +473,7 @@ export default function StockSummary() {
                               </div>
                             </TableCell>
                             <TableCell className="text-right py-3 font-bold tabular-nums text-slate-800">
-                              {(item.quantity || 0).toLocaleString()}
+                              {(item.currentStock || 0).toLocaleString()}
                             </TableCell>
                             <TableCell className="text-right py-3 pr-4 font-bold tabular-nums text-slate-700">
                               {item.unitPrice != null ? formatCurrency(item.unitPrice) : "—"}

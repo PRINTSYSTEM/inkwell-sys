@@ -110,8 +110,8 @@ export function MaterialExportDialog({
     if (!materialsData?.items || fixedQuantity <= 0) return [];
     return materialsData.items.filter(
       (material) =>
-        material.quantity !== undefined &&
-        material.quantity >= fixedQuantity &&
+        material.currentStock !== undefined &&
+        material.currentStock >= fixedQuantity &&
         material.materialTypeId === proofingOrder?.materialType?.id
     );
   }, [materialsData?.items, fixedQuantity, proofingOrder?.materialType?.id]);
@@ -228,11 +228,11 @@ export function MaterialExportDialog({
 
     // Check if selected material has enough quantity
     if (
-      selectedMaterial.quantity === undefined ||
-      selectedMaterial.quantity < fixedQuantity
+      selectedMaterial.currentStock === undefined ||
+      selectedMaterial.currentStock < fixedQuantity
     ) {
       toast.error("Nguyên liệu không đủ số lượng", {
-        description: `Nguyên liệu "${selectedMaterial.name || ""}" chỉ có ${selectedMaterial.quantity?.toLocaleString("vi-VN") || 0} nhưng cần ${fixedQuantity.toLocaleString("vi-VN")}`,
+        description: `Nguyên liệu "${selectedMaterial.name || ""}" chỉ có ${selectedMaterial.currentStock?.toLocaleString("vi-VN") || 0} nhưng cần ${fixedQuantity.toLocaleString("vi-VN")}`,
       });
       return;
     }
@@ -434,7 +434,7 @@ export function MaterialExportDialog({
                           Tồn kho
                         </p>
                         <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                          {selectedMaterial.quantity?.toLocaleString("vi-VN") ||
+                          {selectedMaterial.currentStock?.toLocaleString("vi-VN") ||
                             0}{" "}
                           tấm
                         </p>
@@ -464,8 +464,8 @@ export function MaterialExportDialog({
                     {availableMaterials.map((material) => {
                       const isSelected = selectedMaterialId === material.id;
                       const hasEnoughQuantity =
-                        material.quantity !== undefined &&
-                        material.quantity >= fixedQuantity;
+                        material.currentStock !== undefined &&
+                        material.currentStock >= fixedQuantity;
 
                       return (
                         <button
@@ -535,7 +535,7 @@ export function MaterialExportDialog({
                                       : "text-orange-600 dark:text-orange-400"
                                   }`}
                                 >
-                                  {material.quantity?.toLocaleString("vi-VN") ||
+                                  {material.currentStock?.toLocaleString("vi-VN") ||
                                     0}{" "}
                                   tấm
                                 </p>

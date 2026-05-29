@@ -187,7 +187,6 @@ export function CreateMaterialDialog({
         width: formData.width,
         unit: formData.unit.trim() || undefined,
         unitPrice: formData.unitPrice || 0,
-        quantity: showQuantity ? formData.quantity : 0,
         vendorId: formData.vendorId || undefined,
       },
       {

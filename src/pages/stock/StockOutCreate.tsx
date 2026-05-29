@@ -166,8 +166,8 @@ export default function StockOutCreatePage() {
       errors.quantity = "Số lượng quá lớn (tối đa 2,147,483,647)";
     } else if (item.materialId) {
       const material = materials.find((m) => m.id === item.materialId);
-      if (material && material.quantity !== undefined && item.quantity > material.quantity) {
-        errors.quantity = `Số lượng vượt quá Tồn kho nguyên vật liệu (${material.quantity})`;
+      if (material && material.currentStock !== undefined && item.quantity > material.currentStock) {
+        errors.quantity = `Số lượng vượt quá Tồn kho nguyên vật liệu (${material.currentStock})`;
       }
     }
 
@@ -889,12 +889,12 @@ export default function StockOutCreatePage() {
                         />
                         {(() => {
                           const material = materials.find((m) => m.id === item.materialId);
-                          if (material && material.quantity !== undefined) {
+                          if (material && material.currentStock !== undefined) {
                             return (
                               <div className="flex items-center gap-1.5 px-3 bg-[#93631F]/10 border border-[#93631F]/20 rounded-md whitespace-nowrap">
                                 <Package className="h-4 w-4 text-[#93631F]" />
                                 <span className="text-sm font-semibold text-[#93631F]">
-                                  Tồn: {material.quantity.toLocaleString("vi-VN")}
+                                  Tồn: {material.currentStock.toLocaleString("vi-VN")}
                                 </span>
                               </div>
                             );

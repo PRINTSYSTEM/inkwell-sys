@@ -103,7 +103,6 @@ export function CreateMaterialDirectDialog({
         width: materialType === "cuon" ? null : materialForm.width,
         unit: materialType === "cuon" ? "m" : "tờ",
         unitPrice: materialForm.unitPrice || 0,
-        quantity: materialForm.quantity || 0,
         vendorId: selectedVendor.id,
       };
 

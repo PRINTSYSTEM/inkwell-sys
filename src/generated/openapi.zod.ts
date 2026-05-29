@@ -1802,6 +1802,28 @@ const StockHistoryResponseIPaginate = z
     items: z.array(StockHistoryResponse).nullable(),
   })
   .partial();
+const VendorReconciliationItemResponse = z
+  .object({
+    materialId: z.number().int(),
+    materialName: z.string().nullable(),
+    materialType: z.string().nullable(),
+    unit: z.string().nullable(),
+    openingBalance: z.number().int(),
+    totalImport: z.number().int(),
+    totalExport: z.number().int(),
+    totalWaste: z.number().int(),
+    closingBalance: z.number().int(),
+  })
+  .partial();
+const VendorReconciliationResponse = z
+  .object({
+    vendorId: z.number().int(),
+    vendorName: z.string().nullable(),
+    fromDate: z.string().datetime({ offset: true }),
+    toDate: z.string().datetime({ offset: true }),
+    items: z.array(VendorReconciliationItemResponse).nullable(),
+  })
+  .partial();
 const CreateInvoiceRequest = z.object({
   orderIds: z.array(z.number().int()).min(1),
   billToCustomerId: z.number().int().nullish(),
@@ -1962,7 +1984,7 @@ const MaterialResponse = z
     width: z.number().nullable(),
     unit: z.string().nullable(),
     unitPrice: z.number(),
-    quantity: z.number().int(),
+    currentStock: z.number().int(),
     vendorId: z.number().int().nullable(),
     vendorName: z.string().nullable(),
     createdById: z.number().int(),
@@ -1990,7 +2012,6 @@ const CreateMaterialRequest = z.object({
   width: z.number().gte(0).nullish(),
   unit: z.string().max(50).nullish(),
   unitPrice: z.number().gte(0),
-  quantity: z.number().int().gte(0).lte(2147483647).optional(),
   vendorId: z.number().int().nullish(),
 });
 const UpdateMaterialRequest = z
@@ -2004,19 +2025,23 @@ const UpdateMaterialRequest = z
     width: z.number().gte(0).nullable(),
     unit: z.string().max(50).nullable(),
     unitPrice: z.number().gte(0).nullable(),
-    quantity: z.number().int().gte(0).lte(2147483647).nullable(),
     vendorId: z.number().int().nullable(),
     clearVendor: z.boolean().nullable(),
   })
   .partial();
-const MaterialCutOutputLineRequest = z.object({
-  outputMaterialId: z.number().int(),
-  quantityProduced: z.number().int().gte(1).lte(2147483647).optional(),
-});
+const MaterialCutOutputLineRequest = z
+  .object({
+    outputMaterialId: z.number().int().nullable(),
+    cutLength: z.number().nullable(),
+    cutWidth: z.number().nullable(),
+    quantityProduced: z.number().int().gte(1).lte(2147483647),
+  })
+  .partial();
 const CreateMaterialCutRequest = z.object({
   inputMaterialId: z.number().int(),
   quantityUsed: z.number().int().gte(0).lte(2147483647).optional(),
   quantityWasted: z.number().int().gte(0).lte(2147483647).optional(),
+  jobCode: z.string().nullish(),
   cutAt: z.string().datetime({ offset: true }).nullish(),
   notes: z.string().nullish(),
   outputs: z.array(MaterialCutOutputLineRequest),
@@ -3165,6 +3190,10 @@ const CreateStockInFromProductionRequest = z.object({
   stockInDate: z.string().datetime({ offset: true }).nullish(),
   items: z.array(StockInItemRequest),
 });
+const CreateStockInFromCutRequest = z.object({
+  materialCutId: z.number().int(),
+  notes: z.string().nullish(),
+});
 const CreateStockInFromDeliveryReturnRequest = z.object({
   deliveryNoteId: z.number().int(),
   originalStockOutId: z.number().int(),
@@ -3225,6 +3254,16 @@ const CreateStockOutForDeliveryRequest = z.object({
   notes: z.string().nullish(),
   stockOutDate: z.string().datetime({ offset: true }).nullish(),
   items: z.array(StockOutItemRequest),
+});
+const CreateStockOutForSpecialReasonRequest = z.object({
+  reason: z
+    .string()
+    .min(1)
+    .regex(/^(return_vendor|transfer)$/),
+  materialId: z.number().int(),
+  quantity: z.number().int().gte(1).lte(2147483647),
+  documentCode: z.string().nullish(),
+  notes: z.string().nullish(),
 });
 const ReturnItemRequest = z.object({
   stockOutItemId: z.number().int(),
@@ -3544,6 +3583,8 @@ export const schemas = {
   SlowMovingResponseIPaginate,
   StockHistoryResponse,
   StockHistoryResponseIPaginate,
+  VendorReconciliationItemResponse,
+  VendorReconciliationResponse,
   CreateInvoiceRequest,
   InvoiceOrderResponse,
   InvoiceItemResponse,
@@ -3660,12 +3701,14 @@ export const schemas = {
   CreateStockInRequest,
   CreateStockInFromVendorRequest,
   CreateStockInFromProductionRequest,
+  CreateStockInFromCutRequest,
   CreateStockInFromDeliveryReturnRequest,
   UpdateStockInRequest,
   StockOutItemRequest,
   CreateStockOutRequest,
   CreateStockOutForProductionRequest,
   CreateStockOutForDeliveryRequest,
+  CreateStockOutForSpecialReasonRequest,
   ReturnItemRequest,
   ProcessDeliveryReturnRequest,
   UpdateStockOutRequest,
@@ -7761,6 +7804,30 @@ const endpoints = makeApi([
   },
   {
     method: "get",
+    path: "/api/inventory-reports/material-history/:materialId/excel",
+    alias: "getApiinventoryReportsmaterialHistoryMaterialIdexcel",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "materialId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
     path: "/api/inventory-reports/slow-moving",
     alias: "getApiinventoryReportsslowMoving",
     requestFormat: "json",
@@ -7975,6 +8042,54 @@ const endpoints = makeApi([
         name: "itemType",
         type: "Query",
         schema: z.string().optional().default("finished_product"),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/inventory-reports/vendor-reconciliation/:vendorId",
+    alias: "getApiinventoryReportsvendorReconciliationVendorId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "vendorId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+    ],
+    response: VendorReconciliationResponse,
+  },
+  {
+    method: "get",
+    path: "/api/inventory-reports/vendor-reconciliation/:vendorId/excel",
+    alias: "getApiinventoryReportsvendorReconciliationVendorIdexcel",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "vendorId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
       },
     ],
     response: z.void(),
@@ -8649,6 +8764,13 @@ const endpoints = makeApi([
       },
     ],
     response: InventoryTransactionResponseIPaginate,
+  },
+  {
+    method: "post",
+    path: "/api/materials/sync-inventory-balances",
+    alias: "postApimaterialssyncInventoryBalances",
+    requestFormat: "json",
+    response: z.void(),
   },
   {
     method: "get",
@@ -11918,6 +12040,20 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/stock-ins/from-cut",
+    alias: "postApistockInsfromCut",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateStockInFromCutRequest,
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "post",
     path: "/api/stock-ins/from-delivery-return",
     alias: "postApistockInsfromDeliveryReturn",
     requestFormat: "json",
@@ -12127,6 +12263,36 @@ const endpoints = makeApi([
   },
   {
     method: "get",
+    path: "/api/stock-outs/:id/pdf",
+    alias: "getApistockOutsIdpdf",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 404,
+        description: `Not Found`,
+        schema: z
+          .object({
+            type: z.string().nullable(),
+            title: z.string().nullable(),
+            status: z.number().int().nullable(),
+            detail: z.string().nullable(),
+            instance: z.string().nullable(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+  {
+    method: "get",
     path: "/api/stock-outs/by-delivery-note/:deliveryNoteId",
     alias: "getApistockOutsbyDeliveryNoteDeliveryNoteId",
     requestFormat: "json",
@@ -12177,6 +12343,20 @@ const endpoints = makeApi([
         name: "body",
         type: "Body",
         schema: CreateStockOutForProductionRequest,
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "post",
+    path: "/api/stock-outs/for-special-reason",
+    alias: "postApistockOutsforSpecialReason",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateStockOutForSpecialReasonRequest,
       },
     ],
     response: z.void(),
