@@ -1086,14 +1086,22 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                           <span className="text-destructive">*</span>
                         )}
                       </Label>
-                      {/* Cho phép chọn khi là thẻ treo */}
-                      {shouldShowSidesClassification && isTheTreo && isNhan ? (
+                      {/* Cho phép chọn khi là thẻ treo hoặc Decal */}
+                      {shouldShowSidesClassification && ((isTheTreo && isNhan) || (isDecal && !isDecalCuon)) ? (
                         <div className="flex flex-wrap gap-2">
                           {Object.entries(
                             ENTITY_CONFIG.sidesClassification.values,
                           ).map(([key, label]) => {
                             const isSelected =
                               formData.sidesClassification === key;
+                            const displayLabel =
+                              isDecal && !isDecalCuon
+                                ? key === "one_side"
+                                  ? "Decal lẻ"
+                                  : key === "two_side"
+                                    ? "Decal bộ"
+                                    : label
+                                : label;
                             return (
                               <button
                                 key={key}
@@ -1116,7 +1124,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                                   }
                                 `}
                               >
-                                {label}
+                                {displayLabel}
                               </button>
                             );
                           })}
@@ -1126,9 +1134,17 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                         <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border">
                           <Badge variant="outline" className="text-sm">
                             {formData.sidesClassification
-                              ? ENTITY_CONFIG.sidesClassification.values[
-                                  formData.sidesClassification
-                                ]
+                              ? isDecal && !isDecalCuon
+                                ? formData.sidesClassification === "one_side"
+                                  ? "Decal lẻ"
+                                  : formData.sidesClassification === "two_side"
+                                    ? "Decal bộ"
+                                    : ENTITY_CONFIG.sidesClassification.values[
+                                        formData.sidesClassification
+                                      ]
+                                : ENTITY_CONFIG.sidesClassification.values[
+                                    formData.sidesClassification
+                                  ]
                               : "—"}
                           </Badge>
                           <span className="text-xs text-muted-foreground">
