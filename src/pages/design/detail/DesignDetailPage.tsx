@@ -1169,35 +1169,53 @@ export default function DesignDetailPage() {
                             {isEditing && canEditDesign ? (
                               <div className="flex flex-wrap gap-2 mt-1">
                                 {Object.entries(sidesClassificationLabels).map(
-                                  ([value, label]) => (
-                                    <Button
-                                      key={value}
-                                      size="sm"
-                                      variant={
-                                        editFormData.sidesClassification ===
-                                        value
-                                          ? "default"
-                                          : "outline"
-                                      }
-                                      className="h-7 px-2 text-xs rounded-full"
-                                      onClick={() =>
-                                        setEditFormData((prev) => ({
-                                          ...prev,
-                                          sidesClassification: value,
-                                        }))
-                                      }
-                                    >
-                                      {label}
-                                    </Button>
-                                  )
+                                  ([value, label]) => {
+                                    const displayLabel =
+                                      d.designType?.name?.toLowerCase().includes("decal")
+                                        ? value === "one_side"
+                                          ? "Decal lẻ"
+                                          : value === "two_side"
+                                            ? "Decal bộ"
+                                            : label
+                                        : label;
+                                    return (
+                                      <Button
+                                        key={value}
+                                        size="sm"
+                                        variant={
+                                          editFormData.sidesClassification ===
+                                          value
+                                            ? "default"
+                                            : "outline"
+                                        }
+                                        className="h-7 px-2 text-xs rounded-full"
+                                        onClick={() =>
+                                          setEditFormData((prev) => ({
+                                            ...prev,
+                                            sidesClassification: value,
+                                          }))
+                                        }
+                                      >
+                                        {displayLabel}
+                                      </Button>
+                                    );
+                                  }
                                 )}
                               </div>
                             ) : (
                               <p className="text-sm font-bold">
                                 {d.sidesClassification
-                                  ? sidesClassificationLabels[
-                                      d.sidesClassification
-                                    ] || d.sidesClassification
+                                  ? d.designType?.name?.toLowerCase().includes("decal")
+                                    ? d.sidesClassification === "one_side"
+                                      ? "Decal lẻ"
+                                      : d.sidesClassification === "two_side"
+                                        ? "Decal bộ"
+                                        : sidesClassificationLabels[
+                                            d.sidesClassification
+                                          ] || d.sidesClassification
+                                    : sidesClassificationLabels[
+                                        d.sidesClassification
+                                      ] || d.sidesClassification
                                   : (
                                       d.sidesClassificationOption as
                                         | { value?: string }

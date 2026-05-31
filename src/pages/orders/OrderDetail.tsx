@@ -1284,11 +1284,21 @@ export default function OrderDetailPage() {
                                           Mặt in
                                         </p>
                                         <p className="font-medium">
-                                          {sidesClassificationLabels[
-                                            design.sidesClassification
-                                          ] ||
-                                            design.sidesClassification ||
-                                            "—"}
+                                          {design.designType?.name?.toLowerCase().includes("decal")
+                                            ? design.sidesClassification === "one_side"
+                                              ? "Decal lẻ"
+                                              : design.sidesClassification === "two_side"
+                                                ? "Decal bộ"
+                                                : sidesClassificationLabels[
+                                                    design.sidesClassification
+                                                  ] ||
+                                                  design.sidesClassification ||
+                                                  "—"
+                                            : sidesClassificationLabels[
+                                                design.sidesClassification
+                                              ] ||
+                                              design.sidesClassification ||
+                                              "—"}
                                         </p>
                                       </div>
                                     )}

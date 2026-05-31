@@ -710,7 +710,17 @@ export default function DesignerDetailPage() {
                                   variant="outline"
                                   className="text-[9px] px-1 py-0 h-3.5 bg-blue-50/50"
                                 >
-                                  {design.sidesClassificationOption as string}
+                                  {design.designType?.name?.toLowerCase().includes("decal")
+                                    ? (design.sidesClassificationOption === "1 mặt" ||
+                                       design.sidesClassificationOption === "one_side" ||
+                                       (design as any).sidesClassification === "one_side")
+                                      ? "Decal lẻ"
+                                      : (design.sidesClassificationOption === "2 mặt" ||
+                                         design.sidesClassificationOption === "two_side" ||
+                                         (design as any).sidesClassification === "two_side")
+                                        ? "Decal bộ"
+                                        : (design.sidesClassificationOption as string)
+                                    : (design.sidesClassificationOption as string)}
                                 </Badge>
                               )}
                               {design.processClassificationOption && (

@@ -25908,6 +25908,10 @@
             "type": "string",
             "nullable": true
           },
+          "unitName": {
+            "type": "string",
+            "nullable": true
+          },
           "dimensions": {
             "type": "string",
             "nullable": true
@@ -27750,6 +27754,10 @@
             "nullable": true
           },
           "materialTypeName": {
+            "type": "string",
+            "nullable": true
+          },
+          "unitName": {
             "type": "string",
             "nullable": true
           },

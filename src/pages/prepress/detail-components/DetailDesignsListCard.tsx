@@ -428,9 +428,17 @@ export function DetailDesignsListCard({
                       <TableCell className="px-2 py-1">
                         <span className="text-xs">
                           {pod.design?.sidesClassification
-                            ? sidesClassificationLabels[
-                                pod.design.sidesClassification
-                              ] || pod.design.sidesClassification
+                            ? pod.design.designType?.name?.toLowerCase().includes("decal")
+                              ? pod.design.sidesClassification === "one_side"
+                                ? "Decal lẻ"
+                                : pod.design.sidesClassification === "two_side"
+                                  ? "Decal bộ"
+                                  : sidesClassificationLabels[
+                                      pod.design.sidesClassification
+                                    ] || pod.design.sidesClassification
+                              : sidesClassificationLabels[
+                                  pod.design.sidesClassification
+                                ] || pod.design.sidesClassification
                             : "—"}
                         </span>
                       </TableCell>
