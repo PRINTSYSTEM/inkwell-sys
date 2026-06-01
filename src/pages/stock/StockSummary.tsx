@@ -224,13 +224,13 @@ export default function StockSummary() {
                 <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isLoadingMaterials ? "animate-spin" : ""}`} />
                 Làm mới
               </Button>
-              <Button 
+              {/* <Button 
                 onClick={() => navigate("/stock/stock-ins")}
                 size="sm"
                 className="cursor-pointer transition-all duration-200 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm text-xs h-9 border-none rounded-lg"
               >
                 Quản lý nhập kho
-              </Button>
+              </Button> */}
               <Button 
                 onClick={handleExportVendorReconciliation}
                 disabled={isExportingReconciliation}
