@@ -28,6 +28,7 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
+  FileText,
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { useMaterial, useMaterialHistory, useMaterials } from "@/hooks/use-material";
@@ -72,6 +73,17 @@ import { toast } from "sonner";
 import { MaterialCutDialog } from "./components/MaterialCutDialog";
 import { StockInDialog } from "./components/StockInDialog";
 import { StockOutDialog } from "./components/StockOutDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { downloadBlob } from "@/lib/download-utils";
+import { apiRequest } from "@/lib/http";
+import { API_SUFFIX } from "@/apis";
 
 const formatDateTime = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
@@ -115,6 +127,11 @@ export default function MaterialHistoryPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
 
+  // Stock Out PDF Export Dialog States
+  const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
+  const [stockOutIdInput, setStockOutIdInput] = useState("");
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+
   // Form States
   const [stockInForm, setStockInForm] = useState({
     quantity: 0,
@@ -127,7 +144,7 @@ export default function MaterialHistoryPage() {
     quantity: 0,
     documentCode: "",
     notes: "",
-    purpose: "manual",
+    purpose: "transfer",
   });
 
   // API Queries
@@ -177,6 +194,40 @@ export default function MaterialHistoryPage() {
   const { mutateAsync: completeStockOut } = useCompleteStockOut();
   const { mutateAsync: cancelStockOut } = useCancelStockOut();
 
+  // Handle exporting Stock Out PDF
+  const handleExportStockOutPdf = async (explicitId?: number) => {
+    const idToExport = explicitId || Number(stockOutIdInput.trim());
+    if (!idToExport || isNaN(idToExport)) {
+      toast.error("ID phiếu xuất kho không hợp lệ!");
+      return;
+    }
+    
+    setIsExportingPdf(true);
+    const toastId = toast.loading(`Đang tạo và tải file PDF phiếu xuất kho #${idToExport}...`);
+    try {
+      const response = await apiRequest.get(
+        API_SUFFIX.STOCK_OUT_PDF(idToExport),
+        {
+          responseType: "blob",
+        }
+      );
+      
+      const blob = new Blob([response.data], {
+        type: "application/pdf",
+      });
+      
+      downloadBlob(blob, `phieu-xuat-kho-${idToExport}.pdf`);
+      toast.success(`Tải phiếu xuất kho #${idToExport} thành công!`, { id: toastId });
+      setIsPdfDialogOpen(false);
+      setStockOutIdInput("");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(`Không thể tải PDF cho phiếu xuất #${idToExport}. Vui lòng kiểm tra lại ID!`, { id: toastId });
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   const refetchAll = async () => {
     await Promise.all([
       refetchHistory(),
@@ -190,153 +241,7 @@ export default function MaterialHistoryPage() {
   const isError = isErrorMaterial || isErrorHistory;
   const error = errorMaterial || errorHistory;
 
-  // Local Client-side Filtering and Grouping for cut transactions
-  const filteredItems = useMemo(() => {
-    if (!historyData?.items) return [];
-
-    const items = historyData.items;
-    const grouped: any[] = [];
-    const cutGroupsMap = new Map<number, any[]>();
-
-    items.forEach((item) => {
-      if (item.referenceType === "material_cut" && item.referenceId) {
-        if (!cutGroupsMap.has(item.referenceId)) {
-          cutGroupsMap.set(item.referenceId, []);
-        }
-        cutGroupsMap.get(item.referenceId)!.push(item);
-      } else {
-        grouped.push({ ...item });
-      }
-    });
-
-    cutGroupsMap.forEach((groupItems) => {
-      if (groupItems.length === 1) {
-        const item = groupItems[0];
-        grouped.push({
-          ...item,
-          quantityOut: item.transactionType === "cut_out" ? item.quantity : undefined,
-          quantityWaste: item.transactionType === "waste" ? item.quantity : undefined,
-        });
-      } else {
-        const sorted = [...groupItems].sort((a, b) => {
-          const timeA = new Date(a.createdAt || 0).getTime();
-          const timeB = new Date(b.createdAt || 0).getTime();
-          if (timeA !== timeB) {
-            return timeA - timeB;
-          }
-          return (a.id || 0) - (b.id || 0);
-        });
-
-        const oldest = sorted[0];
-        const newest = sorted[sorted.length - 1];
-
-        const cutOutEntry = groupItems.find((i) => i.transactionType === "cut_out");
-        const wasteEntry = groupItems.find((i) => i.transactionType === "waste");
-
-        const notes = groupItems
-          .map((i) => i.note)
-          .filter((n): n is string => typeof n === "string" && n.trim() !== "")
-          .filter((v, i, a) => a.indexOf(v) === i)
-          .join("; ");
-
-        const mergedEntry = {
-          ...wasteEntry,
-          ...cutOutEntry,
-          id: cutOutEntry?.id || oldest.id,
-          previousQuantity: oldest.previousQuantity,
-          newQuantity: newest.newQuantity,
-          quantityOut: cutOutEntry?.quantity || 0,
-          quantityWaste: wasteEntry?.quantity || 0,
-          note: notes || cutOutEntry?.note || wasteEntry?.note || null,
-          isMerged: true,
-          transactionType: "cut_out",
-        };
-        grouped.push(mergedEntry);
-      }
-    });
-
-    grouped.sort((a, b) => {
-      const dateA = new Date(a.createdAt || 0).getTime();
-      const dateB = new Date(b.createdAt || 0).getTime();
-      if (dateB !== dateA) {
-        return dateB - dateA;
-      }
-      return (b.id || 0) - (a.id || 0);
-    });
-
-    if (!searchQuery) return grouped;
-
-    const query = searchQuery.toLowerCase();
-    return grouped.filter(
-      (entry) =>
-        (entry.referenceCode || "").toLowerCase().includes(query) ||
-        (entry.note || "").toLowerCase().includes(query) ||
-        (entry.createdByName || "").toLowerCase().includes(query) ||
-        (entry.referenceType || "").toLowerCase().includes(query)
-    );
-  }, [historyData?.items, searchQuery]);
-
-  // Total summary statistics computed from returned data
-  const summaryStats = useMemo(() => {
-    const defaultStats = {
-      openingBalance: materialDetail?.quantity || 0,
-      totalIn: 0,
-      totalOut: 0,
-      totalWaste: 0,
-      closingBalance: materialDetail?.quantity || 0,
-    };
-
-    if (!historyData?.items || historyData.items.length === 0) {
-      return defaultStats;
-    }
-
-    // Sort items chronologically (oldest first) to find opening and closing balances
-    const sortedItems = [...historyData.items].sort((a, b) => {
-      return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
-    });
-
-    const oldestTxn = sortedItems[0];
-    const newestTxn = sortedItems[sortedItems.length - 1];
-
-    const openingBalance = oldestTxn.previousQuantity !== undefined && oldestTxn.previousQuantity !== null
-      ? oldestTxn.previousQuantity
-      : 0;
-    const closingBalance = newestTxn.newQuantity !== undefined && newestTxn.newQuantity !== null
-      ? newestTxn.newQuantity
-      : 0;
-
-    let totalIn = 0;
-    let totalOut = 0;
-    let totalWaste = 0;
-
-    historyData.items.forEach((item) => {
-      const qty = item.quantity || 0;
-      if (isImport(item.transactionType)) {
-        totalIn += qty;
-      } else if (isExport(item.transactionType)) {
-        totalOut += qty;
-      } else if (isWaste(item.transactionType)) {
-        totalWaste += qty;
-      }
-    });
-
-    return {
-      openingBalance,
-      totalIn,
-      totalOut,
-      totalWaste,
-      closingBalance,
-    };
-  }, [historyData?.items, materialDetail?.quantity]);
-
   // Client-side calculations for Cut Dialog & Actionable Pending List
-  const vendorRolls = useMemo(() => {
-    if (!allMaterialsData?.items || !materialDetail) return [];
-    return allMaterialsData.items.filter(
-      (m: any) => m.vendorId === materialDetail.vendorId && (m.type === "cuon" || m.materialTypeName?.toLowerCase()?.includes("cuộn") || m.materialTypeName?.toLowerCase()?.includes("cuon"))
-    );
-  }, [allMaterialsData?.items, materialDetail]);
-
   const relevantPendingCuts = useMemo(() => {
     return (pendingCutsData?.items || []).filter(
       (cut: any) => cut.inputMaterialId === materialId
@@ -405,6 +310,206 @@ export default function MaterialHistoryPage() {
     return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   }, [relevantPendingCuts, relevantPendingStockIns, relevantPendingStockOuts, materialId]);
 
+  // Local Client-side Filtering and Grouping for cut transactions
+  const filteredItems = useMemo(() => {
+    // 1. Filter pending transactions first
+    let pendingList = [...combinedPendingItems];
+
+    if (transactionType !== "all") {
+      const typeLower = transactionType.toLowerCase();
+      pendingList = pendingList.filter((item) => {
+        if (typeLower === "stock_in" || typeLower === "stockin") {
+          return item.type === "stock_in";
+        }
+        if (typeLower === "stock_out" || typeLower === "stockout") {
+          return item.type === "stock_out" || item.type === "cut";
+        }
+        return true;
+      });
+    }
+
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      pendingList = pendingList.filter(
+        (item) =>
+          (item.code || "").toLowerCase().includes(query) ||
+          (item.notes || "").toLowerCase().includes(query) ||
+          (item.jobCode || "").toLowerCase().includes(query) ||
+          (item.type || "").toLowerCase().includes(query)
+      );
+    }
+
+    // 2. Group and filter completed historical transactions
+    if (!historyData?.items) {
+      return currentPage === 1 ? pendingList : [];
+    }
+
+    const items = historyData.items;
+    const grouped: any[] = [];
+    const cutGroupsMap = new Map<number, any[]>();
+
+    items.forEach((item) => {
+      if (item.referenceType === "material_cut" && item.referenceId) {
+        if (!cutGroupsMap.has(item.referenceId)) {
+          cutGroupsMap.set(item.referenceId, []);
+        }
+        cutGroupsMap.get(item.referenceId)!.push(item);
+      } else {
+        grouped.push({ ...item });
+      }
+    });
+
+    cutGroupsMap.forEach((groupItems) => {
+      if (groupItems.length === 1) {
+        const item = groupItems[0];
+        grouped.push({
+          ...item,
+          quantityOut: item.transactionType === "cut_out" ? item.quantity : undefined,
+          quantityWaste: item.transactionType === "waste" ? item.quantity : undefined,
+        });
+      } else {
+        const sorted = [...groupItems].sort((a, b) => {
+          const timeA = new Date(a.createdAt || 0).getTime();
+          const timeB = new Date(b.createdAt || 0).getTime();
+          if (timeA !== timeB) {
+            return timeA - timeB;
+          }
+          return (a.id || 0) - (b.id || 0);
+        });
+
+        const oldest = sorted[0];
+        const newest = sorted[sorted.length - 1];
+
+        const cutOutEntry = groupItems.find((i) => i.transactionType === "cut_out");
+        const wasteEntry = groupItems.find((i) => i.transactionType === "waste");
+
+        const notes = groupItems
+          .map((i) => i.note)
+          .filter((n): n is string => typeof n === "string" && n.trim() !== "")
+          .filter((v, i, a) => a.indexOf(v) === i)
+          .join("; ");
+
+        const mergedEntry = {
+          ...wasteEntry,
+          ...cutOutEntry,
+          id: cutOutEntry?.id || oldest.id,
+          previousQuantity: oldest.previousQuantity,
+          newQuantity: newest.newQuantity,
+          quantityOut: cutOutEntry?.quantity || 0,
+          quantityWaste: wasteEntry?.quantity || 0,
+          note: notes || cutOutEntry?.note || wasteEntry?.note || null,
+          isMerged: true,
+          transactionType: "cut_out",
+        };
+        grouped.push(mergedEntry);
+      }
+    });
+
+    grouped.sort((a, b) => {
+      const dateA = new Date(a.createdAt || 0).getTime();
+      const dateB = new Date(b.createdAt || 0).getTime();
+      if (dateA !== dateB) {
+        return dateA - dateB;
+      }
+      return (a.id || 0) - (b.id || 0);
+    });
+
+    let result = grouped;
+
+    if (transactionType !== "all") {
+      result = result.filter((entry) => {
+        const typeLower = transactionType.toLowerCase();
+        if (typeLower === "stock_in" || typeLower === "stockin") {
+          return isImport(entry.transactionType);
+        }
+        if (typeLower === "stock_out" || typeLower === "stockout") {
+          return isExport(entry.transactionType);
+        }
+        return true;
+      });
+    }
+
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (entry) =>
+          (entry.referenceCode || "").toLowerCase().includes(query) ||
+          (entry.note || "").toLowerCase().includes(query) ||
+          (entry.createdByName || "").toLowerCase().includes(query) ||
+          (entry.referenceType || "").toLowerCase().includes(query)
+      );
+    }
+
+    // Prepend pending transactions on the first page only to keep it clean
+    if (currentPage === 1) {
+      return [...pendingList.map(item => ({ ...item, isPending: true })), ...result];
+    }
+    return result;
+  }, [historyData?.items, searchQuery, transactionType, combinedPendingItems, currentPage]);
+
+  // Total summary statistics computed from returned data
+  const summaryStats = useMemo(() => {
+    const defaultStats = {
+      openingBalance: materialDetail?.quantity || 0,
+      totalIn: 0,
+      totalOut: 0,
+      totalWaste: 0,
+      closingBalance: materialDetail?.quantity || 0,
+    };
+
+    if (!historyData?.items || historyData.items.length === 0) {
+      return defaultStats;
+    }
+
+    // Sort items chronologically (oldest first) to find opening and closing balances
+    const sortedItems = [...historyData.items].sort((a, b) => {
+      return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+    });
+
+    const oldestTxn = sortedItems[0];
+    const newestTxn = sortedItems[sortedItems.length - 1];
+
+    const openingBalance = oldestTxn.previousQuantity !== undefined && oldestTxn.previousQuantity !== null
+      ? oldestTxn.previousQuantity
+      : 0;
+    const closingBalance = newestTxn.newQuantity !== undefined && newestTxn.newQuantity !== null
+      ? newestTxn.newQuantity
+      : 0;
+
+    let totalIn = 0;
+    let totalOut = 0;
+    let totalWaste = 0;
+
+    historyData.items.forEach((item) => {
+      const qty = item.quantity || 0;
+      if (isImport(item.transactionType)) {
+        totalIn += qty;
+      } else if (isExport(item.transactionType)) {
+        totalOut += qty;
+      } else if (isWaste(item.transactionType)) {
+        totalWaste += qty;
+      }
+    });
+
+    return {
+      openingBalance,
+      totalIn,
+      totalOut,
+      totalWaste,
+      closingBalance,
+    };
+  }, [historyData?.items, materialDetail?.quantity]);
+
+  // Client-side calculations for Cut Dialog & Actionable Pending List
+  const vendorRolls = useMemo(() => {
+    if (!allMaterialsData?.items || !materialDetail) return [];
+    return allMaterialsData.items.filter(
+      (m: any) => m.vendorId === materialDetail.vendorId && (m.type === "cuon" || m.materialTypeName?.toLowerCase()?.includes("cuộn") || m.materialTypeName?.toLowerCase()?.includes("cuon"))
+    );
+  }, [allMaterialsData?.items, materialDetail]);
+
+
+
   const handleVoucherClick = (
     voucherType: string | null | undefined,
     voucherId: number | null | undefined
@@ -458,7 +563,7 @@ export default function MaterialHistoryPage() {
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Kho: Chính | Đơn vị tính: {materialDetail?.unit || "—"}
+                 Đơn vị tính: {materialDetail?.unit || "—"} dài
               </p>
             </div>
           </div>
@@ -529,7 +634,7 @@ export default function MaterialHistoryPage() {
                   quantity: 0,
                   documentCode: "",
                   notes: "",
-                  purpose: "manual",
+                  purpose: "transfer",
                 });
                 setIsStockOutOpen(true);
               }}
@@ -629,116 +734,160 @@ export default function MaterialHistoryPage() {
           </div>
         )}
 
-        {/* Pending Transactions Section */}
-        {combinedPendingItems.length > 0 && (
-          <div className="space-y-2 mb-4">
-            <div className="flex items-center gap-1.5 px-1">
-              <AlertTriangle className="h-4 w-4 text-[#93631F] shrink-0" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                Giao dịch chờ xử lý ({combinedPendingItems.length})
-              </h3>
-            </div>
-            <Card className="border border-slate-200/60 shadow-sm rounded-xl overflow-hidden bg-white">
-              <div className="overflow-x-auto w-full">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-slate-50/50 hover:bg-slate-50/50 border-b border-slate-200/60 text-xs font-bold uppercase tracking-wider">
-                      <TableHead className="font-bold py-2 pl-4 text-left w-[130px]">Thời gian</TableHead>
-                      <TableHead className="font-bold py-2 text-left w-[140px]">Loại phiếu</TableHead>
-                      <TableHead className="font-bold py-2 text-left w-[100px]">Mã bài</TableHead>
-                      <TableHead className="font-bold py-2 text-left w-[100px]">kích thước</TableHead>
-                      <TableHead className="text-right font-bold py-2 w-[130px] whitespace-nowrap">Số lượng tờ ra</TableHead>
-                      <TableHead className="text-right font-bold py-2 w-[110px]">Số lượng</TableHead>
-                      <TableHead className="font-bold py-2 text-left w-[200px]">Ghi chú</TableHead>
-                      <TableHead className="font-bold py-2 pr-4 text-right w-[200px]">Thao tác</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {combinedPendingItems.map((item) => (
-                      <TableRow key={`${item.type}-${item.id}`} className="hover:bg-slate-50 border-b border-slate-100 text-xs transition-colors duration-150">
-                        {/* 1. Thời gian */}
-                        <TableCell className="py-2 pl-4 font-medium text-slate-600 w-[130px]">
-                          {item.createdAt ? formatDateTime(item.createdAt) : ""}
-                        </TableCell>
+        {/* Transaction History Ledger Table */}
+        <Card className="border-slate-200/60 shadow-sm rounded-2xl overflow-hidden">
+          <div className="overflow-x-auto w-full">
+            <Table>
+            <TableHeader>
+              <TableRow className="bg-slate-50/50 hover:bg-slate-50/50 border-b border-slate-200/60 text-xs font-bold uppercase tracking-wider">
+                <TableHead className="font-bold py-2 pl-4 text-left w-[130px]">Thời gian</TableHead>
+                <TableHead className="font-bold py-2 text-left w-[100px]">Mã bài</TableHead>
+                <TableHead className="font-bold py-2 text-left w-[150px]">Kích thước</TableHead>
+                <TableHead className="text-right font-bold py-2 w-[130px] whitespace-nowrap">Số lượng tờ ra</TableHead>
+                <TableHead className="text-right font-bold py-2 w-[100px]">Số dư đầu</TableHead>
+                <TableHead className="text-right font-bold py-2 w-[110px]">Nhập({materialDetail?.unit || "m"})</TableHead>
+                <TableHead className="text-right font-bold py-2 w-[110px]">Xuất({materialDetail?.unit || "m"})</TableHead>
+                <TableHead className="text-right font-bold py-2 w-[110px]">Hao hụt({materialDetail?.unit || "m"})</TableHead>
+                <TableHead className="text-right font-bold py-2 w-[100px]">Tồn</TableHead>
+                <TableHead className="font-bold py-2 text-left w-[240px]">Ghi chú</TableHead>
+                <TableHead className="font-bold py-2 pr-4 text-right w-[180px]">Thao tác</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i} className="border-b border-slate-100">
+                    {Array.from({ length: 11 }).map((_, j) => (
+                      <TableCell key={j} className="py-4">
+                        <Skeleton className="h-5 w-full rounded-md" />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : filteredItems.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={11}
+                    className="h-32 text-center text-slate-400 text-xs font-semibold py-8"
+                  >
+                    <div className="flex flex-col items-center justify-center space-y-2">
+                      <TrendingUp className="h-8 w-8 text-slate-300" />
+                      <p>Không có giao dịch nào được ghi nhận trong thời gian này.</p>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredItems.map((entry, index) => {
+                  const anyEntry = entry as any;
 
-                        {/* 2. Loại phiếu */}
-                        <TableCell className="py-2 w-[140px]">
-                          <div className="flex items-center gap-1.5">
-                            {item.type === "cut" ? (
-                              <Badge className="bg-[#93631F]/10 text-[#93631F] hover:bg-[#93631F]/10 rounded-md border-none px-1.5 py-0.5 font-semibold text-[10px] shrink-0">
-                                Phiếu cắt
-                              </Badge>
-                            ) : item.type === "stock_in" ? (
-                              <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 rounded-md border-none px-1.5 py-0.5 font-semibold text-[10px] shrink-0">
-                                Phiếu nhập
-                              </Badge>
-                            ) : (
-                              <Badge className="bg-rose-100 text-rose-700 hover:bg-rose-100 rounded-md border-none px-1.5 py-0.5 font-semibold text-[10px] shrink-0">
-                                Phiếu xuất
-                              </Badge>
-                            )}
-                            <span className="font-mono font-bold text-slate-800 text-[10px]">{item.code}</span>
+                  // 1. RENDER PENDING TRANSACTIONS ROW
+                  if (anyEntry.isPending) {
+                    let statusTextColor = "text-amber-600";
+                    let typeText = "";
+                    if (anyEntry.type === "cut") {
+                      statusTextColor = "text-[#93631F]";
+                      typeText = "Chờ Cắt";
+                    } else if (anyEntry.type === "stock_in") {
+                      statusTextColor = "text-emerald-600";
+                      typeText = "Chờ Nhập";
+                    } else if (anyEntry.type === "stock_out") {
+                      statusTextColor = "text-rose-600";
+                      typeText = "Chờ Xuất";
+                    }
+
+                    return (
+                      <TableRow
+                        key={`pending-${anyEntry.type}-${anyEntry.id}`}
+                        className="bg-amber-100/40 hover:bg-amber-100/70 border-b border-slate-100 text-xs transition-colors duration-150 font-semibold border-l-4 border-l-amber-500"
+                      >
+                        {/* 1. Thời gian */}
+                        <TableCell className="py-2 pl-4 w-[130px]">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-semibold text-slate-500">
+                              {anyEntry.createdAt ? formatDateTime(anyEntry.createdAt) : ""}
+                            </span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className={`font-bold text-[9px] uppercase tracking-wider ${statusTextColor}`}>
+                                {typeText}
+                              </span>
+                              <span className="font-mono text-[9px] text-slate-400 font-bold">{anyEntry.code}</span>
+                            </div>
                           </div>
                         </TableCell>
 
-                        {/* 3. Mã bài */}
-                        <TableCell className="py-2 text-slate-700 font-medium w-[100px]">
-                          {item.jobCode || ""}
+                        {/* 2. Mã bài */}
+                        <TableCell className="py-2 text-slate-700 font-bold w-[100px]">
+                          {anyEntry.jobCode || "—"}
                         </TableCell>
 
-                        {/* 4. Kích thước */}
-                        <TableCell className="py-2 font-mono text-slate-600 w-[100px]">
-                          {item.type === "cut" && item.outputs?.[0]
-                            ? `${item.outputs[0].cutLength}x${item.outputs[0].cutWidth}`
-                            : ""}
+                        {/* 3. Kích thước / Thành phẩm */}
+                        <TableCell className="py-2 text-slate-600 font-medium w-[150px] truncate" title={anyEntry.type === "cut" && anyEntry.outputs?.[0] ? anyEntry.outputs[0].outputMaterialName : ""}>
+                          {anyEntry.type === "cut" && anyEntry.outputs?.[0] ? anyEntry.outputs[0].outputMaterialName : "—"}
                         </TableCell>
 
-                        {/* 5. Số lượng tờ ra */}
+                        {/* 4. Số lượng tờ ra */}
                         <TableCell className="text-right py-2 font-bold tabular-nums text-slate-800 w-[130px] whitespace-nowrap">
-                          {item.type === "cut" && item.outputs?.[0]?.quantityProduced !== undefined
-                            ? item.outputs[0].quantityProduced.toLocaleString()
-                            : ""}
+                          {anyEntry.type === "cut" && anyEntry.outputs?.[0]?.quantityProduced !== undefined
+                            ? anyEntry.outputs[0].quantityProduced.toLocaleString()
+                            : "—"}
                         </TableCell>
 
-                        {/* 6. Số lượng */}
-                        <TableCell className="text-right py-2 font-bold tabular-nums w-[110px]">
-                          <span className={item.type === "stock_in" ? "text-emerald-600" : item.type === "stock_out" ? "text-rose-600" : "text-[#93631F]"}>
-                            {item.quantity.toLocaleString()}
-                          </span>{" "}
-                          <span className="text-[10px] text-slate-400 font-normal">{(materialDetail?.unit || "").toLowerCase()}</span>
+                        {/* 5. Số dư đầu */}
+                        <TableCell className="text-right py-2 font-bold tabular-nums text-slate-350 italic w-[100px]">
+                          —
                         </TableCell>
 
-                        {/* 7. Ghi chú */}
-                        <TableCell className="py-2 text-slate-500 italic max-w-[200px] truncate w-[200px]" title={item.notes || ""}>
-                          {item.notes || ""}
+                        {/* 6. Nhập */}
+                        <TableCell className="text-right py-2 font-bold tabular-nums text-emerald-600/70 w-[110px]">
+                          {anyEntry.type === "stock_in" && anyEntry.quantity !== undefined ? anyEntry.quantity.toLocaleString() : ""}
                         </TableCell>
 
-                        {/* 8. Thao tác */}
-                        <TableCell className="py-2 pr-4 text-right w-[200px]">
-                          <div className="flex items-center justify-end gap-1.5">
+                        {/* 7. Xuất */}
+                        <TableCell className="text-right py-2 font-bold tabular-nums text-rose-600/70 w-[110px]">
+                          {(anyEntry.type === "stock_out" || anyEntry.type === "cut") && anyEntry.quantity !== undefined ? anyEntry.quantity.toLocaleString() : ""}
+                        </TableCell>
+
+                        {/* 8. Hao hụt */}
+                        <TableCell className="text-right py-2 font-bold tabular-nums text-amber-600/70 w-[110px]">
+                          {anyEntry.type === "cut" && anyEntry.wasted !== undefined ? anyEntry.wasted.toLocaleString() : ""}
+                        </TableCell>
+
+                        {/* 9. Tồn */}
+                        <TableCell className="text-right py-2 font-extrabold tabular-nums text-slate-350 italic w-[100px]">
+                          —
+                        </TableCell>
+
+                        {/* 10. Ghi chú */}
+                        <TableCell className="py-2 text-slate-500 italic w-[240px] truncate" title={anyEntry.notes || ""}>
+                          {anyEntry.notes || ""}
+                        </TableCell>
+
+                        {/* 11. Thao tác */}
+                        <TableCell className="py-2 pr-4 text-right w-[180px]">
+                          <div className="flex items-center justify-end gap-1">
                             {/* Pencil Edit button */}
-                            {(item.type === "stock_in" || item.type === "stock_out") && (
+                            {(anyEntry.type === "stock_in" || anyEntry.type === "stock_out") && (
                               <Button
                                 variant="outline"
                                 size="icon"
-                                className="h-7 w-7 rounded-md border-slate-200 hover:bg-slate-50 text-slate-600 cursor-pointer"
+                                className="h-6 w-6 rounded-md border-slate-200 hover:bg-slate-100 text-slate-600 cursor-pointer shrink-0"
                                 onClick={() => {
                                   setIsEditMode(true);
-                                  setEditId(item.id);
-                                  if (item.type === "stock_in") {
+                                  setEditId(anyEntry.id);
+                                  if (anyEntry.type === "stock_in") {
                                     setStockInForm({
-                                      quantity: item.quantity,
-                                      documentCode: item.raw.code || "",
-                                      notes: item.notes || "",
-                                      laborCost: item.raw.laborCost || 0,
+                                      quantity: anyEntry.quantity,
+                                      documentCode: anyEntry.raw.code || "",
+                                      notes: anyEntry.notes || "",
+                                      laborCost: anyEntry.raw.laborCost || 0,
                                     });
                                     setIsStockInOpen(true);
                                   } else {
                                     setStockOutForm({
-                                      quantity: item.quantity,
-                                      documentCode: item.raw.code || "",
-                                      notes: item.notes || "",
-                                      purpose: item.raw.purpose || "manual"
+                                      quantity: anyEntry.quantity,
+                                      documentCode: anyEntry.raw.code || "",
+                                      notes: anyEntry.notes || "",
+                                      purpose: anyEntry.raw.purpose || "transfer"
                                     });
                                     setIsStockOutOpen(true);
                                   }
@@ -750,15 +899,15 @@ export default function MaterialHistoryPage() {
 
                             {/* Complete Button */}
                             <Button
-                              className="h-7 px-2.5 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[11px] shadow-sm flex items-center gap-1 cursor-pointer border-none"
+                              className="h-6 px-2 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[10px] shadow-sm flex items-center gap-0.5 cursor-pointer border-none shrink-0"
                               onClick={async () => {
                                 let toastId: string | number | undefined;
                                 try {
                                   toastId = toast.loading("Đang hoàn thành giao dịch...");
                                   const actionPromise = 
-                                    item.type === "cut" ? completeMaterialCut(item.id) :
-                                    item.type === "stock_in" ? completeStockIn(item.id) :
-                                    completeStockOut(item.id);
+                                    anyEntry.type === "cut" ? completeMaterialCut(anyEntry.id) :
+                                    anyEntry.type === "stock_in" ? completeStockIn(anyEntry.id) :
+                                    completeStockOut(anyEntry.id);
                                   
                                   await actionPromise;
                                   refetchAll();
@@ -769,22 +918,22 @@ export default function MaterialHistoryPage() {
                                 }
                               }}
                             >
-                              <Check className="h-3.5 w-3.5" />
-                              Hoàn thành
+                              <Check className="h-3 w-3" />
+                              Duyệt
                             </Button>
 
                             {/* Cancel Button */}
                             <Button
                               variant="outline"
-                              className="h-7 px-2.5 rounded-md border-rose-200 bg-rose-50/50 hover:bg-rose-50 text-rose-600 font-semibold text-[11px] flex items-center gap-1 cursor-pointer"
+                              className="h-6 px-2 rounded-md border-rose-200 bg-rose-50/50 hover:bg-rose-100 text-rose-600 font-semibold text-[10px] flex items-center gap-0.5 cursor-pointer shrink-0"
                               onClick={async () => {
                                 let toastId: string | number | undefined;
                                 try {
                                   toastId = toast.loading("Đang hủy giao dịch...");
                                   const actionPromise = 
-                                    item.type === "cut" ? cancelMaterialCut(item.id) :
-                                    item.type === "stock_in" ? cancelStockIn(item.id) :
-                                    cancelStockOut(item.id);
+                                    anyEntry.type === "cut" ? cancelMaterialCut(anyEntry.id) :
+                                    anyEntry.type === "stock_in" ? cancelStockIn(anyEntry.id) :
+                                    cancelStockOut(anyEntry.id);
                                   
                                   await actionPromise;
                                   refetchAll();
@@ -801,94 +950,10 @@ export default function MaterialHistoryPage() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </Card>
-          </div>
-        )}
+                    );
+                  }
 
-        {/* Search & Transaction Type Filters */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <Input
-              placeholder="Tìm kiếm theo mã chứng từ, ghi chú diễn giải..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="pl-9 rounded-xl border-slate-200/80 h-10 text-xs focus-visible:ring-emerald-500"
-            />
-          </div>
-
-          <Select
-            value={transactionType}
-            onValueChange={(val) => {
-              setTransactionType(val);
-              setCurrentPage(1);
-            }}
-          >
-            <SelectTrigger className="w-full sm:w-[200px] rounded-xl border-slate-200/80 h-10 text-xs focus:ring-emerald-500 cursor-pointer">
-              <SelectValue placeholder="Chọn loại giao dịch" />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl">
-              <SelectItem value="all" className="text-xs cursor-pointer">Tất cả giao dịch</SelectItem>
-              <SelectItem value="StockIn" className="text-xs cursor-pointer text-emerald-600 font-semibold">Nhập kho (Stock In)</SelectItem>
-              <SelectItem value="StockOut" className="text-xs cursor-pointer text-rose-600 font-semibold">Xuất kho (Stock Out)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Transaction History Ledger Table */}
-        <Card className="border-slate-200/60 shadow-sm rounded-2xl overflow-hidden">
-          <div className="overflow-x-auto w-full">
-            <Table>
-            <TableHeader>
-              <TableRow className="bg-slate-50/50 hover:bg-slate-50/50 border-b border-slate-200/60 text-xs font-bold uppercase tracking-wider">
-                <TableHead className="font-bold py-2 pl-4 text-left w-[130px]">Thời gian</TableHead>
-                <TableHead className="font-bold py-2 text-left w-[100px]">Mã bài</TableHead>
-                <TableHead className="font-bold py-2 text-left w-[100px]">kích thước</TableHead>
-                <TableHead className="text-right font-bold py-2 w-[130px] whitespace-nowrap">Số lượng tờ ra</TableHead>
-                <TableHead className="text-right font-bold py-2 w-[100px]">Số dư đầu</TableHead>
-                <TableHead className="text-right font-bold py-2 w-[110px]">Nhập({materialDetail?.unit || "m"})</TableHead>
-                <TableHead className="text-right font-bold py-2 w-[110px]">Xuất({materialDetail?.unit || "m"})</TableHead>
-                <TableHead className="text-right font-bold py-2 w-[110px]">Hao hụt({materialDetail?.unit || "m"})</TableHead>
-                <TableHead className="text-right font-bold py-2 w-[100px]">Tồn</TableHead>
-                <TableHead className="font-bold py-2 pr-4 text-left w-[300px]">Ghi chú</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i} className="border-b border-slate-100">
-                    {Array.from({ length: 10 }).map((_, j) => (
-                      <TableCell key={j} className="py-4">
-                        <Skeleton className="h-5 w-full rounded-md" />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : filteredItems.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={10}
-                    className="h-32 text-center text-slate-400 text-xs font-semibold py-8"
-                  >
-                    <div className="flex flex-col items-center justify-center space-y-2">
-                      <TrendingUp className="h-8 w-8 text-slate-300" />
-                      <p>Không có giao dịch nào được ghi nhận trong thời gian này.</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredItems.map((entry, index) => {
-                  const txnTypeLower = entry.transactionType?.toLowerCase() || "";
-                  const refTypeLower = entry.referenceType?.toLowerCase() || "";
-                  const anyEntry = entry as any;
-
+                  // 2. RENDER COMPLETED COMPLETED HISTORICAL ROW
                   const isImp = isImport(entry.transactionType);
                   const isExp = isExport(entry.transactionType);
                   let rowBgClass = "hover:bg-slate-50/80";
@@ -916,8 +981,8 @@ export default function MaterialHistoryPage() {
                         {anyEntry.jobCode || ""}
                       </TableCell>
 
-                      {/* 3. Kích thước */}
-                      <TableCell className="py-2 font-mono text-slate-600 w-[100px]">
+                      {/* 3. Kích thước / Thành phẩm */}
+                      <TableCell className="py-2 font-mono text-slate-600 w-[150px]">
                         {anyEntry.dimensions || (anyEntry.cutLength && anyEntry.cutWidth ? `${anyEntry.cutLength}x${anyEntry.cutWidth}` : "")}
                       </TableCell>
 
@@ -935,7 +1000,7 @@ export default function MaterialHistoryPage() {
 
                       {/* 6. Nhập */}
                       <TableCell className="text-right py-2 font-bold tabular-nums text-emerald-600 w-[110px]">
-                        {isImport(entry.transactionType) && entry.quantity !== undefined
+                        {isImp && entry.quantity !== undefined
                           ? entry.quantity.toLocaleString()
                           : ""}
                       </TableCell>
@@ -944,7 +1009,7 @@ export default function MaterialHistoryPage() {
                       <TableCell className="text-right py-2 font-bold tabular-nums text-rose-600 w-[110px]">
                         {anyEntry.quantityOut !== undefined
                           ? anyEntry.quantityOut.toLocaleString()
-                          : isExport(entry.transactionType) && entry.quantity !== undefined
+                          : isExp && entry.quantity !== undefined
                           ? entry.quantity.toLocaleString()
                           : ""}
                       </TableCell>
@@ -964,8 +1029,28 @@ export default function MaterialHistoryPage() {
                       </TableCell>
 
                       {/* 10. Ghi chú */}
-                      <TableCell className="py-2 pr-4 text-slate-600 leading-normal w-[300px] truncate" title={entry.note || ""}>
+                      <TableCell className="py-2 text-slate-600 leading-normal w-[240px] truncate" title={entry.note || ""}>
                         {entry.note || ""}
+                      </TableCell>
+
+                      {/* 11. Thao tác / In PDF */}
+                      <TableCell className="py-2 pr-4 text-right w-[180px]">
+                        {(entry.referenceType?.toLowerCase()?.includes("stock_out") || entry.referenceType?.toLowerCase()?.includes("stockout") || entry.referenceType?.toLowerCase()?.includes("xuat")) && entry.referenceId ? (
+                          <div className="flex justify-end pr-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 rounded-md text-red-600 hover:text-red-700 hover:bg-red-50 cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleExportStockOutPdf(Number(entry.referenceId));
+                              }}
+                              title="Tải PDF Phiếu xuất kho"
+                            >
+                              <FileText className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : null}
                       </TableCell>
                     </TableRow>
                   );
@@ -1050,6 +1135,75 @@ export default function MaterialHistoryPage() {
         setStockOutForm={setStockOutForm}
         refetchAll={refetchAll}
       />
+
+      {/* 4. Dialog Xuất PDF Phiếu xuất kho */}
+      <Dialog open={isPdfDialogOpen} onOpenChange={setIsPdfDialogOpen}>
+        <DialogContent className="max-w-md border-slate-200 shadow-xl rounded-2xl">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+                <FileText className="h-5 w-5" />
+              </div>
+              <DialogTitle className="text-lg font-bold text-slate-800">
+                Xuất PDF Phiếu xuất kho
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-sm text-slate-500 pt-2">
+              Nhấp nút bên dưới để tải hoặc in trực tiếp file PDF phiếu xuất kho của chất liệu.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-600 block">ID Phiếu xuất kho</label>
+              <Input
+                type="text"
+                placeholder="Ví dụ: 12, 15, 108..."
+                value={stockOutIdInput}
+                onChange={(e) => setStockOutIdInput(e.target.value)}
+                className="h-10 text-sm border-slate-200 focus-visible:ring-red-500"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleExportStockOutPdf();
+                  }
+                }}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0 border-t border-slate-100 pt-4 mt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsPdfDialogOpen(false);
+                setStockOutIdInput("");
+              }}
+              className="cursor-pointer transition-colors duration-200"
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              onClick={() => handleExportStockOutPdf()}
+              disabled={isExportingPdf}
+              className="cursor-pointer transition-colors duration-200 bg-red-600 hover:bg-red-700 text-white font-semibold shadow-md shadow-red-200 border-none"
+            >
+              {isExportingPdf ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Đang tải...
+                </>
+              ) : (
+                <>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Tải file PDF
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

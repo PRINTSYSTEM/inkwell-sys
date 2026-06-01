@@ -44,14 +44,6 @@ import { useActiveVendors } from "@/hooks/use-vendor";
 import { formatCurrency } from "@/lib/status-utils";
 import { toast } from "sonner";
 import { CreateMaterialDirectDialog } from "./components/CreateMaterialDirectDialog";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { downloadBlob } from "@/lib/download-utils";
 import { apiRequest } from "@/lib/http";
 import { API_SUFFIX } from "@/apis";
@@ -63,7 +55,6 @@ export default function StockSummary() {
   const [pageSize, setPageSize] = useState(10);
   const [materialSearchQuery, setMaterialSearchQuery] = useState("");
   const [selectedVendorId, setSelectedVendorId] = useState<string>("all");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
   const sortColumn = "id";
   const sortOrder = "desc";
 
@@ -86,7 +77,6 @@ export default function StockSummary() {
     size: 1000, // Fetch up to 1000 items to get complete dataset
     search: materialSearchQuery || undefined,
     vendorId: selectedVendorId === "all" ? undefined : Number(selectedVendorId),
-    type: typeFilter === "all" ? undefined : typeFilter || undefined,
     sortColumn: sortColumn || undefined,
     sortOrder: sortOrder || undefined,
   });
@@ -97,7 +87,7 @@ export default function StockSummary() {
   useEffect(() => {
     setRollPage(1);
     setSheetPage(1);
-  }, [selectedVendorId, materialSearchQuery, typeFilter, pageSize]);
+  }, [selectedVendorId, materialSearchQuery, pageSize]);
 
   // Create Material Dialog States
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -105,10 +95,7 @@ export default function StockSummary() {
   // Vendor Reconciliation Excel Export States
   const [isExportingReconciliation, setIsExportingReconciliation] = useState(false);
 
-  // Stock Out PDF Export Dialog States
-  const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
-  const [stockOutIdInput, setStockOutIdInput] = useState("");
-  const [isExportingPdf, setIsExportingPdf] = useState(false);
+
 
   // Handle exporting Vendor Reconciliation Excel
   const handleExportVendorReconciliation = async () => {
@@ -144,43 +131,7 @@ export default function StockSummary() {
     }
   };
 
-  // Handle exporting Stock Out PDF
-  const handleExportStockOutPdf = async () => {
-    if (!stockOutIdInput.trim()) {
-      toast.error("Vui lòng nhập ID phiếu xuất kho!");
-      return;
-    }
-    
-    const stockOutId = Number(stockOutIdInput.trim());
-    if (isNaN(stockOutId)) {
-      toast.error("ID phiếu xuất kho phải là số hợp lệ!");
-      return;
-    }
-    
-    setIsExportingPdf(true);
-    try {
-      const response = await apiRequest.get(
-        API_SUFFIX.STOCK_OUT_PDF(stockOutId),
-        {
-          responseType: "blob",
-        }
-      );
-      
-      const blob = new Blob([response.data], {
-        type: "application/pdf",
-      });
-      
-      downloadBlob(blob, `phieu-xuat-kho-${stockOutId}.pdf`);
-      toast.success(`Tải phiếu xuất kho #${stockOutId} thành công!`);
-      setIsPdfDialogOpen(false);
-      setStockOutIdInput("");
-    } catch (err: any) {
-      console.error(err);
-      toast.error(`Không thể tải PDF cho phiếu xuất #${stockOutId}. Vui lòng kiểm tra lại ID!`);
-    } finally {
-      setIsExportingPdf(false);
-    }
-  };
+
 
   // Classify materials: Roll (Cuộn) vs Sheet (Tờ / Khác)
   const allRollMaterials = useMemo(() => {
@@ -224,7 +175,6 @@ export default function StockSummary() {
   const handleResetFilters = () => {
     setMaterialSearchQuery("");
     setSelectedVendorId("all");
-    setTypeFilter("all");
   };
 
   return (
@@ -293,15 +243,7 @@ export default function StockSummary() {
                 )}
                 Đối soát NCC (Excel)
               </Button>
-              <Button 
-                onClick={() => setIsPdfDialogOpen(true)}
-                size="sm"
-                variant="outline"
-                className="cursor-pointer border-slate-200 text-xs h-9 rounded-lg hover:bg-slate-50 transition-all duration-200"
-              >
-                <FileText className="h-3.5 w-3.5 mr-1.5 text-red-550" />
-                Xuất PDF Phiếu xuất
-              </Button>
+
             </div>
           </div>
 
@@ -335,7 +277,7 @@ export default function StockSummary() {
             <CardContent className="p-6">
               
               {/* Primary Filters Grid with items-end to ensure perfect alignment */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 items-end">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-end">
                 
                 {/* Search Text */}
                 <div className="space-y-1.5 w-full">
@@ -378,28 +320,6 @@ export default function StockSummary() {
                           </SelectItem>
                         ))
                       )}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Type Filter */}
-                <div className="space-y-1.5 w-full">
-                  <label className="text-xs font-bold text-slate-600 block">Loại vật tư </label>
-                  <Select
-                    value={typeFilter}
-                    onValueChange={(val) => {
-                      setTypeFilter(val);
-                    }}
-                  >
-                    <SelectTrigger className="h-10 text-xs cursor-pointer border-slate-200">
-                      <SelectValue placeholder="Chọn loại vật tư" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Tất cả</SelectItem>
-                      <SelectItem value="paper">Giấy</SelectItem>
-                      <SelectItem value="ink">Mực in</SelectItem>
-                      <SelectItem value="plate">Bản kẽm</SelectItem>
-                      <SelectItem value="die">Khuôn mẫu</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -481,9 +401,9 @@ export default function StockSummary() {
                               <div className="font-bold text-slate-800 leading-tight">
                                 {item.name}
                               </div>
-                              <div className="text-[10px] text-slate-400 mt-1">
+                              {/* <div className="text-[10px] text-slate-400 mt-1">
                                 Khổ: {item.length || "—"}{item.width ? `x${item.width}` : ""} ({item.unit || "cuộn"})
-                              </div>
+                              </div> */}
                             </TableCell>
                             <TableCell className="text-right py-3 pr-4 font-bold tabular-nums text-slate-800">
                               {(item.currentStock || 0).toLocaleString()}
@@ -577,9 +497,9 @@ export default function StockSummary() {
                               <div className="font-bold text-slate-800 leading-tight">
                                 {item.name}
                               </div>
-                              <div className="text-[10px] text-slate-400 mt-1">
+                              {/* <div className="text-[10px] text-slate-400 mt-1">
                                 Khổ: {item.length || "—"}{item.width ? `x${item.width}` : ""} ({item.unit || "tờ"})
-                              </div>
+                              </div> */}
                             </TableCell>
                             <TableCell className="text-right py-3 pr-4 font-bold tabular-nums text-slate-800">
                               {(item.currentStock || 0).toLocaleString()}
@@ -636,74 +556,7 @@ export default function StockSummary() {
         refetch={refetch}
       />
 
-      {/* Dialog Xuất PDF Phiếu xuất kho */}
-      <Dialog open={isPdfDialogOpen} onOpenChange={setIsPdfDialogOpen}>
-        <DialogContent className="max-w-md border-slate-200 shadow-xl rounded-2xl">
-          <DialogHeader>
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center text-red-600">
-                <FileText className="h-5 w-5" />
-              </div>
-              <DialogTitle className="text-lg font-bold text-slate-800">
-                Xuất PDF Phiếu xuất kho
-              </DialogTitle>
-            </div>
-            <DialogDescription className="text-sm text-slate-500 pt-2">
-              Nhập mã (ID) của phiếu xuất kho Chất liệu để tải file PDF phiếu xuất chuẩn.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-600 block">ID Phiếu xuất kho</label>
-              <Input
-                type="text"
-                placeholder="Ví dụ: 12, 15, 108..."
-                value={stockOutIdInput}
-                onChange={(e) => setStockOutIdInput(e.target.value)}
-                className="h-10 text-sm border-slate-200 focus-visible:ring-red-500"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    handleExportStockOutPdf();
-                  }
-                }}
-              />
-            </div>
-          </div>
 
-          <DialogFooter className="gap-2 sm:gap-0 border-t border-slate-100 pt-4 mt-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setIsPdfDialogOpen(false);
-                setStockOutIdInput("");
-              }}
-              className="cursor-pointer transition-colors duration-200"
-            >
-              Hủy
-            </Button>
-            <Button
-              type="button"
-              onClick={handleExportStockOutPdf}
-              disabled={isExportingPdf}
-              className="cursor-pointer transition-colors duration-200 bg-red-600 hover:bg-red-700 text-white font-semibold shadow-md shadow-red-200 border-none"
-            >
-              {isExportingPdf ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Đang tải...
-                </>
-              ) : (
-                <>
-                  <Download className="h-4 w-4 mr-2" />
-                  Tải file PDF
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

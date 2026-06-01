@@ -39,6 +39,15 @@ const formatDateTime = (dateStr: string | null | undefined) => {
   return format(new Date(dateStr), "dd/MM/yyyy HH:mm", { locale: vi });
 };
 
+const getLocalDatetimeString = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
 export function MaterialCutDialog({
   open,
   onOpenChange,
@@ -59,6 +68,7 @@ export function MaterialCutDialog({
     quantityWasted: 0,
     notes: "",
     isManuallyEditedUsed: false,
+    cutAt: getLocalDatetimeString(),
   });
 
   // Reset form when dialog opens
@@ -74,6 +84,7 @@ export function MaterialCutDialog({
         quantityWasted: 0,
         notes: "",
         isManuallyEditedUsed: false,
+        cutAt: getLocalDatetimeString(),
       });
     }
   }, [open, materialId, materialDetail]);
@@ -123,6 +134,15 @@ export function MaterialCutDialog({
 
   const handleCutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!cutForm.width || cutForm.width <= 0) {
+      toast.error("Vui lòng nhập chiều rộng cắt!");
+      return;
+    }
+    const maxVal = selectedInputMaterial?.length || 0;
+    if (maxVal > 0 && cutForm.width > maxVal) {
+      toast.error(`Chiều rộng không thể lớn hơn khổ cuộn nguyên liệu (${maxVal} cm)`);
+      return;
+    }
     if (!cutForm.length || cutForm.length <= 0) {
       toast.error("Vui lòng nhập chiều dài cắt!");
       return;
@@ -132,9 +152,19 @@ export function MaterialCutDialog({
       return;
     }
 
+    if (!cutForm.cutAt) {
+      toast.error("Vui lòng chọn thời gian cắt!");
+      return;
+    }
+    const parsedDate = new Date(cutForm.cutAt);
+    if (isNaN(parsedDate.getTime())) {
+      toast.error("Thời gian cắt không hợp lệ!");
+      return;
+    }
+
     let toastId: string | number | undefined;
     try {
-      const cutAtStr = new Date().toISOString();
+      const cutAtStr = parsedDate.toISOString();
       const payload = {
         inputMaterialId: cutForm.inputMaterialId,
         quantityUsed: Math.round(cutForm.quantityUsed),
@@ -237,10 +267,22 @@ export function MaterialCutDialog({
                     type="number"
                     placeholder="Chiều rộng"
                     value={cutForm.width !== undefined && cutForm.width !== null ? cutForm.width : ""}
-                    readOnly
-                    className="rounded-md border-slate-200 h-10 text-xs font-mono text-center bg-slate-50 text-slate-500 cursor-not-allowed select-none focus-visible:ring-0 focus-visible:ring-offset-0"
+                    max={selectedInputMaterial?.length || undefined}
+                    onChange={(e) => {
+                      const maxVal = selectedInputMaterial?.length || 0;
+                      const inputVal = parseFloat(e.target.value) || 0;
+                      if (maxVal > 0 && inputVal > maxVal) {
+                        toast.warning(`Chiều rộng không thể lớn hơn khổ cuộn nguyên liệu (${maxVal} cm)`);
+                        setCutForm((prev) => ({ ...prev, width: maxVal }));
+                      } else {
+                        setCutForm((prev) => ({ ...prev, width: inputVal }));
+                      }
+                    }}
+                    className="rounded-md border-slate-200 h-10 text-xs font-mono text-center focus-visible:ring-[#93631F]"
                   />
-                  <span className="text-[10px] text-slate-400 block text-center leading-none mt-1">Khổ cuộn (Chiều rộng)</span>
+                  <span className="text-[10px] text-slate-400 block text-center leading-none mt-1">
+                    Chiều rộng cắt (Tối đa: {selectedInputMaterial?.length || 0} cm)
+                  </span>
                 </div>
                 <span className="text-slate-400 font-bold self-center">x</span>
                 <div className="flex-1 space-y-1">
@@ -323,9 +365,12 @@ export function MaterialCutDialog({
             {/* Thời gian cắt */}
             <div className="space-y-1.5">
               <Label className="font-semibold text-slate-700">Thời gian cắt</Label>
-              <div className="h-10 px-3 flex items-center bg-slate-50 border border-slate-200 rounded-md text-slate-500 font-medium select-none">
-                {formatDateTime(new Date().toISOString())}
-              </div>
+              <Input
+                type="datetime-local"
+                value={cutForm.cutAt}
+                onChange={(e) => setCutForm((prev) => ({ ...prev, cutAt: e.target.value }))}
+                className="rounded-md border-slate-200 h-10 text-xs font-mono focus-visible:ring-[#93631F] cursor-pointer"
+              />
             </div>
 
             {/* Ghi chú */}

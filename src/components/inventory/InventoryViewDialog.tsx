@@ -103,7 +103,7 @@ export function InventoryViewDialog({
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Tìm kiếm theo mã hàng, tên vật liệu..."
-                className="pl-10"
+                className="pl-10 rounded-xl border-slate-200 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus:outline-none focus:border-slate-200 focus:ring-0"
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
@@ -181,9 +181,6 @@ export function InventoryViewDialog({
                   <TableHeader className="sticky top-0 bg-background z-10">
                     <TableRow>
                       <TableHead className="h-10 text-sm font-bold">
-                        Kho
-                      </TableHead>
-                      <TableHead className="h-10 text-sm font-bold">
                         Mã hàng
                       </TableHead>
                       <TableHead className="h-10 text-sm font-bold">
@@ -202,10 +199,10 @@ export function InventoryViewDialog({
                   </TableHeader>
                   <TableBody>
                     {isLoading ? (
-                      <TableSkeleton cols={7} rows={10} rowHeight="h-14" />
+                      <TableSkeleton cols={6} rows={10} rowHeight="h-14" />
                     ) : error ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="py-10">
+                        <TableCell colSpan={6} className="py-10">
                           <div className="flex flex-col items-center justify-center gap-2 text-center">
                             <FileText className="h-10 w-10 text-muted-foreground opacity-60" />
                             <p className="text-sm font-semibold text-foreground">
@@ -219,7 +216,7 @@ export function InventoryViewDialog({
                       </TableRow>
                     ) : filteredItems.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="py-10">
+                        <TableCell colSpan={6} className="py-10">
                           <div className="flex flex-col items-center justify-center gap-2 text-center">
                             <Package className="h-10 w-10 text-muted-foreground opacity-60" />
                             <p className="text-sm font-semibold text-muted-foreground">
@@ -243,9 +240,6 @@ export function InventoryViewDialog({
                               isWarning && "bg-red-50/50 dark:bg-red-950/10"
                             )}
                           >
-                            <TableCell className="py-3 text-sm">
-                              {item.warehouse || "—"}
-                            </TableCell>
                             <TableCell className="py-3 font-semibold font-mono text-sm">
                               {item.itemCode || "—"}
                             </TableCell>
