@@ -258,94 +258,73 @@ export default function StockSummary() {
             </Alert>
           )}
 
-          {/* FILTERS PANEL AT THE TOP */}
-          <Card className="border-slate-200/60 shadow-sm rounded-xl overflow-hidden">
-            <CardHeader className="bg-[#93631F]/5 border-b border-slate-200/60 py-1.5 px-6 flex flex-row items-center justify-between">
-              <div className="flex items-center gap-2 text-[#93631F]">
-                <Filter className="h-3.5 w-3.5" />
-                <span className="text-[10px] font-bold uppercase tracking-wider">Bộ lọc</span>
-              </div>
-              <Button
-                onClick={handleResetFilters}
-                variant="ghost"
-                size="sm"
-                className="text-[#93631F] hover:text-[#7a521a] hover:bg-[#93631F]/10 text-[10px] font-bold cursor-pointer h-7 px-2.5 rounded-md transition-colors"
-              >
-                Xóa bộ lọc (Reset)
-              </Button>
-            </CardHeader>
-            <CardContent className="p-6">
-              
-              {/* Primary Filters Grid with items-end to ensure perfect alignment */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-end">
-                
-                {/* Search Text */}
-                <div className="space-y-1.5 w-full">
-                  <label className="text-xs font-bold text-slate-600 block">Từ khóa tìm kiếm</label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                    <Input
-                      placeholder="Mã, tên chất vật tư..."
-                      value={materialSearchQuery}
-                      onChange={(e) => {
-                        setMaterialSearchQuery(e.target.value);
-                      }}
-                      className="pl-9 h-10 text-xs border-slate-200 focus-visible:ring-[#93631F]"
-                    />
-                  </div>
-                </div>
-
-                {/* Vendor Dropdown Selector */}
-                <div className="space-y-1.5 w-full">
-                  <label className="text-xs font-bold text-slate-600 block">Nhà cung cấp</label>
-                  <Select
-                    value={selectedVendorId}
-                    onValueChange={(val) => {
-                      setSelectedVendorId(val);
-                    }}
-                  >
-                    <SelectTrigger className="h-10 text-xs cursor-pointer border-slate-200">
-                      <SelectValue placeholder="Chọn nhà cung cấp" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Tất cả nhà cung cấp</SelectItem>
-                      {isLoadingVendors ? (
-                        <div className="flex items-center justify-center p-2">
-                          <Loader2 className="h-4 w-4 animate-spin text-[#93631F]" />
-                        </div>
-                      ) : (
-                        vendorsData?.map((vendor) => (
-                          <SelectItem key={vendor.id} value={String(vendor.id)}>
-                            {vendor.name || vendor.code}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Page Size (Hiển thị) */}
-                <div className="space-y-1.5 w-full">
-                  <label className="text-xs font-bold text-slate-600 block">Hiển thị</label>
-                  <Select value={String(pageSize)} onValueChange={(val) => {
-                    setPageSize(Number(val));
-                  }}>
-                    <SelectTrigger className="h-10 text-xs cursor-pointer border-slate-200">
-                      <SelectValue placeholder="Số dòng" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="5">5 dòng / trang</SelectItem>
-                      <SelectItem value="10">10 dòng / trang</SelectItem>
-                      <SelectItem value="20">20 dòng / trang</SelectItem>
-                      <SelectItem value="50">50 dòng / trang</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
+          {/* COMPACT TOOLBAR FILTERS ROW */}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-2.5 bg-slate-50/60 p-2 rounded-xl border border-slate-200/50 shadow-sm">
+            <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto flex-1">
+              {/* Search Text */}
+              <div className="relative w-full sm:w-[280px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                <Input
+                  placeholder="Tìm kiếm mã, tên vật tư..."
+                  value={materialSearchQuery}
+                  onChange={(e) => setMaterialSearchQuery(e.target.value)}
+                  className="pl-9 h-8.5 text-xs bg-white border-slate-200 focus-visible:ring-[#93631F] rounded-lg"
+                />
               </div>
 
-            </CardContent>
-          </Card>
+              {/* Vendor Selector */}
+              <div className="w-full sm:w-[220px]">
+                <Select value={selectedVendorId} onValueChange={setSelectedVendorId}>
+                  <SelectTrigger className="h-8.5 text-xs bg-white border-slate-200 rounded-lg cursor-pointer">
+                    <SelectValue placeholder="Chọn nhà cung cấp" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả nhà cung cấp</SelectItem>
+                    {isLoadingVendors ? (
+                      <div className="flex items-center justify-center p-2">
+                        <Loader2 className="h-4 w-4 animate-spin text-[#93631F]" />
+                      </div>
+                    ) : (
+                      vendorsData?.map((vendor) => (
+                        <SelectItem key={vendor.id} value={String(vendor.id)}>
+                          {vendor.name || vendor.code}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 w-full md:w-auto shrink-0 justify-end">
+              {/* Page Size */}
+              <div className="w-[130px]">
+                <Select value={String(pageSize)} onValueChange={(val) => setPageSize(Number(val))}>
+                  <SelectTrigger className="h-8.5 text-xs bg-white border-slate-200 rounded-lg cursor-pointer">
+                    <SelectValue placeholder="Số dòng hiển thị" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5 dòng / trang</SelectItem>
+                    <SelectItem value="10">10 dòng / trang</SelectItem>
+                    <SelectItem value="20">20 dòng / trang</SelectItem>
+                    <SelectItem value="50">50 dòng / trang</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Reset Button */}
+              {(materialSearchQuery || selectedVendorId !== "all") && (
+                <Button
+                  onClick={handleResetFilters}
+                  variant="ghost"
+                  size="sm"
+                  className="h-8.5 text-[#93631F] hover:text-[#7a521a] hover:bg-[#93631F]/10 text-xs font-semibold px-3 rounded-lg cursor-pointer transition-colors"
+                >
+                  Xóa bộ lọc
+                </Button>
+              )}
+            </div>
+          </div>
 
           {/* TWO COLUMNS DISPLAY SIDE-BY-SIDE (Cuộn vs Tờ) */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
