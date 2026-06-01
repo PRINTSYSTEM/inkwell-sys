@@ -36,13 +36,25 @@ import {
   AlertCircle,
   Plus,
   Scissors,
-  Boxes
+  Boxes,
+  Download
 } from "lucide-react";
 import { useMaterials } from "@/hooks/use-material";
 import { useActiveVendors } from "@/hooks/use-vendor";
 import { formatCurrency } from "@/lib/status-utils";
 import { toast } from "sonner";
 import { CreateMaterialDirectDialog } from "./components/CreateMaterialDirectDialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { downloadBlob } from "@/lib/download-utils";
+import { apiRequest } from "@/lib/http";
+import { API_SUFFIX } from "@/apis";
 
 export default function StockSummary() {
   const navigate = useNavigate();
@@ -89,6 +101,86 @@ export default function StockSummary() {
 
   // Create Material Dialog States
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+  // Vendor Reconciliation Excel Export States
+  const [isExportingReconciliation, setIsExportingReconciliation] = useState(false);
+
+  // Stock Out PDF Export Dialog States
+  const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
+  const [stockOutIdInput, setStockOutIdInput] = useState("");
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+
+  // Handle exporting Vendor Reconciliation Excel
+  const handleExportVendorReconciliation = async () => {
+    if (selectedVendorId === "all") {
+      toast.error("Vui lòng chọn một Nhà cung cấp ở bộ lọc trước khi xuất đối soát!");
+      return;
+    }
+    
+    setIsExportingReconciliation(true);
+    const vendorId = Number(selectedVendorId);
+    const foundVendor = vendorsData?.find(v => v.id === vendorId);
+    const vendorName = foundVendor?.name || `NCC-${vendorId}`;
+    
+    try {
+      const response = await apiRequest.get(
+        API_SUFFIX.VENDOR_RECONCILIATION_EXCEL(vendorId),
+        {
+          responseType: "blob",
+        }
+      );
+      
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      
+      downloadBlob(blob, `doi-soat-${vendorName}-${new Date().getTime()}.xlsx`);
+      toast.success(`Đã xuất file đối soát cho ${vendorName} thành công!`);
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Không thể xuất file đối soát NCC. Vui lòng thử lại!");
+    } finally {
+      setIsExportingReconciliation(false);
+    }
+  };
+
+  // Handle exporting Stock Out PDF
+  const handleExportStockOutPdf = async () => {
+    if (!stockOutIdInput.trim()) {
+      toast.error("Vui lòng nhập ID phiếu xuất kho!");
+      return;
+    }
+    
+    const stockOutId = Number(stockOutIdInput.trim());
+    if (isNaN(stockOutId)) {
+      toast.error("ID phiếu xuất kho phải là số hợp lệ!");
+      return;
+    }
+    
+    setIsExportingPdf(true);
+    try {
+      const response = await apiRequest.get(
+        API_SUFFIX.STOCK_OUT_PDF(stockOutId),
+        {
+          responseType: "blob",
+        }
+      );
+      
+      const blob = new Blob([response.data], {
+        type: "application/pdf",
+      });
+      
+      downloadBlob(blob, `phieu-xuat-kho-${stockOutId}.pdf`);
+      toast.success(`Tải phiếu xuất kho #${stockOutId} thành công!`);
+      setIsPdfDialogOpen(false);
+      setStockOutIdInput("");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(`Không thể tải PDF cho phiếu xuất #${stockOutId}. Vui lòng kiểm tra lại ID!`);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
 
   // Classify materials: Roll (Cuộn) vs Sheet (Tờ / Khác)
   const allRollMaterials = useMemo(() => {
@@ -187,6 +279,28 @@ export default function StockSummary() {
                 className="cursor-pointer transition-all duration-200 bg-[#93631F] hover:bg-[#7a521a] text-white shadow-sm text-xs h-9 border-none rounded-lg"
               >
                 Quản lý nhập kho
+              </Button>
+              <Button 
+                onClick={handleExportVendorReconciliation}
+                disabled={isExportingReconciliation}
+                size="sm"
+                className="cursor-pointer border border-[#93631F]/40 bg-transparent hover:bg-[#93631F]/5 text-[#93631F] font-semibold text-xs h-9 rounded-lg transition-all duration-200"
+              >
+                {isExportingReconciliation ? (
+                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                ) : (
+                  <Download className="h-3.5 w-3.5 mr-1.5" />
+                )}
+                Đối soát NCC (Excel)
+              </Button>
+              <Button 
+                onClick={() => setIsPdfDialogOpen(true)}
+                size="sm"
+                variant="outline"
+                className="cursor-pointer border-slate-200 text-xs h-9 rounded-lg hover:bg-slate-50 transition-all duration-200"
+              >
+                <FileText className="h-3.5 w-3.5 mr-1.5 text-red-550" />
+                Xuất PDF Phiếu xuất
               </Button>
             </div>
           </div>
@@ -521,6 +635,75 @@ export default function StockSummary() {
         vendorsData={vendorsData}
         refetch={refetch}
       />
+
+      {/* Dialog Xuất PDF Phiếu xuất kho */}
+      <Dialog open={isPdfDialogOpen} onOpenChange={setIsPdfDialogOpen}>
+        <DialogContent className="max-w-md border-slate-200 shadow-xl rounded-2xl">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+                <FileText className="h-5 w-5" />
+              </div>
+              <DialogTitle className="text-lg font-bold text-slate-800">
+                Xuất PDF Phiếu xuất kho
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-sm text-slate-500 pt-2">
+              Nhập mã (ID) của phiếu xuất kho Chất liệu để tải file PDF phiếu xuất chuẩn.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-600 block">ID Phiếu xuất kho</label>
+              <Input
+                type="text"
+                placeholder="Ví dụ: 12, 15, 108..."
+                value={stockOutIdInput}
+                onChange={(e) => setStockOutIdInput(e.target.value)}
+                className="h-10 text-sm border-slate-200 focus-visible:ring-red-500"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleExportStockOutPdf();
+                  }
+                }}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0 border-t border-slate-100 pt-4 mt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsPdfDialogOpen(false);
+                setStockOutIdInput("");
+              }}
+              className="cursor-pointer transition-colors duration-200"
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              onClick={handleExportStockOutPdf}
+              disabled={isExportingPdf}
+              className="cursor-pointer transition-colors duration-200 bg-red-600 hover:bg-red-700 text-white font-semibold shadow-md shadow-red-200 border-none"
+            >
+              {isExportingPdf ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Đang tải...
+                </>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  Tải file PDF
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

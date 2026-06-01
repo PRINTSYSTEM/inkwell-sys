@@ -190,12 +190,84 @@ export default function MaterialHistoryPage() {
   const isError = isErrorMaterial || isErrorHistory;
   const error = errorMaterial || errorHistory;
 
-  // Local Client-side Filtering for search query
+  // Local Client-side Filtering and Grouping for cut transactions
   const filteredItems = useMemo(() => {
     if (!historyData?.items) return [];
-    if (!searchQuery) return historyData.items;
+
+    const items = historyData.items;
+    const grouped: any[] = [];
+    const cutGroupsMap = new Map<number, any[]>();
+
+    items.forEach((item) => {
+      if (item.referenceType === "material_cut" && item.referenceId) {
+        if (!cutGroupsMap.has(item.referenceId)) {
+          cutGroupsMap.set(item.referenceId, []);
+        }
+        cutGroupsMap.get(item.referenceId)!.push(item);
+      } else {
+        grouped.push({ ...item });
+      }
+    });
+
+    cutGroupsMap.forEach((groupItems) => {
+      if (groupItems.length === 1) {
+        const item = groupItems[0];
+        grouped.push({
+          ...item,
+          quantityOut: item.transactionType === "cut_out" ? item.quantity : undefined,
+          quantityWaste: item.transactionType === "waste" ? item.quantity : undefined,
+        });
+      } else {
+        const sorted = [...groupItems].sort((a, b) => {
+          const timeA = new Date(a.createdAt || 0).getTime();
+          const timeB = new Date(b.createdAt || 0).getTime();
+          if (timeA !== timeB) {
+            return timeA - timeB;
+          }
+          return (a.id || 0) - (b.id || 0);
+        });
+
+        const oldest = sorted[0];
+        const newest = sorted[sorted.length - 1];
+
+        const cutOutEntry = groupItems.find((i) => i.transactionType === "cut_out");
+        const wasteEntry = groupItems.find((i) => i.transactionType === "waste");
+
+        const notes = groupItems
+          .map((i) => i.note)
+          .filter((n): n is string => typeof n === "string" && n.trim() !== "")
+          .filter((v, i, a) => a.indexOf(v) === i)
+          .join("; ");
+
+        const mergedEntry = {
+          ...wasteEntry,
+          ...cutOutEntry,
+          id: cutOutEntry?.id || oldest.id,
+          previousQuantity: oldest.previousQuantity,
+          newQuantity: newest.newQuantity,
+          quantityOut: cutOutEntry?.quantity || 0,
+          quantityWaste: wasteEntry?.quantity || 0,
+          note: notes || cutOutEntry?.note || wasteEntry?.note || null,
+          isMerged: true,
+          transactionType: "cut_out",
+        };
+        grouped.push(mergedEntry);
+      }
+    });
+
+    grouped.sort((a, b) => {
+      const dateA = new Date(a.createdAt || 0).getTime();
+      const dateB = new Date(b.createdAt || 0).getTime();
+      if (dateB !== dateA) {
+        return dateB - dateA;
+      }
+      return (b.id || 0) - (a.id || 0);
+    });
+
+    if (!searchQuery) return grouped;
+
     const query = searchQuery.toLowerCase();
-    return historyData.items.filter(
+    return grouped.filter(
       (entry) =>
         (entry.referenceCode || "").toLowerCase().includes(query) ||
         (entry.note || "").toLowerCase().includes(query) ||
@@ -870,14 +942,18 @@ export default function MaterialHistoryPage() {
 
                       {/* 7. Xuất */}
                       <TableCell className="text-right py-2 font-bold tabular-nums text-rose-600 w-[110px]">
-                        {isExport(entry.transactionType) && entry.quantity !== undefined
+                        {anyEntry.quantityOut !== undefined
+                          ? anyEntry.quantityOut.toLocaleString()
+                          : isExport(entry.transactionType) && entry.quantity !== undefined
                           ? entry.quantity.toLocaleString()
                           : ""}
                       </TableCell>
 
                       {/* 8. Hao hụt */}
                       <TableCell className="text-right py-2 font-bold tabular-nums text-amber-600 w-[110px]">
-                        {isWaste(entry.transactionType) && entry.quantity !== undefined
+                        {anyEntry.quantityWaste !== undefined
+                          ? anyEntry.quantityWaste.toLocaleString()
+                          : isWaste(entry.transactionType) && entry.quantity !== undefined
                           ? entry.quantity.toLocaleString()
                           : ""}
                       </TableCell>

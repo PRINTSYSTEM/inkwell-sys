@@ -198,7 +198,7 @@ export function CreateMaterialDirectDialog({
 
                 {/* Số lượng (m) */}
                 <div className="space-y-1.5">
-                  <Label className="font-semibold text-slate-700">Số lượng ban đầu (m dài)</Label>
+                  <Label className="font-semibold text-slate-700">Kích thước (Khổ)</Label>
                   <Input
                     type="number"
                     placeholder="Nhập số lượng mét..."

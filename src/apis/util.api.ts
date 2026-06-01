@@ -237,6 +237,7 @@ export const API_SUFFIX = {
   STOCK_OUT_BY_ID: (id: number) => `/stock-outs/${id}`,
   STOCK_OUT_CANCEL: (id: number) => `/stock-outs/${id}/cancel`,
   STOCK_OUT_COMPLETE: (id: number) => `/stock-outs/${id}/complete`,
+  STOCK_OUT_PDF: (id: number) => `/stock-outs/${id}/pdf`,
   STOCK_OUT_FOR_PRODUCTION: "/stock-outs/for-production",
   STOCK_OUT_FOR_DELIVERY: "/stock-outs/for-delivery",
   STOCK_OUT_PROCESS_RETURN: "/stock-outs/process-return",
@@ -369,6 +370,7 @@ export const API_SUFFIX = {
   SLOW_MOVING: "/inventory-reports/slow-moving",
   STOCK_CARD: (itemCode: string) => `/inventory-reports/stock-card/${itemCode}`,
   STOCK_CARD_EXCEL: (itemCode: string) => `/inventory-reports/stock-card/${itemCode}/excel`,
+  VENDOR_RECONCILIATION_EXCEL: (vendorId: number) => `/inventory-reports/vendor-reconciliation/${vendorId}/excel`,
 
   // ========== SALES REPORTS ==========
   SALES_BY_PERIOD: "/sales-reports/by-period",

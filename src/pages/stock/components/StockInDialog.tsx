@@ -185,23 +185,6 @@ export function StockInDialog({
             </div>
 
 
-            {/* Số chứng từ / Mã bài */}
-            {!isEditMode && (
-              <div className="space-y-1.5">
-                <Label className="font-semibold text-slate-700">
-                  Mã bài sản xuất
-                </Label>
-                <Input
-                  placeholder="Mã bài..."
-                  value={stockInForm.documentCode}
-                  onChange={(e) =>
-                    setStockInForm((prev) => ({ ...prev, documentCode: e.target.value }))
-                  }
-                  className="rounded-md border-slate-200 h-10 text-xs font-mono focus-visible:ring-[#93631F]"
-                />
-              </div>
-            )}
-
             {/* Ghi chú */}
             <div className="space-y-1.5">
               <Label className="font-semibold text-slate-700">Diễn giải / Ghi chú</Label>
