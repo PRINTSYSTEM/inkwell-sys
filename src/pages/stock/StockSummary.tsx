@@ -190,7 +190,7 @@ export default function StockSummary() {
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-100 pb-4">
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-slate-800">
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">
                 Tồn kho tổng hợp
               </h1>
               <p className="text-xs text-muted-foreground mt-0.5">
@@ -207,8 +207,9 @@ export default function StockSummary() {
                   }
                   setIsCreateOpen(true);
                 }}
+                variant="outline"
                 size="sm"
-                className="cursor-pointer border border-[#93631F] bg-transparent hover:bg-[#93631F]/5 text-[#93631F] hover:text-[#7a521a] font-semibold text-xs h-9 rounded-lg transition-all duration-200"
+                className="cursor-pointer border-slate-200 text-xs h-9 rounded-lg hover:bg-slate-50 text-foreground"
               >
                 <Plus className="h-3.5 w-3.5 mr-1.5" />
                 Nhập vật tư mới
@@ -226,15 +227,16 @@ export default function StockSummary() {
               <Button 
                 onClick={() => navigate("/stock/stock-ins")}
                 size="sm"
-                className="cursor-pointer transition-all duration-200 bg-[#93631F] hover:bg-[#7a521a] text-white shadow-sm text-xs h-9 border-none rounded-lg"
+                className="cursor-pointer transition-all duration-200 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm text-xs h-9 border-none rounded-lg"
               >
                 Quản lý nhập kho
               </Button>
               <Button 
                 onClick={handleExportVendorReconciliation}
                 disabled={isExportingReconciliation}
+                variant="outline"
                 size="sm"
-                className="cursor-pointer border border-[#93631F]/40 bg-transparent hover:bg-[#93631F]/5 text-[#93631F] font-semibold text-xs h-9 rounded-lg transition-all duration-200"
+                className="cursor-pointer border-slate-200 text-xs h-9 rounded-lg hover:bg-slate-50 text-foreground"
               >
                 {isExportingReconciliation ? (
                   <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
@@ -268,7 +270,7 @@ export default function StockSummary() {
                   placeholder="Tìm kiếm mã, tên vật tư..."
                   value={materialSearchQuery}
                   onChange={(e) => setMaterialSearchQuery(e.target.value)}
-                  className="pl-9 h-8.5 text-xs bg-white border-slate-200 focus-visible:ring-[#93631F] rounded-lg"
+                  className="pl-9 h-8.5 text-xs bg-white border-slate-200 focus-visible:ring-primary rounded-lg"
                 />
               </div>
 
@@ -282,7 +284,7 @@ export default function StockSummary() {
                     <SelectItem value="all">Tất cả nhà cung cấp</SelectItem>
                     {isLoadingVendors ? (
                       <div className="flex items-center justify-center p-2">
-                        <Loader2 className="h-4 w-4 animate-spin text-[#93631F]" />
+                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
                       </div>
                     ) : (
                       vendorsData?.map((vendor) => (
@@ -318,7 +320,7 @@ export default function StockSummary() {
                   onClick={handleResetFilters}
                   variant="ghost"
                   size="sm"
-                  className="h-8.5 text-[#93631F] hover:text-[#7a521a] hover:bg-[#93631F]/10 text-xs font-semibold px-3 rounded-lg cursor-pointer transition-colors"
+                  className="h-8.5 text-muted-foreground hover:text-foreground hover:bg-accent text-xs font-semibold px-3 rounded-lg cursor-pointer transition-colors"
                 >
                   Xóa bộ lọc
                 </Button>
@@ -331,19 +333,19 @@ export default function StockSummary() {
             
             {/* COLUMN 1: ROLL MATERIALS (CUỘN) */}
             <Card className="border-slate-200/60 shadow-sm rounded-xl overflow-hidden flex flex-col">
-              <CardHeader className="bg-[#93631F]/5 border-b border-slate-200/60 py-3.5 px-4 flex flex-row items-center justify-between">
+              <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-3.5 px-4 flex flex-row items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="h-7.5 w-7.5 rounded-md bg-[#93631F]/15 flex items-center justify-center text-[#93631F]">
+                  <div className="h-7.5 w-7.5 rounded-md bg-slate-100 flex items-center justify-center text-slate-600">
                     <RefreshCw className="h-4 w-4" />
                   </div>
                   <div>
-                    <CardTitle className="text-sm font-bold text-slate-800">
+                    <CardTitle className="text-sm font-bold text-foreground">
                       VẬT TƯ DẠNG CUỘN
                     </CardTitle>
                     <CardDescription className="text-[10px]">Giấy cuộn, decal cuộn, màng phủ, màng lót...</CardDescription>
                   </div>
                 </div>
-                <Badge className="bg-[#93631F] hover:bg-[#7a521a] text-white text-[10px] px-2 py-0.5 rounded-full font-semibold border-none">
+                <Badge variant="secondary" className="text-[10px] px-2 py-0.5 rounded-full font-semibold border-none">
                   {allRollMaterials.length} loại
                 </Badge>
               </CardHeader>
@@ -370,10 +372,10 @@ export default function StockSummary() {
                         {paginatedRollMaterials.map((item, idx) => (
                           <TableRow 
                             key={`${item.id}-${idx}`} 
-                            className="hover:bg-emerald-100/80 border-b border-slate-100 text-xs cursor-pointer transition-colors duration-150"
+                            className="hover:bg-slate-50 border-b border-slate-100 text-xs cursor-pointer transition-colors duration-150"
                             onClick={() => navigate(`/stock/materials/${item.id}/history`)}
                           >
-                            <TableCell className="font-mono font-bold py-3 pl-4 text-[#93631F]">
+                            <TableCell className="font-mono font-semibold py-3 pl-4 text-slate-500">
                               #{item.id}
                             </TableCell>
                             <TableCell className="py-3">
@@ -427,19 +429,19 @@ export default function StockSummary() {
 
             {/* COLUMN 2: SHEET MATERIALS (TỜ / KHÁC) */}
             <Card className="border-slate-200/60 shadow-sm rounded-xl overflow-hidden flex flex-col">
-              <CardHeader className="bg-blue-500/5 border-b border-slate-200/60 py-3.5 px-4 flex flex-row items-center justify-between">
+              <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-3.5 px-4 flex flex-row items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <div className="h-7.5 w-7.5 rounded-md bg-blue-100 flex items-center justify-center text-blue-600">
+                  <div className="h-7.5 w-7.5 rounded-md bg-slate-100 flex items-center justify-center text-slate-600">
                     <FileText className="h-4 w-4" />
                   </div>
                   <div>
-                    <CardTitle className="text-sm font-bold text-slate-800">
+                    <CardTitle className="text-sm font-bold text-foreground">
                       VẬT TƯ DẠNG TỜ / KHÁC
                     </CardTitle>
                     <CardDescription className="text-[10px]">Giấy tờ, decal phẳng, bản kẽm, khuôn mẫu...</CardDescription>
                   </div>
                 </div>
-                <Badge className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] px-2 py-0.5 rounded-full font-semibold border-none">
+                <Badge variant="secondary" className="text-[10px] px-2 py-0.5 rounded-full font-semibold border-none">
                   {allSheetMaterials.length} loại
                 </Badge>
               </CardHeader>
@@ -466,10 +468,10 @@ export default function StockSummary() {
                         {paginatedSheetMaterials.map((item, idx) => (
                           <TableRow 
                             key={`${item.id}-${idx}`} 
-                            className="hover:bg-emerald-100/80 border-b border-slate-100 text-xs cursor-pointer transition-colors duration-150"
+                            className="hover:bg-slate-50 border-b border-slate-100 text-xs cursor-pointer transition-colors duration-150"
                             onClick={() => navigate(`/stock/materials/${item.id}/history`)}
                           >
-                            <TableCell className="font-mono font-bold py-3 pl-4 text-blue-600">
+                            <TableCell className="font-mono font-semibold py-3 pl-4 text-slate-500">
                               #{item.id}
                             </TableCell>
                             <TableCell className="py-3">
