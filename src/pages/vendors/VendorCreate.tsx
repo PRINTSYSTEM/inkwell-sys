@@ -235,11 +235,13 @@ export default function VendorCreatePage() {
                     <SelectValue placeholder="Chọn loại nhà cung cấp" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(vendorTypeLabels).map(([key, label]) => (
-                      <SelectItem key={key} value={key}>
-                        {label}
-                      </SelectItem>
-                    ))}
+                    {Object.entries(vendorTypeLabels)
+                      .filter(([key]) => key !== "paper" && key !== "ink")
+                      .map(([key, label]) => (
+                        <SelectItem key={key} value={key}>
+                          {label}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
                 {errors.vendorType && (
