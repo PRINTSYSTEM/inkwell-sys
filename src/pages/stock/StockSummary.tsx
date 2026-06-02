@@ -342,7 +342,7 @@ export default function StockSummary() {
                     <CardTitle className="text-sm font-bold text-foreground">
                       VẬT TƯ DẠNG CUỘN
                     </CardTitle>
-                    <CardDescription className="text-[10px]">Giấy cuộn, decal cuộn, màng phủ, màng lót...</CardDescription>
+                    {/* <CardDescription className="text-[10px]">Giấy cuộn, decal cuộn, màng phủ, màng lót...</CardDescription> */}
                   </div>
                 </div>
                 <Badge variant="secondary" className="text-[10px] px-2 py-0.5 rounded-full font-semibold border-none">
@@ -438,7 +438,7 @@ export default function StockSummary() {
                     <CardTitle className="text-sm font-bold text-foreground">
                       VẬT TƯ DẠNG TỜ / KHÁC
                     </CardTitle>
-                    <CardDescription className="text-[10px]">Giấy tờ, decal phẳng, bản kẽm, khuôn mẫu...</CardDescription>
+                    {/* <CardDescription className="text-[10px]">Giấy tờ, decal phẳng, bản kẽm, khuôn mẫu...</CardDescription> */}
                   </div>
                 </div>
                 <Badge variant="secondary" className="text-[10px] px-2 py-0.5 rounded-full font-semibold border-none">
