@@ -61,7 +61,7 @@ import { CursorTooltip } from "@/components/ui/cursor-tooltip";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   useProofingOrder,
   useUploadProofingFile,
@@ -340,6 +340,8 @@ export default function ProofingOrderDetailPage() {
   const params = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const highlightSearchTerm = searchParams.get("search") || "";
 
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isUpdateFileDialogOpen, setIsUpdateFileDialogOpen] = useState(false);
@@ -2181,6 +2183,7 @@ export default function ProofingOrderDetailPage() {
                 onReject={handleOpenRejectDialog}
                 isRejecting={isRejecting}
                 onFindDie={handleFindDie}
+                highlightSearchTerm={highlightSearchTerm}
               />
 
               <DetailPlateExportCard

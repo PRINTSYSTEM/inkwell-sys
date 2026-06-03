@@ -109,12 +109,10 @@ type ProofingOrder =
 function useHasActiveProofingFilters(args: {
   selectedDesignTypes: number[];
   selectedMaterialTypes: number[];
-  searchTerm: string;
 }) {
   return (
     args.selectedDesignTypes.length > 0 ||
-    args.selectedMaterialTypes.length > 0 ||
-    args.searchTerm.trim().length > 0
+    args.selectedMaterialTypes.length > 0
   );
 }
 
@@ -126,15 +124,12 @@ export default function PrepressList() {
   const [selectedMaterialTypes, setSelectedMaterialTypes] = useState<number[]>(
     [],
   );
-  const [searchTerm, setSearchTerm] = useState<string>("");
-  const [debouncedSearch] = useDebounce(searchTerm, 300);
 
   const [viewMode, setViewMode] = useState<"orders" | "designs">("orders");
 
   const hasActiveFilters = useHasActiveProofingFilters({
     selectedDesignTypes,
     selectedMaterialTypes,
-    searchTerm,
   });
 
   // Switch to designs mode when any filter becomes active, back to orders if cleared
@@ -265,7 +260,7 @@ export default function PrepressList() {
     selectedDesignTypes.length > 0 ? selectedDesignTypes[0] : null;
 
   const designCodeForApi =
-    debouncedSearch.trim().length > 0 ? debouncedSearch : null;
+    debouncedDesignCode.trim().length > 0 ? debouncedDesignCode : null;
 
   const [designsPage, setDesignsPage] = useState(1);
   const [designsPageInput, setDesignsPageInput] = useState<string>("");
@@ -324,7 +319,7 @@ export default function PrepressList() {
     hasActiveFilters,
     selectedDesignTypeId,
     materialTypeIdForApi,
-    debouncedSearch,
+    debouncedDesignCode,
   ]);
 
   const handleDesignsPageInputBlur = () => {
@@ -591,7 +586,7 @@ export default function PrepressList() {
   const handleClearFilters = () => {
     setSelectedDesignTypes([]);
     setSelectedMaterialTypes([]);
-    setSearchTerm("");
+    setDesignCode("");
     setDesignsPage(1);
     setDesignsPageInput("1");
     setViewMode("orders");
@@ -729,7 +724,6 @@ export default function PrepressList() {
                         selectedDesignTypes={selectedDesignTypes}
                         selectedMaterialTypes={selectedMaterialTypes}
                         currentMaterialTypeId={currentMaterialTypeId}
-                        searchTerm={searchTerm}
                         onDesignTypeChange={(ids) => {
                           if (ids.length === 0) {
                             handleClearFilters();
@@ -739,7 +733,6 @@ export default function PrepressList() {
                           }
                         }}
                         onMaterialTypeChange={setSelectedMaterialTypes}
-                        onSearchChange={setSearchTerm}
                         onClearFilters={handleClearFilters}
                         designs={availableDesignsData?.designs || []}
                         selectedIds={selectedIds}
@@ -779,7 +772,7 @@ export default function PrepressList() {
                         expandedOrderIds={expandedOrderIds}
                         searchTermLower={searchTermLower}
                         debouncedDesignCode={debouncedDesignCode}
-                        onNavigate={(id) => navigate(`/proofing/${id}`)}
+                        onNavigate={(id) => navigate(`/proofing/${id}${debouncedDesignCode.trim() ? `?search=${encodeURIComponent(debouncedDesignCode.trim())}` : ""}`)}
                         ordersTableRef={ordersTableRef}
                         // Actions for shared DesignTable
                         onReject={openRejectDialog}

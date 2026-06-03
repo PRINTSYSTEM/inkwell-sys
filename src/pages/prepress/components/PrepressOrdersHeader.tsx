@@ -41,10 +41,8 @@ interface PrepressOrdersHeaderProps {
   selectedDesignTypes: number[];
   selectedMaterialTypes: number[];
   currentMaterialTypeId: number | null;
-  searchTerm: string;
   onDesignTypeChange: (ids: number[]) => void;
   onMaterialTypeChange: (ids: number[]) => void;
-  onSearchChange: (search: string) => void;
   onClearFilters: () => void;
   // DesignTable props for search results
   designs: DesignItem[];
@@ -108,10 +106,8 @@ export function PrepressOrdersHeader({
   selectedDesignTypes,
   selectedMaterialTypes,
   currentMaterialTypeId,
-  searchTerm,
   onDesignTypeChange,
   onMaterialTypeChange,
-  onSearchChange,
   onClearFilters,
   onNavigate,
   ordersTableRef,
@@ -274,10 +270,8 @@ export function PrepressOrdersHeader({
         selectedDesignTypes={selectedDesignTypes}
         selectedMaterialTypes={selectedMaterialTypes}
         currentMaterialTypeId={currentMaterialTypeId}
-        searchTerm={searchTerm}
         onDesignTypeChange={onDesignTypeChange}
         onMaterialTypeChange={onMaterialTypeChange}
-        onSearchChange={onSearchChange}
         onClearFilters={onClearFilters}
         hasActiveFilters={hasActiveFilters}
       />
@@ -300,7 +294,7 @@ export function PrepressOrdersHeader({
                 isRejecting={isRejecting}
                 onFindDie={onFindDie}
                 isSelectionEnabled={isSelectionEnabled}
-                searchTerm={searchTerm}
+                searchTerm={designCode}
               />
               {/* Designs Pagination */}
               {designsTotalCount > designsPageSize &&

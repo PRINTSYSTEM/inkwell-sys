@@ -96,6 +96,7 @@ interface DetailDesignsListCardProps {
   onReject?: (pod: any) => void;
   isRejecting?: boolean;
   onFindDie?: (design: any, dimensions: string) => void;
+  highlightSearchTerm?: string;
 }
 
 export function DetailDesignsListCard({
@@ -125,8 +126,30 @@ export function DetailDesignsListCard({
   onReject,
   isRejecting,
   onFindDie,
+  highlightSearchTerm = "",
 }: DetailDesignsListCardProps) {
   if (!order) return null;
+
+  const highlightText = (text: string, search: string) => {
+    if (!search || !text) return text;
+    const regex = new RegExp(
+      `(${search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
+      "gi",
+    );
+    const parts = text.split(regex);
+    return parts.map((part, index) =>
+      regex.test(part) ? (
+        <span
+          key={index}
+          className="bg-emerald-500 text-white font-semibold px-0.5 rounded animate-pulse"
+        >
+          {part}
+        </span>
+      ) : (
+        part
+      ),
+    );
+  };
 
   return (
     <Card className="relative">
@@ -394,7 +417,7 @@ export function DetailDesignsListCard({
                       </TableCell>
                       <TableCell className="px-2 py-1">
                         <p className="font-medium text-xs">
-                          {pod.design?.code}
+                          {highlightText(pod.design?.code || "", highlightSearchTerm)}
                         </p>
                       </TableCell>
 

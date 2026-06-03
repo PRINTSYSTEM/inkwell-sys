@@ -29,6 +29,7 @@ import {
   XCircle,
   AlertTriangle,
   FileText,
+  Download,
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { useMaterial, useMaterialHistory, useMaterials } from "@/hooks/use-material";
@@ -1047,7 +1048,7 @@ export default function MaterialHistoryPage() {
                               }}
                               title="Tải PDF Phiếu xuất kho"
                             >
-                              <FileText className="h-4 w-4" />
+                              <Download className="h-4 w-4" />
                             </Button>
                           </div>
                         ) : null}

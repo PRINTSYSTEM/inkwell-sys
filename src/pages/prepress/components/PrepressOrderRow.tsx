@@ -1,5 +1,7 @@
-import { ChevronDown, FileImage } from "lucide-react";
+import { ChevronDown, FileImage, Copy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import {
   TableCell,
   TableRow,
@@ -235,11 +237,32 @@ export function PrepressOrderRow({
 
         <TableCell className="py-3 font-bold text-xs align-top text-slate-800 dark:text-slate-200">
           <div className="flex flex-col gap-1">
-            {designs.map((pod: any, idx: number) => (
-              <span key={pod.id || idx}>
-                {highlightText(pod.design?.code || "—", debouncedSearchTerm.trim())}
-              </span>
-            ))}
+            {designs.map((pod: any, idx: number) => {
+              const code = pod.design?.code || "—";
+              return (
+                <div key={pod.id || idx} className="flex items-center gap-1.5 min-h-5">
+                  <span>{highlightText(code, debouncedSearchTerm.trim())}</span>
+                  {code !== "—" && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-4.5 w-4.5 p-0 shrink-0 text-muted-foreground hover:text-foreground"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigator.clipboard.writeText(code);
+                        toast.success("Đã sao chép mã hàng", {
+                          description: code,
+                          duration: 1500,
+                        });
+                      }}
+                      title="Sao chép mã hàng"
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </TableCell>
 

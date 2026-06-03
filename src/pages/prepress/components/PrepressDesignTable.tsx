@@ -15,11 +15,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, Copy } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { formatDesignDimensions } from "@/utils/format-die-size";
 import type { DesignItem } from "@/types/proofing";
+import { toast } from "sonner";
 
 interface PrepressDesignTableProps {
   designs: DesignItem[];
@@ -276,7 +277,25 @@ export function PrepressDesignTable({
                                   </div>
                                 </TableCell>
                                 <TableCell className="py-3 font-mono text-sm font-semibold">
-                                  {design.code}
+                                  <div className="flex items-center gap-1.5">
+                                    <span>{design.code}</span>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-6 w-6 text-muted-foreground hover:text-foreground shrink-0"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigator.clipboard.writeText(design.code);
+                                        toast.success("Đã sao chép mã hàng", {
+                                          description: design.code,
+                                          duration: 1500,
+                                        });
+                                      }}
+                                      title="Sao chép mã hàng"
+                                    >
+                                      <Copy className="h-3.5 w-3.5" />
+                                    </Button>
+                                  </div>
                                 </TableCell>
                                 <TableCell className="py-3">
                                   <span className="text-sm font-semibold">

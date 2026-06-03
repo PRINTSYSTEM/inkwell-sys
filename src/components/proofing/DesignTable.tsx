@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { CursorTooltip } from "@/components/ui/cursor-tooltip";
 import { cn } from "@/lib/utils";
-import { Search, FileText } from "lucide-react";
+import { Search, FileText, Copy } from "lucide-react";
 import {
   processClassificationLabels,
   sidesClassificationLabels,
@@ -20,6 +20,7 @@ import {
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 interface DesignTableProps {
   designs: DesignItem[];
@@ -48,6 +49,15 @@ export function DesignTable({
     url: string;
     title: string;
   } | null>(null);
+
+  const handleCopy = (text: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+    toast.success("Đã sao chép mã hàng", {
+      description: text,
+      duration: 1500,
+    });
+  };
 
   const highlightText = (text: string, search: string) => {
     if (!search || !text) return text;
@@ -298,7 +308,18 @@ export function DesignTable({
                       )}
                     </TableCell>
                     <TableCell className="py-3 font-mono text-sm font-semibold">
-                      {highlightText(design.code, searchTerm)}
+                      <div className="flex items-center gap-1.5">
+                        <span>{highlightText(design.code, searchTerm)}</span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-muted-foreground hover:text-foreground shrink-0"
+                          onClick={(e) => handleCopy(design.code, e)}
+                          title="Sao chép mã hàng"
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </TableCell>
                     <TableCell className="py-3">
                       <div className="text-sm text-muted-foreground">
@@ -308,7 +329,12 @@ export function DesignTable({
                     </TableCell>
                     <TableCell className="py-3">
                       <div className="text-sm font-semibold">
-                        {design.quantity.toLocaleString()}
+                        {((design.designTypeName?.toLowerCase().includes("decal") || 
+                           design.materialTypeName?.toLowerCase().includes("decal")) && 
+                          design.sidesClassification === "two_side"
+                            ? design.quantity * 2
+                            : design.quantity
+                        ).toLocaleString()}
                       </div>
                       {design.availableQuantity !== undefined && (
                         <div className="text-xs text-muted-foreground">

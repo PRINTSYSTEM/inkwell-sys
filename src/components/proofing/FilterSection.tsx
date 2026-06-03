@@ -17,10 +17,8 @@ interface FilterSectionProps {
   selectedDesignTypes: number[];
   selectedMaterialTypes: number[];
   currentMaterialTypeId: number | null;
-  searchTerm: string;
   onDesignTypeChange: (ids: number[]) => void;
   onMaterialTypeChange: (ids: number[]) => void;
-  onSearchChange: (search: string) => void;
   onClearFilters: () => void;
   hasActiveFilters?: boolean;
 }
@@ -31,17 +29,14 @@ export function FilterSection({
   selectedDesignTypes,
   selectedMaterialTypes,
   currentMaterialTypeId,
-  searchTerm,
   onDesignTypeChange,
   onMaterialTypeChange,
-  onSearchChange,
   onClearFilters,
   hasActiveFilters = false,
 }: FilterSectionProps) {
   const isAnyFilterActive =
     selectedDesignTypes.length > 0 ||
-    selectedMaterialTypes.length > 0 ||
-    searchTerm.trim().length > 0;
+    selectedMaterialTypes.length > 0;
 
   const toggleDesignType = (id: number) => {
     // Only allow selecting 1 design type at a time
@@ -138,17 +133,6 @@ export function FilterSection({
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-
-        {/* Search by Code */}
-        <div className="relative flex-1 min-w-[200px] max-w-[300px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Tìm mã thiết kế..."
-            value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-10 h-8 text-sm"
-          />
-        </div>
       </div>
 
       {/* Active Filter Tags */}
@@ -191,17 +175,6 @@ export function FilterSection({
                 </Badge>
               ) : null;
             })}
-          {searchTerm.trim().length > 0 && (
-            <Badge variant="outline" className="gap-1 pr-1">
-              Mã: {searchTerm}
-              <button
-                onClick={() => onSearchChange("")}
-                className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </Badge>
-          )}
           <Button
             variant="ghost"
             size="sm"
