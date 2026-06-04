@@ -91,6 +91,18 @@ const formatDateTime = (dateStr: string | null | undefined) => {
   return format(new Date(dateStr), "dd/MM/yyyy HH:mm", { locale: vi });
 };
 
+const formatSize = (sizeStr: string | null | undefined): string => {
+  if (!sizeStr) return "—";
+  return sizeStr
+    .split(/x/i)
+    .map((part) => {
+      const trimmed = part.trim();
+      const num = parseFloat(trimmed);
+      return isNaN(num) ? trimmed : String(num);
+    })
+    .join("x");
+};
+
 const isImport = (type: string | null | undefined) => {
   if (!type) return false;
   const t = type.toLowerCase();
@@ -275,6 +287,7 @@ export default function MaterialHistoryPage() {
         quantity: cut.quantityUsed,
         wasted: cut.quantityWasted,
         outputs: cut.outputs,
+        size: cut.size || (cut.outputs?.[0] ? cut.outputs[0].outputMaterialName : "—"),
         raw: cut,
       });
     });
@@ -289,6 +302,7 @@ export default function MaterialHistoryPage() {
         jobCode: item?.jobCode || "—",
         notes: stockIn.notes || "—",
         quantity: item?.quantity || 0,
+        size: item?.size || "—",
         raw: stockIn,
       });
     });
@@ -303,6 +317,7 @@ export default function MaterialHistoryPage() {
         jobCode: item?.jobCode || "",
         notes: stockOut.notes || "",
         quantity: item?.quantity || 0,
+        size: item?.size || "—",
         raw: stockOut,
       });
     });
@@ -564,7 +579,7 @@ export default function MaterialHistoryPage() {
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                 Đơn vị tính: {materialDetail?.unit || "—"}{materialDetail?.unit === "m" ? " dài" : ""}
+                 Đơn vị tính: {materialDetail?.unit || "—"}{materialDetail?.unit === "m" ? " dài" : ""}{materialDetail?.size ? ` | Kích thước: ${formatSize(materialDetail.size)}` : ""}
               </p>
             </div>
           </div>
@@ -822,8 +837,8 @@ export default function MaterialHistoryPage() {
                         </TableCell>
 
                         {/* 3. Kích thước / Thành phẩm */}
-                        <TableCell className="py-2 text-slate-600 font-medium w-[150px] truncate" title={anyEntry.type === "cut" && anyEntry.outputs?.[0] ? anyEntry.outputs[0].outputMaterialName : ""}>
-                          {anyEntry.type === "cut" && anyEntry.outputs?.[0] ? anyEntry.outputs[0].outputMaterialName : "—"}
+                        <TableCell className="py-2 text-slate-600 font-medium w-[150px] truncate" title={formatSize(anyEntry.size)}>
+                          {formatSize(anyEntry.size)}
                         </TableCell>
 
                         {/* 4. Số lượng tờ ra */}
@@ -983,8 +998,8 @@ export default function MaterialHistoryPage() {
                       </TableCell>
 
                       {/* 3. Kích thước / Thành phẩm */}
-                      <TableCell className="py-2 font-mono text-slate-600 w-[150px]">
-                        {anyEntry.dimensions || (anyEntry.cutLength && anyEntry.cutWidth ? `${anyEntry.cutLength}x${anyEntry.cutWidth}` : "")}
+                      <TableCell className="py-2 text-slate-600 font-medium w-[150px]">
+                        {formatSize(anyEntry.size)}
                       </TableCell>
 
                       {/* 4. Số lượng tờ ra */}

@@ -15,6 +15,13 @@ import {
 import { toast } from "sonner";
 import { useCreateMaterial } from "@/hooks/use-material";
 
+const parseRollWidth = (name: string): number | null => {
+  const match = name.trim().match(/(\d+(?:\.\d+)?)\s*(?:cm|mm|m)?$/i);
+  if (!match) return null;
+  const num = parseFloat(match[1]);
+  return isNaN(num) ? null : num;
+};
+
 interface CreateMaterialDirectDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -75,8 +82,9 @@ export function CreateMaterialDirectDialog({
         toast.error("Vui lòng nhập tên vật tư cuộn!");
         return;
       }
-      if (!materialForm.quantity || materialForm.quantity <= 0) {
-        toast.error("Vui lòng nhập số lượng ban đầu (m dài)!");
+      const widthVal = parseRollWidth(materialForm.name);
+      if (widthVal === null) {
+        toast.error("Vui lòng nhập kích thước khổ!");
         return;
       }
     } else {
@@ -103,8 +111,8 @@ export function CreateMaterialDirectDialog({
       const payload = {
         name: generatedName,
         type: materialType,
-        length: materialType === "cuon" ? materialForm.quantity : materialForm.length,
-        width: materialType === "cuon" ? null : materialForm.width,
+        length: materialType === "cuon" ? 0 : materialForm.length,
+        width: materialType === "cuon" ? parseRollWidth(materialForm.name) : materialForm.width,
         unit: materialType === "cuon" ? "m" : "tờ",
         unitPrice: materialForm.unitPrice || 0,
         vendorId: selectedVendor.id,
@@ -194,18 +202,6 @@ export function CreateMaterialDirectDialog({
                     <span className="text-[10px] text-slate-400 font-bold uppercase block leading-none mb-1">Đơn vị lưu kho</span>
                     <span className="text-xs font-bold text-slate-700">m dài</span>
                   </div>
-                </div>
-
-                {/* Số lượng (m) */}
-                <div className="space-y-1.5">
-                  <Label className="font-semibold text-slate-700">Kích thước (Khổ)</Label>
-                  <Input
-                    type="number"
-                    placeholder="Nhập số lượng mét..."
-                    value={materialForm.quantity || ""}
-                    onChange={(e) => setMaterialForm((prev) => ({ ...prev, quantity: parseFloat(e.target.value) || 0 }))}
-                    className="rounded-md border-slate-200 h-10 text-xs font-mono font-bold focus-visible:ring-[#93631F] text-[#93631F]"
-                  />
                 </div>
               </>
             ) : (
