@@ -11661,17 +11661,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrderResponsePaginate"
+                  "$ref": "#/components/schemas/OrderListResponsePaginate"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrderResponsePaginate"
+                  "$ref": "#/components/schemas/OrderListResponsePaginate"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrderResponsePaginate"
+                  "$ref": "#/components/schemas/OrderListResponsePaginate"
                 }
               }
             }
@@ -11865,17 +11865,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrderResponsePaginate"
+                  "$ref": "#/components/schemas/OrderListResponsePaginate"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrderResponsePaginate"
+                  "$ref": "#/components/schemas/OrderListResponsePaginate"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrderResponsePaginate"
+                  "$ref": "#/components/schemas/OrderListResponsePaginate"
                 }
               }
             }
@@ -12288,17 +12288,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrderResponsePaginate"
+                  "$ref": "#/components/schemas/OrderListResponsePaginate"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrderResponsePaginate"
+                  "$ref": "#/components/schemas/OrderListResponsePaginate"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrderResponsePaginate"
+                  "$ref": "#/components/schemas/OrderListResponsePaginate"
                 }
               }
             }
@@ -12379,17 +12379,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrderResponsePaginate"
+                  "$ref": "#/components/schemas/OrderListResponsePaginate"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrderResponsePaginate"
+                  "$ref": "#/components/schemas/OrderListResponsePaginate"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrderResponsePaginate"
+                  "$ref": "#/components/schemas/OrderListResponsePaginate"
                 }
               }
             }
@@ -14079,17 +14079,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProofingOrderResponsePaginate"
+                  "$ref": "#/components/schemas/ProofingOrderListResponsePaginate"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProofingOrderResponsePaginate"
+                  "$ref": "#/components/schemas/ProofingOrderListResponsePaginate"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProofingOrderResponsePaginate"
+                  "$ref": "#/components/schemas/ProofingOrderListResponsePaginate"
                 }
               }
             }
@@ -14387,17 +14387,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProofingOrderResponsePaginate"
+                  "$ref": "#/components/schemas/ProofingOrderListResponsePaginate"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProofingOrderResponsePaginate"
+                  "$ref": "#/components/schemas/ProofingOrderListResponsePaginate"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProofingOrderResponsePaginate"
+                  "$ref": "#/components/schemas/ProofingOrderListResponsePaginate"
                 }
               }
             }
@@ -14459,17 +14459,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrderDetailResponsePaginate"
+                  "$ref": "#/components/schemas/OrderDetailAvailableResponsePaginate"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrderDetailResponsePaginate"
+                  "$ref": "#/components/schemas/OrderDetailAvailableResponsePaginate"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OrderDetailResponsePaginate"
+                  "$ref": "#/components/schemas/OrderDetailAvailableResponsePaginate"
                 }
               }
             }
@@ -14857,17 +14857,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProofingOrderResponsePaginate"
+                  "$ref": "#/components/schemas/ProofingOrderListResponsePaginate"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProofingOrderResponsePaginate"
+                  "$ref": "#/components/schemas/ProofingOrderListResponsePaginate"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProofingOrderResponsePaginate"
+                  "$ref": "#/components/schemas/ProofingOrderListResponsePaginate"
                 }
               }
             }
@@ -26072,6 +26072,134 @@
         },
         "additionalProperties": false
       },
+      "DesignSimpleResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "code": {
+            "type": "string",
+            "nullable": true
+          },
+          "customerId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "designerId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "designTypeId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "designType": {
+            "$ref": "#/components/schemas/DesignTypeResponse"
+          },
+          "materialTypeId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "materialType": {
+            "$ref": "#/components/schemas/MaterialTypeResponse"
+          },
+          "designName": {
+            "type": "string",
+            "nullable": true
+          },
+          "unitName": {
+            "type": "string",
+            "nullable": true
+          },
+          "dimensions": {
+            "type": "string",
+            "nullable": true
+          },
+          "length": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "width": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "height": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "areaM2": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "sidesClassification": {
+            "type": "string",
+            "nullable": true
+          },
+          "processClassification": {
+            "type": "string",
+            "nullable": true
+          },
+          "laminationType": {
+            "type": "string",
+            "nullable": true
+          },
+          "adhesiveOffset": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "laminationTypeName": {
+            "type": "string",
+            "nullable": true,
+            "readOnly": true
+          },
+          "designFileUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "designImageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "excelFileUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "nullable": true
+          },
+          "statusType": {
+            "type": "string",
+            "nullable": true
+          },
+          "availableQuantityForProofing": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "DesignTimelineEntryResponse": {
         "type": "object",
         "properties": {
@@ -27746,6 +27874,168 @@
         },
         "additionalProperties": false
       },
+      "OrderDetailAvailableResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "orderId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "designId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sharedAddressId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "sharedAddress": {
+            "$ref": "#/components/schemas/SharedAddressResponse"
+          },
+          "deliveryAddressLabel": {
+            "type": "string",
+            "nullable": true
+          },
+          "deliveryAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "design": {
+            "$ref": "#/components/schemas/DesignSimpleResponse"
+          },
+          "specification": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "nullable": true
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "unitPrice": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "totalPrice": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "requirements": {
+            "type": "string",
+            "nullable": true
+          },
+          "additionalNotes": {
+            "type": "string",
+            "nullable": true
+          },
+          "lastUpdatedByAccountantId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "lastUpdatedByAccountant": {
+            "$ref": "#/components/schemas/UserInfo"
+          },
+          "orderTotalAmount": {
+            "type": "number",
+            "format": "double"
+          },
+          "orderDepositAmount": {
+            "type": "number",
+            "format": "double"
+          },
+          "derivedStatus": {
+            "type": "string",
+            "nullable": true
+          },
+          "cutOverAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "itemStatus": {
+            "type": "string",
+            "nullable": true
+          },
+          "isCutOver": {
+            "type": "boolean",
+            "readOnly": true
+          },
+          "status": {
+            "type": "string",
+            "nullable": true,
+            "readOnly": true
+          },
+          "statusType": {
+            "type": "string",
+            "nullable": true,
+            "readOnly": true
+          },
+          "proofedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pendingQuantity": {
+            "type": "integer",
+            "format": "int32",
+            "readOnly": true
+          },
+          "proofingAllocations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProofingAllocationResponse"
+            },
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "OrderDetailAvailableResponsePaginate": {
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderDetailAvailableResponse"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "OrderDetailExportResponse": {
         "type": "object",
         "properties": {
@@ -27898,6 +28188,44 @@
             "format": "int32"
           },
           "customerName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "OrderDetailListResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "designId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "designCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "designName": {
+            "type": "string",
+            "nullable": true
+          },
+          "designImageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "type": "string",
+            "nullable": true
+          },
+          "statusType": {
             "type": "string",
             "nullable": true
           }
@@ -28148,35 +28476,6 @@
           },
           "design": {
             "$ref": "#/components/schemas/DesignResponse"
-          }
-        },
-        "additionalProperties": false
-      },
-      "OrderDetailResponsePaginate": {
-        "type": "object",
-        "properties": {
-          "size": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "page": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "total": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "totalPages": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/OrderDetailResponse"
-            },
-            "nullable": true
           }
         },
         "additionalProperties": false
@@ -28471,6 +28770,102 @@
         },
         "additionalProperties": false
       },
+      "OrderListResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "code": {
+            "type": "string",
+            "nullable": true
+          },
+          "customerId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "customerName": {
+            "type": "string",
+            "nullable": true
+          },
+          "customerCompanyName": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "nullable": true
+          },
+          "statusType": {
+            "type": "string",
+            "nullable": true
+          },
+          "totalAmount": {
+            "type": "number",
+            "format": "double"
+          },
+          "depositAmount": {
+            "type": "number",
+            "format": "double"
+          },
+          "paidAmount": {
+            "type": "number",
+            "format": "double"
+          },
+          "remainingAmount": {
+            "type": "number",
+            "format": "double",
+            "readOnly": true
+          },
+          "deliveryDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "orderDetails": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderDetailListResponse"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "OrderListResponsePaginate": {
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderListResponse"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "OrderResponse": {
         "type": "object",
         "properties": {
@@ -28706,35 +29101,6 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/OrderResponseForDesigner"
-            },
-            "nullable": true
-          }
-        },
-        "additionalProperties": false
-      },
-      "OrderResponsePaginate": {
-        "type": "object",
-        "properties": {
-          "size": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "page": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "total": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "totalPages": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/OrderResponse"
             },
             "nullable": true
           }
@@ -29523,6 +29889,31 @@
         },
         "additionalProperties": false
       },
+      "ProofingOrderDesignListResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "proofingOrderId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "designId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "design": {
+            "$ref": "#/components/schemas/DesignSimpleResponse"
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
       "ProofingOrderDesignResponse": {
         "type": "object",
         "properties": {
@@ -29589,6 +29980,119 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProofingOrderListResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "code": {
+            "type": "string",
+            "nullable": true
+          },
+          "materialTypeId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "materialType": {
+            "$ref": "#/components/schemas/MaterialTypeResponse"
+          },
+          "createdById": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdBy": {
+            "$ref": "#/components/schemas/UserInfo"
+          },
+          "totalQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "type": "string",
+            "nullable": true
+          },
+          "statusType": {
+            "type": "string",
+            "nullable": true
+          },
+          "proofingFileUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "paperSizeId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "paperSize": {
+            "$ref": "#/components/schemas/PaperSizeResponse"
+          },
+          "customPaperSize": {
+            "type": "string",
+            "nullable": true
+          },
+          "plateOutputCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "proofingOrderDesigns": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProofingOrderDesignListResponse"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProofingOrderListResponsePaginate": {
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProofingOrderListResponse"
+            },
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -29724,35 +30228,6 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ProofingOrderImageResponse"
-            },
-            "nullable": true
-          }
-        },
-        "additionalProperties": false
-      },
-      "ProofingOrderResponsePaginate": {
-        "type": "object",
-        "properties": {
-          "size": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "page": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "total": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "totalPages": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/ProofingOrderResponse"
             },
             "nullable": true
           }

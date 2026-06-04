@@ -11,7 +11,8 @@ import { DieExportResponseSchema } from "./die-export.schema";
 import {
   ProofingOrderDesignResponseSchema as GenProofingOrderDesignResponseSchema,
   ProofingOrderResponseSchema as GenProofingOrderResponseSchema,
-  ProofingOrderResponsePaginateSchema as GenProofingOrderResponsePaginateSchema,
+  ProofingOrderListResponsePaginateSchema as GenProofingOrderListResponsePaginateSchema,
+  ProofingOrderListResponseSchema as GenProofingOrderListResponseSchema,
   UpdateProofingDesignItemSchema as GenUpdateProofingDesignItemSchema,
   UpdateProofingOrderRequestSchema as GenUpdateProofingOrderRequestSchema,
   AddDesignsToProofingOrderRequestSchema as GenAddDesignsToProofingOrderRequestSchema,
@@ -30,6 +31,16 @@ export const ProofingOrderResponseSchema =
   GenProofingOrderResponseSchema.passthrough();
 export type ProofingOrderResponse = z.infer<typeof ProofingOrderResponseSchema>;
 
+// ===== ProofingOrderListResponse =====
+export const ProofingOrderListResponseSchema =
+  GenProofingOrderListResponseSchema.passthrough();
+export type ProofingOrderListResponse = z.infer<typeof ProofingOrderListResponseSchema>;
+
+// ===== ProofingOrderListResponsePaginate =====
+export const ProofingOrderListResponsePaginateSchema =
+  GenProofingOrderListResponsePaginateSchema.passthrough();
+export type ProofingOrderListResponsePaginate = z.infer<typeof ProofingOrderListResponsePaginateSchema>;
+
 // ===== PagedResponse =====
 export const ProofingOrderResponsePagedResponseSchema =
   createPagedResponseSchema(ProofingOrderResponseSchema);
@@ -38,10 +49,8 @@ export type ProofingOrderResponsePagedResponse = z.infer<
 >;
 
 // Re-export generated paginate schema for compatibility
-export { GenProofingOrderResponsePaginateSchema as ProofingOrderResponsePaginateSchema };
-export type ProofingOrderResponsePaginate = z.infer<
-  typeof GenProofingOrderResponsePaginateSchema
->;
+export const ProofingOrderResponsePaginateSchema = ProofingOrderListResponsePaginateSchema;
+export type ProofingOrderResponsePaginate = ProofingOrderListResponsePaginate;
 
 // ===== AddProofingOrderDetailItem =====
 export const AddProofingOrderDetailItemSchema =

@@ -11,9 +11,7 @@ import {
 import { CustomerSummaryResponseSchema } from "./customer.schema";
 import {
   OrderResponseSchema as GenOrderResponseSchema,
-  OrderResponsePaginateSchema as GenOrderResponsePaginateSchema,
   OrderDetailResponseSchema as GenOrderDetailResponseSchema,
-  OrderDetailResponsePaginateSchema as GenOrderDetailResponsePaginateSchema,
   OrderDetailResponseForDesignerSchema as GenOrderDetailResponseForDesignerSchema,
   OrderResponseForDesignerSchema as GenOrderResponseForDesignerSchema,
   OrderResponseForDesignerPaginateSchema as GenOrderResponseForDesignerPaginateSchema,
@@ -27,6 +25,11 @@ import {
   ProofingAllocationResponseSchema as GenProofingAllocationResponseSchema,
   PaymentSummaryResponseSchema as GenPaymentSummaryResponseSchema,
   CreateDesignRequestSchema as GenCreateDesignRequestSchema,
+  OrderListResponseSchema as GenOrderListResponseSchema,
+  OrderListResponsePaginateSchema as GenOrderListResponsePaginateSchema,
+  OrderDetailListResponseSchema as GenOrderDetailListResponseSchema,
+  OrderDetailAvailableResponseSchema as GenOrderDetailAvailableResponseSchema,
+  OrderDetailAvailableResponsePaginateSchema as GenOrderDetailAvailableResponsePaginateSchema,
 } from "./generated";
 
 // ===== OrderDetailResponse =====
@@ -35,13 +38,20 @@ export const OrderDetailResponseSchema =
   GenOrderDetailResponseSchema.passthrough();
 export type OrderDetailResponse = z.infer<typeof OrderDetailResponseSchema>;
 
-// Re-export generated paginate schema for compatibility
-export {
-  GenOrderDetailResponsePaginateSchema as OrderDetailResponsePaginateSchema,
-};
-export type OrderDetailResponsePaginate = z.infer<
-  typeof GenOrderDetailResponsePaginateSchema
->;
+// ===== OrderDetailListResponse =====
+export const OrderDetailListResponseSchema =
+  GenOrderDetailListResponseSchema.passthrough();
+export type OrderDetailListResponse = z.infer<typeof OrderDetailListResponseSchema>;
+
+// ===== OrderDetailAvailableResponse =====
+export const OrderDetailAvailableResponseSchema =
+  GenOrderDetailAvailableResponseSchema.passthrough();
+export type OrderDetailAvailableResponse = z.infer<typeof OrderDetailAvailableResponseSchema>;
+
+// ===== OrderDetailAvailableResponsePaginate =====
+export const OrderDetailAvailableResponsePaginateSchema =
+  GenOrderDetailAvailableResponsePaginateSchema.passthrough();
+export type OrderDetailAvailableResponsePaginate = z.infer<typeof OrderDetailAvailableResponsePaginateSchema>;
 
 // ===== OrderDetailResponseForDesigner =====
 export const OrderDetailResponseForDesignerSchema =
@@ -55,6 +65,14 @@ export type OrderDetailResponseForDesigner = z.infer<
 export const OrderResponseSchema = GenOrderResponseSchema.passthrough();
 export type OrderResponse = z.infer<typeof OrderResponseSchema>;
 
+// ===== OrderListResponse =====
+export const OrderListResponseSchema = GenOrderListResponseSchema.passthrough();
+export type OrderListResponse = z.infer<typeof OrderListResponseSchema>;
+
+// ===== OrderListResponsePaginate =====
+export const OrderListResponsePaginateSchema = GenOrderListResponsePaginateSchema.passthrough();
+export type OrderListResponsePaginate = z.infer<typeof OrderListResponsePaginateSchema>;
+
 // ===== PagedResponse =====
 // Keep our utility-based paged responses for consistency
 export const OrderResponsePagedResponseSchema =
@@ -63,11 +81,11 @@ export type OrderResponsePagedResponse = z.infer<
   typeof OrderResponsePagedResponseSchema
 >;
 
-// Re-export generated paginate schema for compatibility
-export { GenOrderResponsePaginateSchema as OrderResponsePaginateSchema };
-export type OrderResponsePaginate = z.infer<
-  typeof GenOrderResponsePaginateSchema
->;
+// Backward compatibility mappings
+export const OrderResponsePaginateSchema = OrderListResponsePaginateSchema;
+export type OrderResponsePaginate = OrderListResponsePaginate;
+export const OrderDetailResponsePaginateSchema = OrderDetailAvailableResponsePaginateSchema;
+export type OrderDetailResponsePaginate = OrderDetailAvailableResponsePaginate;
 
 // ===== CreateDesignRequest (embedded in CreateOrderRequest) =====
 // Custom schema - not in generated (CreateDesignRequest in generated is different)

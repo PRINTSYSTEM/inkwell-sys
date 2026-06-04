@@ -141,11 +141,7 @@ export const useAvailableOrderDetailsForProofing = (
               design.availableQuantityForProofing != null
                 ? design.availableQuantityForProofing
                 : undefined,
-            unitPrice: od.unitPrice ?? 0,
             orderId: od.orderId?.toString() || "",
-            orderCode: design.latestOrderCode || "",
-            customerName: design.customer?.name || "",
-            customerCompanyName: design.customer?.companyName || "",
             processClassificationOptionName:
               design.processClassification || undefined,
             sidesClassification: design.sidesClassification || undefined,
@@ -153,9 +149,6 @@ export const useAvailableOrderDetailsForProofing = (
             thumbnailUrl: design.designImageUrl || "",
             createdAt: design.createdAt || "",
             designId: design.id, // Store designId for fallback fetching if needed
-            designerName: design.designer?.fullName || undefined,
-            // Note: accountant may not be in DesignResponse schema, but if it exists in API response, it will be mapped
-            accountantName: (design as any).accountant?.fullName || undefined,
             specification: (() => {
               const rawSpec =
                 (od as any).specification ||

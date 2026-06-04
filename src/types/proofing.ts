@@ -20,8 +20,8 @@ export interface DesignItem {
   availableQuantity?: number; // Số lượng tối đa có thể tạo bình bài (from design.availableQuantityForProofing in response, or fetched separately if missing)
   unitPrice: number; // from OrderDetailResponse.unitPrice
   orderId: string; // from OrderDetailResponse.orderId (converted to string)
-  orderCode: string; // from design.latestOrderCode
-  customerName: string; // from design.customer?.name
+  orderCode?: string; // from design.latestOrderCode
+  customerName?: string; // from design.customer?.name
   customerCompanyName?: string; // from design.customer?.companyName
   processClassificationOptionName?: string; // from design.processClassification
   sidesClassification?: string; // from design.sidesClassification

@@ -174,7 +174,7 @@ export function PrepressOrderRow({
           >
             {designs.length} mã hàng
           </Badge>
-          {order.plateExport && (
+          {((order.plateOutputCount ?? 0) > 0) && (
             <Badge className="bg-green-500/10 text-green-600 border-green-200 text-[10px] px-2 py-0 h-5 font-bold">
               Đã xuất kẽm
             </Badge>
@@ -310,11 +310,11 @@ export function PrepressOrderRow({
         </TableCell>
         <TableCell className="py-3 align-top">
           <StatusBadge
-            status={order.plateExport ? "exported" : "not_exported"}
-            label={order.plateExport ? "Đã xuất" : "Chưa xuất"}
+            status={(order.plateOutputCount ?? 0) > 0 ? "exported" : "not_exported"}
+            label={(order.plateOutputCount ?? 0) > 0 ? "Đã xuất" : "Chưa xuất"}
             className={cn(
               "text-xs font-semibold",
-              order.plateExport
+              (order.plateOutputCount ?? 0) > 0
                 ? "bg-green-100 text-green-800 border-green-300"
                 : "bg-red-100 text-red-800 border-red-300",
             )}
@@ -346,6 +346,7 @@ export function PrepressOrderRow({
             </span>
           )}
         </TableCell>
+
         <TableCell className="py-3 font-medium align-top whitespace-nowrap text-muted-foreground text-[11px]">
           {order.createdAt
             ? new Date(order.createdAt).toLocaleDateString("vi-VN")

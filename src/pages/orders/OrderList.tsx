@@ -44,14 +44,16 @@ import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import {
   orderStatusLabels,
   designStatusLabels,
+  orderDetailItemStatusLabels,
+  orderDetailDerivedStatusLabels,
   formatCurrency,
   formatDate,
 } from "@/lib/status-utils";
 import type {
   OrderListParams,
   UserRole,
-  OrderResponse,
-  OrderDetailResponse,
+  OrderListResponse,
+  OrderDetailListResponse,
 } from "@/Schema";
 import { useAuth } from "@/hooks";
 import { useOrdersByRole } from "@/hooks/use-order";
@@ -173,8 +175,8 @@ export default function OrderList() {
       ).length,
       completed: allOrders.filter((o) => o.status === "completed").length,
       totalRevenue: allOrders.reduce((sum, o) => {
-        const order = o as OrderResponse;
-        return sum + ((order.totalAmount as number | undefined) ?? 0);
+        const order = o as OrderListResponse;
+        return sum + (order.totalAmount ?? 0);
       }, 0),
     };
   }, [orders, totalOrders]);
@@ -413,82 +415,22 @@ export default function OrderList() {
                 {!isLoading &&
                   !isError &&
                   orders.map((order) => {
-                    // Use OrderResponse type which includes customer object
-                    const orderResponse = order as OrderResponse;
+                    const orderResponse = order as any;
 
-                    // Use nested customer object if available, otherwise fall back to flat fields
-                    const customerName =
-                      orderResponse.customer?.name ||
-                      orderResponse.customerName ||
-                      null;
-                    const customerCompanyName =
-                      orderResponse.customer?.companyName ||
-                      orderResponse.customerCompanyName ||
-                      null;
+                    const customerName = orderResponse.customerName || null;
+                    const customerCompanyName = orderResponse.customerCompanyName || null;
                     const isCompany = !!customerCompanyName;
-                    const totalAmount =
-                      (orderResponse.totalAmount as number | undefined) ?? 0;
-                    const depositAmount =
-                      (orderResponse.depositAmount as number | undefined) ?? 0;
-                    const remaining = totalAmount - depositAmount;
+                    const totalAmount = orderResponse.totalAmount ?? 0;
+                    const depositAmount = orderResponse.depositAmount ?? 0;
+                    const remaining = orderResponse.remainingAmount ?? (totalAmount - depositAmount);
                     const orderDetails = orderResponse.orderDetails ?? [];
-
-                    // Determine if customer invoice info is complete
-                    const customerNameField =
-                      orderResponse.customer &&
-                      typeof orderResponse.customer.name === "string"
-                        ? orderResponse.customer.name
-                        : orderResponse.customerName || "";
-                    const customerPhoneField =
-                      orderResponse.customer &&
-                      typeof (orderResponse.customer as any).phone === "string"
-                        ? (orderResponse.customer as any).phone
-                        : orderResponse.customerPhone || "";
-                    const customerAddressField =
-                      orderResponse.customer &&
-                      typeof (orderResponse.customer as any).address ===
-                        "string"
-                        ? (orderResponse.customer as any).address
-                        : orderResponse.customerAddress || "";
-                    const customerEmailField =
-                      orderResponse.customer &&
-                      typeof (orderResponse.customer as any).email === "string"
-                        ? (orderResponse.customer as any).email
-                        : orderResponse.customerEmail || "";
-                    const customerCompanyField =
-                      orderResponse.customer &&
-                      typeof (orderResponse.customer as any).companyName ===
-                        "string"
-                        ? (orderResponse.customer as any).companyName
-                        : orderResponse.customerCompanyName || "";
-                    const customerTaxCodeField =
-                      orderResponse.customer &&
-                      typeof (orderResponse.customer as any).taxCode ===
-                        "string"
-                        ? (orderResponse.customer as any).taxCode
-                        : orderResponse.customerTaxCode || "";
-
-                    const isCustomerInfoComplete =
-                      !!customerNameField.trim() &&
-                      !!customerPhoneField.trim() &&
-                      !!customerAddressField.trim() &&
-                      !!customerEmailField.trim() &&
-                      (!customerCompanyField.trim() ||
-                        !!customerTaxCodeField.trim());
-
-                    const highlightMissingInfo = !isCustomerInfoComplete;
 
                     return (
                       <>
                         <TableRow
                           key={order.id}
-                          className={`h-14 cursor-pointer border-x-2 border-t-2 border-border border-l-4 shadow-sm ${highlightMissingInfo ? "bg-rose-50 hover:bg-rose-100 border-l-rose-500" : "bg-card hover:bg-muted/40 border-l-primary"}`}
+                          className="h-14 cursor-pointer border-x-2 border-t-2 border-border border-l-4 shadow-sm bg-card hover:bg-muted/40 border-l-primary"
                           onClick={() => handleOrderClick(order.id ?? 0)}
-                          title={
-                            highlightMissingInfo
-                              ? "Thiếu thông tin để xuất hóa đơn"
-                              : undefined
-                          }
                         >
                           <TableCell className="py-3">
                             <div className="font-bold text-sm text-primary">
@@ -515,9 +457,6 @@ export default function OrderList() {
                                     text={customerName || "-"}
                                     className="font-semibold text-sm"
                                   />
-                                  {highlightMissingInfo && (
-                                    <AlertTriangle className="h-4 w-4 text-rose-700" />
-                                  )}
                                 </div>
                                 {customerCompanyName && (
                                   <TruncatedText
@@ -584,32 +523,37 @@ export default function OrderList() {
                                   <Table className="mb-0">
                                     <TableBody>
                                       {orderDetails.map((orderDetail) => {
-                                        const detail =
-                                          orderDetail as OrderDetailResponse;
-                                        const design = detail.design;
-                                        if (!design) return null;
+                                        // Can be OrderDetailListResponse or OrderDetailResponseForDesigner
+                                        const detail = orderDetail as any;
+
+                                        const designId = detail.design?.id ?? detail.designId;
+                                        const designImageUrl = detail.design?.designImageUrl ?? detail.designImageUrl;
+                                        const designCode = detail.design?.code ?? detail.designCode;
+                                        const designName = detail.design?.designName ?? detail.designName;
+                                        const status = detail.design?.status ?? detail.status;
+                                        const quantity = detail.quantity ?? 0;
 
                                         return (
                                           <TableRow
                                             key={detail.id}
                                             className="hover:bg-muted/40 transition-colors border-b last:border-b-0 border-border/60 cursor-pointer"
                                             onClick={(e) =>
-                                              handleDesignClick(design.id, e)
+                                              handleDesignClick(designId, e)
                                             }
                                           >
                                             {/* Ảnh */}
                                             <TableCell className="w-[72px] align-middle">
                                               <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md bg-muted/60 flex items-center justify-center">
-                                                {design.designImageUrl ? (
+                                                {designImageUrl ? (
                                                   <img
-                                                    src={design.designImageUrl}
+                                                    src={designImageUrl}
                                                     alt={
-                                                      design.code || "Thiết kế"
+                                                      designCode || "Thiết kế"
                                                     }
                                                     className="h-full w-full object-cover cursor-zoom-in"
                                                     onClick={(e) =>
                                                       handleImageClick(
-                                                        design.designImageUrl!,
+                                                        designImageUrl!,
                                                         e,
                                                       )
                                                     }
@@ -625,13 +569,13 @@ export default function OrderList() {
                                               <div className="min-w-0 space-y-1">
                                                 <div className="flex items-center justify-between gap-2">
                                                   <span className="truncate text-xs font-semibold uppercase tracking-wide text-primary">
-                                                    {design.code ||
-                                                      `DES-${design.id}`}
+                                                    {designCode ||
+                                                      `DES-${designId}`}
                                                   </span>
                                                 </div>
-                                                {design.designName && (
+                                                {designName && (
                                                   <p className="truncate text-xs text-muted-foreground">
-                                                    {design.designName}
+                                                    {designName}
                                                   </p>
                                                 )}
                                               </div>
@@ -640,12 +584,12 @@ export default function OrderList() {
                                             {/* Trạng thái */}
                                             <TableCell className="w-[160px] align-middle">
                                               <StatusBadge
-                                                status={design.status}
+                                                status={status}
                                                 label={
-                                                  designStatusLabels[
-                                                    design.status || ""
-                                                  ] ||
-                                                  design.status ||
+                                                  orderDetailItemStatusLabels[status || ""] ||
+                                                  orderDetailDerivedStatusLabels[status || ""] ||
+                                                  designStatusLabels[status || ""] ||
+                                                  status ||
                                                   "N/A"
                                                 }
                                               />
@@ -654,7 +598,7 @@ export default function OrderList() {
                                             {/* Số lượng */}
                                             <TableCell className="w-[110px] text-right align-middle">
                                               <span className="inline-flex min-w-[56px] items-center justify-end rounded-full bg-muted px-2 py-1 text-xs font-semibold">
-                                                x{detail.quantity ?? 0}
+                                                x{quantity}
                                               </span>
                                             </TableCell>
                                           </TableRow>

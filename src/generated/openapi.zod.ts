@@ -2269,13 +2269,43 @@ const OrderResponse = z
     payments: z.array(PaymentSummaryResponse).nullable(),
   })
   .partial();
-const OrderResponsePaginate = z
+const OrderDetailListResponse = z
+  .object({
+    id: z.number().int(),
+    designId: z.number().int(),
+    designCode: z.string().nullable(),
+    designName: z.string().nullable(),
+    designImageUrl: z.string().nullable(),
+    quantity: z.number().int(),
+    status: z.string().nullable(),
+    statusType: z.string().nullable(),
+  })
+  .partial();
+const OrderListResponse = z
+  .object({
+    id: z.number().int(),
+    code: z.string().nullable(),
+    customerId: z.number().int(),
+    customerName: z.string().nullable(),
+    customerCompanyName: z.string().nullable(),
+    status: z.string().nullable(),
+    statusType: z.string().nullable(),
+    totalAmount: z.number(),
+    depositAmount: z.number(),
+    paidAmount: z.number(),
+    remainingAmount: z.number(),
+    deliveryDate: z.string().datetime({ offset: true }).nullable(),
+    createdAt: z.string().datetime({ offset: true }),
+    orderDetails: z.array(OrderDetailListResponse).nullable(),
+  })
+  .partial();
+const OrderListResponsePaginate = z
   .object({
     size: z.number().int(),
     page: z.number().int(),
     total: z.number().int(),
     totalPages: z.number().int(),
-    items: z.array(OrderResponse).nullable(),
+    items: z.array(OrderListResponse).nullable(),
   })
   .partial();
 const UpdateOrderRequest = z
@@ -2711,13 +2741,78 @@ const ProofingOrderResponse = z
     images: z.array(ProofingOrderImageResponse).nullable(),
   })
   .partial();
-const ProofingOrderResponsePaginate = z
+const DesignSimpleResponse = z
+  .object({
+    id: z.number().int(),
+    code: z.string().nullable(),
+    customerId: z.number().int(),
+    designerId: z.number().int(),
+    designTypeId: z.number().int(),
+    designType: DesignTypeResponse,
+    materialTypeId: z.number().int(),
+    materialType: MaterialTypeResponse,
+    designName: z.string().nullable(),
+    unitName: z.string().nullable(),
+    dimensions: z.string().nullable(),
+    length: z.number().nullable(),
+    width: z.number().nullable(),
+    height: z.number().nullable(),
+    areaM2: z.number().nullable(),
+    sidesClassification: z.string().nullable(),
+    processClassification: z.string().nullable(),
+    laminationType: z.string().nullable(),
+    adhesiveOffset: z.number().nullable(),
+    laminationTypeName: z.string().nullable(),
+    designFileUrl: z.string().nullable(),
+    designImageUrl: z.string().nullable(),
+    excelFileUrl: z.string().nullable(),
+    notes: z.string().nullable(),
+    status: z.string().nullable(),
+    statusType: z.string().nullable(),
+    availableQuantityForProofing: z.number().int().nullable(),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }).nullable(),
+  })
+  .partial();
+const ProofingOrderDesignListResponse = z
+  .object({
+    id: z.number().int(),
+    proofingOrderId: z.number().int(),
+    designId: z.number().int(),
+    design: DesignSimpleResponse,
+    quantity: z.number().int(),
+  })
+  .partial();
+const ProofingOrderListResponse = z
+  .object({
+    id: z.number().int(),
+    code: z.string().nullable(),
+    materialTypeId: z.number().int().nullable(),
+    materialType: MaterialTypeResponse,
+    createdById: z.number().int(),
+    createdBy: UserInfo,
+    totalQuantity: z.number().int(),
+    status: z.string().nullable(),
+    statusType: z.string().nullable(),
+    proofingFileUrl: z.string().nullable(),
+    imageUrl: z.string().nullable(),
+    notes: z.string().nullable(),
+    paperSizeId: z.number().int().nullable(),
+    paperSize: PaperSizeResponse,
+    customPaperSize: z.string().nullable(),
+    plateOutputCount: z.number().int(),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }),
+    proofingOrderDesigns: z.array(ProofingOrderDesignListResponse).nullable(),
+  })
+  .partial();
+const ProofingOrderListResponsePaginate = z
   .object({
     size: z.number().int(),
     page: z.number().int(),
     total: z.number().int(),
     totalPages: z.number().int(),
-    items: z.array(ProofingOrderResponse).nullable(),
+    items: z.array(ProofingOrderListResponse).nullable(),
   })
   .partial();
 const AddProofingOrderDetailItem = z.object({
@@ -2746,13 +2841,46 @@ const RejectDesignRequest = z.object({
   orderDetailId: z.number().int(),
   reason: z.string().nullish(),
 });
-const OrderDetailResponsePaginate = z
+const OrderDetailAvailableResponse = z
+  .object({
+    id: z.number().int(),
+    orderId: z.number().int(),
+    designId: z.number().int(),
+    sharedAddressId: z.number().int().nullable(),
+    sharedAddress: SharedAddressResponse,
+    deliveryAddressLabel: z.string().nullable(),
+    deliveryAddress: z.string().nullable(),
+    design: DesignSimpleResponse,
+    specification: z.array(z.string()).nullable(),
+    quantity: z.number().int(),
+    unitPrice: z.number().nullable(),
+    totalPrice: z.number().nullable(),
+    requirements: z.string().nullable(),
+    additionalNotes: z.string().nullable(),
+    lastUpdatedByAccountantId: z.number().int().nullable(),
+    lastUpdatedByAccountant: UserInfo,
+    orderTotalAmount: z.number(),
+    orderDepositAmount: z.number(),
+    derivedStatus: z.string().nullable(),
+    cutOverAt: z.string().datetime({ offset: true }).nullable(),
+    itemStatus: z.string().nullable(),
+    isCutOver: z.boolean(),
+    status: z.string().nullable(),
+    statusType: z.string().nullable(),
+    proofedQuantity: z.number().int(),
+    pendingQuantity: z.number().int(),
+    proofingAllocations: z.array(ProofingAllocationResponse).nullable(),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }),
+  })
+  .partial();
+const OrderDetailAvailableResponsePaginate = z
   .object({
     size: z.number().int(),
     page: z.number().int(),
     total: z.number().int(),
     totalPages: z.number().int(),
-    items: z.array(OrderDetailResponse).nullable(),
+    items: z.array(OrderDetailAvailableResponse).nullable(),
   })
   .partial();
 const DesignTypeCountResponse = z
@@ -3631,7 +3759,9 @@ export const schemas = {
   OrderDetailResponse,
   PaymentSummaryResponse,
   OrderResponse,
-  OrderResponsePaginate,
+  OrderDetailListResponse,
+  OrderListResponse,
+  OrderListResponsePaginate,
   UpdateOrderRequest,
   AddDesignToOrderRequest,
   OrderDetailResponseForDesigner,
@@ -3664,13 +3794,17 @@ export const schemas = {
   ProofingOrderDesignResponse,
   ProductionResponse,
   ProofingOrderResponse,
-  ProofingOrderResponsePaginate,
+  DesignSimpleResponse,
+  ProofingOrderDesignListResponse,
+  ProofingOrderListResponse,
+  ProofingOrderListResponsePaginate,
   AddProofingOrderDetailItem,
   AddDesignsToProofingOrderRequest,
   UpdateProofingDesignItem,
   UpdateProofingOrderRequest,
   RejectDesignRequest,
-  OrderDetailResponsePaginate,
+  OrderDetailAvailableResponse,
+  OrderDetailAvailableResponsePaginate,
   DesignTypeCountResponse,
   RecordPlateExportRequest,
   RecordDieExportRequest,
@@ -8905,7 +9039,7 @@ const endpoints = makeApi([
         schema: z.string().optional(),
       },
     ],
-    response: OrderResponsePaginate,
+    response: OrderListResponsePaginate,
   },
   {
     method: "put",
@@ -9185,7 +9319,7 @@ const endpoints = makeApi([
         schema: z.string().optional(),
       },
     ],
-    response: OrderResponsePaginate,
+    response: OrderListResponsePaginate,
   },
   {
     method: "get",
@@ -9283,7 +9417,7 @@ const endpoints = makeApi([
         schema: z.string().optional(),
       },
     ],
-    response: OrderResponsePaginate,
+    response: OrderListResponsePaginate,
   },
   {
     method: "get",
@@ -9342,7 +9476,7 @@ const endpoints = makeApi([
         schema: z.string().optional(),
       },
     ],
-    response: OrderResponsePaginate,
+    response: OrderListResponsePaginate,
   },
   {
     method: "get",
@@ -9961,7 +10095,7 @@ const endpoints = makeApi([
         schema: z.string().optional(),
       },
     ],
-    response: ProofingOrderResponsePaginate,
+    response: ProofingOrderListResponsePaginate,
   },
   {
     method: "put",
@@ -10310,7 +10444,7 @@ const endpoints = makeApi([
         schema: z.number().int().optional().default(10),
       },
     ],
-    response: OrderDetailResponsePaginate,
+    response: OrderDetailAvailableResponsePaginate,
   },
   {
     method: "get",
@@ -10377,7 +10511,7 @@ const endpoints = makeApi([
         schema: z.string().optional(),
       },
     ],
-    response: ProofingOrderResponsePaginate,
+    response: ProofingOrderListResponsePaginate,
   },
   {
     method: "post",
@@ -10420,7 +10554,7 @@ const endpoints = makeApi([
         schema: z.string().optional(),
       },
     ],
-    response: ProofingOrderResponsePaginate,
+    response: ProofingOrderListResponsePaginate,
   },
   {
     method: "get",

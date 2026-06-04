@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-06-04T01:34:02.560Z */
+/* Generated at: 2026-06-04T13:18:47.084Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -131,6 +131,7 @@ export const DeliveryNoteResponseSchema = schemas.DeliveryNoteResponse;
 export const DeliveryNoteResponsePaginateSchema = schemas.DeliveryNoteResponsePaginate;
 export const DesignResponseSchema = schemas.DesignResponse;
 export const DesignResponsePaginateSchema = schemas.DesignResponsePaginate;
+export const DesignSimpleResponseSchema = schemas.DesignSimpleResponse;
 export const DesignTimelineEntryResponseSchema = schemas.DesignTimelineEntryResponse;
 export const DesignTimelineEntryResponsePaginateSchema = schemas.DesignTimelineEntryResponsePaginate;
 export const DesignTypeCountResponseSchema = schemas.DesignTypeCountResponse;
@@ -172,21 +173,24 @@ export const MaterialResponseIPaginateSchema = schemas.MaterialResponseIPaginate
 export const MaterialTypeItemSchema = schemas.MaterialTypeItem;
 export const MaterialTypeResponseSchema = schemas.MaterialTypeResponse;
 export const MaterialTypeResponsePaginateSchema = schemas.MaterialTypeResponsePaginate;
+export const OrderDetailAvailableResponseSchema = schemas.OrderDetailAvailableResponse;
+export const OrderDetailAvailableResponsePaginateSchema = schemas.OrderDetailAvailableResponsePaginate;
 export const OrderDetailExportResponseSchema = schemas.OrderDetailExportResponse;
 export const OrderDetailForDeliveryResponseSchema = schemas.OrderDetailForDeliveryResponse;
+export const OrderDetailListResponseSchema = schemas.OrderDetailListResponse;
 export const OrderDetailResponseSchema = schemas.OrderDetailResponse;
 export const OrderDetailResponseForDesignerSchema = schemas.OrderDetailResponseForDesigner;
-export const OrderDetailResponsePaginateSchema = schemas.OrderDetailResponsePaginate;
 export const OrderDrillDownResponseSchema = schemas.OrderDrillDownResponse;
 export const OrderDrillDownResponseIPaginateSchema = schemas.OrderDrillDownResponseIPaginate;
 export const OrderExportResponseSchema = schemas.OrderExportResponse;
 export const OrderForDeliveryResponseSchema = schemas.OrderForDeliveryResponse;
 export const OrderForDeliveryResponsePaginateSchema = schemas.OrderForDeliveryResponsePaginate;
 export const OrderHistoryDetailResponseSchema = schemas.OrderHistoryDetailResponse;
+export const OrderListResponseSchema = schemas.OrderListResponse;
+export const OrderListResponsePaginateSchema = schemas.OrderListResponsePaginate;
 export const OrderResponseSchema = schemas.OrderResponse;
 export const OrderResponseForDesignerSchema = schemas.OrderResponseForDesigner;
 export const OrderResponseForDesignerPaginateSchema = schemas.OrderResponseForDesignerPaginate;
-export const OrderResponsePaginateSchema = schemas.OrderResponsePaginate;
 export const PaperSizeResponseSchema = schemas.PaperSizeResponse;
 export const PaperSizeResponseIPaginateSchema = schemas.PaperSizeResponseIPaginate;
 export const PaymentMethodResponseSchema = schemas.PaymentMethodResponse;
@@ -204,10 +208,12 @@ export const ProductionOrderResponsePaginateSchema = schemas.ProductionOrderResp
 export const ProductionResponseSchema = schemas.ProductionResponse;
 export const ProductionStepResponseSchema = schemas.ProductionStepResponse;
 export const ProofingAllocationResponseSchema = schemas.ProofingAllocationResponse;
+export const ProofingOrderDesignListResponseSchema = schemas.ProofingOrderDesignListResponse;
 export const ProofingOrderDesignResponseSchema = schemas.ProofingOrderDesignResponse;
 export const ProofingOrderImageResponseSchema = schemas.ProofingOrderImageResponse;
+export const ProofingOrderListResponseSchema = schemas.ProofingOrderListResponse;
+export const ProofingOrderListResponsePaginateSchema = schemas.ProofingOrderListResponsePaginate;
 export const ProofingOrderResponseSchema = schemas.ProofingOrderResponse;
-export const ProofingOrderResponsePaginateSchema = schemas.ProofingOrderResponsePaginate;
 export const PurchaseByItemRowSchema = schemas.PurchaseByItemRow;
 export const PurchaseByItemRowIPaginateSchema = schemas.PurchaseByItemRowIPaginate;
 export const PurchaseDetailLedgerRowSchema = schemas.PurchaseDetailLedgerRow;
