@@ -24478,6 +24478,27 @@
             "format": "int32",
             "nullable": true
           },
+          "vendorId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "receiverName": {
+            "type": "string",
+            "nullable": true
+          },
+          "receiverAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "warehouseName": {
+            "type": "string",
+            "nullable": true
+          },
+          "warehouseAddress": {
+            "type": "string",
+            "nullable": true
+          },
           "notes": {
             "type": "string",
             "nullable": true
@@ -26884,6 +26905,19 @@
           },
           "createdByName": {
             "type": "string",
+            "nullable": true
+          },
+          "jobCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "size": {
+            "type": "string",
+            "nullable": true
+          },
+          "quantityProduced": {
+            "type": "integer",
+            "format": "int32",
             "nullable": true
           },
           "createdAt": {
@@ -32828,6 +32862,27 @@
           "orderId": {
             "type": "integer",
             "format": "int32",
+            "nullable": true
+          },
+          "vendorId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "receiverName": {
+            "type": "string",
+            "nullable": true
+          },
+          "receiverAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "warehouseName": {
+            "type": "string",
+            "nullable": true
+          },
+          "warehouseAddress": {
+            "type": "string",
             "nullable": true
           },
           "notes": {

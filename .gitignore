@@ -36,3 +36,8 @@ dist-ssr
 scripts
 .shared/*
 .chrome_profile/
+
+# IDE & AI Assistant local caches
+.codegraph/
+.gemini/
+.claude/

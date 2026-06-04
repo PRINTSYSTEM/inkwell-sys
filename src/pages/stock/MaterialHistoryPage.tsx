@@ -153,11 +153,26 @@ export default function MaterialHistoryPage() {
     laborCost: 0,
   });
 
-  const [stockOutForm, setStockOutForm] = useState({
+  const [stockOutForm, setStockOutForm] = useState<{
+    quantity: number;
+    documentCode: string;
+    notes: string;
+    purpose: string;
+    vendorId?: number;
+    receiverName?: string;
+    receiverAddress?: string;
+    warehouseName?: string;
+    warehouseAddress?: string;
+  }>({
     quantity: 0,
     documentCode: "",
     notes: "",
     purpose: "transfer",
+    vendorId: undefined,
+    receiverName: "",
+    receiverAddress: "",
+    warehouseName: "",
+    warehouseAddress: "",
   });
 
   // API Queries
@@ -170,6 +185,8 @@ export default function MaterialHistoryPage() {
     isNumericId ? materialId : null,
     isNumericId
   );
+
+  const showSheetOutputColumn = materialDetail?.type !== "to";
 
   const {
     data: historyData,
@@ -651,6 +668,11 @@ export default function MaterialHistoryPage() {
                   documentCode: "",
                   notes: "",
                   purpose: "transfer",
+                  vendorId: undefined,
+                  receiverName: "",
+                  receiverAddress: "",
+                  warehouseName: "",
+                  warehouseAddress: "",
                 });
                 setIsStockOutOpen(true);
               }}
@@ -759,7 +781,9 @@ export default function MaterialHistoryPage() {
                 <TableHead className="font-bold py-2 pl-4 text-left w-[130px]">Thời gian</TableHead>
                 <TableHead className="font-bold py-2 text-left w-[100px]">Mã bài</TableHead>
                 <TableHead className="font-bold py-2 text-left w-[150px]">Kích thước</TableHead>
-                <TableHead className="text-right font-bold py-2 w-[130px] whitespace-nowrap">Số lượng tờ ra</TableHead>
+                {showSheetOutputColumn && (
+                  <TableHead className="text-right font-bold py-2 w-[130px] whitespace-nowrap">Số lượng tờ ra</TableHead>
+                )}
                 <TableHead className="text-right font-bold py-2 w-[100px]">Số dư đầu</TableHead>
                 <TableHead className="text-right font-bold py-2 w-[110px]">Nhập({materialDetail?.unit || "m"})</TableHead>
                 <TableHead className="text-right font-bold py-2 w-[110px]">Xuất({materialDetail?.unit || "m"})</TableHead>
@@ -773,7 +797,7 @@ export default function MaterialHistoryPage() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i} className="border-b border-slate-100">
-                    {Array.from({ length: 11 }).map((_, j) => (
+                    {Array.from({ length: showSheetOutputColumn ? 11 : 10 }).map((_, j) => (
                       <TableCell key={j} className="py-4">
                         <Skeleton className="h-5 w-full rounded-md" />
                       </TableCell>
@@ -783,7 +807,7 @@ export default function MaterialHistoryPage() {
               ) : filteredItems.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={11}
+                    colSpan={showSheetOutputColumn ? 11 : 10}
                     className="h-32 text-center text-slate-400 text-xs font-semibold py-8"
                   >
                     <div className="flex flex-col items-center justify-center space-y-2">
@@ -842,11 +866,13 @@ export default function MaterialHistoryPage() {
                         </TableCell>
 
                         {/* 4. Số lượng tờ ra */}
-                        <TableCell className="text-right py-2 font-bold tabular-nums text-slate-800 w-[130px] whitespace-nowrap">
-                          {anyEntry.type === "cut" && anyEntry.outputs?.[0]?.quantityProduced !== undefined
-                            ? anyEntry.outputs[0].quantityProduced.toLocaleString()
-                            : "—"}
-                        </TableCell>
+                        {showSheetOutputColumn && (
+                          <TableCell className="text-right py-2 font-bold tabular-nums text-slate-800 w-[130px] whitespace-nowrap">
+                            {anyEntry.type === "cut" && anyEntry.outputs?.[0]?.quantityProduced !== undefined
+                              ? anyEntry.outputs[0].quantityProduced.toLocaleString()
+                              : "—"}
+                          </TableCell>
+                        )}
 
                         {/* 5. Số dư đầu */}
                         <TableCell className="text-right py-2 font-bold tabular-nums text-slate-350 italic w-[100px]">
@@ -903,7 +929,12 @@ export default function MaterialHistoryPage() {
                                       quantity: anyEntry.quantity,
                                       documentCode: anyEntry.raw.code || "",
                                       notes: anyEntry.notes || "",
-                                      purpose: anyEntry.raw.purpose || "transfer"
+                                      purpose: anyEntry.raw.purpose || "transfer",
+                                      vendorId: anyEntry.raw.vendorId || undefined,
+                                      receiverName: anyEntry.raw.receiverName || "",
+                                      receiverAddress: anyEntry.raw.receiverAddress || "",
+                                      warehouseName: anyEntry.raw.warehouseName || "",
+                                      warehouseAddress: anyEntry.raw.warehouseAddress || "",
                                     });
                                     setIsStockOutOpen(true);
                                   }
@@ -1003,11 +1034,13 @@ export default function MaterialHistoryPage() {
                       </TableCell>
 
                       {/* 4. Số lượng tờ ra */}
-                      <TableCell className="text-right py-2 font-bold tabular-nums text-slate-800 w-[130px] whitespace-nowrap">
-                        {anyEntry.quantityProduced !== undefined && anyEntry.quantityProduced !== null
-                          ? anyEntry.quantityProduced.toLocaleString()
-                          : ""}
-                      </TableCell>
+                      {showSheetOutputColumn && (
+                        <TableCell className="text-right py-2 font-bold tabular-nums text-slate-800 w-[130px] whitespace-nowrap">
+                          {anyEntry.quantityProduced !== undefined && anyEntry.quantityProduced !== null
+                            ? anyEntry.quantityProduced.toLocaleString()
+                            : ""}
+                        </TableCell>
+                      )}
 
                       {/* 5. Số dư đầu */}
                       <TableCell className="text-right py-2 font-bold tabular-nums text-slate-500 w-[100px]">
