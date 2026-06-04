@@ -65,9 +65,14 @@ export const useStockIn = (id: number | null, enabled = true) => {
 export const useCreateStockIn = () => {
   const queryClient = useQueryClient();
 
-  return useMutation({
+  return useMutation<
+    { id: number } | any,
+    ApiError,
+    CreateStockInRequest
+  >({
     mutationFn: async (data: CreateStockInRequest) => {
-      await apiRequest.post(API_SUFFIX.STOCK_INS, data);
+      const response = await apiRequest.post<any>(API_SUFFIX.STOCK_INS, data);
+      return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: stockInKeys.all });

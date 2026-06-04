@@ -13,7 +13,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { useCreateMaterial } from "@/hooks/use-material";
+import { useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/http";
+import { API_SUFFIX } from "@/apis";
 
 const parseRollWidth = (name: string): number | null => {
   const match = name.trim().match(/(\d+(?:\.\d+)?)\s*(?:cm|mm|m)?$/i);
@@ -37,7 +39,7 @@ export function CreateMaterialDirectDialog({
   vendorsData,
   refetch,
 }: CreateMaterialDirectDialogProps) {
-  const { mutateAsync: createMaterial } = useCreateMaterial();
+  const queryClient = useQueryClient();
 
   const [materialType, setMaterialType] = useState<"cuon" | "to">("cuon");
   const [materialForm, setMaterialForm] = useState({
@@ -121,13 +123,63 @@ export function CreateMaterialDirectDialog({
       let toastId: string | number | undefined;
       try {
         toastId = toast.loading("Đang tạo chất liệu mới...");
-        await createMaterial(payload);
+        const newMaterialRes = await apiRequest.post<any>(API_SUFFIX.MATERIALS, payload);
+        const newMaterial = newMaterialRes.data;
+        
+        if (newMaterial && materialForm.quantity > 0) {
+          toast.loading("Đang tạo và duyệt phiếu nhập kho ban đầu...", { id: toastId });
+          const calculatedTotalAmount = (materialForm.quantity || 0) * (newMaterial.unitPrice || 0);
+          const lineKind = materialType === "cuon" ? "roll" : "sheet";
+          
+          const stockInRes = await apiRequest.post<any>(API_SUFFIX.STOCK_INS, {
+            source: "manual",
+            itemType: "material",
+            vendorId: selectedVendor.id,
+            totalAmount: calculatedTotalAmount || undefined,
+            notes: materialForm.notes || "Nhập kho ban đầu khi tạo vật tư mới",
+            stockInDate: new Date().toISOString(),
+            items: [
+              {
+                lineKind: lineKind,
+                itemName: newMaterial.name,
+                itemCode: newMaterial.code || undefined,
+                unit: newMaterial.unit || undefined,
+                quantity: materialForm.quantity,
+                unitPrice: newMaterial.unitPrice || undefined,
+                notes: materialForm.notes || undefined,
+                materialId: newMaterial.id,
+                length: newMaterial.length || undefined,
+                width: newMaterial.width || undefined,
+                height: newMaterial.height || undefined,
+              },
+            ],
+          });
+          const stockInResult = stockInRes.data;
+
+          if (stockInResult && stockInResult.id) {
+            await apiRequest.post(API_SUFFIX.STOCK_IN_COMPLETE(stockInResult.id));
+          }
+        }
+        
+        // Invalidate queries to refresh lists
+        queryClient.invalidateQueries({ queryKey: ["materials"] });
+        queryClient.invalidateQueries({ queryKey: ["stock-ins"] });
+        
         if (toastId) toast.dismiss(toastId);
+        
+        if (materialForm.quantity > 0) {
+          toast.success(`Đã tạo vật tư "${newMaterial.name}" và nhập kho ${materialForm.quantity} ${newMaterial.unit || (materialType === "cuon" ? "m" : "tờ")} thành công!`);
+        } else {
+          toast.success(`Đã tạo vật tư "${newMaterial.name}" thành công!`);
+        }
+        
         onOpenChange(false);
         refetch();
-      } catch (err) {
+      } catch (err: any) {
         if (toastId) toast.dismiss(toastId);
-        throw err;
+        const errMsg = err.response?.data?.message || err.message || "Đã xảy ra lỗi!";
+        toast.error(`Thực hiện thất bại: ${errMsg}`);
+        console.error(err);
       }
     } catch (error) {
       console.error(error);
@@ -202,6 +254,18 @@ export function CreateMaterialDirectDialog({
                     <span className="text-[10px] text-slate-400 font-bold uppercase block leading-none mb-1">Đơn vị lưu kho</span>
                     <span className="text-xs font-bold text-slate-700">m dài</span>
                   </div>
+                </div>
+
+                {/* Số lượng (m) */}
+                <div className="space-y-1.5">
+                  <Label className="font-semibold text-slate-700">Số lượng ban đầu (m)</Label>
+                  <Input
+                    type="number"
+                    placeholder="Nhập số lượng mét..."
+                    value={materialForm.quantity || ""}
+                    onChange={(e) => setMaterialForm((prev) => ({ ...prev, quantity: parseFloat(e.target.value) || 0 }))}
+                    className="rounded-md border-slate-200 h-10 text-xs font-mono font-bold focus-visible:ring-[#93631F] text-[#93631F]"
+                  />
                 </div>
               </>
             ) : (
