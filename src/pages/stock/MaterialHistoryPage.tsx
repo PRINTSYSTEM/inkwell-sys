@@ -139,6 +139,7 @@ export default function MaterialHistoryPage() {
   const [isStockOutOpen, setIsStockOutOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
+  const [editCutData, setEditCutData] = useState<any>(null);
 
   // Stock Out PDF Export Dialog States
   const [isPdfDialogOpen, setIsPdfDialogOpen] = useState(false);
@@ -630,6 +631,9 @@ export default function MaterialHistoryPage() {
             {(materialDetail.type === "cuon" || materialDetail.materialTypeName?.toLowerCase()?.includes("cuộn") || materialDetail.materialTypeName?.toLowerCase()?.includes("cuon")) && (
               <Button
                 onClick={() => {
+                  setIsEditMode(false);
+                  setEditId(null);
+                  setEditCutData(null);
                   setIsCutOpen(true);
                 }}
                 className="h-9 px-4 rounded-lg border border-[#93631F] bg-transparent hover:bg-[#93631F]/5 text-[#93631F] hover:text-[#7a521a] font-semibold text-xs flex items-center gap-1.5 cursor-pointer transition-all duration-200"
@@ -908,7 +912,7 @@ export default function MaterialHistoryPage() {
                         <TableCell className="py-2 pr-4 text-right w-[180px]">
                           <div className="flex items-center justify-end gap-1">
                             {/* Pencil Edit button */}
-                            {(anyEntry.type === "stock_in" || anyEntry.type === "stock_out") && (
+                            {(anyEntry.type === "stock_in" || anyEntry.type === "stock_out" || anyEntry.type === "cut") && (
                               <Button
                                 variant="outline"
                                 size="icon"
@@ -924,7 +928,7 @@ export default function MaterialHistoryPage() {
                                       laborCost: anyEntry.raw.laborCost || 0,
                                     });
                                     setIsStockInOpen(true);
-                                  } else {
+                                  } else if (anyEntry.type === "stock_out") {
                                     setStockOutForm({
                                       quantity: anyEntry.quantity,
                                       documentCode: anyEntry.raw.code || "",
@@ -937,6 +941,9 @@ export default function MaterialHistoryPage() {
                                       warehouseAddress: anyEntry.raw.warehouseAddress || "",
                                     });
                                     setIsStockOutOpen(true);
+                                  } else if (anyEntry.type === "cut") {
+                                    setEditCutData(anyEntry.raw);
+                                    setIsCutOpen(true);
                                   }
                                 }}
                               >
@@ -1157,6 +1164,9 @@ export default function MaterialHistoryPage() {
         materialDetail={materialDetail}
         vendorRolls={vendorRolls}
         refetchAll={refetchAll}
+        isEditMode={isEditMode}
+        editId={editId}
+        editData={editCutData}
       />
 
       {/* 2. Dialog Nhập kho */}

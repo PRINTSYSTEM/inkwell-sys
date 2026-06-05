@@ -502,6 +502,11 @@ export default function AccountingOrderDetail() {
         cardEditValues.customerAddress === null
           ? null
           : String(cardEditValues.customerAddress).trim();
+      payload.deliveryAddress =
+        cardEditValues.deliveryAddress === "" ||
+        cardEditValues.deliveryAddress === null
+          ? null
+          : String(cardEditValues.deliveryAddress).trim();
     } else if (cardName === "orderInfo") {
       payload.deliveryDate =
         cardEditValues.deliveryDate === "" ||
@@ -967,10 +972,11 @@ export default function AccountingOrderDetail() {
     order.status !== "delivered"
       ? new Date(order.deliveryDate) < now
       : false;
-  const isDebtOverLimit =
+  const isDebtOverLimit = Boolean(
     order.customer?.currentDebt &&
-    order.customer?.maxDebt &&
-    order.customer.currentDebt > order.customer.maxDebt;
+      order.customer?.maxDebt &&
+      order.customer.currentDebt > order.customer.maxDebt
+  );
 
   return (
     <>
@@ -1985,6 +1991,7 @@ export default function AccountingOrderDetail() {
                               customerEmail: order.customerEmail || "",
                               customerTaxCode: order.customerTaxCode || "",
                               customerAddress: order.customerAddress || "",
+                              deliveryAddress: order.deliveryAddress || "",
                             })
                           }
                         >
@@ -2081,6 +2088,20 @@ export default function AccountingOrderDetail() {
                           rows={3}
                         />
                       </div>
+                      <div className="space-y-2">
+                        <Label>Địa chỉ giao hàng</Label>
+                        <Textarea
+                          value={(cardEditValues.deliveryAddress as string) || ""}
+                          onChange={(e) =>
+                            setCardEditValues({
+                              ...cardEditValues,
+                              deliveryAddress: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập địa chỉ giao hàng"
+                          rows={3}
+                        />
+                      </div>
                     </div>
                   ) : (
                     /* View Mode */
@@ -2169,6 +2190,17 @@ export default function AccountingOrderDetail() {
                           </div>
                         </div>
                       )}
+                      <div className="flex items-start gap-3">
+                        <Truck className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            Địa chỉ giao hàng
+                          </p>
+                          <p className="font-medium">
+                            {order.deliveryAddress || "—"}
+                          </p>
+                        </div>
+                      </div>
 
                       <Separator />
 

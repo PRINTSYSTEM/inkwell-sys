@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { useCreateStockOut, useUpdateStockOut } from "@/hooks/use-stock";
-import { useVendors, useVendor } from "@/hooks/use-vendor";
+import { useVendors, useVendor, useActivePrintingVendors } from "@/hooks/use-vendor";
 
 interface StockOutDialogProps {
   open: boolean;
@@ -72,6 +72,7 @@ export function StockOutDialog({
   const { mutateAsync: updateStockOut } = useUpdateStockOut();
   const { data: vendorsData } = useVendors({ pageNumber: 1, pageSize: 100 });
   const vendorsList = vendorsData?.items || [];
+  const { data: printingVendors } = useActivePrintingVendors();
 
   const selectedVendorId = stockOutForm.vendorId || null;
   const { data: selectedVendorDetail } = useVendor(selectedVendorId, !!selectedVendorId);
@@ -125,7 +126,7 @@ export function StockOutDialog({
                 quantity: stockOutForm.quantity,
                 materialId: materialId,
                 unit: materialDetail?.unit || "",
-                jobCode: stockOutForm.documentCode || undefined,
+                jobCode: stockOutForm.purpose === "transfer" ? (stockOutForm.documentCode || undefined) : undefined,
               } as any,
             ],
           },
@@ -148,7 +149,7 @@ export function StockOutDialog({
               quantity: stockOutForm.quantity,
               materialId: materialId,
               unit: materialDetail?.unit || "",
-              jobCode: stockOutForm.documentCode || undefined,
+              jobCode: stockOutForm.purpose === "transfer" ? (stockOutForm.documentCode || undefined) : undefined,
             } as any,
           ],
         });
@@ -201,6 +202,7 @@ export function StockOutDialog({
                   <SelectContent className="rounded-md">
                     <SelectItem value="manual" className="text-xs cursor-pointer">Xuất điều chỉnh / Hao hao khác</SelectItem>
                     <SelectItem value="return_vendor" className="text-xs cursor-pointer font-semibold text-rose-600">Trả Nhà Cung Cấp (Return Vendor)</SelectItem>
+                    <SelectItem value="outsource_print" className="text-xs cursor-pointer font-semibold text-blue-600">Xuất in gia công</SelectItem>
                     <SelectItem value="transfer" className="text-xs cursor-pointer font-semibold text-[#93631F]">Xuất xưởng / Xuất sản xuất (Transfer)</SelectItem>
                   </SelectContent>
                 </Select>
@@ -209,7 +211,7 @@ export function StockOutDialog({
 
             {/* Số lượng + Mã bài sản xuất (Nằm trên 1 dòng) */}
             <div className="grid grid-cols-2 gap-3">
-              <div className={isEditMode ? "col-span-2 space-y-1" : "col-span-1 space-y-1"}>
+              <div className={(!isEditMode && stockOutForm.purpose === "transfer") ? "col-span-1 space-y-1" : "col-span-2 space-y-1"}>
                 <Label className="font-semibold text-slate-700">
                   Số lượng xuất ({(materialDetail?.unit || "").toLowerCase()})
                 </Label>
@@ -224,7 +226,7 @@ export function StockOutDialog({
                 />
               </div>
 
-              {!isEditMode && (
+              {!isEditMode && stockOutForm.purpose === "transfer" && (
                 <div className="col-span-1 space-y-1">
                   <Label className="font-semibold text-slate-700">Mã bài sản xuất</Label>
                   <Input
@@ -240,26 +242,37 @@ export function StockOutDialog({
             </div>
 
             {/* Conditional fields based on purpose */}
-            {stockOutForm.purpose === "return_vendor" && (
+            {(stockOutForm.purpose === "return_vendor" || stockOutForm.purpose === "outsource_print") && (
               <div className="space-y-2.5 border-t border-slate-100 pt-2.5">
-                <h4 className="font-bold text-slate-800 text-[10px] uppercase tracking-wider">Thông tin trả hàng</h4>
+                <h4 className="font-bold text-slate-800 text-[10px] uppercase tracking-wider">
+                  {stockOutForm.purpose === "outsource_print" ? "Thông tin nhận hàng" : "Thông tin trả hàng"}
+                </h4>
                 
-                {/* Chọn Nhà Cung Cấp */}
+                {/* Chọn Nhà Cung Cấp / Nhà in */}
                 <div className="space-y-1">
-                  <Label className="font-semibold text-slate-700">Nhà cung cấp nhận lại</Label>
+                  <Label className="font-semibold text-slate-700">
+                    {stockOutForm.purpose === "outsource_print" ? "Nhà in nhận" : "Nhà cung cấp nhận lại"}
+                  </Label>
                   <Select
                     value={stockOutForm.vendorId ? String(stockOutForm.vendorId) : ""}
                     onValueChange={(val) => setStockOutForm((prev) => ({ ...prev, vendorId: val ? parseInt(val, 10) : undefined }))}
                   >
                     <SelectTrigger className="rounded-md border-slate-200 h-9 text-xs cursor-pointer focus:ring-rose-500">
-                      <SelectValue placeholder="Chọn nhà cung cấp" />
+                      <SelectValue placeholder={stockOutForm.purpose === "outsource_print" ? "Chọn nhà in" : "Chọn nhà cung cấp"} />
                     </SelectTrigger>
                     <SelectContent className="rounded-md">
-                      {vendorsList.map((v: any) => (
-                        <SelectItem key={v.id} value={String(v.id)} className="text-xs cursor-pointer">
-                          {v.name}
-                        </SelectItem>
-                      ))}
+                      {stockOutForm.purpose === "outsource_print"
+                        ? (printingVendors || []).map((v: any) => (
+                            <SelectItem key={v.id} value={String(v.id)} className="text-xs cursor-pointer">
+                              {v.name}
+                            </SelectItem>
+                          ))
+                        : vendorsList.map((v: any) => (
+                            <SelectItem key={v.id} value={String(v.id)} className="text-xs cursor-pointer">
+                              {v.name}
+                            </SelectItem>
+                          ))
+                      }
                     </SelectContent>
                   </Select>
                 </div>
@@ -295,7 +308,7 @@ export function StockOutDialog({
 
             {/* Ghi chú */}
             <div className="space-y-1">
-              <Label className="font-semibold text-slate-700">Diễn giải / Ghi chú</Label>
+              <Label className="font-semibold text-slate-700">Ghi chú</Label>
               <Textarea
                 placeholder="Nhập ghi chú diễn giải..."
                 value={stockOutForm.notes}

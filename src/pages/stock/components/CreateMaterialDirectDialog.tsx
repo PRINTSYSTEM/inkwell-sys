@@ -334,7 +334,7 @@ export function CreateMaterialDirectDialog({
 
             {/* Ghi chú */}
             <div className="space-y-1.5">
-              <Label className="font-semibold text-slate-700">Diễn giải / Ghi chú</Label>
+              <Label className="font-semibold text-slate-700">Ghi chú</Label>
               <Textarea
                 placeholder="Nhập diễn giải ghi chú thêm..."
                 value={materialForm.notes}

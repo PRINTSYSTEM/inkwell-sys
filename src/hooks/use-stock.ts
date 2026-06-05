@@ -633,6 +633,33 @@ export const useCancelMaterialCut = () => {
   });
 };
 
+export const useUpdateMaterialCut = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: any;
+    }) => {
+      const response = await apiRequest.put(API_SUFFIX.MATERIAL_CUT_BY_ID(id), data);
+      return response.data;
+    },
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: materialCutKeys.all });
+      queryClient.invalidateQueries({ queryKey: materialCutKeys.detail(id) });
+      toast.success("Cập nhật phiếu cắt nguyên liệu thành công");
+    },
+    onError: (error: ApiError) => {
+      toast.error("Cập nhật phiếu cắt thất bại", {
+        description: error.response?.data?.message || error.message,
+      });
+    },
+  });
+};
+
 
 export const useStockOutsByDeliveryNote = (
   deliveryNoteId: number | null,

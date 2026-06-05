@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Scissors } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { useCreateMaterialCut } from "@/hooks/use-stock";
+import { useCreateMaterialCut, useUpdateMaterialCut } from "@/hooks/use-stock";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 
@@ -32,6 +32,9 @@ interface MaterialCutDialogProps {
   materialDetail: any;
   vendorRolls: any[];
   refetchAll: () => void;
+  isEditMode?: boolean;
+  editId?: number | null;
+  editData?: any;
 }
 
 const formatDateTime = (dateStr: string | null | undefined) => {
@@ -55,8 +58,19 @@ export function MaterialCutDialog({
   materialDetail,
   vendorRolls,
   refetchAll,
+  isEditMode = false,
+  editId = null,
+  editData = null,
 }: MaterialCutDialogProps) {
   const { mutateAsync: createMaterialCut } = useCreateMaterialCut();
+  const { mutateAsync: updateMaterialCut } = useUpdateMaterialCut();
+
+  const isInitialLoadRef = useRef(true);
+  useEffect(() => {
+    if (open) {
+      isInitialLoadRef.current = true;
+    }
+  }, [open]);
 
   const [cutForm, setCutForm] = useState({
     inputMaterialId: 0,
@@ -73,21 +87,37 @@ export function MaterialCutDialog({
 
   // Reset form when dialog opens
   useEffect(() => {
-    if (open && materialDetail) {
-      setCutForm({
-        inputMaterialId: materialId || 0,
-        jobCode: "",
-        width: materialDetail.length || 0,
-        length: 0,
-        quantityProduced: 1200,
-        quantityUsed: 0,
-        quantityWasted: 0,
-        notes: "",
-        isManuallyEditedUsed: false,
-        cutAt: getLocalDatetimeString(),
-      });
+    if (open) {
+      if (isEditMode && editData) {
+        const output = editData.outputs?.[0] || {};
+        setCutForm({
+          inputMaterialId: editData.inputMaterialId || materialId || 0,
+          jobCode: editData.jobCode || "",
+          width: output.cutLength || 0,
+          length: output.cutWidth || 0,
+          quantityProduced: output.quantityProduced || 0,
+          quantityUsed: editData.quantityUsed || 0,
+          quantityWasted: editData.quantityWasted || 0,
+          notes: editData.notes || "",
+          isManuallyEditedUsed: true,
+          cutAt: editData.cutAt ? getLocalDatetimeString(new Date(editData.cutAt)) : getLocalDatetimeString(),
+        });
+      } else if (materialDetail) {
+        setCutForm({
+          inputMaterialId: materialId || 0,
+          jobCode: "",
+          width: materialDetail.length || 0,
+          length: 0,
+          quantityProduced: 1200,
+          quantityUsed: 0,
+          quantityWasted: 0,
+          notes: "",
+          isManuallyEditedUsed: false,
+          cutAt: getLocalDatetimeString(),
+        });
+      }
     }
-  }, [open, materialId, materialDetail]);
+  }, [open, materialId, materialDetail, isEditMode, editData]);
 
   const dropdownRolls = useMemo(() => {
     if (!materialDetail) return [];
@@ -111,13 +141,17 @@ export function MaterialCutDialog({
 
   // Always synchronize cutForm.width with the selected roll's width
   useEffect(() => {
+    if (isEditMode && isInitialLoadRef.current) {
+      isInitialLoadRef.current = false;
+      return;
+    }
     if (selectedInputMaterial) {
       setCutForm((prev) => ({
         ...prev,
         width: selectedInputMaterial.length || 0,
       }));
     }
-  }, [selectedInputMaterial]);
+  }, [selectedInputMaterial, isEditMode]);
 
   // Recalculate quantityUsed
   useEffect(() => {
@@ -182,8 +216,13 @@ export function MaterialCutDialog({
         ],
       };
 
-      toastId = toast.loading("Đang tạo phiếu cắt...");
-      await createMaterialCut(payload);
+      if (isEditMode && editId) {
+        toastId = toast.loading("Đang cập nhật phiếu cắt...");
+        await updateMaterialCut({ id: editId, data: payload });
+      } else {
+        toastId = toast.loading("Đang tạo phiếu cắt...");
+        await createMaterialCut(payload);
+      }
       if (toastId) toast.dismiss(toastId);
       onOpenChange(false);
       refetchAll();
@@ -200,7 +239,7 @@ export function MaterialCutDialog({
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-[#93631F] flex items-center gap-2">
               <Scissors className="h-4.5 w-4.5 text-[#93631F]" />
-              Cắt nguyên liệu từ cuộn
+              {isEditMode ? "Chỉnh sửa phiếu cắt" : "Cắt nguyên liệu từ cuộn"}
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
               Nhập thông tin phân chia cuộn nguyên liệu thành các tờ thành phẩm. Hệ thống sẽ tự tạo chất liệu tờ mới theo vendor của cuộn.
@@ -398,7 +437,7 @@ export function MaterialCutDialog({
               type="submit"
               className="rounded-md text-xs h-10 bg-[#93631F] hover:bg-[#7a521a] text-white cursor-pointer border-none"
             >
-              Lưu phiếu cắt
+              {isEditMode ? "Cập nhật phiếu cắt" : "Lưu phiếu cắt"}
             </Button>
           </DialogFooter>
         </form>
