@@ -53,9 +53,11 @@ function derivePaymentStatus(
 
 // Helper to derive customer type
 function deriveCustomerType(
-  customer: OrderResponse["customer"]
+  order: OrderResponse
 ): "company" | "retail" {
-  return customer?.type as keyof typeof ENTITY_CONFIG.customerTypes.values;
+  const companyName = order.customerCompanyName || order.customer?.companyName;
+  if (companyName) return "company";
+  return (order.customer?.type as "company" | "retail") || "retail";
 }
 
 type PaymentListProps = {
@@ -124,7 +126,7 @@ export function PaymentList({ listFilterType }: PaymentListProps) {
     const allFiltered = data.items.filter((order) => {
       const paymentStatus = derivePaymentStatus(order.totalAmount, order.depositAmount);
       const matchesPaymentStatus = paymentStatusFilter === "all" || paymentStatus === paymentStatusFilter;
-      return matchesPaymentStatus && order.isDebtApproved === false;
+      return matchesPaymentStatus && order.isDebtApproved !== true;
     });
 
     if (clientSideMode) {
@@ -360,7 +362,7 @@ export function PaymentList({ listFilterType }: PaymentListProps) {
                     order.totalAmount,
                     order.depositAmount
                   );
-                  const customerType = deriveCustomerType(order.customer);
+                  const customerType = deriveCustomerType(order);
 
                   return (
                     <TableRow
@@ -374,13 +376,17 @@ export function PaymentList({ listFilterType }: PaymentListProps) {
                       <TableCell>
                         <div className="space-y-1">
                           <div className="font-bold text-sm">
-                            {order.customer?.companyName ||
+                            {order.customerCompanyName ||
+                              order.customerName ||
+                              order.customer?.companyName ||
                               order.customer?.name ||
                               "—"}
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-muted-foreground font-medium">
-                              {order.customer?.phone || "—"}
+                              {order.customerPhone ||
+                                order.customer?.phone ||
+                                "—"}
                             </span>
                             <CustomerTypeBadge type={customerType} />
                           </div>

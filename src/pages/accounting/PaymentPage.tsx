@@ -17,7 +17,7 @@ const calculateSummaryStats = (orders: OrderResponse[]) => {
   };
 
   orders.forEach((order) => {
-    if (order.isDebtApproved !== false) return;
+    if (order.isDebtApproved === true) return;
 
     const totalAmount = order.totalAmount || 0;
     const depositAmount = order.depositAmount || 0;

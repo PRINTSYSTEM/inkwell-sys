@@ -651,7 +651,7 @@ export default function AccountingOrderDetail() {
         // Tạo accounting record cho khách lẻ chưa duyệt nợ
         if (
           deriveCustomerType(order.customer?.companyName) === "retail" &&
-          order.isDebtApproved === false
+          order.isDebtApproved !== true
         ) {
           try {
             await createAccountingMutation.mutate(order.id);
@@ -1044,7 +1044,7 @@ export default function AccountingOrderDetail() {
                   )}
                   Xuất PDF Đơn Hàng
                 </Button>
-                {order.isDebtApproved === false &&
+                {order.isDebtApproved !== true &&
                   order.customer?.type !== "retail" && (
                     <Button
                       size="sm"
