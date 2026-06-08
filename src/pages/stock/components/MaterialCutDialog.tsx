@@ -35,6 +35,7 @@ interface MaterialCutDialogProps {
   isEditMode?: boolean;
   editId?: number | null;
   editData?: any;
+  materials?: any[];
 }
 
 const formatDateTime = (dateStr: string | null | undefined) => {
@@ -61,6 +62,7 @@ export function MaterialCutDialog({
   isEditMode = false,
   editId = null,
   editData = null,
+  materials,
 }: MaterialCutDialogProps) {
   const { mutateAsync: createMaterialCut } = useCreateMaterialCut();
   const { mutateAsync: updateMaterialCut } = useUpdateMaterialCut();
@@ -90,11 +92,33 @@ export function MaterialCutDialog({
     if (open) {
       if (isEditMode && editData) {
         const output = editData.outputs?.[0] || {};
+        
+        let outputWidth = output.cutLength || 0;
+        let outputLength = output.cutWidth || 0;
+
+        // Try to retrieve dimensions using outputMaterialId and materials list
+        if ((!outputWidth || !outputLength) && output.outputMaterialId && materials) {
+          const mat = materials.find((m: any) => m.id === output.outputMaterialId);
+          if (mat) {
+            outputWidth = mat.length || 0;
+            outputLength = mat.width || 0;
+          }
+        }
+
+        // Fallback: parse dimensions from outputMaterialName (e.g. "Decal giấy đế xanh : 50x70")
+        if ((!outputWidth || !outputLength) && output.outputMaterialName) {
+          const crossMatch = output.outputMaterialName.match(/(\d+(?:\.\d+)?)\s*[xX]\s*(\d+(?:\.\d+)?)/);
+          if (crossMatch) {
+            outputWidth = parseFloat(crossMatch[1]);
+            outputLength = parseFloat(crossMatch[2]);
+          }
+        }
+
         setCutForm({
           inputMaterialId: editData.inputMaterialId || materialId || 0,
           jobCode: editData.jobCode || "",
-          width: output.cutLength || 0,
-          length: output.cutWidth || 0,
+          width: outputWidth,
+          length: outputLength,
           quantityProduced: output.quantityProduced || 0,
           quantityUsed: editData.quantityUsed || 0,
           quantityWasted: editData.quantityWasted || 0,
@@ -117,7 +141,7 @@ export function MaterialCutDialog({
         });
       }
     }
-  }, [open, materialId, materialDetail, isEditMode, editData]);
+  }, [open, materialId, materialDetail, isEditMode, editData, materials]);
 
   const dropdownRolls = useMemo(() => {
     if (!materialDetail) return [];
@@ -208,7 +232,7 @@ export function MaterialCutDialog({
         notes: cutForm.notes || "",
         outputs: [
           {
-            outputMaterialId: null,
+            outputMaterialId: isEditMode && editData?.outputs?.[0]?.outputMaterialId ? editData.outputs[0].outputMaterialId : null,
             cutLength: cutForm.width,
             cutWidth: cutForm.length,
             quantityProduced: cutForm.quantityProduced,

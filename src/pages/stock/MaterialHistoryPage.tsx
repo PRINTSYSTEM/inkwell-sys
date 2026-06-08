@@ -1167,6 +1167,7 @@ export default function MaterialHistoryPage() {
         isEditMode={isEditMode}
         editId={editId}
         editData={editCutData}
+        materials={allMaterialsData?.items || []}
       />
 
       {/* 2. Dialog Nhập kho */}
