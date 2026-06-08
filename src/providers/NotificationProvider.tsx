@@ -70,7 +70,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
           ? {
               label: "Xem khách hàng",
               onClick: () =>
-                (window.location.href = `/customers/detail/${message.data.customerId}`),
+                (window.location.href = `/customers/${message.data.customerId}`),
             }
           : undefined,
       });

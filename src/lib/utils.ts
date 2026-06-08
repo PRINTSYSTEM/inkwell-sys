@@ -1,3 +1,5 @@
+import * as React from "react";
+import { Link } from "react-router-dom";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { Customer } from "@/types";
@@ -47,13 +49,39 @@ export function formatCurrency(amount: number): string {
   return amount.toLocaleString("vi-VN") + "₫";
 }
 
-export function getDebtAlert(customer: Customer): string | null {
+export function getDebtAlert(customer: Customer): React.ReactNode | null {
   const status = checkDebtStatus(customer);
   if (status.status === "blocked") {
-    return `🚫 CẢNH BÁO: ${customer.representativeName} (${customer.code}) đã vượt mức công nợ cho phép!`;
+    return React.createElement(
+      "span",
+      null,
+      "🚫 CẢNH BÁO: ",
+      React.createElement(
+        Link,
+        {
+          to: `/customers/${customer.id}`,
+          className: "font-semibold underline hover:text-red-800 transition-colors",
+        },
+        `${customer.representativeName} (${customer.code})`
+      ),
+      " đã vượt mức công nợ cho phép!"
+    );
   }
   if (status.status === "warning") {
-    return `⚠️ CHÚ Ý: ${customer.representativeName} (${customer.code}) gần đạt mức công nợ tối đa!`;
+    return React.createElement(
+      "span",
+      null,
+      "⚠️ CHÚ Ý: ",
+      React.createElement(
+        Link,
+        {
+          to: `/customers/${customer.id}`,
+          className: "font-semibold underline hover:text-amber-800 transition-colors",
+        },
+        `${customer.representativeName} (${customer.code})`
+      ),
+      " gần đạt mức công nợ tối đa!"
+    );
   }
   return null;
 }
