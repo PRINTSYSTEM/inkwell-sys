@@ -666,6 +666,10 @@ function ProductionTableRow({
   const [openPlatePopover, setOpenPlatePopover] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [showMaterialExportDialog, setShowMaterialExportDialog] = useState(false);
+  const [isEditingPackaging, setIsEditingPackaging] = useState(false);
+  const [tempPackagingValues, setTempPackagingValues] = useState<
+    Record<number, { outputQty: string; defectQty: string; notes: string }>
+  >({});
 
   const isDraft = !prod.id;
   const isCreating = React.useRef(false);
@@ -736,6 +740,79 @@ function ProductionTableRow({
     (proofingOrder as any)?.totalProcessedQty ||
     (proofingOrder as any)?.totalQuantity ||
     0;
+
+  const startEditingPackaging = () => {
+    if (!proofingOrder?.proofingOrderDesigns) return;
+    const initialValues: Record<number, { outputQty: string; defectQty: string; notes: string }> = {};
+    proofingOrder.proofingOrderDesigns.forEach((pod: any) => {
+      const prodItem = productionItems.find(
+        (i: any) =>
+          i.proofingOrderDesignId === pod.id ||
+          i.designId === pod.designId ||
+          i.id === pod.id,
+      );
+      
+      const outQty = prodItem?.outputQty != null
+        ? prodItem.outputQty.toString()
+        : prodItem?.producedQty != null
+          ? prodItem.producedQty.toString()
+          : defaultPrintQty
+            ? String(defaultPrintQty)
+            : "";
+      const defQty = prodItem?.defectQty != null
+        ? prodItem.defectQty.toString()
+        : "";
+      const notesVal = prodItem?.notes || "";
+      
+      initialValues[pod.id] = {
+        outputQty: outQty,
+        defectQty: defQty,
+        notes: notesVal,
+      };
+    });
+    setTempPackagingValues(initialValues);
+    setIsEditingPackaging(true);
+  };
+
+  const handleTempChange = (podId: number, field: "outputQty" | "defectQty" | "notes", value: string) => {
+    setTempPackagingValues(prev => ({
+      ...prev,
+      [podId]: {
+        ...prev[podId],
+        [field]: value
+      }
+    }));
+  };
+
+  const handleSaveAllPackaging = async () => {
+    if (!proofingOrder?.proofingOrderDesigns) return;
+    try {
+      const promises = proofingOrder.proofingOrderDesigns.map(async (pod: any) => {
+        const prodItem = productionItems.find(
+          (i: any) =>
+            i.proofingOrderDesignId === pod.id ||
+            i.designId === pod.designId ||
+            i.id === pod.id,
+        );
+        if (!prodItem) return;
+        const values = tempPackagingValues[pod.id] || { outputQty: "", defectQty: "", notes: "" };
+        
+        await updateOrderItem({
+          productionOrderId: prod.id!,
+          itemId: prodItem.id,
+          data: {
+            outputQty: Number(values.outputQty) || 0,
+            defectQty: Number(values.defectQty) || 0,
+            notes: values.notes,
+          },
+        });
+      });
+      await Promise.all(promises);
+      setIsEditingPackaging(false);
+    } catch (error) {
+      console.error("Lỗi lưu thông tin đóng gói:", error);
+    }
+  };
 
   // Aggregate lamination info from order and all designs
   const laminationInfo = React.useMemo(() => {
@@ -1236,35 +1313,103 @@ function ProductionTableRow({
                           </div>
                           
                           <div className="flex flex-col justify-center min-w-[80px]">
-                            <StepItem
-                              step={matchingStep}
-                              isCheckStep={true}
-                              isEnabled={isPackagingEnabled}
-                              showName={false}
-                              hideStatus={true}
-                              isPackagingItem={true}
-                              productionItemId={prodItem ? prodItem.id : null}
-                              productionOrderId={prod.id}
-                              initialOutputQtyOverride={
-                                prodItem?.outputQty != null
-                                  ? prodItem.outputQty
-                                  : prodItem?.producedQty != null
-                                    ? prodItem.producedQty
-                                    : null
-                              }
-                              initialDefectQtyOverride={
-                                prodItem?.defectQty != null
-                                  ? prodItem.defectQty
-                                  : null
-                              }
-                              defaultPrintQty={defaultPrintQty}
-                              productionItems={productionItems}
-                            />
+                            {isEditingPackaging ? (
+                              <div className="flex flex-col gap-1.5 min-w-[80px]">
+                                <div className="flex items-center gap-1">
+                                  <span className="text-[11px] font-bold text-emerald-600 uppercase w-4 shrink-0 text-center">Ra</span>
+                                  <Input
+                                    type="number"
+                                    value={tempPackagingValues[pod.id]?.outputQty ?? ""}
+                                    onChange={(e) => handleTempChange(pod.id, "outputQty", e.target.value)}
+                                    className="h-7 text-[12px] px-1.5 py-0 focus-visible:ring-emerald-500 font-bold tabular-nums"
+                                  />
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-[11px] font-bold text-red-600 uppercase w-4 shrink-0 text-center">Lỗi</span>
+                                  <Input
+                                    type="number"
+                                    value={tempPackagingValues[pod.id]?.defectQty ?? ""}
+                                    onChange={(e) => handleTempChange(pod.id, "defectQty", e.target.value)}
+                                    className="h-7 text-[12px] px-1.5 py-0 focus-visible:ring-red-500 font-bold text-red-600 tabular-nums"
+                                  />
+                                </div>
+                                <Input
+                                  placeholder="Ghi chú..."
+                                  className="h-7 w-full text-[10px] px-1.5 py-0 bg-background mt-0.5 border-amber-200 focus:border-amber-500"
+                                  value={tempPackagingValues[pod.id]?.notes ?? ""}
+                                  onChange={(e) => handleTempChange(pod.id, "notes", e.target.value)}
+                                />
+                              </div>
+                            ) : (
+                              <div className="flex flex-col justify-center min-w-[70px] text-xs">
+                                <div className="flex items-center justify-between gap-1">
+                                  <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">
+                                    Ra
+                                  </span>
+                                  <span className="text-[13px] tabular-nums font-bold text-emerald-700">
+                                    {prodItem?.outputQty != null
+                                      ? prodItem.outputQty
+                                      : prodItem?.producedQty != null
+                                        ? prodItem.producedQty
+                                        : 0}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between gap-1">
+                                  <span className="text-[11px] font-bold text-red-600 dark:text-red-400 uppercase tracking-tighter">
+                                    Lỗi
+                                  </span>
+                                  <span className="text-[13px] tabular-nums font-bold text-red-600">
+                                    {prodItem?.defectQty != null ? prodItem.defectQty : 0}
+                                  </span>
+                                </div>
+                                {prodItem?.notes && (
+                                  <div className="text-[10px] font-medium text-amber-700 dark:text-amber-500 break-words leading-tight border-l-2 border-amber-500/50 pl-1 mt-1 bg-amber-50/30 dark:bg-amber-900/10 py-0.5">
+                                    {prodItem.notes}
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       );
                     })
                     .filter(Boolean)}
+                </div>
+
+                {/* Save/Edit buttons at the bottom of the column */}
+                <div className="mt-2 pt-2 border-t border-dashed">
+                  {isEditingPackaging ? (
+                    <div className="flex gap-1.5">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-[10px] flex-1 bg-slate-50 hover:bg-slate-100"
+                        onClick={() => setIsEditingPackaging(false)}
+                      >
+                        Hủy
+                      </Button>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="h-7 text-[10px] flex-1 bg-[#93631F] hover:bg-[#7a521a] text-white"
+                        onClick={handleSaveAllPackaging}
+                      >
+                        <Save className="w-3.5 h-3.5 mr-1" />
+                        Lưu
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-[10px] w-full"
+                      disabled={!isPackagingEnabled}
+                      onClick={startEditingPackaging}
+                    >
+                      <Edit className="w-3.5 h-3.5 mr-1" />
+                      Sửa
+                    </Button>
+                  )}
                 </div>
               </>
             ) : packagingSteps.length > 0 ? (

@@ -2099,7 +2099,7 @@ export default function ProofingOrderDetailPage() {
             </div>
 
             {/* Right: configuration panel (existing) */}
-            <div className="w-1/3 min-w-0">
+            <div className="w-1/3 min-w-0 shrink-0 h-full flex flex-col">
               <DetailEmptyOrderView
                 toggleSelection={toggleSelection}
                 selectedDesigns={selectedDesigns}

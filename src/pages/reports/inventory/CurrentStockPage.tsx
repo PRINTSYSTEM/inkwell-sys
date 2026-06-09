@@ -88,14 +88,14 @@ export default function CurrentStockPage() {
   const totalItems = materialsData?.total || 0;
   const totalQuantity =
     materialsData?.items?.reduce(
-      (sum, item) => sum + (item.quantity || 0),
+      (sum, item) => sum + (item.currentStock || 0),
       0,
     ) || 0;
 
   // Calculate total value based on available unitPrice * quantity
   const totalValue =
     materialsData?.items?.reduce(
-      (sum, item) => sum + (item.quantity || 0) * (item.unitPrice || 0),
+      (sum, item) => sum + (item.currentStock || 0) * (item.unitPrice || 0),
       0,
     ) || 0;
 
@@ -330,8 +330,8 @@ export default function CurrentStockPage() {
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-bold tabular-nums text-blue-600">
-                      {item.quantity !== undefined
-                        ? item.quantity.toLocaleString()
+                      {item.currentStock !== undefined
+                        ? item.currentStock.toLocaleString()
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right text-sm text-muted-foreground">
@@ -421,7 +421,7 @@ export default function CurrentStockPage() {
                   id="quantity"
                   name="quantity"
                   type="number"
-                  defaultValue={editingItem?.quantity ?? ""}
+                  defaultValue={editingItem?.currentStock ?? ""}
                   required
                 />
               </div>

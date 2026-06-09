@@ -597,7 +597,7 @@ export default function MaterialHistoryPage() {
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                 Đơn vị tính: {materialDetail?.unit || "—"}{materialDetail?.unit === "m" ? " dài" : ""}{materialDetail?.size ? ` | Kích thước: ${formatSize(materialDetail.size)}` : ""}
+                 Đơn vị tính: {materialDetail?.unit || "—"}{materialDetail?.unit === "m" ? " tới" : ""}{materialDetail?.size ? ` | Kích thước: ${formatSize(materialDetail.size)}` : ""}
               </p>
             </div>
           </div>

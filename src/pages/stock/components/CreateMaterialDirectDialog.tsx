@@ -108,7 +108,7 @@ export function CreateMaterialDirectDialog({
     try {
       const generatedName = materialType === "cuon" 
         ? materialForm.name.trim() 
-        : `Tờ ${materialForm.width}x${materialForm.length}`;
+        : `${materialForm.width}x${materialForm.length}`;
 
       const payload = {
         name: generatedName,
@@ -248,11 +248,11 @@ export function CreateMaterialDirectDialog({
                 <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 border border-slate-200 rounded-md select-none">
                   <div>
                     <span className="text-[10px] text-slate-400 font-bold uppercase block leading-none mb-1">Đơn vị tính công nợ</span>
-                    <span className="text-xs font-bold text-slate-700">m dài</span>
+                    <span className="text-xs font-bold text-slate-700">m tới</span>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-400 font-bold uppercase block leading-none mb-1">Đơn vị lưu kho</span>
-                    <span className="text-xs font-bold text-slate-700">m dài</span>
+                    <span className="text-xs font-bold text-slate-700">m tới</span>
                   </div>
                 </div>
 
@@ -302,7 +302,7 @@ export function CreateMaterialDirectDialog({
                 <div className="space-y-1.5">
                   <Label className="font-semibold text-slate-700">Tên vật tư ghép tự động</Label>
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-md font-bold text-slate-800 text-xs">
-                    Tờ {materialForm.width || 0}x{materialForm.length || 0}
+                    {materialForm.width || 0}x{materialForm.length || 0}
                   </div>
                 </div>
 

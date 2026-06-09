@@ -19,7 +19,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Search, Package, AlertTriangle } from "lucide-react";
 import { useDebounce } from "use-debounce";
-import { useCurrentStock } from "@/hooks/use-inventory-report";
+import { useMaterials } from "@/hooks/use-material";
+import { useActiveVendors } from "@/hooks/use-vendor";
 import { TableSkeleton } from "@/components/ui/skeleton-components";
 import { FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -30,8 +31,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useMaterialTypeList } from "@/hooks";
-import { useDesignTypeList } from "@/hooks/use-design-type";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
@@ -49,32 +48,23 @@ export function InventoryViewDialog({
   const [page, setPage] = useState(1);
   const pageSize = 50;
 
-  const [materialTypeId, setMaterialTypeId] = useState<number | null>(null);
-  const [designTypeId, setDesignTypeId] = useState<number | null>(null);
+  const [materialType, setMaterialType] = useState<"cuon" | "to" | "all">("all");
+  const [vendorId, setVendorId] = useState<number | null>(null);
   const [showOutOfStock, setShowOutOfStock] = useState(false);
 
-  const { data: materialTypesData } = useMaterialTypeList({});
-  const { data: designTypesData } = useDesignTypeList({ status: "active" });
-
-  const materialTypeOptions = Array.isArray(materialTypesData)
-    ? materialTypesData
-    : materialTypesData?.items ?? [];
-
-  const designTypeOptions = Array.isArray(designTypesData)
-    ? designTypesData
-    : designTypesData?.items ?? [];
+  const { data: vendorsData } = useActiveVendors();
 
   // Reset page when search changes
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch, materialTypeId, designTypeId]);
+  }, [debouncedSearch, materialType, vendorId]);
 
-  const { data, isLoading, error } = useCurrentStock({
-    pageNumber: page,
-    pageSize,
-    search: debouncedSearch.trim() || "",
-    materialTypeId: materialTypeId ?? undefined,
-    designTypeId: designTypeId ?? undefined,
+  const { data, isLoading, error } = useMaterials({
+    page: page,
+    size: pageSize,
+    search: debouncedSearch.trim() || undefined,
+    type: materialType === "all" ? undefined : materialType,
+    vendorId: vendorId ?? undefined,
   });
 
   const stockItems = data?.items || [];
@@ -82,7 +72,7 @@ export function InventoryViewDialog({
 
   const filteredItems = showOutOfStock
     ? stockItems
-    : stockItems.filter((item: any) => item.status !== "out");
+    : stockItems.filter((item: any) => (item.currentStock ?? 0) > 0);
 
   const displayedCount = filteredItems.length;
 
@@ -114,44 +104,39 @@ export function InventoryViewDialog({
 
             <div className="flex flex-wrap gap-2">
               <Select
-                value={materialTypeId ? String(materialTypeId) : "all"}
-                onValueChange={(value) => {
-                  const next =
-                    value === "all" ? null : Number.parseInt(value, 10);
-                  setMaterialTypeId(next);
+                value={materialType}
+                onValueChange={(value: "cuon" | "to" | "all") => {
+                  setMaterialType(value);
                   setPage(1);
                 }}
               >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Lọc theo chất liệu" />
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Thể loại vật tư" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tất cả chất liệu</SelectItem>
-                  {materialTypeOptions.map((mt: any) => (
-                    <SelectItem key={mt.id} value={String(mt.id)}>
-                      {mt.name || "—"}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="all">Tất cả thể loại</SelectItem>
+                  <SelectItem value="cuon">Dạng cuộn</SelectItem>
+                  <SelectItem value="to">Dạng tờ</SelectItem>
                 </SelectContent>
               </Select>
 
               <Select
-                value={designTypeId ? String(designTypeId) : "all"}
+                value={vendorId ? String(vendorId) : "all"}
                 onValueChange={(value) => {
                   const next =
                     value === "all" ? null : Number.parseInt(value, 10);
-                  setDesignTypeId(next);
+                  setVendorId(next);
                   setPage(1);
                 }}
               >
                 <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Lọc theo loại thiết kế" />
+                  <SelectValue placeholder="Lọc theo nhà cung cấp" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tất cả loại thiết kế</SelectItem>
-                  {designTypeOptions.map((dt: any) => (
-                    <SelectItem key={dt.id} value={String(dt.id)}>
-                      {dt.name || "—"}
+                  <SelectItem value="all">Tất cả nhà cung cấp</SelectItem>
+                  {vendorsData?.map((v: any) => (
+                    <SelectItem key={v.id} value={String(v.id)}>
+                      {v.name || v.code}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -186,6 +171,12 @@ export function InventoryViewDialog({
                       <TableHead className="h-10 text-sm font-bold">
                         Tên vật liệu
                       </TableHead>
+                      <TableHead className="h-10 text-sm font-bold">
+                        Thể loại
+                      </TableHead>
+                      <TableHead className="h-10 text-sm font-bold">
+                        Nhà cung cấp
+                      </TableHead>
                       <TableHead className="h-10 text-sm font-bold text-right">
                         Tồn kho
                       </TableHead>
@@ -199,10 +190,10 @@ export function InventoryViewDialog({
                   </TableHeader>
                   <TableBody>
                     {isLoading ? (
-                      <TableSkeleton cols={6} rows={10} rowHeight="h-14" />
+                      <TableSkeleton cols={7} rows={10} rowHeight="h-14" />
                     ) : error ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="py-10">
+                        <TableCell colSpan={7} className="py-10">
                           <div className="flex flex-col items-center justify-center gap-2 text-center">
                             <FileText className="h-10 w-10 text-muted-foreground opacity-60" />
                             <p className="text-sm font-semibold text-foreground">
@@ -216,7 +207,7 @@ export function InventoryViewDialog({
                       </TableRow>
                     ) : filteredItems.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="py-10">
+                        <TableCell colSpan={7} className="py-10">
                           <div className="flex flex-col items-center justify-center gap-2 text-center">
                             <Package className="h-10 w-10 text-muted-foreground opacity-60" />
                             <p className="text-sm font-semibold text-muted-foreground">
@@ -229,22 +220,38 @@ export function InventoryViewDialog({
                       </TableRow>
                     ) : (
                       filteredItems.map((item: any) => {
-                        const isNegative = item.currentQuantity < 0;
-                        const isOutOfStock = item.status === "out";
+                        const quantity = item.currentStock ?? 0;
+                        const isNegative = quantity < 0;
+                        const isOutOfStock = quantity <= 0;
                         const isWarning = isNegative || isOutOfStock;
+
+                        const foundVendor = vendorsData?.find((v: any) => v.id === item.vendorId);
+                        const vendorName = foundVendor ? (foundVendor.name || foundVendor.code) : "—";
 
                         return (
                           <TableRow
-                            key={item.itemCode}
+                            key={item.id}
                             className={cn(
                               isWarning && "bg-red-50/50 dark:bg-red-950/10"
                             )}
                           >
                             <TableCell className="py-3 font-semibold font-mono text-sm">
-                              {item.itemCode || "—"}
+                              #{item.id}
                             </TableCell>
                             <TableCell className="py-3 text-sm">
-                              {item.itemName || "—"}
+                              {item.name || "—"}
+                            </TableCell>
+                            <TableCell className="py-3 text-sm">
+                              {item.type === "cuon" ? (
+                                <Badge variant="secondary" className="text-xs">Cuộn</Badge>
+                              ) : item.type === "to" ? (
+                                <Badge variant="secondary" className="text-xs">Tờ</Badge>
+                              ) : (
+                                "—"
+                              )}
+                            </TableCell>
+                            <TableCell className="py-3 text-sm font-medium">
+                              {vendorName}
                             </TableCell>
                             <TableCell
                               className={cn(
@@ -252,15 +259,15 @@ export function InventoryViewDialog({
                                 isNegative && "text-red-600 dark:text-red-400"
                               )}
                             >
-                              {item.currentQuantity != null
-                                ? item.currentQuantity.toLocaleString("vi-VN")
+                              {item.currentStock != null
+                                ? item.currentStock.toLocaleString("vi-VN")
                                 : "—"}
                             </TableCell>
                             <TableCell className="py-3 text-sm text-muted-foreground">
                               {item.unit || "—"}
                             </TableCell>
                             <TableCell className="py-3">
-                              {item.status === "out" ? (
+                              {isOutOfStock ? (
                                 <Badge
                                   variant="destructive"
                                   className="text-xs"

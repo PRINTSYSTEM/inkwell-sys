@@ -164,7 +164,7 @@ export function PrepressOrdersHeader({
         <div className="relative flex-1 min-w-[280px] max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Tìm theo mã hàng..."
+            placeholder="Tìm theo mã hàng...."
             className="h-9 pl-10"
             value={designCode}
             onChange={(e) => {
