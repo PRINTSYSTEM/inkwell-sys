@@ -354,7 +354,8 @@ export const useCreateStockOut = () => {
 
   return useMutation({
     mutationFn: async (data: CreateStockOutRequest) => {
-      await apiRequest.post(API_SUFFIX.STOCK_OUTS, data);
+      const response = await apiRequest.post<any>(API_SUFFIX.STOCK_OUTS, data);
+      return response.data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: stockOutKeys.all });
@@ -598,11 +599,53 @@ export const useCompleteMaterialCut = () => {
       } catch (err) {
         console.error("Graceful error: Failed to log stock-in from completed cut:", err);
       }
+
+      // 3. Automatically generate and approve stock-out for the output sheets
+      try {
+        const cutDetailRes = await apiRequest.get(API_SUFFIX.MATERIAL_CUT_BY_ID(id));
+        const cutDetail = cutDetailRes.data;
+        
+        if (cutDetail?.outputs && cutDetail.outputs.length > 0) {
+          for (const output of cutDetail.outputs) {
+            if (!output.outputMaterialId || !output.quantityProduced) continue;
+            
+            // Fetch the sheet material details to get its correct name and unit
+            const materialRes = await apiRequest.get(API_SUFFIX.MATERIAL_BY_ID(output.outputMaterialId));
+            const matDetail = materialRes.data;
+            
+            // Create the Stock Out request
+            const resOut = await apiRequest.post(API_SUFFIX.STOCK_OUTS, {
+              purpose: "transfer",
+              itemType: "material",
+              notes: cutDetail.notes || `Xuất kho sản xuất tự động sau khi cắt từ cuộn #${cutDetail.inputMaterialId}`,
+              stockOutDate: new Date().toISOString(),
+              items: [
+                {
+                  itemName: matDetail?.name || output.outputMaterialName || "",
+                  quantity: output.quantityProduced,
+                  materialId: output.outputMaterialId,
+                  unit: matDetail?.unit || output.unit || "tờ",
+                  jobCode: cutDetail.jobCode || undefined,
+                },
+              ],
+            });
+            
+            const stockOutId = resOut.data?.id;
+            if (stockOutId) {
+              // Automatically complete (approve) the Stock Out
+              await apiRequest.post(API_SUFFIX.STOCK_OUT_COMPLETE(stockOutId));
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Graceful error: Failed to auto-generate or approve stock-out for sheet outputs:", err);
+      }
     },
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: materialCutKeys.all });
       queryClient.invalidateQueries({ queryKey: materialCutKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: stockInKeys.all });
+      queryClient.invalidateQueries({ queryKey: stockOutKeys.all });
       toast.success("Hoàn thành phiếu cắt nguyên liệu thành công");
     },
     onError: (error: ApiError) => {
@@ -644,7 +687,10 @@ export const useUpdateMaterialCut = () => {
       id: number;
       data: any;
     }) => {
-      const response = await apiRequest.put(API_SUFFIX.MATERIAL_CUT_BY_ID(id), data);
+      // 1. Cancel the old cut
+      await apiRequest.post(API_SUFFIX.MATERIAL_CUT_CANCEL(id));
+      // 2. Create the new cut
+      const response = await apiRequest.post(API_SUFFIX.MATERIAL_CUTS, data);
       return response.data;
     },
     onSuccess: (_, { id }) => {

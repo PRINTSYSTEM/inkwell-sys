@@ -30,8 +30,12 @@ import {
   AlertTriangle,
   FileText,
   Download,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
+import { useQueryClient } from "@tanstack/react-query";
 import { useMaterial, useMaterialHistory, useMaterials } from "@/hooks/use-material";
 import {
   useCompleteMaterialCut,
@@ -43,6 +47,9 @@ import {
   useStockIns,
   useStockOuts,
   useMaterialCuts,
+  useCreateStockIn,
+  useCreateStockOut,
+  useUpdateMaterialCut,
 } from "@/hooks/use-stock";
 import { DateRangePicker } from "@/components/forms/DateRangePicker";
 import type { DateRange } from "react-day-picker";
@@ -123,6 +130,7 @@ const isWaste = (type: string | null | undefined) => {
 
 export default function MaterialHistoryPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { id } = useParams<{ id: string }>();
   const materialId = id ? parseInt(id, 10) : null;
   const isNumericId = materialId !== null && !isNaN(materialId);
@@ -176,6 +184,33 @@ export default function MaterialHistoryPage() {
     warehouseAddress: "",
   });
 
+  const [inlineStockInQty, setInlineStockInQty] = useState<number>(0);
+  const [inlineStockInNotes, setInlineStockInNotes] = useState<string>("");
+  const [inlineStockInJobCode, setInlineStockInJobCode] = useState<string>("");
+  const [isSubmittingStockIn, setIsSubmittingStockIn] = useState(false);
+
+  const [sortKey, setSortKey] = useState<string>("createdAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc" | null>("desc");
+
+  const handleSort = (key: string) => {
+    if (sortKey === key) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortOrder("desc");
+    }
+  };
+
+  const renderSortIcon = (key: string) => {
+    if (sortKey !== key) {
+      return <ArrowUpDown className="h-3.5 w-3.5 ml-1 text-slate-400 opacity-60 shrink-0 inline-block align-middle" />;
+    }
+    if (sortOrder === "asc") {
+      return <ArrowUp className="h-3.5 w-3.5 ml-1 text-[#93631F] font-bold shrink-0 inline-block align-middle" />;
+    }
+    return <ArrowDown className="h-3.5 w-3.5 ml-1 text-[#93631F] font-bold shrink-0 inline-block align-middle" />;
+  };
+
   // API Queries
   const { 
     data: materialDetail, 
@@ -188,6 +223,15 @@ export default function MaterialHistoryPage() {
   );
 
   const showSheetOutputColumn = materialDetail?.type !== "to";
+
+  const isRoll = useMemo(() => {
+    if (!materialDetail) return false;
+    return materialDetail.type === "cuon" || 
+           materialDetail.materialTypeName?.toLowerCase()?.includes("cuộn") || 
+           materialDetail.materialTypeName?.toLowerCase()?.includes("cuon") ||
+           materialDetail.unit?.toLowerCase()?.includes("cuộn") ||
+           materialDetail.unit?.toLowerCase()?.includes("cuon");
+  }, [materialDetail]);
 
   const {
     data: historyData,
@@ -225,6 +269,191 @@ export default function MaterialHistoryPage() {
   const { mutateAsync: completeStockOut } = useCompleteStockOut();
   const { mutateAsync: cancelStockOut } = useCancelStockOut();
 
+  const { mutateAsync: createStockIn } = useCreateStockIn();
+  const { mutateAsync: createStockOut } = useCreateStockOut();
+  const { mutateAsync: updateMaterialCut } = useUpdateMaterialCut();
+
+  const handleInlineStockInSubmit = async (e: any) => {
+    e.preventDefault();
+    if (!inlineStockInQty || inlineStockInQty <= 0) {
+      toast.error("Vui lòng nhập số lượng!");
+      return;
+    }
+
+    setIsSubmittingStockIn(true);
+    let toastId: string | number | undefined;
+    try {
+      const calculatedTotalAmount = (inlineStockInQty || 0) * (materialDetail?.unitPrice || 0);
+      const lineKind = isRoll ? "roll" : "sheet";
+
+      if (isRoll || !inlineStockInJobCode.trim()) {
+        toastId = toast.loading("Đang tạo phiếu nhập...");
+        await createStockIn({
+          source: "manual",
+          itemType: "material",
+          vendorId: materialDetail?.vendorId || undefined,
+          productionOrderId: undefined,
+          deliveryNoteId: undefined,
+          originalStockOutId: undefined,
+          orderId: undefined,
+          totalAmount: calculatedTotalAmount || undefined,
+          laborCost: 0,
+          notes: inlineStockInNotes || undefined,
+          stockInDate: new Date().toISOString(),
+          items: [
+            {
+              lineKind: lineKind,
+              itemName: materialDetail?.name || "",
+              itemCode: materialDetail?.code || undefined,
+              unit: materialDetail?.unit || undefined,
+              quantity: inlineStockInQty,
+              unitPrice: materialDetail?.unitPrice || undefined,
+              notes: inlineStockInNotes || undefined,
+              materialId: materialId ? Number(materialId) : undefined,
+              orderDetailId: undefined,
+              length: materialDetail?.length || undefined,
+              width: materialDetail?.width || undefined,
+              height: materialDetail?.height || undefined,
+              ramQuantity: undefined,
+              proofingOrderId: undefined,
+              jobCode: !isRoll ? inlineStockInJobCode || undefined : undefined,
+            },
+          ],
+        });
+        toast.success("Tạo phiếu nhập thành công (chờ duyệt)!", { id: toastId });
+      } else {
+        toastId = toast.loading("1. Đang thực hiện nhập kho...");
+        const resIn = await createStockIn({
+          source: "manual",
+          itemType: "material",
+          vendorId: materialDetail?.vendorId || undefined,
+          productionOrderId: undefined,
+          deliveryNoteId: undefined,
+          originalStockOutId: undefined,
+          orderId: undefined,
+          totalAmount: calculatedTotalAmount || undefined,
+          laborCost: 0,
+          notes: inlineStockInNotes || undefined,
+          stockInDate: new Date().toISOString(),
+          items: [
+            {
+              lineKind: "sheet",
+              itemName: materialDetail?.name || "",
+              itemCode: materialDetail?.code || undefined,
+              unit: materialDetail?.unit || undefined,
+              quantity: inlineStockInQty,
+              unitPrice: materialDetail?.unitPrice || undefined,
+              notes: inlineStockInNotes || undefined,
+              materialId: materialId ? Number(materialId) : undefined,
+              orderDetailId: undefined,
+              length: materialDetail?.length || undefined,
+              width: materialDetail?.width || undefined,
+              height: materialDetail?.height || undefined,
+              ramQuantity: undefined,
+              proofingOrderId: undefined,
+              jobCode: inlineStockInJobCode || undefined,
+            },
+          ],
+        });
+
+        const stockInId = resIn?.id;
+        if (!stockInId) {
+          throw new Error("Không thể lấy ID phiếu nhập vừa tạo!");
+        }
+
+        toast.loading("2. Đang tự động duyệt phiếu nhập...", { id: toastId });
+        await completeStockIn(stockInId);
+
+        toast.loading("3. Đang thực hiện xuất kho sản xuất...", { id: toastId });
+        const resOut = await createStockOut({
+          purpose: "transfer",
+          itemType: "material",
+          notes: inlineStockInNotes || "",
+          stockOutDate: new Date().toISOString(),
+          vendorId: undefined,
+          receiverName: undefined,
+          receiverAddress: undefined,
+          warehouseName: undefined,
+          warehouseAddress: undefined,
+          items: [
+            {
+              itemName: materialDetail?.name || "",
+              quantity: inlineStockInQty,
+              materialId: materialId,
+              unit: materialDetail?.unit || "",
+              jobCode: inlineStockInJobCode || undefined,
+            } as any,
+          ],
+        });
+
+        const stockOutId = resOut?.id;
+        if (!stockOutId) {
+          throw new Error("Không thể lấy ID phiếu xuất vừa tạo!");
+        }
+
+        toast.loading("4. Đang tự động duyệt phiếu xuất...", { id: toastId });
+        await completeStockOut(stockOutId);
+
+        toast.success("Đã nhập kho và xuất kho sản xuất thành công!", { id: toastId });
+      }
+
+      setInlineStockInQty(0);
+      setInlineStockInNotes("");
+      setInlineStockInJobCode("");
+      refetchAll();
+    } catch (error: any) {
+      console.error(error);
+      toast.error("Thao tác thất bại: " + (error?.response?.data?.message || error?.message || "Lỗi không xác định"), { id: toastId });
+    } finally {
+      setIsSubmittingStockIn(false);
+    }
+  };
+
+  const handleInlineStockOutSubmitAction = async (e: any) => {
+    e.preventDefault();
+    if (!inlineStockInQty || inlineStockInQty <= 0) {
+      toast.error("Vui lòng nhập số lượng!");
+      return;
+    }
+
+    setIsSubmittingStockIn(true);
+    let toastId: string | number | undefined;
+    try {
+      toastId = toast.loading("Đang tạo phiếu xuất...");
+      await createStockOut({
+        purpose: "transfer",
+        itemType: "material",
+        notes: inlineStockInNotes || "",
+        stockOutDate: new Date().toISOString(),
+        vendorId: undefined,
+        receiverName: undefined,
+        receiverAddress: undefined,
+        warehouseName: undefined,
+        warehouseAddress: undefined,
+        items: [
+          {
+            itemName: materialDetail?.name || "",
+            quantity: inlineStockInQty,
+            materialId: materialId,
+            unit: materialDetail?.unit || "",
+            jobCode: !isRoll ? inlineStockInJobCode || undefined : undefined,
+          } as any,
+        ],
+      });
+
+      toast.success("Tạo phiếu xuất thành công (chờ duyệt)!", { id: toastId });
+      setInlineStockInQty(0);
+      setInlineStockInNotes("");
+      setInlineStockInJobCode("");
+      refetchAll();
+    } catch (error: any) {
+      console.error(error);
+      toast.error("Tạo phiếu xuất thất bại: " + (error?.response?.data?.message || error?.message || "Lỗi không xác định"), { id: toastId });
+    } finally {
+      setIsSubmittingStockIn(false);
+    }
+  };
+
   // Handle exporting Stock Out PDF
   const handleExportStockOutPdf = async (explicitId?: number) => {
     const idToExport = explicitId || Number(stockOutIdInput.trim());
@@ -259,7 +488,37 @@ export default function MaterialHistoryPage() {
     }
   };
 
+  const handleUpdateWasted = async (cutId: number, rawCut: any, newWasted: number) => {
+    const output = rawCut.outputs?.[0] || {};
+    const payload = {
+      inputMaterialId: rawCut.inputMaterialId,
+      quantityUsed: rawCut.quantityUsed,
+      quantityWasted: Math.round(newWasted),
+      jobCode: rawCut.jobCode || null,
+      cutAt: rawCut.cutAt,
+      notes: rawCut.notes || "",
+      outputs: [
+        {
+          outputMaterialId: output.outputMaterialId || null,
+          cutLength: output.cutLength,
+          cutWidth: output.cutWidth,
+          quantityProduced: output.quantityProduced,
+        },
+      ],
+    };
+    await updateMaterialCut({ id: cutId, data: payload });
+    refetchAll();
+  };
+
   const refetchAll = async () => {
+    // Wait a brief moment to allow database commit/index propagation
+    await new Promise((resolve) => setTimeout(resolve, 350));
+
+    // Invalidate queries to clear react-query cache and ensure fresh fetches
+    await queryClient.invalidateQueries({ queryKey: ["stock-ins"] });
+    await queryClient.invalidateQueries({ queryKey: ["stock-outs"] });
+    await queryClient.invalidateQueries({ queryKey: ["materials"] });
+
     await Promise.all([
       refetchHistory(),
       refetchPendingCuts(),
@@ -481,6 +740,17 @@ export default function MaterialHistoryPage() {
     return result;
   }, [historyData?.items, searchQuery, transactionType, combinedPendingItems, currentPage]);
 
+  // Local Client-side Sorting (Sorting by Time only)
+  const sortedItems = useMemo(() => {
+    if (sortKey !== "createdAt" || !sortOrder) return filteredItems;
+
+    return [...filteredItems].sort((a, b) => {
+      const valA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const valB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return sortOrder === "asc" ? valA - valB : valB - valA;
+    });
+  }, [filteredItems, sortKey, sortOrder]);
+
   // Total summary statistics computed from returned data
   const summaryStats = useMemo(() => {
     const defaultStats = {
@@ -624,70 +894,6 @@ export default function MaterialHistoryPage() {
           </div>
         </div>
 
-        {/* Action Buttons Bar */}
-        {materialDetail && (
-          <div className="flex items-center gap-2 flex-wrap justify-end pb-1">
-            {/* 1. Cắt cuộn button (only for rolls) */}
-            {(materialDetail.type === "cuon" || materialDetail.materialTypeName?.toLowerCase()?.includes("cuộn") || materialDetail.materialTypeName?.toLowerCase()?.includes("cuon")) && (
-              <Button
-                onClick={() => {
-                  setIsEditMode(false);
-                  setEditId(null);
-                  setEditCutData(null);
-                  setIsCutOpen(true);
-                }}
-                className="h-9 px-4 rounded-lg border border-[#93631F] bg-transparent hover:bg-[#93631F]/5 text-[#93631F] hover:text-[#7a521a] font-semibold text-xs flex items-center gap-1.5 cursor-pointer transition-all duration-200"
-              >
-                <Scissors className="h-4 w-4" />
-                Cắt nguyên liệu
-              </Button>
-            )}
-
-            {/* 2. Nhập kho button */}
-            <Button
-              onClick={() => {
-                setIsEditMode(false);
-                setEditId(null);
-                setStockInForm({
-                  quantity: 0,
-                  documentCode: "",
-                  notes: "",
-                  laborCost: 0,
-                });
-                setIsStockInOpen(true);
-              }}
-              className="h-9 px-4 rounded-lg bg-[#93631F] hover:bg-[#7a521a] text-white font-semibold text-xs shadow-sm flex items-center gap-1.5 cursor-pointer transition-all duration-200 hover:shadow-[#93631F]/20"
-            >
-              <Plus className="h-4 w-4" />
-              Nhập kho
-            </Button>
-
-            {/* 3. Xuất kho button */}
-            <Button
-              onClick={() => {
-                setIsEditMode(false);
-                setEditId(null);
-                setStockOutForm({
-                  quantity: 0,
-                  documentCode: "",
-                  notes: "",
-                  purpose: "transfer",
-                  vendorId: undefined,
-                  receiverName: "",
-                  receiverAddress: "",
-                  warehouseName: "",
-                  warehouseAddress: "",
-                });
-                setIsStockOutOpen(true);
-              }}
-              className="h-9 px-4 rounded-lg border border-rose-200 bg-rose-50/30 hover:bg-rose-50 text-rose-700 font-semibold text-xs flex items-center gap-1.5 cursor-pointer transition-all duration-200 hover:shadow-rose-550/10"
-            >
-              <Minus className="h-4 w-4" />
-              Xuất kho
-            </Button>
-          </div>
-        )}
-
         {/* Error Alert */}
         {isError && (
           <Alert variant="destructive" className="border-red-200 bg-red-50 text-red-955 rounded-2xl py-2">
@@ -699,6 +905,107 @@ export default function MaterialHistoryPage() {
                 : "Không thể lấy thông tin lịch sử từ máy chủ. Vui lòng kiểm tra lại kết nối mạng."}
             </AlertDescription>
           </Alert>
+        )}
+
+        {/* Quick Stock In/Out Form (Inline above Stats) */}
+        {materialDetail && (
+          <Card className="border-slate-200 bg-white shadow-sm rounded-xl overflow-hidden p-3.5 mb-2">
+            <form onSubmit={(e) => e.preventDefault()} className="flex flex-col md:flex-row md:items-end gap-3">
+              <div className="flex-1 space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-500 block">
+                  Số lượng ({(materialDetail.unit || "").toLowerCase()}) <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  type="number"
+                  required
+                  min="0.01"
+                  step="any"
+                  placeholder="Nhập số lượng..."
+                  value={inlineStockInQty || ""}
+                  onChange={(e) => setInlineStockInQty(parseFloat(e.target.value) || 0)}
+                  className="h-10 text-xs border-slate-200 focus-visible:ring-[#93631F] font-mono font-bold text-slate-800"
+                />
+              </div>
+
+              {!isRoll && (
+                <div className="flex-1 space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-500 block">Mã bài</label>
+                  <Input
+                    type="text"
+                    placeholder="Mã bài (nếu có)..."
+                    value={inlineStockInJobCode}
+                    onChange={(e) => setInlineStockInJobCode(e.target.value)}
+                    className="h-10 text-xs border-slate-200 focus-visible:ring-[#93631F] font-bold text-slate-800"
+                  />
+                </div>
+              )}
+
+              <div className="flex-[2] space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-500 block">Ghi chú</label>
+                <Input
+                  type="text"
+                  placeholder="Nhập ghi chú diễn giải..."
+                  value={inlineStockInNotes}
+                  onChange={(e) => setInlineStockInNotes(e.target.value)}
+                  className="h-10 text-xs border-slate-200 focus-visible:ring-[#93631F]"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  onClick={handleInlineStockInSubmit}
+                  disabled={isSubmittingStockIn}
+                  className="h-10 px-5 rounded-lg bg-[#93631F] hover:bg-[#7a521a] text-white font-bold text-xs shrink-0 cursor-pointer transition-all border-none"
+                >
+                  {isSubmittingStockIn ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-1" />
+                      Nhập kho
+                    </>
+                  )}
+                </Button>
+
+                <Button
+                  onClick={handleInlineStockOutSubmitAction}
+                  disabled={isSubmittingStockIn}
+                  className="h-10 px-5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shrink-0 cursor-pointer transition-all border-none"
+                >
+                  {isSubmittingStockIn ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    <>
+                      <Minus className="h-4 w-4 mr-1" />
+                      Xuất kho
+                    </>
+                  )}
+                </Button>
+
+                {isRoll && (
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setIsEditMode(false);
+                      setEditId(null);
+                      setEditCutData(null);
+                      setIsCutOpen(true);
+                    }}
+                    className="h-10 px-5 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200/60 font-bold text-xs shrink-0 cursor-pointer transition-all shadow-sm"
+                  >
+                    <Scissors className="h-4 w-4 mr-1" />
+                    Cắt nguyên liệu
+                  </Button>
+                )}
+              </div>
+            </form>
+          </Card>
         )}
 
         {/* Summary Stats Overview (Vertically Compact & Premium 5-Column Ledger Indicators) */}
@@ -782,18 +1089,44 @@ export default function MaterialHistoryPage() {
             <Table>
             <TableHeader>
               <TableRow className="bg-slate-50/50 hover:bg-slate-50/50 border-b border-slate-200/60 text-xs font-bold uppercase tracking-wider">
-                <TableHead className="font-bold py-2 pl-4 text-left w-[130px]">Thời gian</TableHead>
-                <TableHead className="font-bold py-2 text-left w-[100px]">Mã bài</TableHead>
-                <TableHead className="font-bold py-2 text-left w-[150px]">Kích thước</TableHead>
+                <TableHead 
+                  className="font-bold py-2 pl-4 text-left w-[130px] cursor-pointer hover:bg-slate-100/30 transition-colors select-none"
+                  onClick={() => handleSort("createdAt")}
+                >
+                  <div className="flex items-center">
+                    Thời gian
+                    {renderSortIcon("createdAt")}
+                  </div>
+                </TableHead>
+                <TableHead className="font-bold py-2 text-left w-[100px]">
+                  Mã bài
+                </TableHead>
+                <TableHead className="font-bold py-2 text-left w-[150px]">
+                  Kích thước
+                </TableHead>
                 {showSheetOutputColumn && (
-                  <TableHead className="text-right font-bold py-2 w-[130px] whitespace-nowrap">Số lượng tờ ra</TableHead>
+                  <TableHead className="text-right font-bold py-2 w-[130px] whitespace-nowrap">
+                    Số lượng tờ ra
+                  </TableHead>
                 )}
-                <TableHead className="text-right font-bold py-2 w-[100px]">Số dư đầu</TableHead>
-                <TableHead className="text-right font-bold py-2 w-[110px]">Nhập({materialDetail?.unit || "m"})</TableHead>
-                <TableHead className="text-right font-bold py-2 w-[110px]">Xuất({materialDetail?.unit || "m"})</TableHead>
-                <TableHead className="text-right font-bold py-2 w-[110px]">Hao hụt({materialDetail?.unit || "m"})</TableHead>
-                <TableHead className="text-right font-bold py-2 w-[100px]">Tồn</TableHead>
-                <TableHead className="font-bold py-2 text-left w-[240px]">Ghi chú</TableHead>
+                <TableHead className="text-right font-bold py-2 w-[100px]">
+                  Số dư đầu
+                </TableHead>
+                <TableHead className="text-right font-bold py-2 w-[110px]">
+                  Nhập({materialDetail?.unit || "m"})
+                </TableHead>
+                <TableHead className="text-right font-bold py-2 w-[110px]">
+                  Xuất({materialDetail?.unit || "m"})
+                </TableHead>
+                <TableHead className="text-right font-bold py-2 w-[110px]">
+                  Hao hụt({materialDetail?.unit || "m"})
+                </TableHead>
+                <TableHead className="text-right font-bold py-2 w-[100px]">
+                  Tồn
+                </TableHead>
+                <TableHead className="font-bold py-2 text-left w-[240px]">
+                  Ghi chú
+                </TableHead>
                 <TableHead className="font-bold py-2 pr-4 text-right w-[180px]">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
@@ -808,7 +1141,7 @@ export default function MaterialHistoryPage() {
                     ))}
                   </TableRow>
                 ))
-              ) : filteredItems.length === 0 ? (
+              ) : sortedItems.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={showSheetOutputColumn ? 11 : 10}
@@ -821,7 +1154,7 @@ export default function MaterialHistoryPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredItems.map((entry, index) => {
+                sortedItems.map((entry, index) => {
                   const anyEntry = entry as any;
 
                   // 1. RENDER PENDING TRANSACTIONS ROW
@@ -894,8 +1227,44 @@ export default function MaterialHistoryPage() {
                         </TableCell>
 
                         {/* 8. Hao hụt */}
-                        <TableCell className="text-right py-2 font-bold tabular-nums text-amber-600/70 w-[110px]">
-                          {anyEntry.type === "cut" && anyEntry.wasted !== undefined ? anyEntry.wasted.toLocaleString() : ""}
+                        <TableCell className="text-right py-1 font-bold tabular-nums text-amber-600 w-[110px]">
+                          {anyEntry.type === "cut" && anyEntry.wasted !== undefined ? (
+                            <div className="flex justify-end">
+                              <Input
+                                key={`${anyEntry.id}-${anyEntry.wasted}`}
+                                type="number"
+                                min="0"
+                                step="any"
+                                defaultValue={anyEntry.wasted}
+                                className="h-7 w-20 text-right text-xs font-mono font-bold text-amber-600 border-amber-200 focus-visible:ring-amber-500 bg-amber-50/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                onBlur={async (e) => {
+                                  const newVal = parseFloat(e.target.value);
+                                  if (isNaN(newVal) || newVal < 0) {
+                                    toast.error("Hao hụt phải là số không âm!");
+                                    e.target.value = String(anyEntry.wasted);
+                                    return;
+                                  }
+                                  if (newVal === anyEntry.wasted) return;
+                                  
+                                  const toastId = toast.loading("Đang cập nhật hao hụt...");
+                                  try {
+                                    await handleUpdateWasted(anyEntry.id, anyEntry.raw, newVal);
+                                  } catch (err) {
+                                    console.error(err);
+                                  } finally {
+                                    toast.dismiss(toastId);
+                                  }
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    (e.target as HTMLInputElement).blur();
+                                  }
+                                }}
+                              />
+                            </div>
+                          ) : (
+                            ""
+                          )}
                         </TableCell>
 
                         {/* 9. Tồn */}
