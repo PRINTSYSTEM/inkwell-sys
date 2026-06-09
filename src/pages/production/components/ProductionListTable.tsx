@@ -1260,11 +1260,18 @@ function ProductionTableRow({
                             className="flex flex-col gap-1 text-left text-[11px] border-b border-slate-100 dark:border-slate-800 last:border-0 pb-1.5 last:pb-0"
                           >
                             {dieImg && (
-                              <div className="relative w-full aspect-video rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 overflow-hidden mb-1.5">
+                              <div 
+                                className="relative w-full aspect-video rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 overflow-hidden mb-1.5 cursor-zoom-in hover:brightness-95 transition-all"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setViewingImageUrl(dieImg);
+                                }}
+                                title="Nhấp để phóng to hình khuôn bế"
+                              >
                                 <img
                                   src={dieImg}
                                   alt="Hình ảnh khuôn"
-                                  className="w-full h-full object-contain"
+                                  className="w-full h-full object-contain select-none"
                                 />
                               </div>
                             )}
