@@ -28,6 +28,7 @@ import {
   ChevronsUpDown,
   Plus,
   Trash2,
+  FileImage,
 } from "lucide-react";
 import {
   Dialog,
@@ -86,6 +87,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useMaterials } from "@/hooks/use-material";
 import { formatDieSize } from "@/utils/format-die-size";
+import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 
 interface ProductionListTableProps {
   isLoading: boolean;
@@ -670,6 +672,9 @@ function ProductionTableRow({
   const [tempPackagingValues, setTempPackagingValues] = useState<
     Record<number, { outputQty: string; defectQty: string; notes: string }>
   >({});
+  const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
+  const [activeImageIdx, setActiveImageIdx] = useState(0);
+  const imageContainerRef = React.useRef<HTMLDivElement>(null);
 
   const isDraft = !prod.id;
   const isCreating = React.useRef(false);
@@ -688,6 +693,57 @@ function ProductionTableRow({
       !!prod.proofingOrderId,
     );
   const proofingOrder = (proofingOrderData || prod.proofingOrder) as any;
+
+  const orderImages = React.useMemo(() => {
+    if (!proofingOrder) return [];
+    const urls: string[] = [];
+    
+    if (proofingOrder.imageUrl) {
+      urls.push(proofingOrder.imageUrl);
+    }
+    
+    if (Array.isArray(proofingOrder.images)) {
+      proofingOrder.images.forEach((img: any) => {
+        if (img?.imageUrl) {
+          urls.push(img.imageUrl);
+        }
+      });
+    }
+    
+    if (Array.isArray(proofingOrder.proofingOrderDesigns)) {
+      proofingOrder.proofingOrderDesigns.forEach((pod: any) => {
+        if (pod.design?.designImageUrl) {
+          urls.push(pod.design.designImageUrl);
+        } else if (pod.design?.imageUrl) {
+          urls.push(pod.design.imageUrl);
+        }
+      });
+    }
+    
+    return Array.from(new Set(urls));
+  }, [proofingOrder]);
+
+  React.useEffect(() => {
+    setActiveImageIdx(0);
+  }, [orderImages]);
+
+  React.useEffect(() => {
+    const el = imageContainerRef.current;
+    if (!el || orderImages.length <= 1) return;
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.deltaY > 0) {
+        setActiveImageIdx((prev) => (prev + 1) % orderImages.length);
+      } else {
+        setActiveImageIdx((prev) => (prev - 1 + orderImages.length) % orderImages.length);
+      }
+    };
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", handleWheel);
+    };
+  }, [orderImages]);
 
   const productionItems = (prod as any).items || [];
 
@@ -885,10 +941,66 @@ function ProductionTableRow({
               </div>
 
               {prod.customerName && (
-                <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 whitespace-normal break-words text-center leading-tight line-clamp-3 px-1">
+                <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 whitespace-normal break-words text-center leading-tight line-clamp-3 px-1 mb-1">
                   {prod.customerName}
                 </span>
               )}
+
+              {/* Hình ảnh bài in với Carousel (Mũi tên & Cuộn chuột) */}
+              {orderImages.length > 0 && (
+                <div className="mt-1 flex flex-col items-center gap-1 shrink-0">
+                  <div 
+                    ref={imageContainerRef}
+                    className="relative w-16 h-16 rounded border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-slate-50 dark:bg-slate-900 group/img cursor-zoom-in shrink-0"
+                  >
+                    <img
+                      src={orderImages[activeImageIdx]}
+                      alt="Hình bài"
+                      className="w-full h-full object-cover select-none"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setViewingImageUrl(orderImages[activeImageIdx]);
+                      }}
+                    />
+                    
+                    {orderImages.length > 1 && (
+                      <>
+                        {/* Mũi tên trái */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveImageIdx((prev) => (prev - 1 + orderImages.length) % orderImages.length);
+                          }}
+                          className="absolute left-0.5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-slate-900/75 hover:bg-slate-900 text-white flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity duration-150 border border-slate-700/50"
+                          title="Hình trước"
+                        >
+                          <ChevronLeft className="w-3 h-3 stroke-[3]" />
+                        </button>
+                        
+                        {/* Mũi tên phải */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveImageIdx((prev) => (prev + 1) % orderImages.length);
+                          }}
+                          className="absolute right-0.5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-slate-900/75 hover:bg-slate-900 text-white flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity duration-150 border border-slate-700/50"
+                          title="Hình sau"
+                        >
+                          <ChevronRight className="w-3 h-3 stroke-[3]" />
+                        </button>
+                        
+                        {/* Chỉ số trang */}
+                        <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 bg-slate-900/75 text-white text-[8px] font-bold px-1 py-0.5 rounded-sm tracking-tighter select-none">
+                          {activeImageIdx + 1}/{orderImages.length}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Nút hủy lệnh SX */}
               {!isDraft && (
                 <button
@@ -1140,60 +1252,72 @@ function ProductionTableRow({
                   </HoverCardTrigger>
                   <HoverCardContent className="w-[250px] p-2 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800" align="center">
                     <div className="flex flex-col gap-1.5 w-full">
-                      {uniqueDies.map((dieExport: any, i: number) => (
-                        <div
-                          key={dieExport.id || i}
-                          className="flex flex-col gap-1 text-left text-[11px] border-b border-slate-100 dark:border-slate-800 last:border-0 pb-1.5 last:pb-0"
-                        >
-                          <div className="flex flex-col">
-                            <span className="text-[9px] text-muted-foreground font-medium uppercase">
-                              Mã khuôn:
-                            </span>
-                            <span className="font-bold text-foreground">
-                              {dieExport.code || dieExport.die?.code || "—"}
-                            </span>
-                          </div>
-                          <div className="flex flex-col">
-                            <span className="text-[9px] text-muted-foreground font-medium uppercase">
-                              Kích thước:
-                            </span>
-                            <span className="font-bold text-amber-700 dark:text-amber-500">
-                              {dieExport.size ||
-                                (dieExport.die
-                                  ? formatDieSize(dieExport.die)
-                                  : "—")}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center border-t border-slate-200 dark:border-slate-700 pt-0.5">
-                            <span className="text-[9px] text-muted-foreground font-medium uppercase">
-                              Tình trạng:
-                            </span>
-                            <span className="font-bold text-green-600 dark:text-green-400">
-                              {dieExport.die?.location || "Có thể dùng"}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center">
-                            <span className="text-[9px] text-muted-foreground font-medium uppercase">
-                              Ngày xuất:
-                            </span>
-                            <span className="font-bold text-foreground">
-                              {formatDate(dieExport.createdAt)}
-                            </span>
-                          </div>
-                          
-                          {/* Ghi chú Khuôn */}
-                          {(dieExport.notes || dieExport.die?.notes || dieExport.dieExportNotes) && (
-                            <div className="flex flex-col pt-0.5 border-t border-slate-200 dark:border-slate-700 mt-0.5">
+                      {uniqueDies.map((dieExport: any, i: number) => {
+                        const dieImg = dieExport.die?.imageUrl || dieExport.imageUrl;
+                        return (
+                          <div
+                            key={dieExport.id || i}
+                            className="flex flex-col gap-1 text-left text-[11px] border-b border-slate-100 dark:border-slate-800 last:border-0 pb-1.5 last:pb-0"
+                          >
+                            {dieImg && (
+                              <div className="relative w-full aspect-video rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 overflow-hidden mb-1.5">
+                                <img
+                                  src={dieImg}
+                                  alt="Hình ảnh khuôn"
+                                  className="w-full h-full object-contain"
+                                />
+                              </div>
+                            )}
+                            <div className="flex flex-col">
                               <span className="text-[9px] text-muted-foreground font-medium uppercase">
-                                Ghi chú:
+                                Mã khuôn:
                               </span>
-                              <span className="italic text-amber-700 dark:text-amber-500 break-words font-medium whitespace-pre-wrap">
-                                {dieExport.notes || dieExport.die?.notes || dieExport.dieExportNotes}
+                              <span className="font-bold text-foreground">
+                                {dieExport.code || dieExport.die?.code || "—"}
                               </span>
                             </div>
-                          )}
-                        </div>
-                      ))}
+                            <div className="flex flex-col">
+                              <span className="text-[9px] text-muted-foreground font-medium uppercase">
+                                Kích thước:
+                              </span>
+                              <span className="font-bold text-amber-700 dark:text-amber-500">
+                                {dieExport.size ||
+                                  (dieExport.die
+                                    ? formatDieSize(dieExport.die)
+                                    : "—")}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center border-t border-slate-200 dark:border-slate-700 pt-0.5">
+                              <span className="text-[9px] text-muted-foreground font-medium uppercase">
+                                Tình trạng:
+                              </span>
+                              <span className="font-bold text-green-600 dark:text-green-400">
+                                {dieExport.die?.location || "Có thể dùng"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-[9px] text-muted-foreground font-medium uppercase">
+                                Ngày xuất:
+                              </span>
+                              <span className="font-bold text-foreground">
+                                {formatDate(dieExport.createdAt)}
+                              </span>
+                            </div>
+                            
+                            {/* Ghi chú Khuôn */}
+                            {(dieExport.notes || dieExport.die?.notes || dieExport.dieExportNotes) && (
+                              <div className="flex flex-col pt-0.5 border-t border-slate-200 dark:border-slate-700 mt-0.5">
+                                <span className="text-[9px] text-muted-foreground font-medium uppercase">
+                                  Ghi chú:
+                                </span>
+                                <span className="italic text-amber-700 dark:text-amber-500 break-words font-medium whitespace-pre-wrap">
+                                  {dieExport.notes || dieExport.die?.notes || dieExport.dieExportNotes}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </HoverCardContent>
                 </HoverCard>
@@ -1505,6 +1629,16 @@ function ProductionTableRow({
                 }
               });
             }
+          }}
+        />
+      )}
+
+      {viewingImageUrl && (
+        <ImageViewerDialog
+          imageUrl={viewingImageUrl}
+          open={!!viewingImageUrl}
+          onOpenChange={(open) => {
+            if (!open) setViewingImageUrl(null);
           }}
         />
       )}
