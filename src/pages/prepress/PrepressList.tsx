@@ -217,6 +217,21 @@ export default function PrepressList() {
   const completedTotalPages =
     Math.ceil(completedTotalCount / itemsPerPage) || 1;
 
+  const isSearchActiveAndEmpty = useMemo(() => {
+    if (loadingIncompleteOrders || loadingCompletedOrders) return false;
+    return (
+      debouncedDesignCode.trim() !== "" &&
+      incompleteTotalCount === 0 &&
+      completedTotalCount === 0
+    );
+  }, [
+    debouncedDesignCode,
+    incompleteTotalCount,
+    completedTotalCount,
+    loadingIncompleteOrders,
+    loadingCompletedOrders,
+  ]);
+
   useEffect(() => {
     setIncompleteOrdersPageInput(incompleteOrdersPage.toString());
   }, [incompleteOrdersPage]);
@@ -275,10 +290,10 @@ export default function PrepressList() {
 
   const { data: availableDesignsData, isLoading: isLoadingDesigns } =
     useAvailableOrderDetailsForProofing(
-      viewMode === "designs"
+      viewMode === "designs" || isSearchActiveAndEmpty
         ? {
-            materialTypeId: materialTypeIdForApi,
-            designTypeId: selectedDesignTypeId,
+            materialTypeId: viewMode === "designs" ? materialTypeIdForApi : null,
+            designTypeId: viewMode === "designs" ? selectedDesignTypeId : null,
             designCode: designCodeForApi,
             pageNumber: designsPage,
             pageSize: designsPageSize,
@@ -312,11 +327,9 @@ export default function PrepressList() {
   }, [designsPage]);
 
   useEffect(() => {
-    if (!hasActiveFilters) return;
     setDesignsPage(1);
     setDesignsPageInput("1");
   }, [
-    hasActiveFilters,
     selectedDesignTypeId,
     materialTypeIdForApi,
     debouncedDesignCode,

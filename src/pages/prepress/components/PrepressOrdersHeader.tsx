@@ -93,6 +93,7 @@ interface PrepressOrdersHeaderProps {
   designsPageSize?: number;
   expandedOrderIds?: Set<number>;
   isSelectionEnabled?: boolean;
+  shouldShowExpand?: boolean;
 }
 
 export function PrepressOrdersHeader({
@@ -157,6 +158,13 @@ export function PrepressOrdersHeader({
   isSelectionEnabled = true,
 }: PrepressOrdersHeaderProps) {
   const [materialTypeSearchOpen, setMaterialTypeSearchOpen] = useState(false);
+
+  const isSearchActiveAndEmpty =
+    !loadingIncomplete &&
+    !loadingCompleted &&
+    debouncedDesignCode.trim() !== "" &&
+    incompleteTotalCount === 0 &&
+    completedTotalCount === 0;
 
   return (
     <div className="relative shrink-0">
@@ -276,9 +284,14 @@ export function PrepressOrdersHeader({
         hasActiveFilters={hasActiveFilters}
       />
 
-      {/* DesignTable - shown when filters are active */}
-      {hasActiveFilters && (
+      {/* DesignTable - shown when filters are active or search matches no orders */}
+      {(hasActiveFilters || isSearchActiveAndEmpty) && (
         <div className="mt-4 space-y-4">
+          {isSearchActiveAndEmpty && (
+            <div className="rounded-lg border border-[#f5c2c2] bg-[#fdf2f2] p-3 text-xs text-red-800 dark:border-red-900/50 dark:bg-red-950/20 dark:text-red-300">
+              Không tìm thấy mã bài (lệnh bình) nào khớp. Đang tìm và hiển thị các thiết kế chờ bình bài khớp mã hàng <strong>"{debouncedDesignCode}"</strong>:
+            </div>
+          )}
           {isLoadingDesigns ? (
             <div className="text-center py-8 text-muted-foreground text-sm">
               Đang tải thiết kế...
@@ -366,14 +379,14 @@ export function PrepressOrdersHeader({
             </>
           ) : (
             <div className="text-center py-8 text-muted-foreground text-sm">
-              Không tìm thấy thiết kế nào
+              Không tìm thấy thiết kế nào khớp mã hàng <strong>"{debouncedDesignCode}"</strong> trong danh sách chờ bình bài.
             </div>
           )}
         </div>
       )}
 
-      {/* Split lists shown when filters NOT active */}
-      {!hasActiveFilters && (
+      {/* Split lists shown when filters NOT active and search not empty/unmatched */}
+      {!hasActiveFilters && !isSearchActiveAndEmpty && (
         <div className="mt-4 space-y-8">
           {/* Incomplete Orders Section */}
           <div className="space-y-4">

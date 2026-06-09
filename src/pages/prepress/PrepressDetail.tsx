@@ -593,7 +593,7 @@ export default function ProofingOrderDetailPage() {
     useUpdateProofingImage();
   const { mutate: uploadImagesMutate, loading: isUploadingImages } =
     useUploadProofingImages();
-  const { mutate: deleteImageMutate, isPending: isDeletingImage } =
+  const { mutate: deleteImageMutate, loading: isDeletingImage } =
     useDeleteProofingImage();
   const { mutate: handToProductionMutate, isPending: isHandingToProduction } =
     useHandToProduction();
@@ -2025,10 +2025,8 @@ export default function ProofingOrderDetailPage() {
                     selectedDesignTypes={selectedDesignTypes}
                     selectedMaterialTypes={selectedMaterialTypes}
                     currentMaterialTypeId={currentMaterialTypeId}
-                    searchTerm={searchTerm}
                     onDesignTypeChange={setSelectedDesignTypes}
                     onMaterialTypeChange={setSelectedMaterialTypes}
-                    onSearchChange={setSearchTerm}
                     onClearFilters={handleClearFilters}
                     hasActiveFilters={
                       selectedDesignTypes.length > 0 ||
@@ -2292,6 +2290,8 @@ export default function ProofingOrderDetailPage() {
         setIsAddDieDialogOpen={setIsAddDieDialogOpen}
         selectedDesignForRelatedDies={selectedDesignForRelatedDies}
         setSelectedDesignForRelatedDies={setSelectedDesignForRelatedDies}
+        isRelatedDiesDialogOpen={isRelatedDiesDialogOpen}
+        setIsRelatedDiesDialogOpen={setIsRelatedDiesDialogOpen}
         isRejectDialogOpen={isRejectDialogOpen}
         setIsRejectDialogOpen={setIsRejectDialogOpen}
         rejectTarget={rejectTarget}

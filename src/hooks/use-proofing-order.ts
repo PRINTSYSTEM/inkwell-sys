@@ -136,6 +136,7 @@ export const useAvailableOrderDetailsForProofing = (
             height: design.height ?? 0,
             unit: "mm",
             quantity: od.quantity ?? 0,
+            unitPrice: od.unitPrice ?? 0,
             // Map availableQuantityForProofing from design to availableQuantity
             availableQuantity:
               design.availableQuantityForProofing != null
@@ -149,6 +150,9 @@ export const useAvailableOrderDetailsForProofing = (
             thumbnailUrl: design.designImageUrl || "",
             createdAt: design.createdAt || "",
             designId: design.id, // Store designId for fallback fetching if needed
+            orderCode: (design as any).latestOrderCode || undefined,
+            customerName: (design as any).customer?.name || undefined,
+            customerCompanyName: (design as any).customer?.companyName || undefined,
             specification: (() => {
               const rawSpec =
                 (od as any).specification ||

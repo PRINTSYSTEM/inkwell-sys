@@ -54,10 +54,8 @@ export function PrepressDesignFilter({
               selectedDesignTypes={selectedDesignTypes}
               selectedMaterialTypes={selectedMaterialTypes}
               currentMaterialTypeId={currentMaterialTypeId}
-              searchTerm={searchTerm}
               onDesignTypeChange={onDesignTypeChange}
               onMaterialTypeChange={onMaterialTypeChange}
-              onSearchChange={onSearchChange}
               onClearFilters={onClearFilters}
             />
 
