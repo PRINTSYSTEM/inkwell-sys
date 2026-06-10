@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus, Trash2, Loader2, AlertCircle, Minus, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +52,7 @@ export function StockOutByVendorDialog({
   vendors,
   refetch,
 }: StockOutByVendorDialogProps) {
+  const navigate = useNavigate();
   // Purpose: production, outsource, return_vendor, adjustment
   const [purpose, setPurpose] = useState<string>("production");
 
@@ -237,9 +239,12 @@ export function StockOutByVendorDialog({
       };
 
       try {
-        await createProductionStockOut(payload);
+        const res = await createProductionStockOut(payload);
         onOpenChange(false);
         refetch();
+        if (res?.id) {
+          navigate(`/stock/stock-outs/${res.id}`);
+        }
       } catch (err) {
         console.error(err);
       }
@@ -284,13 +289,17 @@ export function StockOutByVendorDialog({
       };
 
       try {
+        let res;
         if (purpose === "outsource") {
-          await createOutsourceStockOut(payload);
+          res = await createOutsourceStockOut(payload);
         } else {
-          await createReturnVendorStockOut(payload);
+          res = await createReturnVendorStockOut(payload);
         }
         onOpenChange(false);
         refetch();
+        if (res?.id) {
+          navigate(`/stock/stock-outs/${res.id}`);
+        }
       } catch (err) {
         console.error(err);
       }
@@ -329,9 +338,12 @@ export function StockOutByVendorDialog({
       };
 
       try {
-        await createAdjustmentStockOut(payload);
+        const res = await createAdjustmentStockOut(payload);
         onOpenChange(false);
         refetch();
+        if (res?.id) {
+          navigate(`/stock/stock-outs/${res.id}`);
+        }
       } catch (err) {
         console.error(err);
       }

@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
+import { format } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -87,6 +88,19 @@ export default function StockSummary() {
 
   const materials = materialsData?.items || [];
 
+  // Date filter for recent stock-outs
+  const [stockOutDate, setStockOutDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
+
+  const stockOutDateParams = useMemo(() => {
+    if (!stockOutDate) return { fromDate: undefined, toDate: undefined };
+    const start = new Date(stockOutDate + "T00:00:00");
+    const end = new Date(stockOutDate + "T23:59:59.999");
+    return {
+      fromDate: start.toISOString(),
+      toDate: end.toISOString(),
+    };
+  }, [stockOutDate]);
+
   // Fetch recent stock-out vouchers
   const {
     data: stockOutsData,
@@ -94,7 +108,9 @@ export default function StockSummary() {
     refetch: refetchStockOuts,
   } = useStockOuts({
     pageNumber: 1,
-    pageSize: 5,
+    pageSize: 10,
+    fromDate: stockOutDateParams.fromDate,
+    toDate: stockOutDateParams.toDate,
   });
 
   const stockOuts = stockOutsData?.items || [];
@@ -312,14 +328,14 @@ export default function StockSummary() {
                   placeholder="Tìm kiếm mã, tên vật tư..."
                   value={materialSearchQuery}
                   onChange={(e) => setMaterialSearchQuery(e.target.value)}
-                  className="pl-9 h-8.5 text-xs bg-white border-slate-200 focus-visible:ring-primary rounded-lg"
+                  className="pl-9 h-9 text-xs bg-white border-slate-200 focus-visible:ring-primary rounded-lg"
                 />
               </div>
 
               {/* Vendor Selector */}
               <div className="w-full sm:w-[220px]">
                 <Select value={selectedVendorId} onValueChange={setSelectedVendorId}>
-                  <SelectTrigger className="h-8.5 text-xs bg-white border-slate-200 rounded-lg cursor-pointer">
+                  <SelectTrigger className="h-9 text-xs bg-white border-slate-200 rounded-lg cursor-pointer">
                     <SelectValue placeholder="Chọn nhà cung cấp" />
                   </SelectTrigger>
                   <SelectContent>
@@ -344,7 +360,7 @@ export default function StockSummary() {
               {/* Page Size */}
               <div className="w-[130px]">
                 <Select value={String(pageSize)} onValueChange={(val) => setPageSize(Number(val))}>
-                  <SelectTrigger className="h-8.5 text-xs bg-white border-slate-200 rounded-lg cursor-pointer">
+                  <SelectTrigger className="h-9 text-xs bg-white border-slate-200 rounded-lg cursor-pointer">
                     <SelectValue placeholder="Số dòng hiển thị" />
                   </SelectTrigger>
                   <SelectContent>
@@ -362,7 +378,7 @@ export default function StockSummary() {
                   onClick={handleResetFilters}
                   variant="ghost"
                   size="sm"
-                  className="h-8.5 text-muted-foreground hover:text-foreground hover:bg-accent text-xs font-semibold px-3 rounded-lg cursor-pointer transition-colors"
+                  className="h-9 text-muted-foreground hover:text-foreground hover:bg-accent text-xs font-semibold px-3 rounded-lg cursor-pointer transition-colors"
                 >
                   Xóa bộ lọc
                 </Button>
@@ -568,123 +584,110 @@ export default function StockSummary() {
 
           {/* Recent Stock-Outs List (Vertical Layout) */}
           <Card className="border-slate-200/60 shadow-sm rounded-xl overflow-hidden">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-3.5 px-4 flex flex-row items-center justify-between">
+            <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-3.5 px-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <div className="h-7.5 w-7.5 rounded-md bg-slate-100 flex items-center justify-center text-slate-600">
                   <FileText className="h-4 w-4" />
                 </div>
                 <CardTitle className="text-sm font-bold text-foreground">
-                  PHIẾU XUẤT KHO GẦN ĐÂY
+                  PHIẾU XUẤT KHO THEO NGÀY
                 </CardTitle>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate("/stock/stock-outs")}
-                className="text-xs text-[#93631F] font-semibold hover:bg-slate-100 cursor-pointer h-7 rounded-lg"
-              >
-                Xem tất cả
-              </Button>
+              
+              <div className="flex items-center gap-2 w-full sm:w-auto self-stretch sm:self-auto justify-end">
+                <div className="relative">
+                  <Input
+                    type="date"
+                    value={stockOutDate}
+                    onChange={(e) => setStockOutDate(e.target.value)}
+                    className="h-8 text-xs bg-white border-slate-200 rounded-lg pr-2 cursor-pointer focus-visible:ring-[#93631F]"
+                  />
+                </div>
+                {stockOutDate && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setStockOutDate("")}
+                    className="text-xs text-muted-foreground hover:text-foreground cursor-pointer h-8 rounded-lg px-2"
+                  >
+                    Xóa ngày
+                  </Button>
+                )}
+                <div className="h-6 w-px bg-slate-200 hidden sm:block mx-1" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate("/stock/stock-outs")}
+                  className="text-xs text-[#93631F] font-semibold hover:bg-slate-100 cursor-pointer h-8 rounded-lg"
+                >
+                  Xem tất cả
+                </Button>
+              </div>
             </CardHeader>
 
-            <CardContent className="p-4">
+            <CardContent className="p-0">
               {isLoadingStockOuts ? (
-                <div className="space-y-3">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <div key={i} className="flex items-center justify-between p-3 border border-slate-100 rounded-lg">
-                      <div className="space-y-2 flex-1">
-                        <Skeleton className="h-4 w-1/4" />
-                        <Skeleton className="h-3 w-1/2" />
-                      </div>
-                      <Skeleton className="h-8 w-8 rounded-lg" />
-                    </div>
-                  ))}
-                </div>
+                <TableSkeletonRows cols={7} />
               ) : stockOuts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-slate-400 text-xs">
+                <div className="flex flex-col items-center justify-center py-16 text-slate-400 text-xs">
                   <Info className="h-6 w-6 mb-2 text-slate-300" />
                   <p className="font-medium">Chưa có phiếu xuất kho nào được ghi nhận</p>
                 </div>
               ) : (
-                <div className="flex flex-col gap-3">
-                  {stockOuts.map((item: any) => (
-                    <div 
-                      key={item.id}
-                      className="group flex flex-col sm:flex-row sm:items-center justify-between p-3.5 border border-slate-100 rounded-xl hover:bg-slate-50/80 transition-all duration-200 gap-3 relative cursor-pointer"
-                      onClick={() => navigate(`/stock/stock-outs/${item.id}`)}
-                    >
-                      {/* Left: Info */}
-                      <div className="flex items-start gap-3">
-                        <div className="h-8.5 w-8.5 rounded-lg bg-rose-50 flex items-center justify-center shrink-0">
-                          <Minus className="h-4.5 w-4.5 text-rose-500" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-mono font-bold text-xs text-slate-800">
-                              {item.code || `PXK-${item.id}`}
-                            </span>
-                            <span className="text-[10px] text-slate-400">
-                              {item.stockOutDate ? formatDate(item.stockOutDate) : "—"}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                            <span className="text-[11px] font-semibold text-slate-500">
-                              Nghiệp vụ:
-                            </span>
-                            <Badge variant="outline" className="text-[10px] bg-slate-50 border-slate-200 text-slate-700 py-0 px-1.5 rounded font-normal">
-                              {translatePurpose(item.type)}
-                            </Badge>
-                            {item.customer?.name && (
-                              <>
-                                <span className="text-[11px] font-semibold text-slate-300">|</span>
-                                <span className="text-[11px] text-slate-600 truncate max-w-[180px]" title={item.customer.name}>
-                                  KH: {item.customer.name}
-                                </span>
-                              </>
-                            )}
-                            {(item.warehouse || item.warehouseName) && (
-                              <>
-                                <span className="text-[11px] font-semibold text-slate-300">|</span>
-                                <span className="text-[11px] text-slate-500">
-                                  Kho: {item.warehouse || item.warehouseName}
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Right: Quantity / Value & Status */}
-                      <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0">
-                        <div className="text-right sm:block flex items-center gap-2">
-                          <div className="text-xs font-bold text-slate-800 tabular-nums">
-                            {item.totalQuantity ? item.totalQuantity.toLocaleString("vi-VN") : "0"} {" "}
-                            <span className="text-[10px] text-slate-400 font-normal">vật tư</span>
-                          </div>
-                          {item.totalValue > 0 && (
-                            <div className="text-[10px] text-emerald-600 font-semibold tabular-nums mt-0.5 sm:mt-0">
-                              {formatCurrency(item.totalValue)}
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-slate-50/50 whitespace-nowrap text-xs border-b border-slate-200/60">
+                        <TableHead className="w-[120px] font-bold py-2.5 pl-4">Số phiếu</TableHead>
+                        <TableHead className="w-[120px] font-bold py-2.5">Ngày xuất</TableHead>
+                        <TableHead className="min-w-[140px] font-bold py-2.5">Nghiệp vụ</TableHead>
+                        <TableHead className="min-w-[200px] font-bold py-2.5">Khách hàng / Đối tác</TableHead>
+                        <TableHead className="w-[150px] font-bold py-2.5">Kho xuất</TableHead>
+                        <TableHead className="w-[120px] text-center font-bold py-2.5">Trạng thái</TableHead>
+                        <TableHead className="w-[60px] text-center font-bold py-2.5 pr-4">Xem</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {stockOuts.map((item: any) => (
+                        <TableRow
+                          key={item.id}
+                          className="hover:bg-slate-50 border-b border-slate-100 text-xs cursor-pointer transition-colors duration-150"
+                          onClick={() => navigate(`/stock/stock-outs/${item.id}`)}
+                        >
+                          <TableCell className="font-mono font-bold py-3 pl-4 text-slate-800">
+                            {item.code || `PXK-${item.id}`}
+                          </TableCell>
+                          <TableCell className="py-3 text-slate-600">
+                            {item.stockOutDate ? formatDate(item.stockOutDate) : "—"}
+                          </TableCell>
+                          <TableCell className="py-3 font-semibold text-slate-700">
+                            {item.purposeName || translatePurpose(item.purpose || item.type)}
+                          </TableCell>
+                          <TableCell className="py-3 text-slate-600 truncate max-w-[200px]" title={item.customer?.name || item.vendorName || item.vendor?.name || item.supplier?.name || "—"}>
+                            {item.customer?.name || item.vendorName || item.vendor?.name || item.supplier?.name || "—"}
+                          </TableCell>
+                          <TableCell className="py-3 text-slate-600">
+                            {item.warehouse || item.warehouseName || "—"}
+                          </TableCell>
+                          <TableCell className="py-3 text-center">
+                            <div className="inline-flex justify-center w-full">
+                              {getStatusBadge(item.status)}
                             </div>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          {getStatusBadge(item.status)}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-lg hover:bg-slate-100 text-slate-500 cursor-pointer shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/stock/stock-outs/${item.id}`);
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                          </TableCell>
+                          <TableCell className="py-3 text-center pr-4" onClick={(e) => e.stopPropagation()}>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-lg hover:bg-slate-100 text-slate-500 cursor-pointer"
+                              onClick={() => navigate(`/stock/stock-outs/${item.id}`)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               )}
             </CardContent>

@@ -241,12 +241,12 @@ export default function StockInListPage() {
                   placeholder="Tìm kiếm theo mã phiếu, nhà cung cấp..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9 h-8.5 text-xs bg-white border-slate-200 focus-visible:ring-[#93631F] rounded-lg"
+                  className="pl-9 h-9 text-xs bg-white border-slate-200 focus-visible:ring-[#93631F] rounded-lg"
                 />
               </div>
 
               {/* Date Range Picker */}
-              <div className="w-full sm:w-[260px] [&_button]:h-8.5 [&_button]:text-xs [&_button]:rounded-lg [&_button]:border-slate-200">
+              <div className="w-full sm:w-[260px] [&_button]:h-9 [&_button]:text-xs [&_button]:rounded-lg [&_button]:border-slate-200">
                 <DateRangePicker
                   value={dateRange}
                   onValueChange={(r) => {
@@ -265,7 +265,7 @@ export default function StockInListPage() {
                     setPage(1);
                   }}
                 >
-                  <SelectTrigger className="h-8.5 text-xs bg-white border-slate-200 rounded-lg cursor-pointer">
+                  <SelectTrigger className="h-9 text-xs bg-white border-slate-200 rounded-lg cursor-pointer">
                     <SelectValue placeholder="Loại phiếu" />
                   </SelectTrigger>
                   <SelectContent>
@@ -290,7 +290,7 @@ export default function StockInListPage() {
                     setPage(1);
                   }}
                 >
-                  <SelectTrigger className="h-8.5 text-xs bg-white border-slate-200 rounded-lg cursor-pointer">
+                  <SelectTrigger className="h-9 text-xs bg-white border-slate-200 rounded-lg cursor-pointer">
                     <SelectValue placeholder="Nhà cung cấp" />
                   </SelectTrigger>
                   <SelectContent>
@@ -310,7 +310,7 @@ export default function StockInListPage() {
                   value={statusFilter || "all"}
                   onValueChange={(v) => setStatusFilter(v === "all" ? "" : v)}
                 >
-                  <SelectTrigger className="h-8.5 text-xs bg-white border-slate-200 rounded-lg cursor-pointer">
+                  <SelectTrigger className="h-9 text-xs bg-white border-slate-200 rounded-lg cursor-pointer">
                     <SelectValue placeholder="Trạng thái" />
                   </SelectTrigger>
                   <SelectContent>
@@ -331,7 +331,7 @@ export default function StockInListPage() {
                 size="sm"
                 onClick={() => refetch()}
                 disabled={isLoading}
-                className="cursor-pointer border-slate-200 text-xs h-8.5 rounded-lg hover:bg-slate-50 text-slate-700 font-semibold"
+                className="cursor-pointer border-slate-200 text-xs h-9 rounded-lg hover:bg-slate-50 text-slate-700 font-semibold"
               >
                 <RefreshCw
                   className={`h-3.5 w-3.5 mr-1.5 ${isLoading ? "animate-spin" : ""}`}
@@ -344,7 +344,7 @@ export default function StockInListPage() {
                 variant="outline"
                 size="sm"
                 onClick={handleExportExcel}
-                className="cursor-pointer border-slate-200 text-xs h-8.5 rounded-lg hover:bg-slate-50 text-slate-700 font-semibold"
+                className="cursor-pointer border-slate-200 text-xs h-9 rounded-lg hover:bg-slate-50 text-slate-700 font-semibold"
               >
                 <Download className="h-3.5 w-3.5 mr-1.5" />
                 Xuất Excel
@@ -356,7 +356,7 @@ export default function StockInListPage() {
                   onClick={handleResetFilters}
                   variant="ghost"
                   size="sm"
-                  className="h-8.5 text-muted-foreground hover:text-foreground hover:bg-accent text-xs font-semibold px-3 rounded-lg cursor-pointer transition-colors"
+                  className="h-9 text-muted-foreground hover:text-foreground hover:bg-accent text-xs font-semibold px-3 rounded-lg cursor-pointer transition-colors"
                 >
                   Xóa bộ lọc
                 </Button>
