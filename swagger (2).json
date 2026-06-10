@@ -19066,6 +19066,130 @@
         }
       }
     },
+    "/api/stock-outs/production-by-vendor": {
+      "post": {
+        "tags": [
+          "StockOut"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductionStockOutByVendorRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductionStockOutByVendorRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateProductionStockOutByVendorRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/stock-outs/outsource": {
+      "post": {
+        "tags": [
+          "StockOut"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOutsourceStockOutRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOutsourceStockOutRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOutsourceStockOutRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/stock-outs/return-vendor": {
+      "post": {
+        "tags": [
+          "StockOut"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReturnVendorStockOutRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReturnVendorStockOutRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReturnVendorStockOutRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/stock-outs/adjustment": {
+      "post": {
+        "tags": [
+          "StockOut"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAdjustmentStockOutRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAdjustmentStockOutRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAdjustmentStockOutRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/stock-outs/process-return": {
       "post": {
         "tags": [
@@ -19327,6 +19451,49 @@
       }
     },
     "/api/stock-outs/{id}/pdf": {
+      "get": {
+        "tags": [
+          "StockOut"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stock-outs/{id}/excel": {
       "get": {
         "tags": [
           "StockOut"
@@ -23086,6 +23253,36 @@
         },
         "additionalProperties": false
       },
+      "CreateAdjustmentStockOutRequest": {
+        "required": [
+          "materialId",
+          "notes",
+          "quantity"
+        ],
+        "type": "object",
+        "properties": {
+          "materialId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "quantity": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "notes": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "stockOutDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "CreateBankAccountRequest": {
         "required": [
           "accountHolder",
@@ -23973,6 +24170,48 @@
         },
         "additionalProperties": false
       },
+      "CreateOutsourceStockOutRequest": {
+        "required": [
+          "items",
+          "vendorId"
+        ],
+        "type": "object",
+        "properties": {
+          "vendorId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "exportReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "warehouseName": {
+            "type": "string",
+            "nullable": true
+          },
+          "warehouseAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "stockOutDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "items": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductionStockOutItemRequest"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
       "CreatePaperSizeRequest": {
         "type": "object",
         "properties": {
@@ -24091,6 +24330,45 @@
         },
         "additionalProperties": false
       },
+      "CreateProductionStockOutByVendorRequest": {
+        "required": [
+          "items",
+          "receiverName",
+          "vendorId"
+        ],
+        "type": "object",
+        "properties": {
+          "vendorId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "receiverName": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "exportReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "stockOutDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "items": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductionStockOutItemRequest"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
       "CreateReturnNoteRequest": {
         "required": [
           "deliveryNoteId",
@@ -24107,6 +24385,48 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ReturnLineRequest"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreateReturnVendorStockOutRequest": {
+        "required": [
+          "items",
+          "vendorId"
+        ],
+        "type": "object",
+        "properties": {
+          "vendorId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "exportReason": {
+            "type": "string",
+            "nullable": true
+          },
+          "warehouseName": {
+            "type": "string",
+            "nullable": true
+          },
+          "warehouseAddress": {
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "stockOutDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "items": {
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProductionStockOutItemRequest"
             }
           }
         },
@@ -27048,6 +27368,15 @@
             "format": "int32",
             "nullable": true
           },
+          "stockOutPurpose": {
+            "type": "string",
+            "nullable": true
+          },
+          "stockOutPurposeName": {
+            "type": "string",
+            "nullable": true,
+            "readOnly": true
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -29862,6 +30191,30 @@
           "completedAt": {
             "type": "string",
             "format": "date-time",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProductionStockOutItemRequest": {
+        "required": [
+          "materialId",
+          "quantity"
+        ],
+        "type": "object",
+        "properties": {
+          "materialId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "quantity": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "notes": {
+            "type": "string",
             "nullable": true
           }
         },

@@ -90,6 +90,15 @@ export default function StockInListPage() {
   });
   const [vendorFilter, setVendorFilter] = useState<string>("");
 
+  const handleResetFilters = () => {
+    setSearch("");
+    setTypeFilter("");
+    setVendorFilter("");
+    setStatusFilter("");
+    setDateRange(undefined);
+    setPage(1);
+  };
+
   const { data: vendorsData } = useActiveVendors();
 
   const { data, isLoading, refetch } = useStockIns({
@@ -214,131 +223,146 @@ export default function StockInListPage() {
 
       <div className="min-h-screen bg-background">
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-          {/* Standard Header */}
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-foreground">Quản lý nhập kho</h1>
               <p className="text-muted-foreground mt-1">Quản lý các phiếu nhập kho Chất liệu</p>
             </div>
-            <Button
-              onClick={() => navigate("/stock/stock-ins/create")}
-              className="cursor-pointer transition-colors duration-200 bg-gradient-to-r from-[#93631F] to-[#7a521a] hover:opacity-90 shadow-lg shadow-[#93631F]/25 text-white border-none"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Tạo phiếu nhập kho
-            </Button>
           </div>
 
           <div className="space-y-6">
-            {/* Filters Card */}
-            <Card className="mb-6 border-slate-200/60 shadow-lg shadow-slate-200/50">
-              <CardHeader className="bg-[#93631F]/5 border-b border-slate-200/60">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-lg bg-[#93631F]/10 flex items-center justify-center">
-                    <Filter className="h-5 w-5 text-[#93631F]" />
-                  </div>
-                  <CardTitle className="text-lg">Bộ lọc</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input
-                      placeholder="Tìm kiếm theo mã phiếu, nhà cung cấp..."
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      className="pl-9 h-11 transition-colors duration-200"
-                    />
-                  </div>
-                  <DateRangePicker
-                    value={dateRange}
-                    onValueChange={(r) => {
-                      setDateRange(r);
-                      setPage(1);
-                    }}
-                  />
-                  <Select
-                    value={typeFilter || "all"}
-                    onValueChange={(v) => {
-                      setTypeFilter(v === "all" ? "" : v);
-                      setPage(1);
-                    }}
-                  >
-                    <SelectTrigger className="h-11 cursor-pointer transition-colors duration-200">
-                      <SelectValue placeholder="Loại phiếu" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Tất cả</SelectItem>
-                      <SelectItem value="purchase">Mua hàng</SelectItem>
-                      <SelectItem value="production_completion">
-                        Hoàn thành SX
+          {/* COMPACT TOOLBAR FILTERS ROW */}
+          <div className="flex flex-col xl:flex-row items-center justify-between gap-2.5 bg-slate-50/60 p-2.5 rounded-xl border border-slate-200/50 shadow-sm mb-4">
+            <div className="flex flex-col sm:flex-row items-center gap-2 w-full xl:w-auto flex-1">
+              {/* Search Text */}
+              <div className="relative w-full sm:w-[260px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                <Input
+                  placeholder="Tìm kiếm theo mã phiếu, nhà cung cấp..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 h-8.5 text-xs bg-white border-slate-200 focus-visible:ring-[#93631F] rounded-lg"
+                />
+              </div>
+
+              {/* Date Range Picker */}
+              <div className="w-full sm:w-[260px] [&_button]:h-8.5 [&_button]:text-xs [&_button]:rounded-lg [&_button]:border-slate-200">
+                <DateRangePicker
+                  value={dateRange}
+                  onValueChange={(r) => {
+                    setDateRange(r);
+                    setPage(1);
+                  }}
+                />
+              </div>
+
+              {/* Type Selector */}
+              <div className="w-full sm:w-[150px]">
+                <Select
+                  value={typeFilter || "all"}
+                  onValueChange={(v) => {
+                    setTypeFilter(v === "all" ? "" : v);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-8.5 text-xs bg-white border-slate-200 rounded-lg cursor-pointer">
+                    <SelectValue placeholder="Loại phiếu" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả loại phiếu</SelectItem>
+                    <SelectItem value="purchase">Mua hàng</SelectItem>
+                    <SelectItem value="production_completion">
+                      Hoàn thành SX
+                    </SelectItem>
+                    <SelectItem value="return">Trả hàng</SelectItem>
+                    <SelectItem value="adjustment">Điều chỉnh</SelectItem>
+                    <SelectItem value="other">Khác</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Vendor Selector */}
+              <div className="w-full sm:w-[150px]">
+                <Select
+                  value={vendorFilter || "all"}
+                  onValueChange={(v) => {
+                    setVendorFilter(v === "all" ? "" : v);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-8.5 text-xs bg-white border-slate-200 rounded-lg cursor-pointer">
+                    <SelectValue placeholder="Nhà cung cấp" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả NCC</SelectItem>
+                    {vendorsData?.map((vendor) => (
+                      <SelectItem key={vendor.id} value={String(vendor.id)}>
+                        {vendor.name || vendor.code}
                       </SelectItem>
-                      <SelectItem value="return">Trả hàng</SelectItem>
-                      <SelectItem value="adjustment">Điều chỉnh</SelectItem>
-                      <SelectItem value="other">Khác</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={vendorFilter || "all"}
-                    onValueChange={(v) => {
-                      setVendorFilter(v === "all" ? "" : v);
-                      setPage(1);
-                    }}
-                  >
-                    <SelectTrigger className="h-11 cursor-pointer transition-colors duration-200">
-                      <SelectValue placeholder="Nhà cung cấp" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Tất cả NCC</SelectItem>
-                      {vendorsData?.map((vendor) => (
-                        <SelectItem key={vendor.id} value={String(vendor.id)}>
-                          {vendor.name || vendor.code}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={statusFilter || "all"}
-                    onValueChange={(v) => setStatusFilter(v === "all" ? "" : v)}
-                  >
-                    <SelectTrigger className="h-11 cursor-pointer transition-colors duration-200">
-                      <SelectValue placeholder="Trạng thái" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Tất cả</SelectItem>
-                      <SelectItem value="draft">Nháp</SelectItem>
-                      <SelectItem value="pending">Chờ xử lý</SelectItem>
-                      <SelectItem value="completed">Hoàn thành</SelectItem>
-                      <SelectItem value="cancelled">Đã hủy</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-center gap-2 mt-4">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => refetch()}
-                    disabled={isLoading}
-                    className="cursor-pointer transition-colors duration-200"
-                  >
-                    <RefreshCw
-                      className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
-                    />
-                    Làm mới
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExportExcel}
-                    className="cursor-pointer transition-colors duration-200"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Xuất Excel
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Status Selector */}
+              <div className="w-full sm:w-[150px]">
+                <Select
+                  value={statusFilter || "all"}
+                  onValueChange={(v) => setStatusFilter(v === "all" ? "" : v)}
+                >
+                  <SelectTrigger className="h-8.5 text-xs bg-white border-slate-200 rounded-lg cursor-pointer">
+                    <SelectValue placeholder="Trạng thái" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                    <SelectItem value="draft">Nháp</SelectItem>
+                    <SelectItem value="pending">Chờ xử lý</SelectItem>
+                    <SelectItem value="completed">Hoàn thành</SelectItem>
+                    <SelectItem value="cancelled">Đã hủy</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 w-full xl:w-auto shrink-0 justify-end">
+              {/* Refresh Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refetch()}
+                disabled={isLoading}
+                className="cursor-pointer border-slate-200 text-xs h-8.5 rounded-lg hover:bg-slate-50 text-slate-700 font-semibold"
+              >
+                <RefreshCw
+                  className={`h-3.5 w-3.5 mr-1.5 ${isLoading ? "animate-spin" : ""}`}
+                />
+                Làm mới
+              </Button>
+
+              {/* Export Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportExcel}
+                className="cursor-pointer border-slate-200 text-xs h-8.5 rounded-lg hover:bg-slate-50 text-slate-700 font-semibold"
+              >
+                <Download className="h-3.5 w-3.5 mr-1.5" />
+                Xuất Excel
+              </Button>
+
+              {/* Reset Button */}
+              {(search || typeFilter || vendorFilter || statusFilter || dateRange) && (
+                <Button
+                  onClick={handleResetFilters}
+                  variant="ghost"
+                  size="sm"
+                  className="h-8.5 text-muted-foreground hover:text-foreground hover:bg-accent text-xs font-semibold px-3 rounded-lg cursor-pointer transition-colors"
+                >
+                  Xóa bộ lọc
+                </Button>
+              )}
+            </div>
+          </div>
 
             {/* Table Card */}
             <Card className="border-slate-200/60 shadow-lg shadow-slate-200/50 overflow-hidden">

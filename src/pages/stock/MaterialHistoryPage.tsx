@@ -409,50 +409,7 @@ export default function MaterialHistoryPage() {
     }
   };
 
-  const handleInlineStockOutSubmitAction = async (e: any) => {
-    e.preventDefault();
-    if (!inlineStockInQty || inlineStockInQty <= 0) {
-      toast.error("Vui lòng nhập số lượng!");
-      return;
-    }
 
-    setIsSubmittingStockIn(true);
-    let toastId: string | number | undefined;
-    try {
-      toastId = toast.loading("Đang tạo phiếu xuất...");
-      await createStockOut({
-        purpose: "transfer",
-        itemType: "material",
-        notes: inlineStockInNotes || "",
-        stockOutDate: new Date().toISOString(),
-        vendorId: undefined,
-        receiverName: undefined,
-        receiverAddress: undefined,
-        warehouseName: undefined,
-        warehouseAddress: undefined,
-        items: [
-          {
-            itemName: materialDetail?.name || "",
-            quantity: inlineStockInQty,
-            materialId: materialId,
-            unit: materialDetail?.unit || "",
-            jobCode: !isRoll ? inlineStockInJobCode || undefined : undefined,
-          } as any,
-        ],
-      });
-
-      toast.success("Tạo phiếu xuất thành công (chờ duyệt)!", { id: toastId });
-      setInlineStockInQty(0);
-      setInlineStockInNotes("");
-      setInlineStockInJobCode("");
-      refetchAll();
-    } catch (error: any) {
-      console.error(error);
-      toast.error("Tạo phiếu xuất thất bại: " + (error?.response?.data?.message || error?.message || "Lỗi không xác định"), { id: toastId });
-    } finally {
-      setIsSubmittingStockIn(false);
-    }
-  };
 
   // Handle exporting Stock Out PDF
   const handleExportStockOutPdf = async (explicitId?: number) => {
@@ -971,21 +928,27 @@ export default function MaterialHistoryPage() {
                 </Button>
 
                 <Button
-                  onClick={handleInlineStockOutSubmitAction}
-                  disabled={isSubmittingStockIn}
+                  type="button"
+                  onClick={() => {
+                    setIsEditMode(false);
+                    setEditId(null);
+                    setStockOutForm({
+                      quantity: 0,
+                      documentCode: "",
+                      notes: "",
+                      purpose: "transfer",
+                      vendorId: undefined,
+                      receiverName: "",
+                      receiverAddress: "",
+                      warehouseName: "",
+                      warehouseAddress: "",
+                    });
+                    setIsStockOutOpen(true);
+                  }}
                   className="h-10 px-5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shrink-0 cursor-pointer transition-all border-none"
                 >
-                  {isSubmittingStockIn ? (
-                    <>
-                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                      Đang xử lý...
-                    </>
-                  ) : (
-                    <>
-                      <Minus className="h-4 w-4 mr-1" />
-                      Xuất kho
-                    </>
-                  )}
+                  <Minus className="h-4 w-4 mr-1" />
+                  Xuất điều chỉnh
                 </Button>
 
                 {isRoll && (
@@ -1460,7 +1423,7 @@ export default function MaterialHistoryPage() {
 
                       {/* 11. Thao tác / In PDF */}
                       <TableCell className="py-2 pr-4 text-right w-[180px]">
-                        {(entry.referenceType?.toLowerCase()?.includes("stock_out") || entry.referenceType?.toLowerCase()?.includes("stockout") || entry.referenceType?.toLowerCase()?.includes("xuat")) && entry.referenceId ? (
+                        {(entry.referenceType?.toLowerCase()?.includes("stock_out") || entry.referenceType?.toLowerCase()?.includes("stockout") || entry.referenceType?.toLowerCase()?.includes("xuat")) && entry.referenceId && entry.stockOutPurpose?.toLowerCase() !== "adjustment" ? (
                           <div className="flex justify-end pr-2">
                             <Button
                               variant="ghost"

@@ -248,6 +248,10 @@ export const API_SUFFIX = {
   STOCK_OUT_RETURNABLE_BY_DELIVERY_NOTE: (deliveryNoteId: number) =>
     `/stock-outs/returnable/by-delivery-note/${deliveryNoteId}`,
   STOCK_OUT_SUMMARY: "/stock-outs/summary",
+  STOCK_OUT_PRODUCTION_BY_VENDOR: "/stock-outs/production-by-vendor",
+  STOCK_OUT_OUTSOURCE: "/stock-outs/outsource",
+  STOCK_OUT_RETURN_VENDOR: "/stock-outs/return-vendor",
+  STOCK_OUT_ADJUSTMENT: "/stock-outs/adjustment",
   MATERIAL_CUTS: "/material-cuts",
   MATERIAL_CUT_BY_ID: (id: number) => `/material-cuts/${id}`,
   MATERIAL_CUT_COMPLETE: (id: number) => `/material-cuts/${id}/complete`,

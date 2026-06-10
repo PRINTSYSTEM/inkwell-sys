@@ -31,19 +31,23 @@ import {
   ChevronLeft, 
   ChevronRight,
   Info,
-  Layers,
   FileText,
   AlertCircle,
   Plus,
+  Minus,
   Scissors,
   Boxes,
-  Download
+  Download,
+  Eye
 } from "lucide-react";
 import { useMaterials } from "@/hooks/use-material";
 import { useActiveVendors } from "@/hooks/use-vendor";
-import { formatCurrency } from "@/lib/status-utils";
+import { useStockOuts } from "@/hooks/use-stock";
+import { formatCurrency, formatDate } from "@/lib/status-utils";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { toast } from "sonner";
 import { CreateMaterialDirectDialog } from "./components/CreateMaterialDirectDialog";
+import { StockOutByVendorDialog } from "./components/StockOutByVendorDialog";
 import { downloadBlob } from "@/lib/download-utils";
 import { apiRequest } from "@/lib/http";
 import { API_SUFFIX } from "@/apis";
@@ -83,6 +87,23 @@ export default function StockSummary() {
 
   const materials = materialsData?.items || [];
 
+  // Fetch recent stock-out vouchers
+  const {
+    data: stockOutsData,
+    isLoading: isLoadingStockOuts,
+    refetch: refetchStockOuts,
+  } = useStockOuts({
+    pageNumber: 1,
+    pageSize: 5,
+  });
+
+  const stockOuts = stockOutsData?.items || [];
+
+  const handleRefreshAll = () => {
+    refetch();
+    refetchStockOuts();
+  };
+
   // Reset independent page counters when query parameters or pageSize changes
   useEffect(() => {
     setRollPage(1);
@@ -91,6 +112,9 @@ export default function StockSummary() {
 
   // Create Material Dialog States
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+  // Stock Out Dialog States
+  const [isStockOutOpen, setIsStockOutOpen] = useState(false);
 
   // Vendor Reconciliation Excel Export States
   const [isExportingReconciliation, setIsExportingReconciliation] = useState(false);
@@ -215,22 +239,40 @@ export default function StockSummary() {
                 Nhập vật tư mới
               </Button>
               <Button 
-                onClick={() => refetch()}
-                disabled={isLoadingMaterials}
+                onClick={() => {
+                  if (selectedVendorId === "all") {
+                    toast.error("Vui lòng chọn một Nhà cung cấp ở bộ lọc trước khi thực hiện xuất kho!");
+                    return;
+                  }
+                  setIsStockOutOpen(true);
+                }}
+                variant="outline"
+                size="sm"
+                className="cursor-pointer border-slate-200 text-xs h-9 rounded-lg hover:bg-slate-50 text-foreground"
+              >
+                <Minus className="h-3.5 w-3.5 mr-1.5 text-rose-600" />
+                Xuất kho NCC
+              </Button>
+              <Button 
+                onClick={handleRefreshAll}
+                disabled={isLoadingMaterials || isLoadingStockOuts}
                 variant="outline"
                 size="sm"
                 className="cursor-pointer border-slate-200 text-xs h-9 rounded-lg"
               >
-                <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isLoadingMaterials ? "animate-spin" : ""}`} />
+                <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isLoadingMaterials || isLoadingStockOuts ? "animate-spin" : ""}`} />
                 Làm mới
               </Button>
-              {/* <Button 
-                onClick={() => navigate("/stock/stock-ins")}
+
+              <Button 
+                onClick={() => navigate("/stock/stock-outs")}
+                variant="outline"
                 size="sm"
-                className="cursor-pointer transition-all duration-200 bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm text-xs h-9 border-none rounded-lg"
+                className="cursor-pointer border-slate-200 text-xs h-9 rounded-lg hover:bg-slate-50 text-foreground"
               >
-                Quản lý nhập kho
-              </Button> */}
+                <FileText className="h-3.5 w-3.5 mr-1.5 text-slate-500" />
+                Danh sách xuất
+              </Button>
               <Button 
                 onClick={handleExportVendorReconciliation}
                 disabled={isExportingReconciliation}
@@ -522,8 +564,131 @@ export default function StockSummary() {
                 )}
               </CardContent>
             </Card>
-
           </div>
+
+          {/* Recent Stock-Outs List (Vertical Layout) */}
+          <Card className="border-slate-200/60 shadow-sm rounded-xl overflow-hidden">
+            <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-3.5 px-4 flex flex-row items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-7.5 w-7.5 rounded-md bg-slate-100 flex items-center justify-center text-slate-600">
+                  <FileText className="h-4 w-4" />
+                </div>
+                <CardTitle className="text-sm font-bold text-foreground">
+                  PHIẾU XUẤT KHO GẦN ĐÂY
+                </CardTitle>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/stock/stock-outs")}
+                className="text-xs text-[#93631F] font-semibold hover:bg-slate-100 cursor-pointer h-7 rounded-lg"
+              >
+                Xem tất cả
+              </Button>
+            </CardHeader>
+
+            <CardContent className="p-4">
+              {isLoadingStockOuts ? (
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 border border-slate-100 rounded-lg">
+                      <div className="space-y-2 flex-1">
+                        <Skeleton className="h-4 w-1/4" />
+                        <Skeleton className="h-3 w-1/2" />
+                      </div>
+                      <Skeleton className="h-8 w-8 rounded-lg" />
+                    </div>
+                  ))}
+                </div>
+              ) : stockOuts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-slate-400 text-xs">
+                  <Info className="h-6 w-6 mb-2 text-slate-300" />
+                  <p className="font-medium">Chưa có phiếu xuất kho nào được ghi nhận</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  {stockOuts.map((item: any) => (
+                    <div 
+                      key={item.id}
+                      className="group flex flex-col sm:flex-row sm:items-center justify-between p-3.5 border border-slate-100 rounded-xl hover:bg-slate-50/80 transition-all duration-200 gap-3 relative cursor-pointer"
+                      onClick={() => navigate(`/stock/stock-outs/${item.id}`)}
+                    >
+                      {/* Left: Info */}
+                      <div className="flex items-start gap-3">
+                        <div className="h-8.5 w-8.5 rounded-lg bg-rose-50 flex items-center justify-center shrink-0">
+                          <Minus className="h-4.5 w-4.5 text-rose-500" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono font-bold text-xs text-slate-800">
+                              {item.code || `PXK-${item.id}`}
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                              {item.stockOutDate ? formatDate(item.stockOutDate) : "—"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                            <span className="text-[11px] font-semibold text-slate-500">
+                              Nghiệp vụ:
+                            </span>
+                            <Badge variant="outline" className="text-[10px] bg-slate-50 border-slate-200 text-slate-700 py-0 px-1.5 rounded font-normal">
+                              {translatePurpose(item.type)}
+                            </Badge>
+                            {item.customer?.name && (
+                              <>
+                                <span className="text-[11px] font-semibold text-slate-300">|</span>
+                                <span className="text-[11px] text-slate-600 truncate max-w-[180px]" title={item.customer.name}>
+                                  KH: {item.customer.name}
+                                </span>
+                              </>
+                            )}
+                            {(item.warehouse || item.warehouseName) && (
+                              <>
+                                <span className="text-[11px] font-semibold text-slate-300">|</span>
+                                <span className="text-[11px] text-slate-500">
+                                  Kho: {item.warehouse || item.warehouseName}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right: Quantity / Value & Status */}
+                      <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0">
+                        <div className="text-right sm:block flex items-center gap-2">
+                          <div className="text-xs font-bold text-slate-800 tabular-nums">
+                            {item.totalQuantity ? item.totalQuantity.toLocaleString("vi-VN") : "0"} {" "}
+                            <span className="text-[10px] text-slate-400 font-normal">vật tư</span>
+                          </div>
+                          {item.totalValue > 0 && (
+                            <div className="text-[10px] text-emerald-600 font-semibold tabular-nums mt-0.5 sm:mt-0">
+                              {formatCurrency(item.totalValue)}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {getStatusBadge(item.status)}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-lg hover:bg-slate-100 text-slate-500 cursor-pointer shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`/stock/stock-outs/${item.id}`);
+                            }}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
         </div>
       </div>
@@ -537,10 +702,56 @@ export default function StockSummary() {
         refetch={refetch}
       />
 
+      {/* Dialog Xuất kho NCC */}
+      <StockOutByVendorDialog
+        open={isStockOutOpen}
+        onOpenChange={setIsStockOutOpen}
+        selectedVendorId={selectedVendorId !== "all" ? Number(selectedVendorId) : null}
+        vendors={vendorsData || []}
+        refetch={refetch}
+      />
+
 
     </>
   );
 }
+
+const translatePurpose = (purpose: string | null | undefined) => {
+  if (!purpose) return "—";
+  const p = purpose.toLowerCase();
+  switch (p) {
+    case "sale":
+      return "Bán hàng";
+    case "production":
+      return "Sản xuất";
+    case "adjustment":
+      return "Điều chỉnh";
+    case "outsource":
+      return "In gia công";
+    case "return_vendor":
+      return "Trả hàng NCC";
+    default:
+      return purpose;
+  }
+};
+
+const getStatusBadge = (status: string | null | undefined) => {
+  if (!status) return <StatusBadge status="unknown" label="—" />;
+  const statusLower = status.toLowerCase();
+  if (statusLower === "draft" || statusLower.includes("draft")) {
+    return <StatusBadge status="draft" label="Nháp" />;
+  }
+  if (statusLower === "pending" || statusLower.includes("pending")) {
+    return <StatusBadge status="pending" label="Chờ xử lý" />;
+  }
+  if (statusLower === "completed" || statusLower.includes("completed")) {
+    return <StatusBadge status="completed" label="Hoàn thành" />;
+  }
+  if (statusLower === "cancelled" || statusLower.includes("cancelled")) {
+    return <StatusBadge status="cancelled" label="Đã hủy" />;
+  }
+  return <StatusBadge status={status} label={status} />;
+};
 
 // Skeletal loading helper for tables
 function TableSkeletonRows({ cols }: { cols: number }) {

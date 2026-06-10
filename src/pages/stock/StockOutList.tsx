@@ -87,6 +87,14 @@ export default function StockOutListPage() {
     to: new Date(),
   });
 
+  const handleResetFilters = () => {
+    setSearch("");
+    setTypeFilter("");
+    setStatusFilter("");
+    setDateRange(undefined);
+    setPage(1);
+  };
+
   const { data, isLoading, refetch } = useStockOuts({
     pageNumber: page,
     pageSize,
@@ -228,43 +236,30 @@ export default function StockOutListPage() {
 
       <div className="min-h-screen bg-background">
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-          {/* Standard Header */}
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-foreground">Quản lý xuất kho</h1>
               <p className="text-muted-foreground mt-1">Quản lý các phiếu xuất kho Chất liệu</p>
             </div>
-            <Button
-              onClick={() => navigate("/stock/stock-outs/create")}
-              className="cursor-pointer transition-colors duration-200 bg-gradient-to-r from-[#93631F] to-[#7a521a] hover:opacity-90 shadow-lg shadow-[#93631F]/25 text-white border-none"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Tạo phiếu xuất kho
-            </Button>
           </div>
 
           <div className="space-y-6">
-            {/* Filters Card */}
-          <Card className="mb-6 border-slate-200/60 shadow-lg shadow-slate-200/50">
-            <CardHeader className="bg-[#93631F]/5 border-b border-slate-200/60">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-lg bg-[#93631F]/10 flex items-center justify-center">
-                  <Filter className="h-5 w-5 text-[#93631F]" />
-                </div>
-                <CardTitle className="text-lg">Bộ lọc</CardTitle>
+          {/* COMPACT TOOLBAR FILTERS ROW */}
+          <div className="flex flex-col xl:flex-row items-center justify-between gap-2.5 bg-slate-50/60 p-2.5 rounded-xl border border-slate-200/50 shadow-sm mb-4">
+            <div className="flex flex-col sm:flex-row items-center gap-2 w-full xl:w-auto flex-1">
+              {/* Search Text */}
+              <div className="relative w-full sm:w-[260px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                <Input
+                  placeholder="Tìm kiếm theo mã phiếu, lý do xuất..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9 h-8.5 text-xs bg-white border-slate-200 focus-visible:ring-[#93631F] rounded-lg"
+                />
               </div>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    placeholder="Tìm kiếm theo mã phiếu, lý do xuất..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-9 h-11 transition-colors duration-200"
-                  />
-                </div>
+
+              {/* Date Range Picker */}
+              <div className="w-full sm:w-[260px] [&_button]:h-8.5 [&_button]:text-xs [&_button]:rounded-lg [&_button]:border-slate-200">
                 <DateRangePicker 
                   value={dateRange} 
                   onValueChange={(r) => {
@@ -272,6 +267,10 @@ export default function StockOutListPage() {
                     setPage(1);
                   }} 
                 />
+              </div>
+
+              {/* Type Selector */}
+              <div className="w-full sm:w-[150px]">
                 <Select
                   value={typeFilter || "all"}
                   onValueChange={(v) => {
@@ -279,11 +278,11 @@ export default function StockOutListPage() {
                     setPage(1);
                   }}
                 >
-                  <SelectTrigger className="h-11 cursor-pointer transition-colors duration-200">
+                  <SelectTrigger className="h-8.5 text-xs bg-white border-slate-200 rounded-lg cursor-pointer">
                     <SelectValue placeholder="Lý do xuất" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Tất cả</SelectItem>
+                    <SelectItem value="all">Tất cả nghiệp vụ</SelectItem>
                     <SelectItem value="sale">Bán hàng</SelectItem>
                     <SelectItem value="material_export">Xuất nguyên liệu</SelectItem>
                     <SelectItem value="production">Sản xuất</SelectItem>
@@ -291,15 +290,19 @@ export default function StockOutListPage() {
                     <SelectItem value="other">Khác</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Status Selector */}
+              <div className="w-full sm:w-[150px]">
                 <Select
                   value={statusFilter || "all"}
                   onValueChange={(v) => setStatusFilter(v === "all" ? "" : v)}
                 >
-                  <SelectTrigger className="h-11 cursor-pointer transition-colors duration-200">
+                  <SelectTrigger className="h-8.5 text-xs bg-white border-slate-200 rounded-lg cursor-pointer">
                     <SelectValue placeholder="Trạng thái" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Tất cả</SelectItem>
+                    <SelectItem value="all">Tất cả trạng thái</SelectItem>
                     <SelectItem value="draft">Nháp</SelectItem>
                     <SelectItem value="pending">Chờ xử lý</SelectItem>
                     <SelectItem value="completed">Hoàn thành</SelectItem>
@@ -307,31 +310,36 @@ export default function StockOutListPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex items-center gap-2 mt-4">
+            </div>
+
+            <div className="flex items-center gap-2 w-full xl:w-auto shrink-0 justify-end">
+              {/* Refresh Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => refetch()}
+                disabled={isLoading}
+                className="cursor-pointer border-slate-200 text-xs h-8.5 rounded-lg hover:bg-slate-50 text-slate-700 font-semibold"
+              >
+                <RefreshCw
+                  className={`h-3.5 w-3.5 mr-1.5 ${isLoading ? "animate-spin" : ""}`}
+                />
+                Làm mới
+              </Button>
+
+              {/* Reset Button */}
+              {(search || typeFilter || statusFilter || dateRange) && (
                 <Button
-                  variant="outline"
+                  onClick={handleResetFilters}
+                  variant="ghost"
                   size="sm"
-                  onClick={() => refetch()}
-                  disabled={isLoading}
-                  className="cursor-pointer transition-colors duration-200"
+                  className="h-8.5 text-muted-foreground hover:text-foreground hover:bg-accent text-xs font-semibold px-3 rounded-lg cursor-pointer transition-colors"
                 >
-                  <RefreshCw
-                    className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
-                  />
-                  Làm mới
+                  Xóa bộ lọc
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleExportExcel}
-                  className="cursor-pointer transition-colors duration-200"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Xuất Excel
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+              )}
+            </div>
+          </div>
 
           {/* Table Card */}
           <Card className="border-slate-200/60 shadow-lg shadow-slate-200/50 overflow-hidden">
@@ -367,20 +375,12 @@ export default function StockOutListPage() {
                             Loại phiếu
                           </TableHead>
                           <TableHead className="font-semibold text-slate-700">
-                            Khách hàng
+                            NCC
                           </TableHead>
                           <TableHead className="w-[120px] font-semibold text-slate-700">
                             Kho
                           </TableHead>
-                          <TableHead className="text-right font-semibold text-slate-700">
-                            Tổng SL
-                          </TableHead>
-                          <TableHead className="text-right font-semibold text-slate-700">
-                            Tổng giá trị
-                          </TableHead>
-                          <TableHead className="font-semibold text-slate-700">
-                            Tham chiếu
-                          </TableHead>
+
                           <TableHead className="text-center font-semibold text-slate-700">
                             Trạng thái
                           </TableHead>
@@ -403,51 +403,28 @@ export default function StockOutListPage() {
                                 : "—"}
                             </TableCell>
                             <TableCell className="text-sm text-slate-600">
-                              {stockOut.type === "sale"
-                                ? "Bán hàng"
-                                : stockOut.type === "production"
-                                  ? "Sản xuất"
-                                  : stockOut.type === "adjustment"
-                                    ? "Điều chỉnh"
-                                    : stockOut.type || "—"}
+                              {stockOut.purpose === "return_vendor" || stockOut.type === "return_vendor"
+                                ? "Trả NCC"
+                                : stockOut.purposeName === "Trả hàng NCC" || stockOut.purposeName === "Trả hàng nhà cung cấp"
+                                  ? "Trả NCC"
+                                  : stockOut.purposeName ||
+                                    (stockOut.type === "sale" || stockOut.purpose === "sale"
+                                      ? "Bán hàng"
+                                      : stockOut.type === "production" || stockOut.purpose === "production"
+                                        ? "Sản xuất"
+                                        : stockOut.type === "adjustment" || stockOut.purpose === "adjustment"
+                                          ? "Điều chỉnh"
+                                          : stockOut.type === "outsource" || stockOut.purpose === "outsource"
+                                            ? "In gia công"
+                                            : stockOut.type || stockOut.purpose || "—")}
                             </TableCell>
                             <TableCell className="text-sm font-medium text-slate-700">
-                              {stockOut.customer?.name || "—"}
+                              {stockOut.customer?.name || stockOut.supplier?.name || stockOut.vendorName || stockOut.vendor?.name || "—"}
                             </TableCell>
                             <TableCell className="text-sm text-slate-600">
                               {stockOut.warehouse || stockOut.warehouseName || "—"}
                             </TableCell>
-                            <TableCell className="text-right font-medium tabular-nums text-slate-700">
-                              {stockOut.totalQuantity
-                                ? stockOut.totalQuantity.toLocaleString("vi-VN")
-                                : "—"}
-                            </TableCell>
-                            <TableCell className="text-right font-medium tabular-nums text-slate-700">
-                              {stockOut.totalValue
-                                ? formatCurrency(stockOut.totalValue)
-                                : "—"}
-                            </TableCell>
-                            <TableCell>
-                              <div className="space-y-1">
-                                {stockOut.orderCode && (
-                                  <div className="text-xs">
-                                    <span className="text-slate-500">Đơn:</span>{" "}
-                                    <span className="font-mono">{stockOut.orderCode}</span>
-                                  </div>
-                                )}
-                                {stockOut.productionCode && (
-                                  <div className="text-xs">
-                                    <span className="text-slate-500">SX:</span>{" "}
-                                    <span className="font-mono">
-                                      {stockOut.productionCode}
-                                    </span>
-                                  </div>
-                                )}
-                                {!stockOut.orderCode &&
-                                  !stockOut.productionCode &&
-                                  "—"}
-                              </div>
-                            </TableCell>
+
                             <TableCell className="text-center">
                               {getStatusBadge(stockOut.status)}
                             </TableCell>

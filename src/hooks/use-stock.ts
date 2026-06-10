@@ -771,3 +771,99 @@ export const useStockOutSummary = (params?: StockOutSummaryParams) => {
     },
   });
 };
+
+export const useCreateProductionStockOutByVendor = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<any, ApiError, any>({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest.post<any>(
+        API_SUFFIX.STOCK_OUT_PRODUCTION_BY_VENDOR,
+        data
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: stockOutKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["materials"] });
+      toast.success("Tạo phiếu xuất sản xuất theo NCC thành công");
+    },
+    onError: (error: ApiError) => {
+      toast.error("Tạo phiếu xuất kho thất bại", {
+        description: error.response?.data?.message || error.message,
+      });
+    },
+  });
+};
+
+export const useCreateOutsourceStockOut = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<any, ApiError, any>({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest.post<any>(
+        API_SUFFIX.STOCK_OUT_OUTSOURCE,
+        data
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: stockOutKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["materials"] });
+      toast.success("Tạo phiếu xuất kho in gia công thành công");
+    },
+    onError: (error: ApiError) => {
+      toast.error("Tạo phiếu xuất kho thất bại", {
+        description: error.response?.data?.message || error.message,
+      });
+    },
+  });
+};
+
+export const useCreateReturnVendorStockOut = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<any, ApiError, any>({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest.post<any>(
+        API_SUFFIX.STOCK_OUT_RETURN_VENDOR,
+        data
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: stockOutKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["materials"] });
+      toast.success("Tạo phiếu xuất kho trả hàng NCC thành công");
+    },
+    onError: (error: ApiError) => {
+      toast.error("Tạo phiếu xuất kho thất bại", {
+        description: error.response?.data?.message || error.message,
+      });
+    },
+  });
+};
+
+export const useCreateAdjustmentStockOut = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<any, ApiError, any>({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest.post<any>(
+        API_SUFFIX.STOCK_OUT_ADJUSTMENT,
+        data
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: stockOutKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["materials"] });
+      toast.success("Tạo phiếu xuất điều chỉnh giảm kho thành công");
+    },
+    onError: (error: ApiError) => {
+      toast.error("Tạo phiếu xuất kho thất bại", {
+        description: error.response?.data?.message || error.message,
+      });
+    },
+  });
+};
