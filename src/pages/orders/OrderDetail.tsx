@@ -134,7 +134,6 @@ import {
   useRemoveOrderDetail,
   useDesigns,
   useCustomers,
-  customerApi,
   useOrders,
   orderCrudApi,
   useProductionOrdersByOrder,
@@ -617,28 +616,6 @@ export default function OrderDetailPage() {
         );
       }
 
-      // Cập nhật thông tin khách hàng vào danh mục khách hàng master
-      if (cardName === "customerInfo" && cardEditValues.customerId) {
-        try {
-          await customerApi.update(Number(cardEditValues.customerId), {
-            name: String(cardEditValues.customerName || ""),
-            companyName: String(cardEditValues.customerCompanyName || ""),
-            // Phone field: backend requires valid format — fall back to existing phone if clearing
-            phone: cardEditValues.customerPhone || null,
-            email: cardEditValues.customerEmail || null,
-            taxCode: String(cardEditValues.customerTaxCode || ""),
-            address: String(cardEditValues.customerAddress || ""),
-          });
-        } catch (customerError) {
-          console.error(
-            "Failed to update customer master data:",
-            customerError,
-          );
-          toast.warning(
-            "Lưu danh mục khách hàng thất bại, đơn hàng vẫn được lưu.",
-          );
-        }
-      }
 
       // Close editing mode early for better responsiveness
       setEditingCard(null);

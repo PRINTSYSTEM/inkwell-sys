@@ -133,17 +133,20 @@ export default function StockOutDetailPage() {
 
   const [isExportingExcel, setIsExportingExcel] = useState(false);
 
-  // Inline Editing States
   const [isEditing, setIsEditing] = useState(false);
   const [editReceiverName, setEditReceiverName] = useState("");
+  const [editReceiverAddress, setEditReceiverAddress] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [editItems, setEditItems] = useState<any[]>([]);
   const { mutate: updateStockOut, isPending: isUpdating } = useUpdateStockOut();
 
-  // Initialize edit states when data loads
   useEffect(() => {
     if (stockOut) {
       setEditReceiverName(stockOut.receiverName ?? "");
+      setEditReceiverAddress(
+        stockOut.receiverAddress ??
+        (stockOut.customer?.address || stockOut.vendor?.address || stockOut.supplier?.address || stockOut.vendorAddress || "")
+      );
       setEditNotes(stockOut.notes ?? "");
       setEditItems(
         (stockOut.items || []).map((item: any) => ({
@@ -158,6 +161,10 @@ export default function StockOutDetailPage() {
   const handleStartEdit = () => {
     if (stockOut) {
       setEditReceiverName(stockOut.receiverName ?? "");
+      setEditReceiverAddress(
+        stockOut.receiverAddress ??
+        (stockOut.customer?.address || stockOut.vendor?.address || stockOut.supplier?.address || stockOut.vendorAddress || "")
+      );
       setEditNotes(stockOut.notes ?? "");
       setEditItems(
         (stockOut.items || []).map((item: any) => ({
@@ -174,6 +181,10 @@ export default function StockOutDetailPage() {
     setIsEditing(false);
     if (stockOut) {
       setEditReceiverName(stockOut.receiverName ?? "");
+      setEditReceiverAddress(
+        stockOut.receiverAddress ??
+        (stockOut.customer?.address || stockOut.vendor?.address || stockOut.supplier?.address || stockOut.vendorAddress || "")
+      );
       setEditNotes(stockOut.notes ?? "");
       setEditItems(
         (stockOut.items || []).map((item: any) => ({
@@ -220,6 +231,7 @@ export default function StockOutDetailPage() {
         id: stockOut.id,
         data: {
           receiverName: editReceiverName.trim() || null,
+          receiverAddress: editReceiverAddress.trim() || null,
           notes: editNotes.trim() || null,
           items: updatedItems,
         },
@@ -316,7 +328,7 @@ export default function StockOutDetailPage() {
           onSuccess: () => {
             toast.success("Đã xóa phiếu xuất kho");
             setConfirmDialog({ ...confirmDialog, open: false });
-            navigate("/stock/stock-outs");
+            navigate("/stock/summary");
           },
         });
         break;
@@ -348,7 +360,7 @@ export default function StockOutDetailPage() {
                 Phiếu xuất kho không tồn tại hoặc đã bị xóa
               </p>
               <Button 
-                onClick={() => navigate("/stock/stock-outs")}
+                onClick={() => navigate("/stock/summary")}
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 Quay lại danh sách
@@ -373,6 +385,13 @@ export default function StockOutDetailPage() {
   const isExcelPurpose = ["production", "outsource", "outsource_print", "return_vendor"].includes(purposeLower);
   const isAdjustmentPurpose = purposeLower === "adjustment";
 
+  const partnerName = stockOut.customer?.name || stockOut.vendorName || stockOut.vendor?.name || stockOut.supplier?.name || "";
+  const partnerAddress = stockOut.customer?.address || stockOut.vendor?.address || stockOut.supplier?.address || stockOut.vendorAddress || "";
+  const partnerPhone = stockOut.customer?.phone || stockOut.vendor?.phone || stockOut.supplier?.phone || stockOut.vendorPhone || "";
+  
+  const warehouseName = stockOut.warehouse || stockOut.warehouseName || "CÔNG TY QUANG ĐẠT";
+  const warehouseAddress = stockOut.warehouseAddress || "97/3 Đường Tân Thời Nhất 8, P. Đông Hưng Thuận, TP. HCM";
+
   return (
     <>
       <Helmet>
@@ -389,7 +408,7 @@ export default function StockOutDetailPage() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => navigate("/stock/stock-outs")}
+                  onClick={() => navigate("/stock/summary")}
                   className="cursor-pointer transition-colors duration-200 hover:bg-slate-100"
                 >
                   <ArrowLeft className="h-4 w-4 mr-2" />
@@ -401,9 +420,12 @@ export default function StockOutDetailPage() {
                     <ArrowRight className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <h1 className="text-xl font-bold text-slate-900">
+                    <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                       Phiếu xuất kho{" "}
                       {stockOut.code ? `#${stockOut.code}` : `#${stockOut.id}`}
+                      <div className="scale-90 font-normal">
+                        {getStatusBadge(stockOut.status)}
+                      </div>
                     </h1>
                     <p className="text-xs text-slate-500">
                       Chi tiết phiếu xuất kho
@@ -484,7 +506,7 @@ export default function StockOutDetailPage() {
                         </Button>
                       </>
                     )}
-                    {(status === "pending" || status === "completed") && (
+                    {(status === "pending" || status === "draft") && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -555,171 +577,170 @@ export default function StockOutDetailPage() {
         <div className="flex-1 overflow-y-auto print:overflow-visible print:bg-white print:h-auto print:p-0">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 print:p-0 print:max-w-none">
             
-            {/* Screen View (Modern Dashboard UI) */}
-            <div className="space-y-6 print:hidden">
-              {/* Consolidated Information Card */}
-              <Card className="bg-white rounded-xl shadow-sm border border-slate-200/60 overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-blue-500/5 via-indigo-500/5 to-sky-500/5 px-4 py-3 border-b border-slate-200/60">
-                  <div className="flex items-center gap-2.5">
-                    <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-                      <FileText className="h-4 w-4 text-blue-600" />
+            {/* Paper Voucher Container */}
+            <div className="bg-white text-slate-950 p-6 sm:p-8 shadow-xl shadow-slate-200/50 rounded-xl border border-slate-200/60 font-sans print:shadow-none print:border-none print:p-0 print:text-black mx-auto max-w-4xl transition-all duration-300 space-y-4">
+                {/* Header Grid */}
+                <div className="grid grid-cols-[1.5fr_1fr] text-xs gap-4 items-start">
+                  {/* Left Header */}
+                  <div className="space-y-1 leading-relaxed">
+                    <div>
+                      <span className="font-bold">Đơn vị:</span> CÔNG TY TNHH SX TMDV QUỐC TẾ QUANG ĐẠT
                     </div>
                     <div>
-                      <CardTitle className="text-base font-bold text-slate-900">
-                        Thông tin phiếu xuất kho
-                      </CardTitle>
+                      <span className="font-bold">Địa chỉ:</span> 97/3 Đường Tân Thời Nhất 8, P. Đông Hưng Thuận, TP. HCM
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    
-                    {/* Mã phiếu */}
-                    <div className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-slate-50/50 transition-colors duration-150">
-                      <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
-                        <Hash className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mã phiếu</p>
-                        <p className="text-xs font-mono font-bold text-slate-800 mt-0.5">
-                          {stockOut.code || `PXK-${stockOut.id}`}
-                        </p>
-                      </div>
+                  
+                  {/* Right Header */}
+                  <div className="text-center space-y-1">
+                    <div className="font-bold uppercase tracking-wide">Mẫu số 02 - VT</div>
+                    <div className="italic text-[10px] leading-snug text-slate-600 print:text-black">
+                      (Ban hành theo Thông tư số 200/2014/TT-BTC
+                      <br />
+                      Ngày 22/12/2014 của Bộ Tài chính)
                     </div>
+                  </div>
+                </div>
 
-                    {/* Ngày xuất */}
-                    <div className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-slate-50/50 transition-colors duration-150">
-                      <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
-                        <Calendar className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ngày xuất</p>
-                        <p className="text-xs font-semibold text-slate-800 mt-0.5">
-                          {stockOut.stockOutDate ? formatDateTimeFull(stockOut.stockOutDate) : "—"}
-                        </p>
-                      </div>
-                    </div>
+                {/* Title Section */}
+                <div className="text-center my-6 space-y-1">
+                  <h2 className="text-xl font-bold tracking-wider uppercase text-slate-900 print:text-black">
+                    PHIẾU XUẤT KHO
+                  </h2>
+                  <div className="text-xs italic text-slate-600 print:text-black">
+                    Ngày {day} tháng {month} năm {year}
+                  </div>
+                  <div className="text-xs font-semibold text-slate-800 print:text-black">
+                    Số: <span className="font-mono">{stockOut.code || `PXK-${stockOut.id}`}</span>
+                  </div>
+                </div>
 
-                    {/* Trạng thái */}
-                    <div className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-slate-50/50 transition-colors duration-150">
-                      <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
-                        <Package className="h-4 w-4" />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Trạng thái</p>
-                        <div className="mt-0.5 flex items-center">
-                          {getStatusBadge(stockOut.status)}
-                        </div>
-                      </div>
-                    </div>
+                {/* Receiver & Reason Info Block */}
+                <div className="text-xs space-y-3.5 my-6 leading-relaxed">
+                  {/* Row 1 */}
+                  <div className="flex items-end gap-1.5 w-full">
+                    <span className="shrink-0 text-slate-700 print:text-black font-medium">- Họ và tên người nhận hàng:</span>
+                    <span className="font-semibold text-slate-900 print:text-black border-b border-dashed border-slate-300 flex-1 pb-0.5 min-h-[1.5rem] text-left flex items-end">
+                      {isEditing ? (
+                        <Input
+                          value={editReceiverName}
+                          onChange={(e) => setEditReceiverName(e.target.value)}
+                          className="h-6 py-0 px-2 border border-dashed border-blue-400 focus-visible:ring-0 focus-visible:border-blue-600 focus-visible:bg-blue-50 w-full text-xs font-semibold bg-blue-50/30 text-blue-900 rounded"
+                          placeholder="Họ tên người nhận..."
+                        />
+                      ) : (
+                        stockOut.receiverName || partnerName || "—"
+                      )}
+                    </span>
+                  </div>
 
-                    {/* Người nhận hàng */}
-                    <div className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-slate-50/50 transition-colors duration-150">
-                      <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
-                        <User className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Người nhận hàng</p>
+                  {/* Row 2 */}
+                  <div className="flex flex-col sm:flex-row items-end gap-3 sm:gap-6 w-full">
+                    <div className="flex items-end gap-1.5 flex-1 w-full min-w-0">
+                      <span className="shrink-0 text-slate-700 print:text-black font-medium">- Địa chỉ (bộ phận):</span>
+                      <span className="text-slate-900 print:text-black border-b border-dashed border-slate-300 flex-1 pb-0.5 min-h-[1.5rem] text-left flex items-end">
                         {isEditing ? (
                           <Input
-                            value={editReceiverName}
-                            onChange={(e) => setEditReceiverName(e.target.value)}
-                            placeholder="Họ tên người nhận..."
-                            className="h-8 text-xs font-semibold focus-visible:ring-blue-500/30 mt-1"
+                            value={editReceiverAddress}
+                            onChange={(e) => setEditReceiverAddress(e.target.value)}
+                            className="h-6 py-0 px-2 border border-dashed border-blue-400 focus-visible:ring-0 focus-visible:border-blue-600 focus-visible:bg-blue-50 w-full text-xs bg-blue-50/30 text-blue-900 rounded"
+                            placeholder="Địa chỉ..."
                           />
                         ) : (
-                          <p className="text-xs font-semibold text-slate-800 mt-0.5 truncate">
-                            {stockOut.receiverName || "—"}
-                          </p>
+                          stockOut.receiverAddress || partnerAddress || "—"
                         )}
-                      </div>
+                      </span>
                     </div>
-
-                    {/* Khách hàng / Đối tác / NCC */}
-                    <div className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-slate-50/50 transition-colors duration-150">
-                      <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
-                        <Building2 className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Khách hàng / Đối tác / NCC</p>
-                        <p className="text-xs font-semibold text-slate-800 mt-0.5 truncate" title={stockOut.customer?.name || stockOut.vendorName || stockOut.vendor?.name || stockOut.supplier?.name || "—"}>
-                          {stockOut.customer?.name || stockOut.vendorName || stockOut.vendor?.name || stockOut.supplier?.name || "—"}
-                        </p>
-                      </div>
+                    <div className="flex items-end gap-1.5 shrink-0 w-full sm:w-auto">
+                      <span className="shrink-0 text-slate-700 print:text-black font-medium">SĐT:</span>
+                      <span className="text-slate-900 print:text-black border-b border-dashed border-slate-300 pb-0.5 min-h-[1.5rem] text-left w-full sm:w-36">
+                        {partnerPhone || "—"}
+                      </span>
                     </div>
-
-                    {/* Kho xuất hàng */}
-                    <div className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-slate-50/50 transition-colors duration-150">
-                      <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
-                        <Factory className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Kho xuất hàng</p>
-                        <p className="text-xs font-semibold text-slate-800 mt-0.5 truncate">
-                          {stockOut.warehouse || stockOut.warehouseName || "—"}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Lý do xuất / Ghi chú (Full width in md/lg) */}
-                    <div className="flex items-start gap-2.5 p-2 rounded-lg hover:bg-slate-50/50 transition-colors duration-150 md:col-span-2 lg:col-span-3">
-                      <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
-                        <FileText className="h-4 w-4" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Lý do xuất / Ghi chú</p>
-                        <p className="text-xs font-semibold text-slate-800 mt-0.5 whitespace-pre-wrap" title={stockOut.notes || stockOutPurposeLabels[stockOut.purpose?.toLowerCase()] || stockOut.purpose || "—"}>
-                          {stockOut.notes || (stockOut.purpose ? stockOutPurposeLabels[stockOut.purpose.toLowerCase()] || stockOut.purpose : "—")}
-                        </p>
-                      </div>
-                    </div>
-
                   </div>
-                </CardContent>
-              </Card>
 
-              {/* Items Card */}
-              <Card className="border-slate-200/60 shadow-sm rounded-xl overflow-hidden bg-white">
-                <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-3.5 px-5">
-                  <CardTitle className="text-sm font-bold text-slate-800">
-                    DANH SÁCH VẬT TƯ XUẤT KHO
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <Table>
-                    <TableHeader className="bg-slate-50/75">
-                      <TableRow className="text-xs border-b border-slate-200/60">
-                        <TableHead className="w-12 text-center font-bold py-2.5 pl-4">STT</TableHead>
-                        <TableHead className="font-bold py-2.5">Tên vật tư</TableHead>
-                        <TableHead className="font-bold py-2.5">Mã vật tư</TableHead>
-                        <TableHead className="w-24 text-center font-bold py-2.5">ĐVT</TableHead>
-                        <TableHead className="w-32 text-right font-bold py-2.5">Số lượng xuất</TableHead>
-                        <TableHead className="min-w-[200px] font-bold py-2.5 pr-4">Ghi chú dòng</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {editItems.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={6} className="text-center py-8 text-slate-400 italic text-xs">
-                            Không có vật tư nào trong phiếu
-                          </TableCell>
-                        </TableRow>
+                  {/* Row 3 */}
+                  <div className="flex items-end gap-1.5 w-full">
+                    <span className="shrink-0 text-slate-700 print:text-black font-medium">- Lý do xuất kho:</span>
+                    <span className="text-slate-900 print:text-black border-b border-dashed border-slate-300 flex-1 pb-0.5 min-h-[1.5rem] text-left flex items-end">
+                      {isEditing ? (
+                        <Input
+                          value={editNotes}
+                          onChange={(e) => setEditNotes(e.target.value)}
+                          className="h-6 py-0 px-2 border border-dashed border-blue-400 focus-visible:ring-0 focus-visible:border-blue-600 focus-visible:bg-blue-50 w-full text-xs bg-blue-50/30 text-blue-900 rounded"
+                          placeholder="Lý do xuất kho..."
+                        />
+                      ) : (
+                        stockOut.notes || (stockOut.purpose ? stockOutPurposeLabels[stockOut.purpose.toLowerCase()] || stockOut.purpose : "—")
+                      )}
+                    </span>
+                  </div>
+
+                  {/* Row 4 */}
+                  <div className="flex flex-col sm:flex-row items-end gap-3 sm:gap-6 w-full">
+                    <div className="flex items-end gap-1.5 flex-1 w-full min-w-0">
+                      <span className="shrink-0 text-slate-700 print:text-black font-medium">- Xuất tại kho:</span>
+                      <span className="text-slate-900 print:text-black border-b border-dashed border-slate-300 flex-1 pb-0.5 min-h-[1.25rem] text-left">
+                        {warehouseName}
+                      </span>
+                    </div>
+                    <div className="flex items-end gap-1.5 flex-1 w-full min-w-0">
+                      <span className="shrink-0 text-slate-700 print:text-black font-medium">Địa điểm:</span>
+                      <span className="text-slate-900 print:text-black border-b border-dashed border-slate-300 flex-1 pb-0.5 min-h-[1.25rem] text-left">
+                        {warehouseAddress}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Items Table */}
+                <div className="my-6 overflow-x-auto print:overflow-visible">
+                  <table className="w-full border-collapse border border-black text-xs text-left">
+                    <thead>
+                      <tr className="bg-slate-50/50 print:bg-transparent border-b border-black">
+                        <th className="border-r border-black font-bold text-center py-2.5 px-1 w-12 text-slate-900 print:text-black">
+                          STT
+                        </th>
+                        <th className="border-r border-black font-bold text-left py-2.5 px-2 text-slate-900 print:text-black">
+                          Tên, nhãn hiệu, quy cách, phẩm chất vật tư, dụng cụ, sp, hàng hoá
+                        </th>
+                        <th className="border-r border-black font-bold text-center py-2.5 px-1 w-20 text-slate-900 print:text-black">
+                          ĐVT
+                        </th>
+                        <th className="border-r border-black font-bold text-right py-2.5 px-2 w-28 text-slate-900 print:text-black">
+                          SỐ LƯỢNG
+                        </th>
+                        <th className="font-bold text-left py-2.5 px-2 w-40 text-slate-900 print:text-black">
+                          GHI CHÚ
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {items.length === 0 ? (
+                        <tr className="border-b border-black">
+                          <td
+                            colSpan={5}
+                            className="text-center py-8 text-slate-400 italic"
+                          >
+                            Không có vật tư nào trong phiếu xuất
+                          </td>
+                        </tr>
                       ) : (
                         (isEditing ? editItems : items).map((item: any, index: number) => (
-                          <TableRow key={index} className="hover:bg-slate-50 border-b border-slate-100 text-xs">
-                            <TableCell className="text-center font-mono text-slate-500 py-3.5 pl-4">
+                          <tr
+                            key={index}
+                            className="border-b border-black hover:bg-slate-50/30 print:hover:bg-transparent"
+                          >
+                            <td className="border-r border-black text-center py-2 px-1 font-mono text-slate-600 print:text-black">
                               {index + 1}
-                            </TableCell>
-                            <TableCell className="py-3.5 font-semibold text-slate-800">
+                            </td>
+                            <td className="border-r border-black font-semibold text-slate-900 print:text-black py-2 px-2 leading-relaxed">
                               {item.itemName || "—"}
-                            </TableCell>
-                            <TableCell className="py-3.5 font-mono text-slate-600">
-                              {item.itemCode || "—"}
-                            </TableCell>
-                            <TableCell className="text-center text-slate-600 py-3.5">
+                            </td>
+                            <td className="border-r border-black text-center py-2 px-1 text-slate-700 print:text-black">
                               {item.unit || "—"}
-                            </TableCell>
-                            <TableCell className="text-right py-2 font-bold tabular-nums text-slate-800">
+                            </td>
+                            <td className="border-r border-black text-right py-2 px-2 font-bold tabular-nums text-slate-900 print:text-black">
                               {isEditing ? (
                                 <Input
                                   type="number"
@@ -730,170 +751,49 @@ export default function StockOutDetailPage() {
                                     const val = parseInt(e.target.value, 10);
                                     handleEditItemChange(index, "quantity", isNaN(val) ? 0 : val);
                                   }}
-                                  className="h-8 w-24 text-xs font-semibold text-right ml-auto focus-visible:ring-blue-500/30"
+                                  className="h-7 w-24 text-xs font-semibold text-right ml-auto bg-blue-50/30 text-blue-900 border-blue-300 focus-visible:ring-blue-500/30 focus:border-blue-500 focus:bg-blue-50"
                                 />
                               ) : (
                                 (item.quantity || 0).toLocaleString("vi-VN")
                               )}
-                            </TableCell>
-                            <TableCell className="py-2 pr-4 text-slate-600">
+                            </td>
+                            <td className="py-2 px-2 text-slate-600 print:text-black leading-normal">
                               {isEditing ? (
                                 <Input
                                   value={item.notes || ""}
                                   onChange={(e) => handleEditItemChange(index, "notes", e.target.value)}
                                   placeholder="Ghi chú dòng..."
-                                  className="h-8 text-xs focus-visible:ring-blue-500/30"
+                                  className="h-7 text-xs bg-blue-50/30 text-blue-900 border-blue-300 focus-visible:ring-blue-500/30 focus:border-blue-500 focus:bg-blue-50 w-full"
                                 />
                               ) : (
                                 item.notes || "—"
                               )}
-                            </TableCell>
-                          </TableRow>
+                            </td>
+                          </tr>
                         ))
                       )}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Print View (Traditional Paper Layout) */}
-            <div className="hidden print:block font-sans text-slate-900 bg-white p-0">
-              {/* Invoice Header */}
-              <div className="grid grid-cols-2 gap-4 items-start border-none">
-                {/* Left Header */}
-                <div className="text-xs space-y-1">
-                  <div className="flex gap-1">
-                    <span className="font-bold shrink-0">Đơn vị:</span>
-                    <span>CÔNG TY TNHH SX TMDV QUỐC TẾ QUANG ĐẠT</span>
-                  </div>
-                  <div className="flex gap-1 leading-relaxed">
-                    <span className="font-bold shrink-0">Địa chỉ:</span>
-                    <span>97/3 Đường Tân Thời Nhất 8, P. Đông Hưng Thuận, TP. HCM</span>
-                  </div>
+                    </tbody>
+                  </table>
                 </div>
-                
-                {/* Right Header */}
-                <div className="text-right space-y-1 text-xs">
-                  <div className="font-bold">Mẫu số 02 - VT</div>
-                  <div className="italic text-[10px] text-slate-500 leading-normal">
-                    (Ban hành theo Thông tư số 200/2014/TT-BTC<br/>
-                    Ngày 22/12/2014 của Bộ Tài chính)
+
+              {/* Signatures & Footer block */}
+              <div className="mt-4 pt-4 border-t border-slate-100 print:border-none">
+                {/* Signatures Block */}
+                <div className="grid grid-cols-3 gap-4 text-center text-xs mt-4 mb-12">
+                  <div className="space-y-1">
+                    <div className="font-bold text-slate-900 print:text-black">Người lập</div>
+                    <div className="italic text-slate-500 print:text-black">(Ký, họ tên)</div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="font-bold text-slate-900 print:text-black">Người nhận hàng</div>
+                    <div className="italic text-slate-500 print:text-black">(Ký, họ tên)</div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="font-bold text-slate-900 print:text-black">Thủ kho</div>
+                    <div className="italic text-slate-500 print:text-black">(Ký, họ tên)</div>
                   </div>
                 </div>
               </div>
-
-              {/* Title Section */}
-              <div className="text-center my-8 space-y-1">
-                <h2 className="text-xl font-bold tracking-wider uppercase">
-                  PHIẾU XUẤT KHO
-                </h2>
-                <div className="text-xs italic text-slate-600">
-                  Ngày {day} tháng {month} năm {year}
-                </div>
-                <div className="text-xs font-semibold text-slate-800">
-                  Số: {stockOut.code || `PXK-${stockOut.id}`}
-                </div>
-              </div>
-
-              {/* Receiver & Reason Info Block */}
-              <div className="text-xs space-y-3.5 my-6 leading-relaxed">
-                <div className="flex items-end gap-1.5 w-full">
-                  <span className="shrink-0">- Họ và tên người nhận hàng:</span>
-                  <span className="font-semibold text-slate-800 border-b border-dashed border-slate-300 flex-1 pb-0.5 min-h-[1.25rem] text-left">
-                    {stockOut.receiverName || "—"}
-                  </span>
-                </div>
-                <div className="flex items-end gap-1.5 w-full">
-                  <span className="shrink-0">- Lý do xuất kho:</span>
-                  <span className="text-slate-800 border-b border-dashed border-slate-300 flex-1 pb-0.5 min-h-[1.25rem] text-left">
-                    {stockOut.notes || (stockOut.purpose ? stockOutPurposeLabels[stockOut.purpose.toLowerCase()] || stockOut.purpose : "—")}
-                  </span>
-                </div>
-              </div>
-
-              {/* Items Table */}
-              <div className="my-6">
-                <table className="w-full border-collapse border border-slate-800 text-xs text-left">
-                  <thead>
-                    <tr className="bg-slate-50/50 border-b border-slate-800">
-                      <th className="border-r border-slate-800 font-bold text-center py-2 px-1 w-12 text-slate-900">
-                        STT
-                      </th>
-                      <th className="border-r border-slate-800 font-bold text-left py-2 px-2 text-slate-900">
-                        Tên, nhãn hiệu, quy cách, phẩm chất vật tư, dụng cụ, sp, hàng hoá
-                      </th>
-                      <th className="border-r border-slate-800 font-bold text-center py-2 px-1 w-20 text-slate-900">
-                        ĐVT
-                      </th>
-                      <th className="border-r border-slate-800 font-bold text-right py-2 px-2 w-28 text-slate-900">
-                        SỐ LƯỢNG
-                      </th>
-                      <th className="font-bold text-left py-2 px-2 w-40 text-slate-900">
-                        GHI CHÚ
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.length === 0 ? (
-                      <tr className="border-b border-slate-800">
-                        <td
-                          colSpan={5}
-                          className="text-center py-8 text-slate-400 italic"
-                        >
-                          Không có vật tư nào trong phiếu xuất
-                        </td>
-                      </tr>
-                    ) : (
-                      items.map((item: any, index: number) => (
-                        <tr
-                          key={index}
-                          className="border-b border-slate-800"
-                        >
-                          <td className="border-r border-slate-800 text-center py-2 px-1 font-mono">
-                            {index + 1}
-                          </td>
-                          <td className="border-r border-slate-800 font-medium text-slate-900 py-2 px-2 leading-relaxed">
-                            {item.itemName || "—"}
-                          </td>
-                          <td className="border-r border-slate-800 text-center py-2 px-1">
-                            {item.unit || "—"}
-                          </td>
-                          <td className="border-r border-slate-800 text-right py-2 px-2 font-semibold tabular-nums text-slate-900">
-                            {(item.quantity || 0).toLocaleString("en-US")}
-                          </td>
-                          <td className="py-2 px-2 text-slate-600 leading-normal">
-                            {item.notes || "—"}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Signatures Block */}
-              <div className="grid grid-cols-3 gap-4 text-center text-xs mt-12 mb-20">
-                <div className="space-y-1">
-                  <div className="font-bold text-slate-900">Người lập</div>
-                  <div className="italic text-slate-500">(Ký, họ tên)</div>
-                </div>
-                <div className="space-y-1">
-                  <div className="font-bold text-slate-900">Người nhận hàng</div>
-                  <div className="italic text-slate-500">(Ký, họ tên)</div>
-                </div>
-                <div className="space-y-1">
-                  <div className="font-bold text-slate-900">Thủ kho</div>
-                  <div className="italic text-slate-500">(Ký, họ tên)</div>
-                </div>
-              </div>
-
-              {/* Creator name at the bottom left */}
-              {stockOut.createdBy?.fullName && (
-                <div className="text-xs font-bold text-slate-900 pl-4 mt-8">
-                  {stockOut.createdBy.fullName}
-                </div>
-              )}
             </div>
 
           </div>

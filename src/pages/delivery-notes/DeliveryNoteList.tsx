@@ -788,9 +788,12 @@ export default function DeliveryNoteListPage() {
       lines,
     };
 
-    await recreateMutation.mutateAsync(payload);
+    const res = await recreateMutation.mutateAsync(payload);
     setIsRecreateDialogOpen(false);
     setRecreateNoteId(null);
+    if (res && res.id) {
+      navigate(`/delivery-notes/${res.id}`);
+    }
   };
   const handleCreateDeliveryNote = () => {
     if (selectedOrderDetailIds.size === 0) {
@@ -902,6 +905,9 @@ export default function DeliveryNoteListPage() {
       refetchOrders();
       refetchDeliveryNotes();
       setViewMode("delivery-notes");
+      if (res && res.id) {
+        navigate(`/delivery-notes/${res.id}`);
+      }
     } catch (error) {
       // Error is handled by the hook
     }

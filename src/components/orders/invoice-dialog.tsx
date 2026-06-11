@@ -173,20 +173,11 @@ export function InvoiceDialog({
           </Button>
           <Button
             onClick={handleCreateInvoice}
-            disabled={isPending || !isCustomerInfoComplete}
+            disabled={isPending}
             className="gap-2"
-            title={
-              !isCustomerInfoComplete
-                ? "Thông tin khách hàng chưa đầy đủ. Vui lòng cập nhật trước khi xuất hóa đơn."
-                : undefined
-            }
           >
             <Plus className="w-4 h-4" />
-            {isPending
-              ? "Đang tạo..."
-              : !isCustomerInfoComplete
-              ? "Thông tin KH chưa đầy đủ"
-              : "Tạo hóa đơn mới"}
+            {isPending ? "Đang tạo..." : "Tạo hóa đơn mới"}
           </Button>
         </DialogFooter>
       </DialogContent>

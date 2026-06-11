@@ -155,23 +155,6 @@ function getInvoiceDisableReason(
     return "Phải giao hàng trước khi xuất hóa đơn";
   }
 
-  // Check if customer information is complete
-  if (!customerInfoComplete) {
-    const missingFields: string[] = [];
-
-    if (!order.customerName?.trim()) missingFields.push("Tên khách hàng");
-    if (!order.customerPhone?.trim()) missingFields.push("Số điện thoại");
-    if (!order.customerAddress?.trim()) missingFields.push("Địa chỉ");
-    if (!order.customerEmail?.trim()) missingFields.push("Email");
-
-    // Check taxCode for company customers
-    if (order.customerCompanyName && !order.customerTaxCode?.trim()) {
-      missingFields.push("Mã số thuế");
-    }
-
-    return `Thiếu thông tin khách hàng: ${missingFields.join(", ")}`;
-  }
-
   // All conditions met - invoice can be issued
   return null;
 }
@@ -398,17 +381,7 @@ export function InvoiceList() {
 
 
 
-    // Check if all selected orders have complete customer info
-    const incompleteOrders = selectedOrders.filter(
-      (o) => !isCustomerInfoComplete(o)
-    );
 
-    if (incompleteOrders.length > 0) {
-      toast.error(
-        `Có ${incompleteOrders.length} đơn hàng thiếu thông tin khách hàng. Vui lòng cập nhật trước khi xuất hóa đơn.`
-      );
-      return;
-    }
 
     setIsCreateInvoiceDialogOpen(true);
   };
@@ -667,7 +640,6 @@ export function InvoiceList() {
                       ? selectedOrderIds.has(order.id)
                       : false;
                     const isCheckboxDisabled =
-                      !customerInfoComplete ||
                       !canInvoice ||
                       invoiceStatus === "issued";
                     const disableReason = getInvoiceDisableReason(
