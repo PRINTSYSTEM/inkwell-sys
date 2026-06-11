@@ -258,14 +258,10 @@ export default function StockOutDetailPage() {
 
   const handleComplete = () => {
     if (!stockOut?.id) return;
-    setConfirmDialog({
-      open: true,
-      type: "complete",
-      title: "Xác nhận hoàn thành phiếu xuất kho",
-      description:
-        "Bạn có chắc chắn muốn hoàn thành phiếu xuất kho này? Hành động này không thể hoàn tác.",
-      confirmText: "Hoàn thành",
-      confirmVariant: "default",
+    completeStockOut(stockOut.id, {
+      onSuccess: () => {
+        toast.success("Đã hoàn thành phiếu xuất kho");
+      },
     });
   };
 
