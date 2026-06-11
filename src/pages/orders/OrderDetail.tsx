@@ -623,8 +623,9 @@ export default function OrderDetailPage() {
           await customerApi.update(Number(cardEditValues.customerId), {
             name: String(cardEditValues.customerName || ""),
             companyName: String(cardEditValues.customerCompanyName || ""),
-            phone: String(cardEditValues.customerPhone || ""),
-            email: String(cardEditValues.customerEmail || ""),
+            // Phone field: backend requires valid format — fall back to existing phone if clearing
+            phone: cardEditValues.customerPhone || null,
+            email: cardEditValues.customerEmail || null,
             taxCode: String(cardEditValues.customerTaxCode || ""),
             address: String(cardEditValues.customerAddress || ""),
           });

@@ -616,12 +616,14 @@ export default function AccountingOrderDetail() {
       // 1. Update Customer record first if it's customer info
       if (cardName === "customerInfo" && order.customerId) {
         try {
+          // Phone field: backend requires valid phone format — skip updating if clearing
+          const phoneForCustomer = payload.customerPhone || order.customer?.phone || null;
           await customerApi.update(order.customerId, {
             name: payload.customerName !== undefined ? payload.customerName : (order.customer?.name || null),
             companyName:
               payload.customerCompanyName !== undefined ? payload.customerCompanyName : (order.customer?.companyName || null),
             representativeName: order.customer?.representativeName || null,
-            phone: payload.customerPhone !== undefined ? payload.customerPhone : (order.customer?.phone || null),
+            phone: phoneForCustomer,
             email: payload.customerEmail !== undefined ? payload.customerEmail : (order.customer?.email || null),
             taxCode: payload.customerTaxCode !== undefined ? payload.customerTaxCode : (order.customer?.taxCode || null),
             address: payload.customerAddress !== undefined ? payload.customerAddress : (order.customer?.address || null),
@@ -640,6 +642,7 @@ export default function AccountingOrderDetail() {
         cardName === "orderInfo" ||
         cardName === "recipientInfo"
       ) {
+        console.log("[DEBUG] PUT /orders payload:", JSON.stringify(payload));
         await updateOrder({
           id: order.id,
           data: payload as UpdateOrderRequest,
