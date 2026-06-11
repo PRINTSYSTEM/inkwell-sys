@@ -485,7 +485,7 @@ export default function OrderDetailPage() {
       payload.customerCompanyName =
         cardEditValues.customerCompanyName === "" ||
         cardEditValues.customerCompanyName === null
-          ? null
+          ? ""
           : String(cardEditValues.customerCompanyName).trim();
       payload.customerPhone =
         cardEditValues.customerPhone === "" ||
@@ -500,12 +500,12 @@ export default function OrderDetailPage() {
       payload.customerTaxCode =
         cardEditValues.customerTaxCode === "" ||
         cardEditValues.customerTaxCode === null
-          ? null
+          ? ""
           : String(cardEditValues.customerTaxCode).trim();
       payload.customerAddress =
         cardEditValues.customerAddress === "" ||
         cardEditValues.customerAddress === null
-          ? null
+          ? ""
           : String(cardEditValues.customerAddress).trim();
 
       // Send customerId if it was changed
@@ -521,7 +521,7 @@ export default function OrderDetailPage() {
       payload.deliveryAddress =
         cardEditValues.deliveryAddress === "" ||
         cardEditValues.deliveryAddress === null
-          ? null
+          ? ""
           : String(cardEditValues.deliveryAddress).trim();
       payload.note =
         cardEditValues.note === "" || cardEditValues.note === null

@@ -61,6 +61,7 @@ import {
   useUpdateOrderForSale,
   useCancelOrder,
   useRemoveOrderDetail,
+  useUpdateOrder,
 } from "@/hooks/use-order";
 import { useAuth } from "@/hooks/use-auth";
 import { ROLE } from "@/constants/role.constant";
@@ -70,7 +71,7 @@ import {
 } from "@/hooks/use-accounting";
 import { useCreateDebtNotification } from "@/hooks/use-debt-notification";
 import { useCreateInvoice, useInvoicesByOrder } from "@/hooks/use-invoice";
-import { useUpdateCustomer } from "@/hooks/use-customer";
+import { customerApi } from "@/hooks/use-customer";
 import { useCashReceipts, useCashFunds } from "@/hooks/use-cash";
 import { useBankAccounts } from "@/hooks/use-bank";
 import type {
@@ -321,8 +322,8 @@ export default function AccountingOrderDetail() {
     useUpdateOrderForSale();
   const { user } = useAuth();
   const createInvoiceMutation = useCreateInvoice();
-  const { mutateAsync: updateCustomer } = useUpdateCustomer();
   const { mutate: removeOrderDetail } = useRemoveOrderDetail();
+  const { mutateAsync: updateOrder, isPending: isUpdatingOrder } = useUpdateOrder();
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -480,7 +481,7 @@ export default function AccountingOrderDetail() {
       payload.customerCompanyName =
         cardEditValues.customerCompanyName === "" ||
         cardEditValues.customerCompanyName === null
-          ? null
+          ? ""
           : String(cardEditValues.customerCompanyName).trim();
       payload.customerPhone =
         cardEditValues.customerPhone === "" ||
@@ -495,17 +496,17 @@ export default function AccountingOrderDetail() {
       payload.customerTaxCode =
         cardEditValues.customerTaxCode === "" ||
         cardEditValues.customerTaxCode === null
-          ? null
+          ? ""
           : String(cardEditValues.customerTaxCode).trim();
       payload.customerAddress =
         cardEditValues.customerAddress === "" ||
         cardEditValues.customerAddress === null
-          ? null
+          ? ""
           : String(cardEditValues.customerAddress).trim();
       payload.deliveryAddress =
         cardEditValues.deliveryAddress === "" ||
         cardEditValues.deliveryAddress === null
-          ? null
+          ? ""
           : String(cardEditValues.deliveryAddress).trim();
     } else if (cardName === "orderInfo") {
       payload.deliveryDate =
@@ -516,7 +517,7 @@ export default function AccountingOrderDetail() {
       payload.deliveryAddress =
         cardEditValues.deliveryAddress === "" ||
         cardEditValues.deliveryAddress === null
-          ? null
+          ? ""
           : String(cardEditValues.deliveryAddress).trim();
       payload.note =
         cardEditValues.note === "" || cardEditValues.note === null
@@ -615,21 +616,17 @@ export default function AccountingOrderDetail() {
       // 1. Update Customer record first if it's customer info
       if (cardName === "customerInfo" && order.customerId) {
         try {
-          await updateCustomer({
-            id: order.customerId,
-            data: {
-              name: payload.customerName ?? order.customer?.name,
-              companyName:
-                payload.customerCompanyName ?? order.customer?.companyName,
-              representativeName: order.customer?.representativeName,
-              phone: payload.customerPhone ?? order.customer?.phone,
-              email: payload.customerEmail ?? order.customer?.email,
-              taxCode: payload.customerTaxCode ?? order.customer?.taxCode,
-              address: payload.customerAddress ?? order.customer?.address,
-              type: order.customer?.type ?? "retail",
-              scrapRate: order.customer?.scrapRate ?? 0,
-            },
-            suppressToast: true,
+          await customerApi.update(order.customerId, {
+            name: payload.customerName !== undefined ? payload.customerName : (order.customer?.name || null),
+            companyName:
+              payload.customerCompanyName !== undefined ? payload.customerCompanyName : (order.customer?.companyName || null),
+            representativeName: order.customer?.representativeName || null,
+            phone: payload.customerPhone !== undefined ? payload.customerPhone : (order.customer?.phone || null),
+            email: payload.customerEmail !== undefined ? payload.customerEmail : (order.customer?.email || null),
+            taxCode: payload.customerTaxCode !== undefined ? payload.customerTaxCode : (order.customer?.taxCode || null),
+            address: payload.customerAddress !== undefined ? payload.customerAddress : (order.customer?.address || null),
+            type: order.customer?.type ?? "retail",
+            scrapRate: order.customer?.scrapRate ?? 0,
           });
         } catch (err) {
           console.error("Failed to update central customer record:", err);
@@ -638,10 +635,21 @@ export default function AccountingOrderDetail() {
       }
 
       // 2. Update Order's customer info snapshot
-      await updateOrderForAccounting(
-        order.id,
-        payload as UpdateOrderForAccountingRequest,
-      );
+      if (
+        cardName === "customerInfo" ||
+        cardName === "orderInfo" ||
+        cardName === "recipientInfo"
+      ) {
+        await updateOrder({
+          id: order.id,
+          data: payload as UpdateOrderRequest,
+        });
+      } else {
+        await updateOrderForAccounting(
+          order.id,
+          payload as UpdateOrderForAccountingRequest,
+        );
+      }
 
       // useUpdateOrderForAccounting đã tự xử lý:
       //   GET /cash-receipts?customerId&status=approved → lọc orderId → POST .../post
@@ -693,7 +701,11 @@ export default function AccountingOrderDetail() {
 
       setEditingCard(null);
       setCardEditValues({});
-    } catch (error) {
+    } catch (error: any) {
+      console.error("[AccountingOrderDetail] Save card failed:", error);
+      toast.error("Không thể lưu thông tin", {
+        description: error?.response?.data?.message || error?.message || "Đã xảy ra lỗi khi lưu",
+      });
       // Keep editing mode on error
     }
   };
@@ -1958,9 +1970,9 @@ export default function AccountingOrderDetail() {
                             size="sm"
                             variant="default"
                             onClick={() => handleSaveCard("customerInfo")}
-                            disabled={isUpdatingForAccounting}
+                            disabled={isUpdatingForAccounting || isUpdatingOrder}
                           >
-                            {isUpdatingForAccounting ? (
+                            {isUpdatingForAccounting || isUpdatingOrder ? (
                               <>
                                 <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                                 Đang lưu...
@@ -1973,7 +1985,7 @@ export default function AccountingOrderDetail() {
                             size="sm"
                             variant="outline"
                             onClick={cancelEditingCard}
-                            disabled={isUpdatingForAccounting}
+                            disabled={isUpdatingForAccounting || isUpdatingOrder}
                           >
                             Hủy
                           </Button>
@@ -2177,19 +2189,17 @@ export default function AccountingOrderDetail() {
                           </p>
                         </div>
                       </div>
-                      {order.customerAddress && (
-                        <div className="flex items-start gap-3">
-                          <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-                          <div>
-                            <p className="text-sm text-muted-foreground">
-                              Địa chỉ
-                            </p>
-                            <p className="font-medium">
-                              {order.customerAddress}
-                            </p>
-                          </div>
+                      <div className="flex items-start gap-3">
+                        <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+                        <div>
+                          <p className="text-sm text-muted-foreground">
+                            Địa chỉ
+                          </p>
+                          <p className="font-medium">
+                            {order.customerAddress || "—"}
+                          </p>
                         </div>
-                      )}
+                      </div>
                       <div className="flex items-start gap-3">
                         <Truck className="h-4 w-4 text-muted-foreground mt-0.5" />
                         <div>
