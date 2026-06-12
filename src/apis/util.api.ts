@@ -320,6 +320,8 @@ export const API_SUFFIX = {
   DEBT_NOTIFICATIONS: "/debt-notifications",
   DEBT_NOTIFICATION_BY_ID: (id: number) => `/debt-notifications/${id}`,
   DEBT_NOTIFICATION_PREVIEW: (id: number) => `/debt-notifications/${id}/preview`,
+  DEBT_NOTIFICATION_READ: (id: number) => `/debt-notifications/${id}/read`,
+  DEBT_NOTIFICATION_READ_ALL: "/debt-notifications/read-all",
 
   // ========== DEBT RECONCILIATIONS ==========
   DEBT_RECONCILIATION_AP: "/debt-reconciliations/ap",

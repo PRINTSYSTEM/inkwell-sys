@@ -27,13 +27,13 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  useMarkNotificationAsRead,
-  useMarkAllNotificationsAsRead,
   useDeleteNotification,
 } from "@/hooks/use-notifications";
 import {
   useDebtNotifications,
   useDebtNotificationPreview,
+  useMarkDebtNotificationRead,
+  useMarkAllDebtNotificationsRead,
 } from "@/hooks/use-debt-notification";
 import { useNotification } from "@/hooks/use-notification";
 import { toast } from "sonner";
@@ -122,11 +122,22 @@ function NotificationCenter() {
   const { data: debtData, isLoading: isLoadingDebt, refetch } = useDebtNotifications({
     pageNumber: currentPage,
     pageSize,
+    isRead: activeTab === "unread" ? false : activeTab === "read" ? true : undefined,
   });
 
-  const markAsRead = useMarkNotificationAsRead();
-  const markAllAsRead = useMarkAllNotificationsAsRead();
+  const { data: unreadCountData, refetch: refetchUnreadCount } = useDebtNotifications({
+    pageSize: 1,
+    isRead: false,
+  });
+
+  const markAsRead = useMarkDebtNotificationRead();
+  const markAllAsRead = useMarkAllDebtNotificationsRead();
   const deleteNotification = useDeleteNotification();
+
+  // Reset page when tab changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab]);
 
   // Listen for real-time notifications from SignalR
   const { connection } = useNotification();
@@ -137,6 +148,7 @@ function NotificationCenter() {
     const handleNewNotification = () => {
       // Refetch notifications when a new one arrives
       refetch();
+      refetchUnreadCount();
     };
 
     // Listen for new notifications
@@ -145,7 +157,7 @@ function NotificationCenter() {
     return () => {
       connection.off("ReceiveNotification", handleNewNotification);
     };
-  }, [connection, refetch]);
+  }, [connection, refetch, refetchUnreadCount]);
 
   // Filter and format notifications
   const filteredNotifications = useMemo(() => {
@@ -162,7 +174,7 @@ function NotificationCenter() {
       relatedEntityType: "customer",
       relatedEntityId: undefined,
       status: "delivered" as const,
-      isRead: false, // Debt notifications don't seem to have isRead in the schema yet
+      isRead: !!item.isRead,
       readAt: undefined,
       createdAt: item.createdAt || new Date().toISOString(),
       updatedAt: item.createdAt || new Date().toISOString(),
@@ -190,13 +202,14 @@ function NotificationCenter() {
     return filtered;
   }, [debtData, selectedType, searchQuery]);
 
-  const unreadCount = debtData?.total ?? 0;
+  const unreadCount = unreadCountData?.total ?? 0;
 
   const handleMarkAsRead = async (id: number) => {
     try {
       await markAsRead.mutateAsync(id);
       toast.success("Đã đánh dấu đã đọc");
       refetch();
+      refetchUnreadCount();
     } catch (error) {
       toast.error("Có lỗi xảy ra");
     }
@@ -207,6 +220,7 @@ function NotificationCenter() {
       await markAllAsRead.mutateAsync();
       toast.success("Đã đánh dấu tất cả đã đọc");
       refetch();
+      refetchUnreadCount();
     } catch (error) {
       toast.error("Có lỗi xảy ra");
     }
@@ -454,8 +468,8 @@ function NotificationCenter() {
         )}
       </div>
 
-      {/* Pagination - Add if needed */}
-      {filteredNotifications.length > pageSize && (
+      {/* Pagination */}
+      {debtData && debtData.total > pageSize && (
         <div className="flex justify-center items-center gap-2">
           <Button
             variant="outline"
@@ -466,7 +480,7 @@ function NotificationCenter() {
             Trước
           </Button>
           <span className="text-sm text-muted-foreground">
-            Trang {currentPage} / {Math.ceil(filteredNotifications.length / pageSize)}
+            Trang {currentPage} / {debtData.totalPages}
           </span>
           <Button
             variant="outline"
@@ -474,13 +488,13 @@ function NotificationCenter() {
             onClick={() =>
               setCurrentPage((p) =>
                 Math.min(
-                  Math.ceil(filteredNotifications.length / pageSize),
+                  debtData.totalPages,
                   p + 1
                 )
               )
             }
             disabled={
-              currentPage >= Math.ceil(filteredNotifications.length / pageSize)
+              currentPage >= debtData.totalPages
             }
           >
             Sau

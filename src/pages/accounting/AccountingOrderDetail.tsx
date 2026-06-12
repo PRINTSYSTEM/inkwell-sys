@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { useDebounce } from "use-debounce";
 import { format } from "date-fns";
@@ -319,6 +319,39 @@ export default function AccountingOrderDetail() {
     isCash ? "111" : isBankTransfer ? "112" : undefined,
   );
 
+  // Auto-select first cash fund / bank account when editing paymentInfo
+  useEffect(() => {
+    if (editingCard !== "paymentInfo") return;
+
+    if (isCash && !cardEditValues.financeAccountId && cashFundsData?.items && cashFundsData.items.length > 0) {
+      const firstFund = cashFundsData.items[0];
+      if (firstFund && firstFund.id) {
+        setCardEditValues((prev) => ({
+          ...prev,
+          financeAccountId: firstFund.id.toString(),
+        }));
+      }
+    }
+
+    if (isBankTransfer && !cardEditValues.bankAccountId && bankAccountsData?.items && bankAccountsData.items.length > 0) {
+      const firstAcc = bankAccountsData.items[0];
+      if (firstAcc && firstAcc.id) {
+        setCardEditValues((prev) => ({
+          ...prev,
+          bankAccountId: firstAcc.id.toString(),
+        }));
+      }
+    }
+  }, [
+    editingCard,
+    isCash,
+    isBankTransfer,
+    cashFundsData,
+    bankAccountsData,
+    cardEditValues.financeAccountId,
+    cardEditValues.bankAccountId,
+  ]);
+
   // Order detail editing states
   const [editingOrderDetailId, setEditingOrderDetailId] = useState<
     number | null
@@ -524,7 +557,7 @@ export default function AccountingOrderDetail() {
       payload.customerPhone =
         cardEditValues.customerPhone === "" ||
         cardEditValues.customerPhone === null
-          ? null
+          ? ""
           : String(cardEditValues.customerPhone).trim();
       payload.customerEmail =
         cardEditValues.customerEmail === "" ||
@@ -1212,7 +1245,13 @@ export default function AccountingOrderDetail() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() =>
+                          onClick={() => {
+                            // Find Cash payment method ID if it exists, or default to ""
+                            const cashMethod = paymentMethodsData?.items?.find(
+                              (m: any) => m.name?.toLowerCase().includes("tiền mặt") || m.code?.toLowerCase() === "cash"
+                            );
+                            const defaultMethodId = cashMethod?.id?.toString() || "";
+
                             startEditingCard("paymentInfo", {
                               totalAmount: order.totalAmount?.toString() || "",
                               depositAmount:
@@ -1221,10 +1260,9 @@ export default function AccountingOrderDetail() {
                                 order.paymentDueDate,
                               ),
                               paymentMethodId:
-                                order.paymentMethodId?.toString() || "",
-                              // cashFundId: "", // Removed - field no longer exists in schema
-                            })
-                          }
+                                order.paymentMethodId?.toString() || defaultMethodId,
+                            });
+                          }}
                         >
                           <Edit className="h-3 w-3 mr-1" />
                           Cọc tiền
@@ -1358,6 +1396,9 @@ export default function AccountingOrderDetail() {
                             setCardEditValues({
                               ...cardEditValues,
                               paymentMethodId: value === "all" ? "" : value,
+                              // Reset these when payment method changes to allow auto-selection to trigger
+                              financeAccountId: null,
+                              bankAccountId: null,
                             })
                           }
                         >

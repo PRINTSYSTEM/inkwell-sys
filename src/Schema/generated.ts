@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-06-04T13:18:47.084Z */
+/* Generated at: 2026-06-12T17:17:07.718Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -68,6 +68,7 @@ export const CollectionScheduleResponseIPaginateSchema = schemas.CollectionSched
 export const ConfirmPaymentRequestSchema = schemas.ConfirmPaymentRequest;
 export const ConstantGroupSchema = schemas.ConstantGroup;
 export const ConstantsResponseSchema = schemas.ConstantsResponse;
+export const CreateAdjustmentStockOutRequestSchema = schemas.CreateAdjustmentStockOutRequest;
 export const CreateBankAccountRequestSchema = schemas.CreateBankAccountRequest;
 export const CreateCashPaymentRequestSchema = schemas.CreateCashPaymentRequest;
 export const CreateCashReceiptRequestSchema = schemas.CreateCashReceiptRequest;
@@ -85,11 +86,14 @@ export const CreateMaterialCutRequestSchema = schemas.CreateMaterialCutRequest;
 export const CreateMaterialRequestSchema = schemas.CreateMaterialRequest;
 export const CreateMaterialTypeRequestSchema = schemas.CreateMaterialTypeRequest;
 export const CreateOrderRequestSchema = schemas.CreateOrderRequest;
+export const CreateOutsourceStockOutRequestSchema = schemas.CreateOutsourceStockOutRequest;
 export const CreatePaperSizeRequestSchema = schemas.CreatePaperSizeRequest;
 export const CreatePaymentMethodRequestSchema = schemas.CreatePaymentMethodRequest;
 export const CreatePaymentRequestSchema = schemas.CreatePaymentRequest;
 export const CreateProductionOrderRequestSchema = schemas.CreateProductionOrderRequest;
+export const CreateProductionStockOutByVendorRequestSchema = schemas.CreateProductionStockOutByVendorRequest;
 export const CreateReturnNoteRequestSchema = schemas.CreateReturnNoteRequest;
+export const CreateReturnVendorStockOutRequestSchema = schemas.CreateReturnVendorStockOutRequest;
 export const CreateSharedAddressRequestSchema = schemas.CreateSharedAddressRequest;
 export const CreateStockInFromCutRequestSchema = schemas.CreateStockInFromCutRequest;
 export const CreateStockInFromDeliveryReturnRequestSchema = schemas.CreateStockInFromDeliveryReturnRequest;
@@ -207,6 +211,7 @@ export const ProductionOrderResponseSchema = schemas.ProductionOrderResponse;
 export const ProductionOrderResponsePaginateSchema = schemas.ProductionOrderResponsePaginate;
 export const ProductionResponseSchema = schemas.ProductionResponse;
 export const ProductionStepResponseSchema = schemas.ProductionStepResponse;
+export const ProductionStockOutItemRequestSchema = schemas.ProductionStockOutItemRequest;
 export const ProofingAllocationResponseSchema = schemas.ProofingAllocationResponse;
 export const ProofingOrderDesignListResponseSchema = schemas.ProofingOrderDesignListResponse;
 export const ProofingOrderDesignResponseSchema = schemas.ProofingOrderDesignResponse;

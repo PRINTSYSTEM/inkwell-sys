@@ -489,7 +489,7 @@ export default function OrderDetailPage() {
       payload.customerPhone =
         cardEditValues.customerPhone === "" ||
         cardEditValues.customerPhone === null
-          ? null
+          ? ""
           : String(cardEditValues.customerPhone).trim();
       payload.customerEmail =
         cardEditValues.customerEmail === "" ||

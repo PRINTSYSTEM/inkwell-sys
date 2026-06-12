@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-06-04T13:18:47.171Z */
+/* Generated at: 2026-06-12T17:17:07.788Z */
 
 import { z } from "zod";
 import { IdSchema, PagedParamsSchema } from "./Common";
@@ -140,6 +140,7 @@ export const DebtNotificationListParamsSchema = PagedParamsSchema.extend({
   type: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
+  isRead: z.boolean().nullable().optional(),
 });
 export type DebtNotificationListParams = z.infer<typeof DebtNotificationListParamsSchema>;
 

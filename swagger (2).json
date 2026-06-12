@@ -3245,6 +3245,13 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "isRead",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -3327,6 +3334,41 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/debt-notifications/{id}/read": {
+      "put": {
+        "tags": [
+          "DebtNotification"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/debt-notifications/read-all": {
+      "put": {
+        "tags": [
+          "DebtNotification"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
           }
         }
       }
@@ -25752,6 +25794,9 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "isRead": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false

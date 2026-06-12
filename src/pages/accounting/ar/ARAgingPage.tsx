@@ -28,7 +28,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useARAging, useExportARAging } from "@/hooks/use-ar-ap";
 import { formatCurrency } from "@/lib/status-utils";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+
 
 export default function ARAgingPage() {
   const navigate = useNavigate();

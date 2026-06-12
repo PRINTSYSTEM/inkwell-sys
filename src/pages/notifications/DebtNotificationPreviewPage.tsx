@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { useDebtNotificationPreview } from "@/hooks/use-debt-notification";
+import { useDebtNotificationPreview, useMarkDebtNotificationRead } from "@/hooks/use-debt-notification";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 
@@ -23,7 +23,15 @@ export default function DebtNotificationPreviewPage() {
   const navigate = useNavigate();
   const notificationId = id ? parseInt(id) : null;
 
-  const { data: previewData, isLoading, isError, error } = useDebtNotificationPreview(notificationId);
+  const { data: rawData, isLoading, isError, error } = useDebtNotificationPreview(notificationId);
+  const previewData = rawData as any;
+  const { mutate: markAsRead } = useMarkDebtNotificationRead();
+
+  React.useEffect(() => {
+    if (notificationId) {
+      markAsRead(notificationId);
+    }
+  }, [notificationId, markAsRead]);
 
   const formatDate = (dateStr: string | null | undefined) => {
     if (!dateStr) return "—";

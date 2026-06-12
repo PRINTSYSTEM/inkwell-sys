@@ -1,5 +1,5 @@
 // src/hooks/use-debt-notification.ts
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/http";
 import { API_SUFFIX } from "@/apis";
 import { normalizeParams } from "@/apis/util.api";
@@ -126,5 +126,46 @@ export const useDebtNotificationPreview = (
       return res.data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+};
+
+// ===== PUT /api/debt-notifications/:id/read =====
+// Đánh dấu thông báo công nợ đã đọc
+
+export const useMarkDebtNotificationRead = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest.put(API_SUFFIX.DEBT_NOTIFICATION_READ(id));
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: debtNotificationKeys.all });
+    },
+    onError: () => {
+      toast.error("Không thể đánh dấu thông báo là đã đọc");
+    },
+  });
+};
+
+// ===== PUT /api/debt-notifications/read-all =====
+// Đánh dấu tất cả thông báo công nợ đã đọc
+
+export const useMarkAllDebtNotificationsRead = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest.put(API_SUFFIX.DEBT_NOTIFICATION_READ_ALL);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: debtNotificationKeys.all });
+      toast.success("Đã đánh dấu tất cả thông báo là đã đọc");
+    },
+    onError: () => {
+      toast.error("Không thể đánh dấu tất cả thông báo là đã đọc");
+    },
   });
 };

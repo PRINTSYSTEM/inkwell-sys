@@ -719,6 +719,7 @@ const DebtNotificationResponse = z
     body: z.string().nullable(),
     sentAt: z.string().datetime({ offset: true }).nullable(),
     createdAt: z.string().datetime({ offset: true }),
+    isRead: z.boolean(),
   })
   .partial();
 const DebtNotificationResponseIPaginate = z
@@ -1651,6 +1652,8 @@ const InventoryTransactionResponse = z
     jobCode: z.string().nullable(),
     size: z.string().nullable(),
     quantityProduced: z.number().int().nullable(),
+    stockOutPurpose: z.string().nullable(),
+    stockOutPurposeName: z.string().nullable(),
     createdAt: z.string().datetime({ offset: true }),
   })
   .partial();
@@ -3403,6 +3406,43 @@ const CreateStockOutForSpecialReasonRequest = z.object({
   documentCode: z.string().nullish(),
   notes: z.string().nullish(),
 });
+const ProductionStockOutItemRequest = z.object({
+  materialId: z.number().int(),
+  quantity: z.number().int().gte(1).lte(2147483647),
+  notes: z.string().nullish(),
+});
+const CreateProductionStockOutByVendorRequest = z.object({
+  vendorId: z.number().int(),
+  receiverName: z.string().min(1),
+  exportReason: z.string().nullish(),
+  notes: z.string().nullish(),
+  stockOutDate: z.string().datetime({ offset: true }).nullish(),
+  items: z.array(ProductionStockOutItemRequest).min(1),
+});
+const CreateOutsourceStockOutRequest = z.object({
+  vendorId: z.number().int(),
+  exportReason: z.string().nullish(),
+  warehouseName: z.string().nullish(),
+  warehouseAddress: z.string().nullish(),
+  notes: z.string().nullish(),
+  stockOutDate: z.string().datetime({ offset: true }).nullish(),
+  items: z.array(ProductionStockOutItemRequest).min(1),
+});
+const CreateReturnVendorStockOutRequest = z.object({
+  vendorId: z.number().int(),
+  exportReason: z.string().nullish(),
+  warehouseName: z.string().nullish(),
+  warehouseAddress: z.string().nullish(),
+  notes: z.string().nullish(),
+  stockOutDate: z.string().datetime({ offset: true }).nullish(),
+  items: z.array(ProductionStockOutItemRequest).min(1),
+});
+const CreateAdjustmentStockOutRequest = z.object({
+  materialId: z.number().int(),
+  quantity: z.number().int().gte(1).lte(2147483647),
+  notes: z.string().min(1),
+  stockOutDate: z.string().datetime({ offset: true }).nullish(),
+});
 const ReturnItemRequest = z.object({
   stockOutItemId: z.number().int(),
   returnQuantity: z.number().int().gte(1).lte(2147483647),
@@ -3858,6 +3898,11 @@ export const schemas = {
   CreateStockOutForProductionRequest,
   CreateStockOutForDeliveryRequest,
   CreateStockOutForSpecialReasonRequest,
+  ProductionStockOutItemRequest,
+  CreateProductionStockOutByVendorRequest,
+  CreateOutsourceStockOutRequest,
+  CreateReturnVendorStockOutRequest,
+  CreateAdjustmentStockOutRequest,
   ReturnItemRequest,
   ProcessDeliveryReturnRequest,
   UpdateStockOutRequest,
@@ -5228,6 +5273,11 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.string().optional(),
       },
+      {
+        name: "isRead",
+        type: "Query",
+        schema: z.boolean().optional(),
+      },
     ],
     response: DebtNotificationResponseIPaginate,
   },
@@ -5260,6 +5310,27 @@ const endpoints = makeApi([
           .passthrough(),
       },
     ],
+  },
+  {
+    method: "put",
+    path: "/api/debt-notifications/:id/read",
+    alias: "putApidebtNotificationsIdread",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "put",
+    path: "/api/debt-notifications/read-all",
+    alias: "putApidebtNotificationsreadAll",
+    requestFormat: "json",
+    response: z.void(),
   },
   {
     method: "post",
@@ -12412,6 +12483,36 @@ const endpoints = makeApi([
   },
   {
     method: "get",
+    path: "/api/stock-outs/:id/excel",
+    alias: "getApistockOutsIdexcel",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 404,
+        description: `Not Found`,
+        schema: z
+          .object({
+            type: z.string().nullable(),
+            title: z.string().nullable(),
+            status: z.number().int().nullable(),
+            detail: z.string().nullable(),
+            instance: z.string().nullable(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+  {
+    method: "get",
     path: "/api/stock-outs/:id/pdf",
     alias: "getApistockOutsIdpdf",
     requestFormat: "json",
@@ -12439,6 +12540,20 @@ const endpoints = makeApi([
           .passthrough(),
       },
     ],
+  },
+  {
+    method: "post",
+    path: "/api/stock-outs/adjustment",
+    alias: "postApistockOutsadjustment",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateAdjustmentStockOutRequest,
+      },
+    ],
+    response: z.void(),
   },
   {
     method: "get",
@@ -12512,6 +12627,20 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/stock-outs/outsource",
+    alias: "postApistockOutsoutsource",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateOutsourceStockOutRequest,
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "post",
     path: "/api/stock-outs/process-return",
     alias: "postApistockOutsprocessReturn",
     requestFormat: "json",
@@ -12520,6 +12649,34 @@ const endpoints = makeApi([
         name: "body",
         type: "Body",
         schema: ProcessDeliveryReturnRequest,
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "post",
+    path: "/api/stock-outs/production-by-vendor",
+    alias: "postApistockOutsproductionByVendor",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateProductionStockOutByVendorRequest,
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "post",
+    path: "/api/stock-outs/return-vendor",
+    alias: "postApistockOutsreturnVendor",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateReturnVendorStockOutRequest,
       },
     ],
     response: z.void(),

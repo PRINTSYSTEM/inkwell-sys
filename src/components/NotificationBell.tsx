@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { Bell, MoreHorizontal, Check, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { useDebtNotifications } from "@/hooks/use-debt-notification";
+import { useDebtNotifications, useMarkAllDebtNotificationsRead, useMarkDebtNotificationRead } from "@/hooks/use-debt-notification";
+import { useNotification } from "@/hooks/use-notification";
 import {
   Popover,
   PopoverContent,
@@ -22,13 +23,38 @@ function NotificationBell() {
   const [tab, setTab] = useState<"all" | "unread">("all");
   const [lastNotifId, setLastNotifId] = useState<number | null>(null);
 
-  const { data, isLoading } = useDebtNotifications({ 
+  const { data, isLoading, refetch } = useDebtNotifications({ 
     pageSize: 10,
-    type: tab === "unread" ? "unread" : undefined 
+    isRead: tab === "unread" ? false : undefined 
   });
 
+  const { data: unreadData, refetch: refetchUnreadCount } = useDebtNotifications({ 
+    pageSize: 1,
+    isRead: false 
+  });
+
+  const markAllAsRead = useMarkAllDebtNotificationsRead();
+  const markAsRead = useMarkDebtNotificationRead();
+  const { connection } = useNotification();
+
   const notifications = data?.items ?? [];
-  const unreadCount = data?.total ?? 0;
+  const unreadCount = unreadData?.total ?? 0;
+
+  // Real-time SignalR listener
+  useEffect(() => {
+    if (!connection) return;
+
+    const handleNewNotification = () => {
+      refetch();
+      refetchUnreadCount();
+    };
+
+    connection.on("ReceiveNotification", handleNewNotification);
+
+    return () => {
+      connection.off("ReceiveNotification", handleNewNotification);
+    };
+  }, [connection, refetch, refetchUnreadCount]);
 
   // Real-time toast logic (Facebook style)
   useEffect(() => {
@@ -49,6 +75,25 @@ function NotificationBell() {
     }
   }, [notifications, lastNotifId, navigate]);
 
+  const handleDoubleClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await markAllAsRead.mutateAsync();
+    } catch (err) {
+      // Error is handled by mutation onError
+    }
+  };
+
+  const handleMarkAsRead = async (id: number) => {
+    try {
+      await markAsRead.mutateAsync(id);
+      toast.success("Đã đánh dấu đã đọc");
+    } catch (err) {
+      // Error is handled by mutation onError
+    }
+  };
+
   const handleNavigate = (path: string) => {
     setOpen(false);
     navigate(path);
@@ -58,6 +103,7 @@ function NotificationBell() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <div
+          onDoubleClick={handleDoubleClick}
           className="relative transition-all hover:bg-secondary/80 cursor-pointer flex items-center justify-center h-10 w-10 rounded-full bg-secondary select-none outline-none"
           title="Thông báo"
         >
@@ -141,25 +187,26 @@ function NotificationBell() {
               notifications.map((notif) => (
                 <div
                   key={notif.id}
-                  className="group relative flex gap-3 p-3 rounded-lg hover:bg-accent/50 transition-colors"
+                  onClick={() => notif.id && !notif.isRead && handleMarkAsRead(notif.id)}
+                  className="group relative flex gap-3 p-3 rounded-lg hover:bg-accent/50 transition-colors cursor-pointer"
                 >
                   <div className="flex-1 space-y-1 pr-4">
                     <p className={cn(
                       "text-sm leading-snug line-clamp-3",
-                      !notif.sentAt ? "font-bold text-foreground" : "text-muted-foreground"
+                      !notif.isRead ? "font-bold text-foreground" : "text-muted-foreground"
                     )}>
                       <span className="font-extrabold text-foreground">{notif.subject}: </span>
                       {notif.body}
                     </p>
                     <p className={cn(
                       "text-xs font-medium",
-                      !notif.sentAt ? "text-blue-600" : "text-muted-foreground"
+                      !notif.isRead ? "text-blue-600" : "text-muted-foreground"
                     )}>
                       {notif.createdAt ? formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true, locale: vi }) : "Vừa xong"}
                     </p>
                   </div>
 
-                  {!notif.sentAt && (
+                  {!notif.isRead && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
                       <div className="h-2.5 w-2.5 bg-blue-600 rounded-full" />
                     </div>

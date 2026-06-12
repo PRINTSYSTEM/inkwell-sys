@@ -362,42 +362,39 @@ export default function AccountingDebtReport() {
   };
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
-      <div className="flex-1 overflow-y-auto p-6">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-6 shrink-0">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">
-              Báo cáo Công nợ
-            </h1>
-            <p className="text-muted-foreground">
-              Theo dõi và quản lý công nợ khách hàng
-            </p>
-          </div>
+    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Báo cáo Công nợ
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Theo dõi và quản lý công nợ khách hàng
+          </p>
         </div>
+      </div>
 
-        {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6 shrink-0">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Tổng KH</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalCustomers}</div>
+      {/* Stats Cards */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">Tổng KH</p>
+              <div className="text-2xl font-bold mt-0.5">{stats.totalCustomers}</div>
               <p className="text-xs text-muted-foreground">khách hàng</p>
-            </CardContent>
-          </Card>
+            </div>
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <Users className="h-5 w-5 text-primary" />
+            </div>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Tình trạng tốt
-              </CardTitle>
-              <CheckCircle className="h-4 w-4 text-green-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-600">
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">Tình trạng tốt</p>
+              <div className="text-2xl font-bold mt-0.5 text-green-600">
                 {stats.goodStatus}
               </div>
               <p className="text-xs text-muted-foreground">
@@ -406,18 +403,18 @@ export default function AccountingDebtReport() {
                   : 0}
                 % khách hàng
               </p>
-            </CardContent>
-          </Card>
+            </div>
+            <div className="h-10 w-10 rounded-full bg-green-50 flex items-center justify-center">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Cần theo dõi
-              </CardTitle>
-              <AlertTriangle className="h-4 w-4 text-yellow-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">Cần theo dõi</p>
+              <div className="text-2xl font-bold mt-0.5 text-yellow-600">
                 {stats.warningStatus}
               </div>
               <p className="text-xs text-muted-foreground">
@@ -428,16 +425,18 @@ export default function AccountingDebtReport() {
                   : 0}
                 % khách hàng
               </p>
-            </CardContent>
-          </Card>
+            </div>
+            <div className="h-10 w-10 rounded-full bg-yellow-50 flex items-center justify-center">
+              <AlertTriangle className="h-5 w-5 text-yellow-600" />
+            </div>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Bị chặn</CardTitle>
-              <AlertCircle className="h-4 w-4 text-red-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-600">
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs text-muted-foreground">Bị chặn</p>
+              <div className="text-2xl font-bold mt-0.5 text-red-600">
                 {stats.blockedStatus}
               </div>
               <p className="text-xs text-muted-foreground">
@@ -448,130 +447,121 @@ export default function AccountingDebtReport() {
                   : 0}
                 % khách hàng
               </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Summary Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5" />
-              Tổng quan công nợ
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid md:grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  Tổng công nợ hiện tại
-                </p>
-                <p className="text-2xl font-bold text-red-600">
-                  {formatCurrency(stats.totalCurrentDebt)}
-                </p>
-              </div>
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">
-                  Tổng hạn mức cho phép
-                </p>
-                <p className="text-2xl font-bold">
-                  {formatCurrency(stats.totalMaxDebt)}
-                </p>
-              </div>
-              <div className="text-center p-4 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">Tỷ lệ sử dụng</p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {stats.totalMaxDebt > 0
-                    ? Math.round(
-                        (stats.totalCurrentDebt / stats.totalMaxDebt) * 100
-                      )
-                    : 0}
-                  %
-                </p>
-              </div>
+            </div>
+            <div className="h-10 w-10 rounded-full bg-red-50 flex items-center justify-center">
+              <AlertCircle className="h-5 w-5 text-red-600" />
             </div>
           </CardContent>
         </Card>
+      </div>
 
-        {/* Customer Debt Table */}
-        <Card className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          <CardHeader className="shrink-0">
-            <CardTitle>Chi tiết công nợ khách hàng</CardTitle>
-            <div className="flex gap-4 items-center mt-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input
-                  placeholder="Tìm kiếm khách hàng..."
-                  className="pl-10"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant={filterStatus === "all" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setFilterStatus("all")}
-                >
-                  Tất cả
-                </Button>
-                <Button
-                  variant={filterStatus === "warning" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setFilterStatus("warning")}
-                >
-                  Cảnh báo
-                </Button>
-                <Button
-                  variant={filterStatus === "blocked" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setFilterStatus("blocked")}
-                >
-                  Bị chặn
-                </Button>
-              </div>
+      {/* Summary Card */}
+      <Card className="border-0 shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-semibold">Tổng quan công nợ</span>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-4">
+            <div className="text-center p-3 bg-red-50 rounded-lg">
+              <p className="text-xs text-muted-foreground">
+                Tổng công nợ hiện tại
+              </p>
+              <p className="text-xl font-bold text-red-600 mt-0.5">
+                {formatCurrency(stats.totalCurrentDebt)}
+              </p>
             </div>
-          </CardHeader>
-          <CardContent className="flex-1 flex flex-col min-h-0 overflow-hidden">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-              </div>
-            ) : customers.length === 0 ? (
-              <div className="text-center py-8">
-                <Building2 className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                <p className="text-muted-foreground">Không có khách hàng nào</p>
-              </div>
-            ) : (
-              <>
-                <div
-                  ref={tableContainerRef}
-                  className="flex-1 overflow-auto rounded-md border"
-                >
-                  <Table>
-                    <TableHeader className="sticky top-0 z-10 bg-background">
-                      <TableRow className="h-10">
-                        <TableHead className="font-bold text-sm">
-                          Khách hàng
-                        </TableHead>
-                        <TableHead className="font-bold text-sm">
-                          Liên hệ
-                        </TableHead>
-                        <TableHead className="font-bold text-sm">
-                          Công nợ hiện tại
-                        </TableHead>
-                        <TableHead className="font-bold text-sm">
-                          Hạn mức
-                        </TableHead>
-                        <TableHead className="font-bold text-sm">
-                          Tỷ lệ
-                        </TableHead>
-                        <TableHead className="font-bold text-sm">
-                          Trạng thái
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
+            <div className="text-center p-3 bg-muted/50 rounded-lg">
+              <p className="text-xs text-muted-foreground">
+                Tổng hạn mức cho phép
+              </p>
+              <p className="text-xl font-bold mt-0.5">
+                {formatCurrency(stats.totalMaxDebt)}
+              </p>
+            </div>
+            <div className="text-center p-3 bg-blue-50 rounded-lg">
+              <p className="text-xs text-muted-foreground">Tỷ lệ sử dụng</p>
+              <p className="text-xl font-bold text-blue-600 mt-0.5">
+                {stats.totalMaxDebt > 0
+                  ? Math.round(
+                      (stats.totalCurrentDebt / stats.totalMaxDebt) * 100
+                    )
+                  : 0}
+                %
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Customer Debt Table */}
+      <Card className="border-0 shadow-sm overflow-hidden">
+        <CardContent className="p-0">
+          {/* Filter toolbar */}
+          <div className="flex gap-3 items-center p-3 border-b border-slate-100">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-3.5 w-3.5" />
+              <Input
+                placeholder="Tìm kiếm khách hàng..."
+                className="pl-9 h-9 text-sm bg-muted/50 border-0 focus-visible:ring-1"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-1.5">
+              <Button
+                variant={filterStatus === "all" ? "default" : "ghost"}
+                size="sm"
+                className="h-9 text-sm"
+                onClick={() => setFilterStatus("all")}
+              >
+                Tất cả
+              </Button>
+              <Button
+                variant={filterStatus === "warning" ? "default" : "ghost"}
+                size="sm"
+                className="h-9 text-sm"
+                onClick={() => setFilterStatus("warning")}
+              >
+                Cảnh báo
+              </Button>
+              <Button
+                variant={filterStatus === "blocked" ? "default" : "ghost"}
+                size="sm"
+                className="h-9 text-sm"
+                onClick={() => setFilterStatus("blocked")}
+              >
+                Bị chặn
+              </Button>
+            </div>
+          </div>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : customers.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16">
+              <Building2 className="h-10 w-10 text-muted-foreground/30 mb-3" />
+              <p className="text-muted-foreground">Không có khách hàng nào</p>
+            </div>
+          ) : (
+            <>
+              <div
+                ref={tableContainerRef}
+                className="overflow-x-auto"
+              >
+                <Table>
+                  <TableHeader className="bg-muted/50">
+                    <TableRow className="hover:bg-muted/50">
+                      <TableHead className="font-semibold text-slate-700">Khách hàng</TableHead>
+                      <TableHead className="font-semibold text-slate-700">Liên hệ</TableHead>
+                      <TableHead className="font-semibold text-slate-700">Công nợ hiện tại</TableHead>
+                      <TableHead className="font-semibold text-slate-700">Hạn mức</TableHead>
+                      <TableHead className="font-semibold text-slate-700">Tỷ lệ</TableHead>
+                      <TableHead className="font-semibold text-slate-700">Trạng thái</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
                       {customers.map((customer) => {
                         const debtRatio =
                           customer.maxDebt && customer.maxDebt > 0
@@ -649,80 +639,65 @@ export default function AccountingDebtReport() {
                           </TableRow>
                         );
                       })}
-                    </TableBody>
-                  </Table>
-                </div>
+                  </TableBody>
+                </Table>
+              </div>
 
-                {/* Pagination */}
-                {totalCount > 0 && (
-                  <div className="flex items-center justify-between shrink-0 pt-4 border-t mt-4">
-                    <p className="text-sm font-semibold text-muted-foreground">
-                      Hiển thị{" "}
-                      <span className="font-bold text-foreground">
-                        {(pageNumber - 1) * pageSize + 1}
-                      </span>
-                      {" - "}
-                      <span className="font-bold text-foreground">
-                        {Math.min(pageNumber * pageSize, totalCount)}
-                      </span>{" "}
-                      trong tổng số{" "}
-                      <span className="font-bold text-foreground">
-                        {totalCount}
-                      </span>{" "}
-                      khách hàng
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handlePreviousPage}
-                        disabled={pageNumber === 1 || isLoading}
-                        className="h-8"
-                      >
-                        Trước
-                      </Button>
-                      <div className="flex items-center space-x-1">
-                        <span className="text-sm font-semibold text-muted-foreground">
-                          Trang
-                        </span>
-                        <Input
-                          type="number"
-                          min="1"
-                          max={totalPages}
-                          value={pageInput}
-                          onChange={handlePageInputChange}
-                          onBlur={handlePageInputBlur}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.currentTarget.blur();
-                            }
-                          }}
-                          className="w-14 h-8 text-center text-sm font-bold"
-                          disabled={isLoading}
-                        />
-                        <span className="text-sm font-semibold text-muted-foreground">
-                          / {totalPages}
-                        </span>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleNextPage}
-                        disabled={pageNumber === totalPages || isLoading}
-                        className="h-8"
-                      >
-                        Sau
-                      </Button>
+              {/* Pagination */}
+              {totalCount > 0 && (
+                <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200/60">
+                  <p className="text-sm text-slate-500">
+                    Hiển thị <strong>{(pageNumber - 1) * pageSize + 1}</strong> – <strong>{Math.min(pageNumber * pageSize, totalCount)}</strong> trong <strong>{totalCount}</strong> khách hàng
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handlePreviousPage}
+                      disabled={pageNumber === 1 || isLoading}
+                      className="h-8"
+                    >
+                      Trước
+                    </Button>
+                    <div className="flex items-center space-x-1">
+                      <span className="text-sm text-muted-foreground">Trang</span>
+                      <Input
+                        type="number"
+                        min="1"
+                        max={totalPages}
+                        value={pageInput}
+                        onChange={handlePageInputChange}
+                        onBlur={handlePageInputBlur}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.currentTarget.blur();
+                          }
+                        }}
+                        className="w-14 h-8 text-center text-sm font-bold"
+                        disabled={isLoading}
+                      />
+                      <span className="text-sm text-muted-foreground">/ {totalPages}</span>
                     </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleNextPage}
+                      disabled={pageNumber === totalPages || isLoading}
+                      className="h-8"
+                    >
+                      Sau
+                    </Button>
                   </div>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
 
-        {/* Export Debt Section */}
-        <Card className="shrink-0 mt-6">
+      {/* Export Debt Section */}
+
+      <Card className="border-0 shadow-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileSpreadsheet className="h-5 w-5" />
@@ -1173,7 +1148,6 @@ export default function AccountingDebtReport() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
     </div>
   );
 }

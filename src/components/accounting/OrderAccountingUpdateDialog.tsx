@@ -109,7 +109,7 @@ export function OrderAccountingUpdateDialog({
       note: formData.note?.trim() || null,
       customerName: formData.customerName?.trim() || null,
       customerCompanyName: formData.customerCompanyName?.trim() || null,
-      customerPhone: formData.customerPhone?.trim() || null,
+      customerPhone: formData.customerPhone?.trim() ?? "",
       customerEmail: formData.customerEmail?.trim() || null,
       customerTaxCode: formData.customerTaxCode?.trim() || null,
       customerAddress: formData.customerAddress?.trim() || null,

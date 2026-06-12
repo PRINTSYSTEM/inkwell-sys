@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { format } from "date-fns";
@@ -7,11 +7,11 @@ import {
   Package,
   Search,
   Building2,
-  ChevronLeft,
-  ChevronRight,
+  Loader2,
   RefreshCw,
+  Filter,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -30,11 +30,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { usePlateExports } from "@/hooks/use-plate-export";
 import { useVendors } from "@/hooks/use-vendor";
 import type { PlateExportResponse, PlateExportListParams } from "@/Schema";
-import { productionMethodLabels, formatCurrency } from "@/lib/status-utils";
+import { formatCurrency } from "@/lib/status-utils";
 
 export default function PlateExportListPage() {
   const navigate = useNavigate();
@@ -45,13 +44,6 @@ export default function PlateExportListPage() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
 
-  // Refs for height measurement
-  const tableContainerRef = useRef<HTMLDivElement>(null);
-  const tableRef = useRef<HTMLTableElement>(null);
-  const firstRowRef = useRef<HTMLTableRowElement>(null);
-
-  // Convert date inputs to ISO datetime strings
-  // Use empty string instead of undefined for string params
   const fromDateISO = fromDate
     ? new Date(`${fromDate}T00:00:00`).toISOString()
     : "";
@@ -61,9 +53,9 @@ export default function PlateExportListPage() {
     pageNumber: page,
     pageSize,
     search: searchTerm || "",
-    vendorId: vendorId || undefined, // number params can use undefined
-    fromDate: fromDateISO || "", // Use empty string instead of undefined
-    toDate: toDateISO || "", // Use empty string instead of undefined
+    vendorId: vendorId || undefined,
+    fromDate: fromDateISO || "",
+    toDate: toDateISO || "",
   };
 
   const { data, isLoading, isFetching, refetch } = usePlateExports(params);
@@ -72,56 +64,6 @@ export default function PlateExportListPage() {
   const plateExports: PlateExportResponse[] = data?.items ?? [];
   const totalPages = data?.totalPages ?? 1;
   const totalCount = data?.total ?? 0;
-
-  // #region agent log
-  useEffect(() => {
-    if (
-      tableContainerRef.current &&
-      tableRef.current &&
-      firstRowRef.current &&
-      plateExports.length > 0
-    ) {
-      const containerHeight = tableContainerRef.current.offsetHeight;
-      const tableHeight = tableRef.current.offsetHeight;
-      const rowHeight = firstRowRef.current.offsetHeight;
-      const viewportHeight = window.innerHeight;
-      const headerHeight =
-        tableContainerRef.current
-          .querySelector("thead")
-          ?.getBoundingClientRect().height || 0;
-      const totalRowsHeight = rowHeight * plateExports.length;
-      const cardElement = tableContainerRef.current.querySelector(".h-auto");
-      const cardHeight = cardElement?.getBoundingClientRect().height || 0;
-
-      fetch(
-        "http://127.0.0.1:7243/ingest/0ac68b44-beaf-4ee6-8632-2687b7520c17",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            location: "PlateExportListPage.tsx:measure-heights",
-            message: "Table height measurements after fix",
-            data: {
-              containerHeight,
-              tableHeight,
-              rowHeight,
-              viewportHeight,
-              headerHeight,
-              totalRowsHeight,
-              rowCount: plateExports.length,
-              pageSize,
-              cardHeight,
-            },
-            timestamp: Date.now(),
-            sessionId: "debug-session",
-            runId: "post-fix",
-            hypothesisId: "A",
-          }),
-        }
-      ).catch(() => {});
-    }
-  }, [plateExports.length, pageSize]);
-  // #endregion
 
   const handleResetFilters = () => {
     setSearchTerm("");
@@ -147,7 +89,7 @@ export default function PlateExportListPage() {
   };
 
   return (
-    <main className="min-h-screen bg-background p-6 space-y-6">
+    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
       <Helmet>
         <title>Danh sách xuất kẽm</title>
         <meta
@@ -157,267 +99,263 @@ export default function PlateExportListPage() {
         <link rel="canonical" href="/plate-exports" />
       </Helmet>
 
-      <header className="flex items-center justify-between gap-4">
+      {/* Header */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2 text-foreground">
-            <Package className="h-7 w-7 text-primary" />
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+            <Package className="h-6 w-6 text-primary" />
             Danh sách xuất kẽm
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             Theo dõi danh sách xuất kẽm, nhà cung cấp và tình trạng nhận kẽm.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleResetFilters}
-            disabled={isFetching}
-          >
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Làm mới
-          </Button>
-        </div>
-      </header>
+      </div>
 
       {/* Stats */}
-      <section className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardContent className="p-5 flex items-center justify-between">
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted-foreground">Tổng số lệnh xuất kẽm</p>
-              <p className="text-2xl font-bold">{totalCount}</p>
+              <p className="text-xs text-muted-foreground">Tổng lệnh xuất kẽm</p>
+              <p className="text-2xl font-bold mt-0.5">{totalCount}</p>
             </div>
-            <Package className="h-8 w-8 text-primary" />
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+              <Package className="h-5 w-5 text-primary" />
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-5 flex items-center justify-between">
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted-foreground">
-                Đang hoạt động
-              </p>
-              <p className="text-2xl font-bold">
+              <p className="text-xs text-muted-foreground">Đang hoạt động</p>
+              <p className="text-2xl font-bold mt-0.5 text-emerald-600">
                 {plateExports.filter((p) => p.isActive).length}
               </p>
             </div>
-            <Package className="h-8 w-8 text-emerald-500" />
+            <div className="h-10 w-10 rounded-full bg-emerald-50 flex items-center justify-center">
+              <Package className="h-5 w-5 text-emerald-500" />
+            </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-5 flex items-center justify-between">
+        <Card className="border-0 shadow-sm">
+          <CardContent className="p-4 flex items-center justify-between">
             <div>
-              <p className="text-sm text-muted-foreground">Đã nhận kẽm</p>
-              <p className="text-2xl font-bold">
+              <p className="text-xs text-muted-foreground">Đã nhận kẽm</p>
+              <p className="text-2xl font-bold mt-0.5 text-blue-600">
                 {plateExports.filter((p) => p.receivedAt).length}
               </p>
             </div>
-            <Package className="h-8 w-8 text-blue-500" />
-          </CardContent>
-        </Card>
-      </section>
-
-      {/* Filters */}
-      <section>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Bộ lọc xuất kẽm</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="relative flex-1">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Tìm kiếm theo mã bài, nhà cung cấp..."
-                  value={searchTerm}
-                  onChange={(e) => {
-                    setSearchTerm(e.target.value);
-                    setPage(1);
-                  }}
-                  className="pl-8"
-                />
-              </div>
-              <div className="w-full md:w-[240px]">
-                <Select
-                  value={vendorId?.toString() || "all"}
-                  onValueChange={(value) => {
-                    setVendorId(value === "all" ? null : Number(value));
-                    setPage(1);
-                  }}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Nhà cung cấp" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tất cả nhà cung cấp</SelectItem>
-                    {vendorsData?.items?.map((vendor) => (
-                      <SelectItem
-                        key={vendor.id}
-                        value={vendor.id?.toString() || ""}
-                      >
-                        {vendor.name || "—"}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="w-full md:w-[180px]">
-                <Input
-                  type="date"
-                  placeholder="Từ ngày"
-                  value={fromDate}
-                  onChange={(e) => {
-                    setFromDate(e.target.value);
-                    setPage(1);
-                  }}
-                />
-              </div>
-              <div className="w-full md:w-[180px]">
-                <Input
-                  type="date"
-                  placeholder="Đến ngày"
-                  value={toDate}
-                  onChange={(e) => {
-                    setToDate(e.target.value);
-                    setPage(1);
-                  }}
-                />
-              </div>
+            <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center">
+              <Package className="h-5 w-5 text-blue-500" />
             </div>
           </CardContent>
         </Card>
-      </section>
+      </div>
+
+      {/* Filters */}
+      <Card className="border-0 shadow-sm">
+        <CardContent className="p-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-wrap">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Tìm theo mã bài, nhà cung cấp..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setPage(1);
+                }}
+                className="pl-8 h-9 text-sm bg-muted/50 border-0 focus-visible:ring-1"
+              />
+            </div>
+            <Select
+              value={vendorId?.toString() || "all"}
+              onValueChange={(value) => {
+                setVendorId(value === "all" ? null : Number(value));
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[200px] h-9 text-sm bg-muted/50 border-0">
+                <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                <SelectValue placeholder="Nhà cung cấp" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả nhà cung cấp</SelectItem>
+                {vendorsData?.items?.map((vendor) => (
+                  <SelectItem
+                    key={vendor.id}
+                    value={vendor.id?.toString() || ""}
+                  >
+                    {vendor.name || "—"}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="flex items-center gap-1.5 bg-muted/50 rounded-md px-2 h-9">
+              <span className="text-xs text-muted-foreground font-medium">Từ</span>
+              <Input
+                type="date"
+                value={fromDate}
+                onChange={(e) => {
+                  setFromDate(e.target.value);
+                  setPage(1);
+                }}
+                className="h-7 border-0 bg-transparent shadow-none p-0 text-sm focus-visible:ring-0 w-[120px]"
+              />
+              <span className="text-xs text-muted-foreground font-medium">Đến</span>
+              <Input
+                type="date"
+                value={toDate}
+                onChange={(e) => {
+                  setToDate(e.target.value);
+                  setPage(1);
+                }}
+                className="h-7 border-0 bg-transparent shadow-none p-0 text-sm focus-visible:ring-0 w-[120px]"
+              />
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleResetFilters}
+              disabled={isFetching}
+              className="h-9 text-muted-foreground hover:text-foreground"
+            >
+              {isFetching ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+              )}
+              Đặt lại
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Table */}
-      <section>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Danh sách xuất kẽm</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="p-4 space-y-4">
-                {[...Array(5)].map((_, i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
-                ))}
-              </div>
-            ) : plateExports.length === 0 ? (
-              <div className="flex flex-col items-center justify-center text-center py-12 text-muted-foreground">
-                <Package className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                <p className="text-sm font-medium">Không có dữ liệu xuất kẽm</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="rounded-md border overflow-x-auto">
-                  <Table ref={tableRef}>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[140px]">Mã bài</TableHead>
-                        <TableHead>Nhà cung cấp</TableHead>
-                        <TableHead className="text-center">Số lượng kẽm</TableHead>
-                        <TableHead>Hình thức in</TableHead>
-                        <TableHead className="text-center">Trạng thái</TableHead>
-                        <TableHead>Ngày gửi</TableHead>
-                        <TableHead>Ngày nhận dự kiến</TableHead>
-                        <TableHead>Ngày nhận thực tế</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {plateExports.map((plateExport, index) => (
-                        <TableRow
-                          key={plateExport.id}
-                          ref={index === 0 ? firstRowRef : null}
-                          className="cursor-pointer hover:bg-muted/50 transition-colors"
-                          onClick={() => handleViewDetail(plateExport.id)}
-                        >
-                          <TableCell className="font-medium">
-                            {plateExport.proofingOrderCode || "—"}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                              <span>
-                                {plateExport.vendorName ||
-                                  plateExport.plateVendor?.name ||
-                                  "—"}
+      <Card className="border-0 shadow-sm overflow-hidden">
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="h-7 w-7 animate-spin text-primary" />
+              <span className="ml-3 text-slate-500">Đang tải...</span>
+            </div>
+          ) : plateExports.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+              <Package className="h-12 w-12 mb-3 opacity-20" />
+              <p className="font-medium">Không có dữ liệu xuất kẽm</p>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50 hover:bg-muted/50">
+                      <TableHead className="w-[140px] font-semibold text-slate-700">Mã bài</TableHead>
+                      <TableHead className="font-semibold text-slate-700">Nhà cung cấp</TableHead>
+                      <TableHead className="text-center font-semibold text-slate-700">Số lượng kẽm</TableHead>
+                      <TableHead className="font-semibold text-slate-700">Hình thức in</TableHead>
+                      <TableHead className="text-center font-semibold text-slate-700">Trạng thái</TableHead>
+                      <TableHead className="font-semibold text-slate-700">Ngày gửi</TableHead>
+                      <TableHead className="font-semibold text-slate-700">Ngày nhận dự kiến</TableHead>
+                      <TableHead className="font-semibold text-slate-700">Ngày nhận thực tế</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {plateExports.map((plateExport) => (
+                      <TableRow
+                        key={plateExport.id}
+                        className="cursor-pointer hover:bg-muted/30 transition-colors border-b border-slate-100"
+                        onClick={() => handleViewDetail(plateExport.id)}
+                      >
+                        <TableCell className="font-medium font-mono text-sm">
+                          {plateExport.proofingOrderCode || "—"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span className="text-sm">
+                              {plateExport.vendorName ||
+                                plateExport.plateVendor?.name ||
+                                "—"}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center font-medium">
+                          {plateExport.plateCount ?? "—"}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-0.5">
+                            <span className={plateExport.productionMethod === "outsource" ? "text-orange-600 font-medium text-sm" : "text-blue-600 font-medium text-sm"}>
+                              {plateExport.productionMethodName || (plateExport.productionMethod === "outsource" ? "In ngoài" : "In tại xưởng")}
+                            </span>
+                            {plateExport.productionMethod === "outsource" && plateExport.printingVendorName && (
+                              <span className="text-xs text-muted-foreground truncate max-w-[150px]">
+                                {plateExport.printingVendorName}
                               </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center font-medium">
-                            {plateExport.plateCount ?? "—"}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-col gap-0.5">
-                              <span className={plateExport.productionMethod === "outsource" ? "text-orange-600 font-medium" : "text-blue-600 font-medium"}>
-                                {plateExport.productionMethodName || (plateExport.productionMethod === "outsource" ? "In ngoài" : "In tại xưởng")}
-                              </span>
-                              {plateExport.productionMethod === "outsource" && plateExport.printingVendorName && (
-                                <span className="text-xs text-muted-foreground truncate max-w-[150px]">
-                                  {plateExport.printingVendorName}
-                                </span>
-                              )}
-                              {plateExport.productionMethod === "outsource" && (plateExport.outsourceCost ?? 0) > 0 && (
-                                <span className="text-xs text-orange-500">
-                                  {formatCurrency(plateExport.outsourceCost ?? 0)}
-                                </span>
-                              )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge
-                              variant={plateExport.isActive ? "default" : "secondary"}
-                            >
-                              {plateExport.isActive ? "Đang hoạt động" : "Không hoạt động"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{formatDate(plateExport.sentAt)}</TableCell>
-                          <TableCell>
-                            {formatDate(plateExport.estimatedReceiveAt)}
-                          </TableCell>
-                          <TableCell>
-                            {plateExport.receivedAt ? (
-                              <span className="text-emerald-600 font-medium">
-                                {formatDate(plateExport.receivedAt)}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
                             )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                            {plateExport.productionMethod === "outsource" && (plateExport.outsourceCost ?? 0) > 0 && (
+                              <span className="text-xs text-orange-500">
+                                {formatCurrency(plateExport.outsourceCost ?? 0)}
+                              </span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge
+                            variant={plateExport.isActive ? "default" : "secondary"}
+                          >
+                            {plateExport.isActive ? "Đang hoạt động" : "Không hoạt động"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-slate-600">{formatDate(plateExport.sentAt)}</TableCell>
+                        <TableCell className="text-sm text-slate-600">
+                          {formatDate(plateExport.estimatedReceiveAt)}
+                        </TableCell>
+                        <TableCell>
+                          {plateExport.receivedAt ? (
+                            <span className="text-emerald-600 font-medium text-sm">
+                              {formatDate(plateExport.receivedAt)}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
-                {/* Pagination */}
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <div>
-                    Trang {page} / {totalPages} ({totalCount} kết quả)
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      disabled={page === 1 || isFetching}
-                    >
-                      Trước
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                      disabled={page === totalPages || isFetching}
-                    >
-                      Sau
-                    </Button>
-                  </div>
+              {/* Pagination */}
+              <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200/60">
+                <span className="text-sm text-slate-500">
+                  Trang <strong>{page}</strong> / <strong>{totalPages}</strong>
+                  <span className="ml-2 text-muted-foreground">({totalCount} kết quả)</span>
+                </span>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page === 1 || isFetching}
+                  >
+                    Trước
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages || isFetching}
+                  >
+                    Sau
+                  </Button>
                 </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
-      </section>
-    </main>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

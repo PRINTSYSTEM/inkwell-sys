@@ -7,8 +7,6 @@ import { vi } from "date-fns/locale";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,7 +39,6 @@ import {
   Scissors,
   AlertCircle,
   CircleDollarSign,
-  Users,
   Printer,
 } from "lucide-react";
 import { usePlateExports, useUpdatePlateExport } from "@/hooks/use-plate-export";
@@ -179,24 +176,42 @@ function InlinePriceCell({
 }
 
 // ───────────────────────────────────────────────────────
+// Filter state types
+// ───────────────────────────────────────────────────────
+interface PlateFilterState {
+  search: string;
+  vendorId: string;
+  fromDate: string;
+  toDate: string;
+}
+
+interface DieFilterState {
+  search: string;
+  vendorId: string;
+  priceFilter: "all" | "no_price";
+}
+
+interface PrinterFilterState {
+  search: string;
+  vendorId: string;
+  fromDate: string;
+  toDate: string;
+}
+
+// ───────────────────────────────────────────────────────
 // Kẽm (Plate Exports) Tab
 // ───────────────────────────────────────────────────────
-function PlateTab() {
+function PlateTab({ filter }: { filter: PlateFilterState }) {
   const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [vendorId, setVendorId] = useState<string>("");
-  const [fromDate, setFromDate] = useState<string>("");
-  const [toDate, setToDate] = useState<string>("");
   const [savingId, setSavingId] = useState<number | null>(null);
 
-  const { data: vendorsData } = useActiveVendors();
   const { data, isLoading, refetch } = usePlateExports({
     pageNumber: page,
     pageSize: 15,
-    search: search || undefined,
-    vendorId: vendorId ? parseInt(vendorId) : undefined,
-    fromDate: fromDate || undefined,
-    toDate: toDate || undefined,
+    search: filter.search || undefined,
+    vendorId: filter.vendorId ? parseInt(filter.vendorId) : undefined,
+    fromDate: filter.fromDate || undefined,
+    toDate: filter.toDate || undefined,
   } as any);
   const { mutateAsync: updatePlate } = useUpdatePlateExport();
 
@@ -226,73 +241,6 @@ function PlateTab() {
 
   return (
     <div className="space-y-4">
-      {/* Filters */}
-      <Card className="border-slate-200/60 shadow-sm">
-        <CardHeader className="bg-[#93631F]/5 border-b border-slate-200/60 py-3 px-5">
-        </CardHeader>
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-3">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Tìm theo mã bình bài..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-                className="pl-9 h-10"
-              />
-            </div>
-            <Select
-              value={vendorId || "all"}
-              onValueChange={(v) => {
-                setVendorId(v === "all" ? "" : v);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="h-10 w-48">
-                <SelectValue placeholder="Nhà cung cấp kẽm" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả NCC</SelectItem>
-                {vendorsData?.map((v) => (
-                  <SelectItem key={v.id} value={String(v.id)}>
-                    {v.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Input
-              type="date"
-              value={fromDate}
-              onChange={(e) => { setFromDate(e.target.value); setPage(1); }}
-              className="w-[140px] h-10"
-              title="Từ ngày"
-            />
-            <Input
-              type="date"
-              value={toDate}
-              onChange={(e) => { setToDate(e.target.value); setPage(1); }}
-              className="w-[140px] h-10"
-              title="Đến ngày"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-10"
-              onClick={() => refetch()}
-              disabled={isLoading}
-            >
-              <RefreshCw
-                className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
-              />
-              Làm mới
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Info banner about default price */}
       <div className="flex items-start gap-2.5 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
         <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
@@ -304,7 +252,7 @@ function PlateTab() {
       </div>
 
       {/* Table */}
-      <Card className="border-slate-200/60 shadow-sm overflow-hidden">
+      <Card className="border-0 shadow-sm overflow-hidden">
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
@@ -321,7 +269,7 @@ function PlateTab() {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-[#93631F]/5 border-b border-slate-200/60">
+                    <TableRow className="bg-muted/50 hover:bg-muted/50">
                       <TableHead className="font-semibold text-slate-700">
                         Mã bình bài
                       </TableHead>
@@ -415,7 +363,7 @@ function PlateTab() {
                 </Table>
               </div>
               {/* Pagination */}
-              <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200/60 bg-slate-50/50">
+              <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200/60">
                 <span className="text-sm text-slate-500">
                   Trang <strong>{page}</strong> / <strong>{totalPages}</strong>
                 </span>
@@ -451,26 +399,22 @@ function PlateTab() {
 // ───────────────────────────────────────────────────────
 // Khuôn (Dies) Tab
 // ───────────────────────────────────────────────────────
-function DieTab() {
+function DieTab({ filter }: { filter: DieFilterState }) {
   const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [vendorId, setVendorId] = useState<string>("");
-  const [priceFilter, setPriceFilter] = useState<"all" | "no_price">("all");
   const [savingId, setSavingId] = useState<number | null>(null);
 
   const { data: vendorsData } = useActiveVendors();
-  const { data, isLoading, refetch } = useDies({
+  const { data, isLoading } = useDies({
     pageNumber: page,
     pageSize: 15,
-    q: search || undefined,
-    vendorName: vendorId ? vendorsData?.find(v => v.id.toString() === vendorId)?.name : undefined,
+    q: filter.search || undefined,
+    vendorName: filter.vendorId ? vendorsData?.find(v => v.id.toString() === filter.vendorId)?.name : undefined,
   });
   const { mutateAsync: updateDie } = useUpdateDie();
 
   const allItems = data?.items ?? [];
-  // Client-side filter for "no price" since the API doesn't support it natively
   const items =
-    priceFilter === "no_price"
+    filter.priceFilter === "no_price"
       ? allItems.filter((d: DieResponse) => !d.price || d.price === 0)
       : allItems;
   const totalPages = data?.totalPages ?? 1;
@@ -486,75 +430,7 @@ function DieTab() {
 
   return (
     <div className="space-y-4">
-      {/* Filters */}
-      <Card className="border-slate-200/60 shadow-sm">
-        <CardHeader className="bg-[#93631F]/5 border-b border-slate-200/60 py-3 px-5">
-        </CardHeader>
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-3">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Tìm theo mã khuôn, tên..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-                className="pl-9 h-10"
-              />
-            </div>
-            <Select
-              value={vendorId || "all"}
-              onValueChange={(v) => {
-                setVendorId(v === "all" ? "" : v);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="h-10 w-48">
-                <SelectValue placeholder="Nhà cung cấp khuôn" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả NCC</SelectItem>
-                {vendorsData?.map((v) => (
-                  <SelectItem key={v.id} value={String(v.id)}>
-                    {v.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={priceFilter}
-              onValueChange={(v) => {
-                setPriceFilter(v as "all" | "no_price");
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="h-10 w-40">
-                <SelectValue placeholder="Trạng thái giá" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="no_price">Chưa có giá</SelectItem>
-                <SelectItem value="all">Tất cả</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-10"
-              onClick={() => refetch()}
-              disabled={isLoading}
-            >
-              <RefreshCw
-                className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
-              />
-              Làm mới
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {priceFilter === "no_price" && (
+      {filter.priceFilter === "no_price" && (
         <div className="flex items-start gap-2.5 p-3 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 text-sm">
           <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
           <span>
@@ -565,7 +441,7 @@ function DieTab() {
       )}
 
       {/* Table */}
-      <Card className="border-slate-200/60 shadow-sm overflow-hidden">
+      <Card className="border-0 shadow-sm overflow-hidden">
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
@@ -576,7 +452,7 @@ function DieTab() {
             <div className="flex flex-col items-center justify-center py-16 text-slate-400">
               <Scissors className="h-12 w-12 mb-3 text-slate-300" />
               <p className="font-medium">
-                {priceFilter === "no_price"
+                {filter.priceFilter === "no_price"
                   ? "Không có khuôn nào chưa có giá 🎉"
                   : "Không có dữ liệu"}
               </p>
@@ -586,7 +462,7 @@ function DieTab() {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-[#93631F]/5 border-b border-slate-200/60">
+                    <TableRow className="bg-muted/50 hover:bg-muted/50">
                       <TableHead className="font-semibold text-slate-700">
                         Mã khuôn
                       </TableHead>
@@ -693,10 +569,10 @@ function DieTab() {
                 </Table>
               </div>
               {/* Pagination */}
-              <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200/60 bg-slate-50/50">
+              <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200/60">
                 <span className="text-sm text-slate-500">
                   Trang <strong>{page}</strong> / <strong>{totalPages}</strong>
-                  {priceFilter === "no_price" && (
+                  {filter.priceFilter === "no_price" && (
                     <span className="ml-2 text-orange-600">
                       ({items.length} khuôn cần cập nhật giá)
                     </span>
@@ -731,44 +607,32 @@ function DieTab() {
   );
 }
 
-
-
 // ───────────────────────────────────────────────────────
 // Nhà in (Printer) Tab
 // ───────────────────────────────────────────────────────
-function PrinterTab() {
+function PrinterTab({ filter }: { filter: PrinterFilterState }) {
   const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [vendorId, setVendorId] = useState<string>("");
-  const [fromDate, setFromDate] = useState<string>("");
-  const [toDate, setToDate] = useState<string>("");
   const [savingId, setSavingId] = useState<number | null>(null);
 
-  const { data: vendorsData } = useActiveVendors();
-  // Fetch plate exports, but we will filter client-side for print vendors if API doesn't support it directly.
-  // Actually, some plate exports are used to track printing outsource cost.
-  const { data, isLoading, refetch } = usePlateExports({
+  const { data, isLoading } = usePlateExports({
     pageNumber: page,
-    pageSize: 100, // Fetch more since we filter client side
-    search: search || undefined,
-    fromDate: fromDate || undefined,
-    toDate: toDate || undefined,
+    pageSize: 100,
+    search: filter.search || undefined,
+    fromDate: filter.fromDate || undefined,
+    toDate: filter.toDate || undefined,
   } as any);
   const { mutateAsync: updatePlate } = useUpdatePlateExport();
 
-  // Lọc chỉ những bản ghi có thuê ngoài in
   const allItems = data?.items ?? [];
   const items = allItems.filter(
     (p: any) => p.productionMethod === "outsource" || p.printingVendorId || p.printingVendorName
   );
   
-  // Filter by selected vendor
   const displayItems = items.filter((p: any) => {
-    if (!vendorId || vendorId === "all") return true;
-    return p.printingVendorId?.toString() === vendorId;
+    if (!filter.vendorId || filter.vendorId === "all") return true;
+    return p.printingVendorId?.toString() === filter.vendorId;
   });
 
-  // Calculate local pagination
   const pageSize = 15;
   const totalPages = Math.max(1, Math.ceil(displayItems.length / pageSize));
   const currentItems = displayItems.slice((page - 1) * pageSize, page * pageSize);
@@ -797,73 +661,8 @@ function PrinterTab() {
 
   return (
     <div className="space-y-4">
-      {/* Filters */}
-      <Card className="border-slate-200/60 shadow-sm">
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-3">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <Input
-                placeholder="Tìm theo mã bình bài..."
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-                className="pl-9 h-10"
-              />
-            </div>
-            <Select
-              value={vendorId || "all"}
-              onValueChange={(v) => {
-                setVendorId(v === "all" ? "" : v);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="h-10 w-48">
-                <SelectValue placeholder="Nhà in" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả Nhà in</SelectItem>
-                {vendorsData?.filter(v => v.type === "printing" || !v.type).map((v) => (
-                  <SelectItem key={v.id} value={String(v.id)}>
-                    {v.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Input
-              type="date"
-              value={fromDate}
-              onChange={(e) => { setFromDate(e.target.value); setPage(1); }}
-              className="w-[140px] h-10"
-              title="Từ ngày"
-            />
-            <Input
-              type="date"
-              value={toDate}
-              onChange={(e) => { setToDate(e.target.value); setPage(1); }}
-              className="w-[140px] h-10"
-              title="Đến ngày"
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-10"
-              onClick={() => refetch()}
-              disabled={isLoading}
-            >
-              <RefreshCw
-                className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`}
-              />
-              Làm mới
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Table */}
-      <Card className="border-slate-200/60 shadow-sm overflow-hidden">
+      <Card className="border-0 shadow-sm overflow-hidden">
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
@@ -880,7 +679,7 @@ function PrinterTab() {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-[#93631F]/5 border-b border-slate-200/60">
+                    <TableRow className="bg-muted/50 hover:bg-muted/50">
                       <TableHead className="font-semibold text-slate-700">
                         Mã bình bài
                       </TableHead>
@@ -951,7 +750,7 @@ function PrinterTab() {
                 </Table>
               </div>
               {/* Pagination */}
-              <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200/60 bg-slate-50/50">
+              <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200/60">
                 <span className="text-sm text-slate-500">
                   Trang <strong>{page}</strong> / <strong>{totalPages}</strong>
                 </span>
@@ -988,6 +787,27 @@ function PrinterTab() {
 // Main Page
 // ───────────────────────────────────────────────────────
 export default function CostPricingPage() {
+  const [activeTab, setActiveTab] = useState("plates");
+
+  // Plate filter state
+  const [plateSearch, setPlateSearch] = useState("");
+  const [plateVendorId, setPlateVendorId] = useState("");
+  const [plateFromDate, setPlateFromDate] = useState("");
+  const [plateToDate, setPlateToDate] = useState("");
+
+  // Die filter state
+  const [dieSearch, setDieSearch] = useState("");
+  const [dieVendorId, setDieVendorId] = useState("");
+  const [diePriceFilter, setDiePriceFilter] = useState<"all" | "no_price">("all");
+
+  // Printer filter state
+  const [printerSearch, setPrinterSearch] = useState("");
+  const [printerVendorId, setPrinterVendorId] = useState("");
+  const [printerFromDate, setPrinterFromDate] = useState("");
+  const [printerToDate, setPrinterToDate] = useState("");
+
+  const { data: vendorsData } = useActiveVendors();
+
   return (
     <>
       <Helmet>
@@ -998,57 +818,211 @@ export default function CostPricingPage() {
         />
       </Helmet>
 
-      <div className="min-h-screen bg-background">
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-          {/* Standard Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">
-                Bảng kê chi phí Khuôn / Kẽm
-              </h1>
-            </div>
-            <div className="flex items-center gap-2">
-              <CircleDollarSign className="h-8 w-8 text-[#93631F]" />
-            </div>
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+        {/* Header */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">
+              Bảng kê chi phí Khuôn / Kẽm
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Quản lý và cập nhật giá chi phí khuôn bế, kẽm in và thuê ngoài nhà in
+            </p>
           </div>
-
-          {/* Tabs */}
-          <Tabs defaultValue="plates">
-            <TabsList className="h-11 bg-slate-100 p-1 rounded-lg">
-              <TabsTrigger
-                value="plates"
-                className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#93631F]"
-              >
-                <Layers className="h-4 w-4" />
-                Kẽm
-              </TabsTrigger>
-              <TabsTrigger
-                value="dies"
-                className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#93631F]"
-              >
-                <Scissors className="h-4 w-4" />
-                Khuôn bế
-              </TabsTrigger>
-              <TabsTrigger
-                value="printers"
-                className="flex items-center gap-2 data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-[#93631F]"
-              >
-                <Printer className="h-4 w-4" />
-                Nhà in
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="plates" className="mt-6">
-              <PlateTab />
-            </TabsContent>
-            <TabsContent value="dies" className="mt-6">
-              <DieTab />
-            </TabsContent>
-            <TabsContent value="printers" className="mt-6">
-              <PrinterTab />
-            </TabsContent>
-          </Tabs>
+          <div className="flex items-center gap-2">
+            <CircleDollarSign className="h-6 w-6 text-[#93631F]" />
+          </div>
         </div>
+
+        {/* Tabs + Filter toolbar — same row */}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <Card className="border-0 shadow-sm">
+            <CardContent className="p-3">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                {/* Tab switcher */}
+                <TabsList className="h-9 bg-muted p-1 rounded-md shrink-0">
+                  <TabsTrigger value="plates" className="flex items-center gap-1.5 h-7 text-sm">
+                    <Layers className="h-3.5 w-3.5" />
+                    Kẽm
+                  </TabsTrigger>
+                  <TabsTrigger value="dies" className="flex items-center gap-1.5 h-7 text-sm">
+                    <Scissors className="h-3.5 w-3.5" />
+                    Khuôn bế
+                  </TabsTrigger>
+                  <TabsTrigger value="printers" className="flex items-center gap-1.5 h-7 text-sm">
+                    <Printer className="h-3.5 w-3.5" />
+                    Nhà in
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Divider */}
+                <div className="hidden lg:block w-px h-6 bg-border shrink-0" />
+
+                {/* Filters — per tab */}
+                {activeTab === "plates" && (
+                  <div className="flex flex-1 flex-wrap items-center gap-2">
+                    <div className="relative flex-1 min-w-[160px]">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        placeholder="Tìm mã bình bài..."
+                        value={plateSearch}
+                        onChange={(e) => setPlateSearch(e.target.value)}
+                        className="pl-8 h-9 text-sm bg-muted/50 border-0 focus-visible:ring-1"
+                      />
+                    </div>
+                    <Select
+                      value={plateVendorId || "all"}
+                      onValueChange={(v) => setPlateVendorId(v === "all" ? "" : v)}
+                    >
+                      <SelectTrigger className="w-[160px] h-9 text-sm bg-muted/50 border-0">
+                        <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                        <SelectValue placeholder="NCC kẽm" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tất cả NCC</SelectItem>
+                        {vendorsData?.map((v) => (
+                          <SelectItem key={v.id} value={String(v.id)}>{v.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex items-center gap-1.5 bg-muted/50 rounded-md px-2 h-9">
+                      <span className="text-xs text-muted-foreground font-medium">Từ</span>
+                      <Input
+                        type="date"
+                        value={plateFromDate}
+                        onChange={(e) => setPlateFromDate(e.target.value)}
+                        className="h-7 border-0 bg-transparent shadow-none p-0 text-sm focus-visible:ring-0 w-[120px]"
+                      />
+                      <span className="text-xs text-muted-foreground font-medium">Đến</span>
+                      <Input
+                        type="date"
+                        value={plateToDate}
+                        onChange={(e) => setPlateToDate(e.target.value)}
+                        className="h-7 border-0 bg-transparent shadow-none p-0 text-sm focus-visible:ring-0 w-[120px]"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === "dies" && (
+                  <div className="flex flex-1 flex-wrap items-center gap-2">
+                    <div className="relative flex-1 min-w-[160px]">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        placeholder="Tìm mã khuôn, tên..."
+                        value={dieSearch}
+                        onChange={(e) => setDieSearch(e.target.value)}
+                        className="pl-8 h-9 text-sm bg-muted/50 border-0 focus-visible:ring-1"
+                      />
+                    </div>
+                    <Select
+                      value={dieVendorId || "all"}
+                      onValueChange={(v) => setDieVendorId(v === "all" ? "" : v)}
+                    >
+                      <SelectTrigger className="w-[160px] h-9 text-sm bg-muted/50 border-0">
+                        <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                        <SelectValue placeholder="NCC khuôn" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tất cả NCC</SelectItem>
+                        {vendorsData?.map((v) => (
+                          <SelectItem key={v.id} value={String(v.id)}>{v.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select
+                      value={diePriceFilter}
+                      onValueChange={(v) => setDiePriceFilter(v as "all" | "no_price")}
+                    >
+                      <SelectTrigger className="w-[140px] h-9 text-sm bg-muted/50 border-0">
+                        <SelectValue placeholder="Trạng thái giá" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="no_price">Chưa có giá</SelectItem>
+                        <SelectItem value="all">Tất cả</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {activeTab === "printers" && (
+                  <div className="flex flex-1 flex-wrap items-center gap-2">
+                    <div className="relative flex-1 min-w-[160px]">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        placeholder="Tìm mã bình bài..."
+                        value={printerSearch}
+                        onChange={(e) => setPrinterSearch(e.target.value)}
+                        className="pl-8 h-9 text-sm bg-muted/50 border-0 focus-visible:ring-1"
+                      />
+                    </div>
+                    <Select
+                      value={printerVendorId || "all"}
+                      onValueChange={(v) => setPrinterVendorId(v === "all" ? "" : v)}
+                    >
+                      <SelectTrigger className="w-[160px] h-9 text-sm bg-muted/50 border-0">
+                        <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                        <SelectValue placeholder="Nhà in" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Tất cả Nhà in</SelectItem>
+                        {vendorsData?.filter(v => v.type === "printing" || !v.type).map((v) => (
+                          <SelectItem key={v.id} value={String(v.id)}>{v.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="flex items-center gap-1.5 bg-muted/50 rounded-md px-2 h-9">
+                      <span className="text-xs text-muted-foreground font-medium">Từ</span>
+                      <Input
+                        type="date"
+                        value={printerFromDate}
+                        onChange={(e) => setPrinterFromDate(e.target.value)}
+                        className="h-7 border-0 bg-transparent shadow-none p-0 text-sm focus-visible:ring-0 w-[120px]"
+                      />
+                      <span className="text-xs text-muted-foreground font-medium">Đến</span>
+                      <Input
+                        type="date"
+                        value={printerToDate}
+                        onChange={(e) => setPrinterToDate(e.target.value)}
+                        className="h-7 border-0 bg-transparent shadow-none p-0 text-sm focus-visible:ring-0 w-[120px]"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <TabsContent value="plates">
+            <PlateTab
+              filter={{
+                search: plateSearch,
+                vendorId: plateVendorId,
+                fromDate: plateFromDate,
+                toDate: plateToDate,
+              }}
+            />
+          </TabsContent>
+          <TabsContent value="dies">
+            <DieTab
+              filter={{
+                search: dieSearch,
+                vendorId: dieVendorId,
+                priceFilter: diePriceFilter,
+              }}
+            />
+          </TabsContent>
+          <TabsContent value="printers">
+            <PrinterTab
+              filter={{
+                search: printerSearch,
+                vendorId: printerVendorId,
+                fromDate: printerFromDate,
+                toDate: printerToDate,
+              }}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
     </>
   );
