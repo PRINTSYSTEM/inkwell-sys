@@ -353,10 +353,10 @@ export const useExportDebt = () => {
 
       // Generate filename based on payload
       const filename = payload.customerId
-        ? `debt-report-customer-${payload.customerId}.xlsx`
+        ? `bao-cao-cong-no-khach-hang-${payload.customerId}.xlsx`
         : payload.year && payload.month
-          ? `debt-report-${payload.year}-${payload.month}.xlsx`
-          : `debt-report.xlsx`;
+          ? `bao-cao-cong-no-${payload.year}-${payload.month}.xlsx`
+          : `bao-cao-cong-no.xlsx`;
 
       link.download = filename;
       document.body.appendChild(link);

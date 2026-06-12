@@ -108,7 +108,7 @@ export const useGenerateOrderExcel = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `order-${id}.xlsx`; // có thể đổi tên tuỳ ý
+      link.download = `don-hang-${id}.xlsx`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -567,7 +567,7 @@ export const useExportOrderInvoice = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `order-${id}-invoice.xlsx`;
+      link.download = `hoa-don-don-hang-${id}.xlsx`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -617,7 +617,7 @@ export const useExportOrderDeliveryNote = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `order-${id}-delivery-note.xlsx`;
+      link.download = `phieu-giao-hang-don-hang-${id}.xlsx`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -666,7 +666,7 @@ export const useExportOrderPDF = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `order-${id}.pdf`;
+      link.download = `don-hang-${id}.pdf`;
       document.body.appendChild(link);
       link.click();
       link.remove();

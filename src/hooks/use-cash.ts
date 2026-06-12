@@ -219,7 +219,7 @@ export const useExportCashPaymentsExcel = () => {
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `cash-payments-${new Date().getTime()}.xlsx`;
+    link.download = `danh-sach-phieu-chi-${new Date().getTime()}.xlsx`;
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -266,7 +266,7 @@ export const useExportCashPaymentPDF = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `cash-payment-${id}.pdf`;
+      link.download = `phieu-chi-${id}.pdf`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -480,7 +480,7 @@ export const useExportCashReceiptPDF = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `cash-receipt-${id}.pdf`;
+      link.download = `phieu-thu-${id}.pdf`;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -535,7 +535,7 @@ export const useExportCashReceiptsExcel = () => {
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `cash-receipts-${new Date().getTime()}.xlsx`;
+    link.download = `danh-sach-phieu-thu-${new Date().getTime()}.xlsx`;
     document.body.appendChild(link);
     link.click();
     link.remove();
