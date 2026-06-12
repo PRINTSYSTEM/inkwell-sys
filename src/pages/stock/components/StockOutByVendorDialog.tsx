@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Trash2, Loader2, AlertCircle, Minus, Info } from "lucide-react";
+import { Plus, Trash2, Loader2, AlertCircle, Minus, Info, Check, ChevronsUpDown, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +29,20 @@ import {
   useCreateReturnVendorStockOut,
   useCreateAdjustmentStockOut,
 } from "@/hooks/use-stock";
+import { cn } from "@/lib/utils";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 
 interface StockOutByVendorDialogProps {
   open: boolean;
@@ -43,6 +57,86 @@ interface FormItem {
   jobCode: string;
   quantity: number;
   notes: string;
+}
+
+interface MaterialSelectorProps {
+  value: number | null;
+  onSelect: (id: number) => void;
+  materials: any[];
+  placeholder?: string;
+  className?: string;
+}
+
+function MaterialSelector({
+  value,
+  onSelect,
+  materials,
+  placeholder = "Chọn vật tư",
+  className,
+}: MaterialSelectorProps) {
+  const [open, setOpen] = useState(false);
+  const selectedMaterial = materials.find((m) => m.id === value);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className={cn(
+            "h-10 w-full justify-between text-xs bg-white border-slate-200 rounded-lg font-normal hover:bg-slate-50/50 cursor-pointer",
+            className
+          )}
+        >
+          <span className="truncate">
+            {selectedMaterial
+              ? `${selectedMaterial.name || ""}${selectedMaterial.size ? ` (${selectedMaterial.size})` : ""}`
+              : placeholder}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 text-slate-500" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+        <Command className="w-full">
+          <div className="flex items-center border-b px-3" cmdk-input-wrapper="">
+            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-slate-500" />
+            <CommandInput
+              placeholder="Tìm vật tư..."
+              className="h-9 border-none focus:ring-0 focus-visible:ring-0 w-full bg-transparent text-xs"
+            />
+          </div>
+          <CommandList className="max-h-[220px]">
+            <CommandEmpty>Không tìm thấy vật tư nào.</CommandEmpty>
+            <CommandGroup>
+              {materials.map((m) => (
+                <CommandItem
+                  key={m.id}
+                  value={`${m.name || ""} ${m.size || ""} ${m.id}`}
+                  onSelect={() => {
+                    onSelect(m.id);
+                    setOpen(false);
+                  }}
+                  className="text-xs cursor-pointer"
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-3.5 w-3.5 text-rose-600",
+                      value === m.id ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  <span>
+                    {m.name} {m.size ? `(${m.size})` : ""}
+                  </span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 export function StockOutByVendorDialog({
@@ -508,21 +602,12 @@ export function StockOutByVendorDialog({
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-1.5">
                       <Label className="font-semibold text-slate-700">Vật tư cần điều chỉnh giảm</Label>
-                      <Select
-                        value={adjMaterialId ? String(adjMaterialId) : ""}
-                        onValueChange={(val) => setAdjMaterialId(Number(val))}
-                      >
-                        <SelectTrigger className="h-10 bg-white border-slate-200 rounded-lg cursor-pointer">
-                          <SelectValue placeholder="Chọn vật tư" />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-lg">
-                          {vendorMaterials.map((m: any) => (
-                            <SelectItem key={m.id} value={String(m.id)} className="text-xs cursor-pointer">
-                              {m.name} {m.size ? `(${m.size})` : ""}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <MaterialSelector
+                        value={adjMaterialId}
+                        onSelect={(val) => setAdjMaterialId(val)}
+                        materials={vendorMaterials}
+                        placeholder="Chọn vật tư"
+                      />
                     </div>
 
                     <div className="space-y-1.5">
@@ -589,21 +674,13 @@ export function StockOutByVendorDialog({
                         <tr key={index} className="border-b border-slate-100 hover:bg-slate-50/50">
                           <td className="py-2 px-3 text-center font-semibold text-slate-400">{index + 1}</td>
                           <td className="py-2 px-3">
-                            <Select
-                              value={item.materialId ? String(item.materialId) : ""}
-                              onValueChange={(val) => handleItemChange(index, "materialId", Number(val))}
-                            >
-                              <SelectTrigger className="h-9 text-xs border-slate-200 focus:ring-rose-500 rounded-lg cursor-pointer bg-white">
-                                <SelectValue placeholder="Chọn vật tư" />
-                              </SelectTrigger>
-                              <SelectContent className="max-h-[220px] rounded-lg">
-                                {filteredMaterials.map((m: any) => (
-                                  <SelectItem key={m.id} value={String(m.id)} className="text-xs cursor-pointer">
-                                    {m.name} {m.size ? `(${m.size})` : ""}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                            <MaterialSelector
+                              value={item.materialId}
+                              onSelect={(val) => handleItemChange(index, "materialId", val)}
+                              materials={filteredMaterials}
+                              placeholder="Chọn vật tư"
+                              className="h-9"
+                            />
                           </td>
                           <td className="py-2 px-3 font-semibold text-slate-500">{getMaterialUnit(item.materialId)}</td>
                           <td className="py-2 px-3 text-right font-mono font-bold text-slate-600">

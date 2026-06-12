@@ -57,6 +57,8 @@ import {
   useDeleteStockOut,
   useUpdateStockOut,
 } from "@/hooks/use-stock";
+import { useCustomer } from "@/hooks/use-customer";
+import { useVendor } from "@/hooks/use-vendor";
 import {
   formatDate,
   formatDateTime,
@@ -109,6 +111,9 @@ export default function StockOutDetailPage() {
     error,
   } = useStockOut(stockOutId || null, !!stockOutId);
 
+  const { data: customerData } = useCustomer(stockOut?.customerId || null, !!stockOut?.customerId);
+  const { data: vendorData } = useVendor(stockOut?.vendorId || null, !!stockOut?.vendorId);
+
   const { mutate: completeStockOut, isPending: isCompleting } =
     useCompleteStockOut();
   const { mutate: cancelStockOut, isPending: isCancelling } = useCancelStockOut();
@@ -145,7 +150,13 @@ export default function StockOutDetailPage() {
       setEditReceiverName(stockOut.receiverName ?? "");
       setEditReceiverAddress(
         stockOut.receiverAddress ??
-        (stockOut.customer?.address || stockOut.vendor?.address || stockOut.supplier?.address || stockOut.vendorAddress || "")
+        (stockOut.customer?.address ||
+          customerData?.address ||
+          stockOut.vendor?.address ||
+          vendorData?.address ||
+          stockOut.supplier?.address ||
+          stockOut.vendorAddress ||
+          "")
       );
       setEditNotes(stockOut.notes ?? "");
       setEditItems(
@@ -156,14 +167,20 @@ export default function StockOutDetailPage() {
         }))
       );
     }
-  }, [stockOut]);
+  }, [stockOut, customerData, vendorData]);
 
   const handleStartEdit = () => {
     if (stockOut) {
       setEditReceiverName(stockOut.receiverName ?? "");
       setEditReceiverAddress(
         stockOut.receiverAddress ??
-        (stockOut.customer?.address || stockOut.vendor?.address || stockOut.supplier?.address || stockOut.vendorAddress || "")
+        (stockOut.customer?.address ||
+          customerData?.address ||
+          stockOut.vendor?.address ||
+          vendorData?.address ||
+          stockOut.supplier?.address ||
+          stockOut.vendorAddress ||
+          "")
       );
       setEditNotes(stockOut.notes ?? "");
       setEditItems(
@@ -183,7 +200,13 @@ export default function StockOutDetailPage() {
       setEditReceiverName(stockOut.receiverName ?? "");
       setEditReceiverAddress(
         stockOut.receiverAddress ??
-        (stockOut.customer?.address || stockOut.vendor?.address || stockOut.supplier?.address || stockOut.vendorAddress || "")
+        (stockOut.customer?.address ||
+          customerData?.address ||
+          stockOut.vendor?.address ||
+          vendorData?.address ||
+          stockOut.supplier?.address ||
+          stockOut.vendorAddress ||
+          "")
       );
       setEditNotes(stockOut.notes ?? "");
       setEditItems(
@@ -385,9 +408,30 @@ export default function StockOutDetailPage() {
   const isExcelPurpose = ["production", "outsource", "outsource_print", "return_vendor"].includes(purposeLower);
   const isAdjustmentPurpose = purposeLower === "adjustment";
 
-  const partnerName = stockOut.customer?.name || stockOut.vendorName || stockOut.vendor?.name || stockOut.supplier?.name || "";
-  const partnerAddress = stockOut.customer?.address || stockOut.vendor?.address || stockOut.supplier?.address || stockOut.vendorAddress || "";
-  const partnerPhone = stockOut.customer?.phone || stockOut.vendor?.phone || stockOut.supplier?.phone || stockOut.vendorPhone || "";
+  const partnerName =
+    stockOut.customer?.name ||
+    customerData?.name ||
+    stockOut.vendorName ||
+    stockOut.vendor?.name ||
+    vendorData?.name ||
+    stockOut.supplier?.name ||
+    "";
+  const partnerAddress =
+    stockOut.customer?.address ||
+    customerData?.address ||
+    stockOut.vendor?.address ||
+    vendorData?.address ||
+    stockOut.supplier?.address ||
+    stockOut.vendorAddress ||
+    "";
+  const partnerPhone =
+    stockOut.customer?.phone ||
+    customerData?.phone ||
+    stockOut.vendor?.phone ||
+    vendorData?.phone ||
+    stockOut.supplier?.phone ||
+    stockOut.vendorPhone ||
+    "";
   
   const warehouseName = stockOut.warehouse || stockOut.warehouseName || "CÔNG TY QUANG ĐẠT";
   const warehouseAddress = stockOut.warehouseAddress || "97/3 Đường Tân Thời Nhất 8, P. Đông Hưng Thuận, TP. HCM";
@@ -579,26 +623,13 @@ export default function StockOutDetailPage() {
             
             {/* Paper Voucher Container */}
             <div className="bg-white text-slate-950 p-6 sm:p-8 shadow-xl shadow-slate-200/50 rounded-xl border border-slate-200/60 font-sans print:shadow-none print:border-none print:p-0 print:text-black mx-auto max-w-4xl transition-all duration-300 space-y-4">
-                {/* Header Grid */}
-                <div className="grid grid-cols-[1.5fr_1fr] text-xs gap-4 items-start">
-                  {/* Left Header */}
-                  <div className="space-y-1 leading-relaxed">
-                    <div>
-                      <span className="font-bold">Đơn vị:</span> CÔNG TY TNHH SX TMDV QUỐC TẾ QUANG ĐẠT
-                    </div>
-                    <div>
-                      <span className="font-bold">Địa chỉ:</span> 97/3 Đường Tân Thời Nhất 8, P. Đông Hưng Thuận, TP. HCM
-                    </div>
+                {/* Header Info */}
+                <div className="text-xs space-y-1 leading-relaxed">
+                  <div>
+                    <span className="font-bold">Đơn vị:</span> CÔNG TY TNHH SX TMDV QUỐC TẾ QUANG ĐẠT
                   </div>
-                  
-                  {/* Right Header */}
-                  <div className="text-center space-y-1">
-                    <div className="font-bold uppercase tracking-wide">Mẫu số 02 - VT</div>
-                    <div className="italic text-[10px] leading-snug text-slate-600 print:text-black">
-                      (Ban hành theo Thông tư số 200/2014/TT-BTC
-                      <br />
-                      Ngày 22/12/2014 của Bộ Tài chính)
-                    </div>
+                  <div>
+                    <span className="font-bold">Địa chỉ:</span> 97/3 Đường Tân Thời Nhất 8, P. Đông Hưng Thuận, TP. HCM
                   </div>
                 </div>
 
@@ -684,7 +715,7 @@ export default function StockOutDetailPage() {
                         {warehouseName}
                       </span>
                     </div>
-                    <div className="flex items-end gap-1.5 flex-1 w-full min-w-0">
+                    <div className="flex items-end gap-1.5 flex-[2] w-full min-w-0">
                       <span className="shrink-0 text-slate-700 print:text-black font-medium">Địa điểm:</span>
                       <span className="text-slate-900 print:text-black border-b border-dashed border-slate-300 flex-1 pb-0.5 min-h-[1.25rem] text-left">
                         {warehouseAddress}
@@ -776,24 +807,7 @@ export default function StockOutDetailPage() {
                   </table>
                 </div>
 
-              {/* Signatures & Footer block */}
-              <div className="mt-4 pt-4 border-t border-slate-100 print:border-none">
-                {/* Signatures Block */}
-                <div className="grid grid-cols-3 gap-4 text-center text-xs mt-4 mb-12">
-                  <div className="space-y-1">
-                    <div className="font-bold text-slate-900 print:text-black">Người lập</div>
-                    <div className="italic text-slate-500 print:text-black">(Ký, họ tên)</div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="font-bold text-slate-900 print:text-black">Người nhận hàng</div>
-                    <div className="italic text-slate-500 print:text-black">(Ký, họ tên)</div>
-                  </div>
-                  <div className="space-y-1">
-                    <div className="font-bold text-slate-900 print:text-black">Thủ kho</div>
-                    <div className="italic text-slate-500 print:text-black">(Ký, họ tên)</div>
-                  </div>
-                </div>
-              </div>
+
             </div>
 
           </div>

@@ -640,7 +640,7 @@ export default function StockSummary() {
                       <TableRow className="bg-slate-50/50 whitespace-nowrap text-xs border-b border-slate-200/60">
                         <TableHead className="w-[120px] font-bold py-2.5 pl-4">Số phiếu</TableHead>
                         <TableHead className="w-[120px] font-bold py-2.5">Ngày xuất</TableHead>
-                        <TableHead className="min-w-[140px] font-bold py-2.5">Nghiệp vụ</TableHead>
+                        <TableHead className="min-w-[140px] font-bold py-2.5">Loại Phiếu</TableHead>
                         <TableHead className="min-w-[200px] font-bold py-2.5">Khách hàng / Đối tác</TableHead>
                         <TableHead className="w-[150px] font-bold py-2.5">Kho xuất</TableHead>
                         <TableHead className="w-[120px] text-center font-bold py-2.5">Trạng thái</TableHead>
@@ -661,7 +661,7 @@ export default function StockSummary() {
                             {item.stockOutDate ? formatDate(item.stockOutDate) : "—"}
                           </TableCell>
                           <TableCell className="py-3 font-semibold text-slate-700">
-                            {item.purposeName || translatePurpose(item.purpose || item.type)}
+                            {translatePurpose(item.purposeName || item.purpose || item.type)}
                           </TableCell>
                           <TableCell className="py-3 text-slate-600 truncate max-w-[200px]" title={item.customer?.name || item.vendorName || item.vendor?.name || item.supplier?.name || "—"}>
                             {item.customer?.name || item.vendorName || item.vendor?.name || item.supplier?.name || "—"}
@@ -728,8 +728,10 @@ const translatePurpose = (purpose: string | null | undefined) => {
     case "production":
       return "Sản xuất";
     case "adjustment":
+    case "manual":
       return "Điều chỉnh";
     case "outsource":
+    case "outsource_print":
       return "In gia công";
     case "return_vendor":
       return "Trả hàng NCC";

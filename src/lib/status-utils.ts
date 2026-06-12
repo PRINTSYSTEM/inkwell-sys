@@ -264,8 +264,14 @@ export const stockInStatusLabels: Record<string, string> =
   ENTITY_CONFIG.stockInStatuses.values;
 
 // Mục đích xuất kho (StockOutPurpose)
-export const stockOutPurposeLabels: Record<string, string> =
-  ENTITY_CONFIG.stockOutPurposes.values;
+export const stockOutPurposeLabels: Record<string, string> = {
+  ...ENTITY_CONFIG.stockOutPurposes.values,
+  outsource: "In gia công",
+  outsource_print: "In gia công",
+  return_vendor: "Trả hàng NCC",
+  sale: "Bán hàng",
+  manual: "Điều chỉnh",
+};
 
 // Loại vật phẩm xuất kho (StockOutItemType)
 export const stockOutItemTypeLabels: Record<string, string> =

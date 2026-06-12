@@ -936,7 +936,7 @@ export default function MaterialHistoryPage() {
                       quantity: 0,
                       documentCode: "",
                       notes: "",
-                      purpose: "transfer",
+                      purpose: "manual",
                       vendorId: undefined,
                       receiverName: "",
                       receiverAddress: "",

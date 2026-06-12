@@ -107,7 +107,14 @@ export default function StockOutListPage() {
   const { mutate: completeStockOut } = useCompleteStockOut();
   const { mutate: cancelStockOut } = useCancelStockOut();
 
-  const stockOuts = data?.items || [];
+  const stockOuts = (data?.items || []).filter(
+    (stockOut) => {
+      const p = (stockOut.purpose || "").toLowerCase();
+      const t = (stockOut.type || "").toLowerCase();
+      const name = stockOut.purposeName || "";
+      return p !== "delivery" && t !== "delivery" && name !== "Xuất giao hàng";
+    }
+  );
   const totalPages = data?.totalPages || 1;
 
   // Confirm dialog state
@@ -407,16 +414,18 @@ export default function StockOutListPage() {
                                 ? "Trả NCC"
                                 : stockOut.purposeName === "Trả hàng NCC" || stockOut.purposeName === "Trả hàng nhà cung cấp"
                                   ? "Trả NCC"
-                                  : stockOut.purposeName ||
-                                    (stockOut.type === "sale" || stockOut.purpose === "sale"
-                                      ? "Bán hàng"
-                                      : stockOut.type === "production" || stockOut.purpose === "production"
-                                        ? "Sản xuất"
-                                        : stockOut.type === "adjustment" || stockOut.purpose === "adjustment"
-                                          ? "Điều chỉnh"
-                                          : stockOut.type === "outsource" || stockOut.purpose === "outsource"
-                                            ? "In gia công"
-                                            : stockOut.type || stockOut.purpose || "—")}
+                                  : stockOut.purposeName === "outsource_print" || stockOut.purposeName === "outsource"
+                                    ? "In gia công"
+                                    : stockOut.purposeName ||
+                                      (stockOut.type === "sale" || stockOut.purpose === "sale"
+                                        ? "Bán hàng"
+                                        : stockOut.type === "production" || stockOut.purpose === "production"
+                                          ? "Sản xuất"
+                                          : stockOut.type === "adjustment" || stockOut.purpose === "adjustment" || stockOut.type === "manual" || stockOut.purpose === "manual" || stockOut.purposeName === "manual"
+                                            ? "Điều chỉnh"
+                                            : stockOut.type === "outsource" || stockOut.purpose === "outsource"
+                                              ? "In gia công"
+                                              : stockOut.type || stockOut.purpose || "—")}
                             </TableCell>
                             <TableCell className="text-sm font-medium text-slate-700">
                               {stockOut.customer?.name || stockOut.supplier?.name || stockOut.vendorName || stockOut.vendor?.name || "—"}
