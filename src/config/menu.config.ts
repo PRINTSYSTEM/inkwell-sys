@@ -180,43 +180,29 @@ export const MENU_ITEMS: MenuItem[] = [
   {
     id: "proofing",
     title: "Bình bài",
-    icon: Factory,
+    icon: Layers,
+    path: ROUTE_PATHS.PROOFING.ROOT,
     allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
-    children: [
-      {
-        id: "proofing-list",
-        title: "Danh sách bình bài",
-        icon: Layers,
-        path: ROUTE_PATHS.PROOFING.ROOT,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
-      },
-     
-    ],
   },
   {
     id: "production",
     title: "Sản xuất",
     icon: Factory,
+    path: ROUTE_PATHS.PRODUCTION.ROOT,
     allowedRoles: [
       ROLE.ADMIN,
       ROLE.MANAGER,
       ROLE.PRODUCTION,
       ROLE.PRODUCTION_LEAD,
     ],
+  },
+  {
+    id: "production-tools",
+    title: "Kỹ thuật & Công cụ",
+    icon: Scissors,
+    allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
     children: [
       {
-        id: "production-process",
-        title: "Quy trình sản xuất",
-        icon: Layers,
-        path: ROUTE_PATHS.PRODUCTION.ROOT,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.PRODUCTION,
-          ROLE.PRODUCTION_LEAD,
-        ],
-      },
-       {
         id: "dies-management",
         title: "Danh sách khuôn bế",
         icon: Layers,
@@ -232,7 +218,7 @@ export const MENU_ITEMS: MenuItem[] = [
       },
       {
         id: "outside-printing-orders",
-        title: "Danh sách lệnh in ( in ngoài)",
+        title: "Danh sách lệnh in (in ngoài)",
         icon: Package,
         path: ROUTE_PATHS.PLATE_EXPORTS.ROOT,
         allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
@@ -240,55 +226,29 @@ export const MENU_ITEMS: MenuItem[] = [
     ],
   },
 
-  // // ==== Kho vật tư ====
-  // {
-  //   id: "inventory",
-  //   title: "Kho vật tư",
-  //   icon: Package,
-  //   allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PRODUCTION_LEAD],
-  //   children: [
-  //     {
-  //       id: "inventory-main",
-  //       title: "Quản lý kho",
-  //       icon: Package,
-  //       path: ROUTE_PATHS.INVENTORY.ROOT,
-  //       allowedRoles: [ROLE.ADMIN],
-  //     },
-  //     {
-  //       id: "materials",
-  //       title: "Quản lý chất liệu",
-  //       icon: Package,
-  //       path: ROUTE_PATHS.MATERIALS.ROOT,
-  //       allowedRoles: [ROLE.ADMIN, ROLE.PRODUCTION_LEAD, ROLE.DESIGN_LEAD],
-  //     },
-  //   ],
-  // },
-
   // ==== Quản lý kho ====
   {
-    id: "stock-management",
-    title: "Quản lý kho",
+    id: "stock-summary",
+    title: "Tồn kho tổng hợp",
     icon: Package,
+    path: ROUTE_PATHS.STOCK.SUMMARY,
     allowedRoles: [
       ROLE.ADMIN,
       ROLE.MANAGER,
       ROLE.PRODUCTION_LEAD,
       ROLE.PRODUCTION,
-      ROLE.ACCOUNTING_LEAD,
     ],
-    children: [
-      {
-        id: "stock-summary",
-        title: "Tồn kho tổng hợp",
-        icon: Package,
-        path: ROUTE_PATHS.STOCK.SUMMARY,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.PRODUCTION_LEAD,
-          ROLE.PRODUCTION,
-        ],
-      },
+  },
+  {
+    id: "production-stock",
+    title: "Tồn kho sản xuất",
+    icon: PackageSearch,
+    path: ROUTE_PATHS.REPORTS.INVENTORY.SUMMARY,
+    allowedRoles: [
+      ROLE.ADMIN,
+      ROLE.MANAGER,
+      ROLE.PRODUCTION_LEAD,
+      ROLE.PRODUCTION,
     ],
   },
 
@@ -598,104 +558,104 @@ export const MENU_ITEMS: MenuItem[] = [
   //   ],
   // },
 
-  // ==== Báo cáo ====
-  {
-    id: "reports",
-    title: "Báo cáo",
-    icon: FileBarChart,
-    allowedRoles: [
-      ROLE.ADMIN,
-      ROLE.MANAGER,
-      ROLE.ACCOUNTING_LEAD,
-      ROLE.PRODUCTION_LEAD,
-      ROLE.DESIGN_LEAD,
-      ROLE.SALE,
-    ],
-    children: [
-      // Inventory Reports
-      {
-        id: "inventory-slow-moving",
-        title: "Hàng chậm luân chuyển",
-        icon: Activity,
-        path: ROUTE_PATHS.REPORTS.INVENTORY.SLOW_MOVING,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PRODUCTION_LEAD],
-      },
-      // Sales Reports
-      {
-        id: "sales-by-period",
-        title: "Doanh số theo kỳ",
-        icon: LineChart,
-        path: ROUTE_PATHS.REPORTS.SALES.BY_PERIOD,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.ACCOUNTING_LEAD,
-          ROLE.SALE,
-        ],
-      },
-      {
-        id: "sales-by-customer",
-        title: "Doanh số theo khách hàng",
-        icon: Users,
-        path: ROUTE_PATHS.REPORTS.SALES.BY_CUSTOMER,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.ACCOUNTING_LEAD,
-          ROLE.SALE,
-        ],
-      },
-      {
-        id: "sales-by-dimension",
-        title: "Doanh số theo chiều",
-        icon: PieChart,
-        path: ROUTE_PATHS.REPORTS.SALES.BY_DIMENSION,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.ACCOUNTING_LEAD,
-          ROLE.SALE,
-        ],
-      },
-      {
-        id: "returns-discounts",
-        title: "Trả hàng & giảm giá",
-        icon: FileText,
-        path: ROUTE_PATHS.REPORTS.SALES.RETURNS_DISCOUNTS,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.ACCOUNTING_LEAD,
-          ROLE.SALE,
-        ],
-      },
-      {
-        id: "order-drill-down",
-        title: "Chi tiết đơn hàng",
-        icon: FileSpreadsheet,
-        path: ROUTE_PATHS.REPORTS.SALES.ORDER_DRILL_DOWN,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.ACCOUNTING_LEAD,
-          ROLE.SALE,
-        ],
-      },
-      // Report Exports
-      {
-        id: "report-exports",
-        title: "Báo cáo đã xuất",
-        icon: FileSpreadsheet,
-        path: ROUTE_PATHS.REPORTS.EXPORTS,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.ACCOUNTING_LEAD,
-          ROLE.SALE,
-        ],
-      },
-    ],
-  },
+  // ==== Báo cáo (Đã ẩn theo yêu cầu) ====
+  // {
+  //   id: "reports",
+  //   title: "Báo cáo",
+  //   icon: FileBarChart,
+  //   allowedRoles: [
+  //     ROLE.ADMIN,
+  //     ROLE.MANAGER,
+  //     ROLE.ACCOUNTING_LEAD,
+  //     ROLE.PRODUCTION_LEAD,
+  //     ROLE.DESIGN_LEAD,
+  //     ROLE.SALE,
+  //   ],
+  //   children: [
+  //     // Inventory Reports
+  //     {
+  //       id: "inventory-slow-moving",
+  //       title: "Hàng chậm luân chuyển",
+  //       icon: Activity,
+  //       path: ROUTE_PATHS.REPORTS.INVENTORY.SLOW_MOVING,
+  //       allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PRODUCTION_LEAD],
+  //     },
+  //     // Sales Reports
+  //     {
+  //       id: "sales-by-period",
+  //       title: "Doanh số theo kỳ",
+  //       icon: LineChart,
+  //       path: ROUTE_PATHS.REPORTS.SALES.BY_PERIOD,
+  //       allowedRoles: [
+  //         ROLE.ADMIN,
+  //         ROLE.MANAGER,
+  //         ROLE.ACCOUNTING_LEAD,
+  //         ROLE.SALE,
+  //       ],
+  //     },
+  //     {
+  //       id: "sales-by-customer",
+  //       title: "Doanh số theo khách hàng",
+  //       icon: Users,
+  //       path: ROUTE_PATHS.REPORTS.SALES.BY_CUSTOMER,
+  //       allowedRoles: [
+  //         ROLE.ADMIN,
+  //         ROLE.MANAGER,
+  //         ROLE.ACCOUNTING_LEAD,
+  //         ROLE.SALE,
+  //       ],
+  //     },
+  //     {
+  //       id: "sales-by-dimension",
+  //       title: "Doanh số theo chiều",
+  //       icon: PieChart,
+  //       path: ROUTE_PATHS.REPORTS.SALES.BY_DIMENSION,
+  //       allowedRoles: [
+  //         ROLE.ADMIN,
+  //         ROLE.MANAGER,
+  //         ROLE.ACCOUNTING_LEAD,
+  //         ROLE.SALE,
+  //       ],
+  //     },
+  //     {
+  //       id: "returns-discounts",
+  //       title: "Trả hàng & giảm giá",
+  //       icon: FileText,
+  //       path: ROUTE_PATHS.REPORTS.SALES.RETURNS_DISCOUNTS,
+  //       allowedRoles: [
+  //         ROLE.ADMIN,
+  //         ROLE.MANAGER,
+  //         ROLE.ACCOUNTING_LEAD,
+  //         ROLE.SALE,
+  //       ],
+  //     },
+  //     {
+  //       id: "order-drill-down",
+  //       title: "Chi tiết đơn hàng",
+  //       icon: FileSpreadsheet,
+  //       path: ROUTE_PATHS.REPORTS.SALES.ORDER_DRILL_DOWN,
+  //       allowedRoles: [
+  //         ROLE.ADMIN,
+  //         ROLE.MANAGER,
+  //         ROLE.ACCOUNTING_LEAD,
+  //         ROLE.SALE,
+  //       ],
+  //     },
+  //     // Report Exports
+  //     {
+  //       id: "report-exports",
+  //       title: "Báo cáo đã xuất",
+  //       icon: FileSpreadsheet,
+  //       path: ROUTE_PATHS.REPORTS.EXPORTS,
+  //       allowedRoles: [
+  //         ROLE.ADMIN,
+  //         ROLE.MANAGER,
+  //         ROLE.ACCOUNTING_LEAD,
+  //         ROLE.SALE,
+  //       ],
+  //     },
+  //   ],
+  // },
 
   // ==== Thông báo ====
   {
