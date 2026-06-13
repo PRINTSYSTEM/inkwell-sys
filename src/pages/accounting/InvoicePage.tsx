@@ -1,10 +1,8 @@
 import { Helmet } from "react-helmet-async";
 import { useMemo, useState, useRef, useEffect } from "react";
 import { FileText, CheckCircle } from "lucide-react";
-import { InvoiceList } from "@/components/accounting";
 import { useOrdersForAccounting } from "@/hooks/use-order";
 import type { OrderResponse } from "@/Schema/order.schema";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -427,7 +425,7 @@ function CreatedInvoicesTab() {
 }
 
 export default function InvoicePage() {
-  const [activeTab, setActiveTab] = useState("orders");
+
 
   // Fetch not issued orders for stats
   const { data: notIssuedOrders } = useOrdersForAccounting({
@@ -518,36 +516,8 @@ export default function InvoicePage() {
             </div>
           </div>
 
-          {/* Tabs */}
           <div className="flex-1 flex flex-col min-h-0">
-            <Tabs
-              value={activeTab}
-              onValueChange={setActiveTab}
-              className="flex-1 flex flex-col min-h-0 overflow-hidden"
-            >
-              <TabsList className="w-fit mb-3 shrink-0">
-                <TabsTrigger value="orders" className="text-sm">
-                  Đơn hàng
-                </TabsTrigger>
-                <TabsTrigger value="invoices" className="text-sm">
-                  Hóa đơn đã tạo
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent
-                value="orders"
-                className="flex-1 mt-0 min-h-0 overflow-hidden"
-              >
-                <InvoiceList />
-              </TabsContent>
-
-              <TabsContent
-                value="invoices"
-                className="flex-1 mt-0 min-h-0 overflow-hidden"
-              >
-                <CreatedInvoicesTab />
-              </TabsContent>
-            </Tabs>
+            <CreatedInvoicesTab />
           </div>
         </div>
       </div>

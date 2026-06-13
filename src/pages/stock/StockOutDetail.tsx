@@ -59,7 +59,6 @@ import {
 } from "@/hooks/use-stock";
 import { useCustomer } from "@/hooks/use-customer";
 import { useVendor } from "@/hooks/use-vendor";
-import { useProductionOrder, useUpdateProductionStep } from "@/hooks/use-production";
 import {
   formatDate,
   formatDateTime,
@@ -114,12 +113,6 @@ export default function StockOutDetailPage() {
 
   const { data: customerData } = useCustomer(stockOut?.customerId || null, !!stockOut?.customerId);
   const { data: vendorData } = useVendor(stockOut?.vendorId || null, !!stockOut?.vendorId);
-
-  const { data: production } = useProductionOrder(
-    stockOut?.productionOrderId || null,
-    !!stockOut?.productionOrderId
-  );
-  const { mutate: updateStep } = useUpdateProductionStep();
 
   const { mutate: completeStockOut, isPending: isCompleting } =
     useCompleteStockOut();
@@ -298,33 +291,11 @@ export default function StockOutDetailPage() {
     }
   };
 
-  const autoCompleteProductionStep = () => {
-    if (production?.steps) {
-      const materialExportStep = production.steps.find(
-        (step: any) => step.stepType === "material_export" && step.status !== "done"
-      );
-      if (materialExportStep?.id) {
-        const outputQty =
-          materialExportStep.inputQty ||
-          stockOut?.items?.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0) ||
-          0;
-        updateStep({
-          stepId: materialExportStep.id,
-          data: {
-            status: "done",
-            outputQty: outputQty,
-          },
-        });
-      }
-    }
-  };
-
   const handleComplete = () => {
     if (!stockOut?.id) return;
     completeStockOut(stockOut.id, {
       onSuccess: () => {
         toast.success("Đã hoàn thành phiếu xuất kho");
-        autoCompleteProductionStep();
       },
     });
   };
@@ -363,7 +334,6 @@ export default function StockOutDetailPage() {
         completeStockOut(stockOut.id, {
           onSuccess: () => {
             toast.success("Đã hoàn thành phiếu xuất kho");
-            autoCompleteProductionStep();
             setConfirmDialog({ ...confirmDialog, open: false });
           },
         });

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Trash2, Loader2, AlertCircle, Minus, Info, Check, ChevronsUpDown, Search } from "lucide-react";
+import { Plus, Trash2, Loader2, AlertCircle, Minus, Info, Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -100,13 +100,10 @@ function MaterialSelector({
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
         <Command className="w-full">
-          <div className="flex items-center border-b px-3" cmdk-input-wrapper="">
-            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50 text-slate-500" />
-            <CommandInput
-              placeholder="Tìm vật tư..."
-              className="h-9 border-none focus:ring-0 focus-visible:ring-0 w-full bg-transparent text-xs"
-            />
-          </div>
+          <CommandInput
+            placeholder="Tìm vật tư..."
+            className="h-9 w-full bg-transparent text-xs"
+          />
           <CommandList className="max-h-[220px]">
             <CommandEmpty>Không tìm thấy vật tư nào.</CommandEmpty>
             <CommandGroup>
