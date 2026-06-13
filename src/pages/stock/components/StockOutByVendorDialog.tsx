@@ -152,7 +152,7 @@ export function StockOutByVendorDialog({
 
   // General fields
   const [receiverName, setReceiverName] = useState("");
-  const [productionReason, setProductionReason] = useState("Xuất sản xuất");
+  const [exportReason, setExportReason] = useState("Xuất sản xuất");
   const [warehouseName, setWarehouseName] = useState("");
   const [warehouseAddress, setWarehouseAddress] = useState("");
   const [notes, setNotes] = useState("");
@@ -233,7 +233,7 @@ export function StockOutByVendorDialog({
     if (open) {
       setPurpose("production");
       setReceiverName("");
-      setProductionReason("Xuất sản xuất");
+      setExportReason("Xuất sản xuất");
       setWarehouseName("");
       setWarehouseAddress("");
       setNotes("");
@@ -304,7 +304,7 @@ export function StockOutByVendorDialog({
         toast.error("Vui lòng nhập họ và tên người nhận hàng!");
         return;
       }
-      if (!productionReason.trim()) {
+      if (!exportReason.trim()) {
         toast.error("Vui lòng nhập lý do xuất hàng!");
         return;
       }
@@ -329,7 +329,7 @@ export function StockOutByVendorDialog({
       const payload = {
         vendorId: selectedVendorId,
         receiverName: receiverName.trim(),
-        exportReason: productionReason.trim(),
+        exportReason: exportReason.trim(),
         stockOutDate: new Date().toISOString(),
         items: items.map((item) => ({
           materialId: item.materialId,
@@ -358,6 +358,10 @@ export function StockOutByVendorDialog({
         toast.error("Vui lòng nhập địa chỉ kho nhận!");
         return;
       }
+      if (!exportReason.trim()) {
+        toast.error("Vui lòng nhập lý do xuất hàng!");
+        return;
+      }
 
       const invalidItem = items.some((item) => !item.materialId || !item.quantity || item.quantity <= 0);
       if (invalidItem) {
@@ -377,7 +381,7 @@ export function StockOutByVendorDialog({
 
       const payload = {
         vendorId: purpose === "outsource" ? outsourceVendorId : selectedVendorId,
-        exportReason: purpose === "outsource" ? "In gia công" : "Trả hàng nhà cung cấp",
+        exportReason: exportReason.trim(),
         warehouseName: warehouseName.trim() || undefined,
         warehouseAddress: warehouseAddress.trim() || undefined,
         stockOutDate: new Date().toISOString(),
@@ -469,7 +473,19 @@ export function StockOutByVendorDialog({
             <div className="grid grid-cols-1 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-slate-700">Lý do xuất kho (Loại nghiệp vụ)</Label>
-                <Select value={purpose} onValueChange={setPurpose}>
+                <Select
+                  value={purpose}
+                  onValueChange={(val) => {
+                    setPurpose(val);
+                    if (val === "production") {
+                      setExportReason("Xuất sản xuất");
+                    } else if (val === "outsource") {
+                      setExportReason("Xuất in gia công");
+                    } else if (val === "return_vendor") {
+                      setExportReason("Xuất trả NCC");
+                    }
+                  }}
+                >
                   <SelectTrigger className="h-10 text-xs border-slate-200 rounded-lg cursor-pointer bg-white">
                     <SelectValue placeholder="Chọn lý do xuất kho" />
                   </SelectTrigger>
@@ -500,8 +516,8 @@ export function StockOutByVendorDialog({
                   <Label className="text-xs font-bold text-slate-700">Lý do xuất hàng <span className="text-red-500">*</span></Label>
                   <Input
                     placeholder="Ví dụ: Xuất sản xuất, Xuất test mẫu..."
-                    value={productionReason}
-                    onChange={(e) => setProductionReason(e.target.value)}
+                    value={exportReason}
+                    onChange={(e) => setExportReason(e.target.value)}
                     className="h-10 text-xs border-slate-200 focus-visible:ring-rose-500 rounded-lg"
                     required
                   />
@@ -532,6 +548,19 @@ export function StockOutByVendorDialog({
                   </div>
 
                   <div className="space-y-1.5">
+                    <Label className="text-xs font-bold text-slate-700">Lý do xuất hàng <span className="text-red-500">*</span></Label>
+                    <Input
+                      placeholder="Ví dụ: Xuất in gia công..."
+                      value={exportReason}
+                      onChange={(e) => setExportReason(e.target.value)}
+                      className="h-10 text-xs border-slate-200 bg-white focus-visible:ring-rose-500 rounded-lg"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
                     <Label className="text-xs font-bold text-slate-700">Họ tên người nhận hàng</Label>
                     <Input
                       placeholder="Họ tên người nhận..."
@@ -540,9 +569,7 @@ export function StockOutByVendorDialog({
                       className="h-10 text-xs border-slate-200 bg-white focus-visible:ring-rose-500 rounded-lg"
                     />
                   </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <Label className="text-xs font-bold text-slate-700">Số điện thoại</Label>
                     <Input
@@ -579,15 +606,25 @@ export function StockOutByVendorDialog({
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-bold text-slate-700">Địa chỉ kho nhận <span className="text-red-500">*</span></Label>
+                    <Label className="text-xs font-bold text-slate-700">Lý do xuất hàng <span className="text-red-500">*</span></Label>
                     <Input
-                      placeholder="Nhập địa chỉ nhận..."
-                      value={warehouseAddress}
-                      onChange={(e) => setWarehouseAddress(e.target.value)}
+                      placeholder="Ví dụ: Xuất trả ncc..."
+                      value={exportReason}
+                      onChange={(e) => setExportReason(e.target.value)}
                       className="h-10 text-xs border-slate-200 bg-white focus-visible:ring-rose-500 rounded-lg"
                       required
                     />
                   </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-700">Địa chỉ kho nhận <span className="text-red-500">*</span></Label>
+                  <Input
+                    placeholder="Nhập địa chỉ nhận..."
+                    value={warehouseAddress}
+                    onChange={(e) => setWarehouseAddress(e.target.value)}
+                    className="h-10 text-xs border-slate-200 bg-white focus-visible:ring-rose-500 rounded-lg"
+                    required
+                  />
                 </div>
               </div>
             )}

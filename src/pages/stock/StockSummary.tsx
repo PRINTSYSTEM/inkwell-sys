@@ -66,6 +66,7 @@ export default function StockSummary() {
   // Independent Client-side Pagination States for the two columns
   const [rollPage, setRollPage] = useState(1);
   const [sheetPage, setSheetPage] = useState(1);
+  const [stockOutPage, setStockOutPage] = useState(1);
 
   // Fetch Vendors (Material suppliers only)
   const { data: vendorsData, isLoading: isLoadingVendors } = useActiveVendors("material");
@@ -107,11 +108,13 @@ export default function StockSummary() {
     isLoading: isLoadingStockOuts,
     refetch: refetchStockOuts,
   } = useStockOuts({
-    pageNumber: 1,
+    pageNumber: stockOutPage,
     pageSize: 10,
     fromDate: stockOutDateParams.fromDate,
     toDate: stockOutDateParams.toDate,
   });
+
+  const totalStockOutPages = stockOutsData?.totalPages || 1;
 
   const stockOuts = stockOutsData?.items || [];
 
@@ -599,7 +602,10 @@ export default function StockSummary() {
                   <Input
                     type="date"
                     value={stockOutDate}
-                    onChange={(e) => setStockOutDate(e.target.value)}
+                    onChange={(e) => {
+                      setStockOutDate(e.target.value);
+                      setStockOutPage(1);
+                    }}
                     className="h-8 text-xs bg-white border-slate-200 rounded-lg pr-2 cursor-pointer focus-visible:ring-[#93631F]"
                   />
                 </div>
@@ -607,7 +613,10 @@ export default function StockSummary() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setStockOutDate("")}
+                    onClick={() => {
+                      setStockOutDate("");
+                      setStockOutPage(1);
+                    }}
                     className="text-xs text-muted-foreground hover:text-foreground cursor-pointer h-8 rounded-lg px-2"
                   >
                     Xóa ngày
@@ -634,61 +643,92 @@ export default function StockSummary() {
                   <p className="font-medium">Chưa có phiếu xuất kho nào được ghi nhận</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-slate-50/50 whitespace-nowrap text-xs border-b border-slate-200/60">
-                        <TableHead className="w-[120px] font-bold py-2.5 pl-4">Số phiếu</TableHead>
-                        <TableHead className="w-[120px] font-bold py-2.5">Ngày xuất</TableHead>
-                        <TableHead className="min-w-[140px] font-bold py-2.5">Loại Phiếu</TableHead>
-                        <TableHead className="min-w-[200px] font-bold py-2.5">Khách hàng / Đối tác</TableHead>
-                        <TableHead className="w-[150px] font-bold py-2.5">Kho xuất</TableHead>
-                        <TableHead className="w-[120px] text-center font-bold py-2.5">Trạng thái</TableHead>
-                        <TableHead className="w-[60px] text-center font-bold py-2.5 pr-4">Xem</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {stockOuts.map((item: any) => (
-                        <TableRow
-                          key={item.id}
-                          className="hover:bg-slate-50 border-b border-slate-100 text-xs cursor-pointer transition-colors duration-150"
-                          onClick={() => navigate(`/stock/stock-outs/${item.id}`)}
-                        >
-                          <TableCell className="font-mono font-bold py-3 pl-4 text-slate-800">
-                            {item.code || `PXK-${item.id}`}
-                          </TableCell>
-                          <TableCell className="py-3 text-slate-600">
-                            {item.stockOutDate ? formatDate(item.stockOutDate) : "—"}
-                          </TableCell>
-                          <TableCell className="py-3 font-semibold text-slate-700">
-                            {translatePurpose(item.purposeName || item.purpose || item.type)}
-                          </TableCell>
-                          <TableCell className="py-3 text-slate-600 truncate max-w-[200px]" title={item.customer?.name || item.vendorName || item.vendor?.name || item.supplier?.name || "—"}>
-                            {item.customer?.name || item.vendorName || item.vendor?.name || item.supplier?.name || "—"}
-                          </TableCell>
-                          <TableCell className="py-3 text-slate-600">
-                            {item.warehouse || item.warehouseName || "—"}
-                          </TableCell>
-                          <TableCell className="py-3 text-center">
-                            <div className="inline-flex justify-center w-full">
-                              {getStatusBadge(item.status)}
-                            </div>
-                          </TableCell>
-                          <TableCell className="py-3 text-center pr-4" onClick={(e) => e.stopPropagation()}>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 rounded-lg hover:bg-slate-100 text-slate-500 cursor-pointer"
-                              onClick={() => navigate(`/stock/stock-outs/${item.id}`)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
+                <>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-slate-50/50 whitespace-nowrap text-xs border-b border-slate-200/60">
+                          <TableHead className="w-[120px] font-bold py-2.5 pl-4">Số phiếu</TableHead>
+                          <TableHead className="w-[120px] font-bold py-2.5">Ngày xuất</TableHead>
+                          <TableHead className="min-w-[140px] font-bold py-2.5">Loại Phiếu</TableHead>
+                          <TableHead className="min-w-[200px] font-bold py-2.5">Khách hàng / Đối tác</TableHead>
+                          <TableHead className="w-[150px] font-bold py-2.5">Kho xuất</TableHead>
+                          <TableHead className="w-[120px] text-center font-bold py-2.5">Trạng thái</TableHead>
+                          <TableHead className="w-[60px] text-center font-bold py-2.5 pr-4">Xem</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                      </TableHeader>
+                      <TableBody>
+                        {stockOuts.map((item: any) => (
+                          <TableRow
+                            key={item.id}
+                            className="hover:bg-slate-50 border-b border-slate-100 text-xs cursor-pointer transition-colors duration-150"
+                            onClick={() => navigate(`/stock/stock-outs/${item.id}`)}
+                          >
+                            <TableCell className="font-mono font-bold py-3 pl-4 text-slate-800">
+                              {item.code || `PXK-${item.id}`}
+                            </TableCell>
+                            <TableCell className="py-3 text-slate-600">
+                              {item.stockOutDate ? formatDate(item.stockOutDate) : "—"}
+                            </TableCell>
+                            <TableCell className="py-3 font-semibold text-slate-700">
+                              {translatePurpose(item.purposeName || item.purpose || item.type)}
+                            </TableCell>
+                            <TableCell className="py-3 text-slate-600 truncate max-w-[200px]" title={item.customer?.name || item.vendorName || item.vendor?.name || item.supplier?.name || "—"}>
+                              {item.customer?.name || item.vendorName || item.vendor?.name || item.supplier?.name || "—"}
+                            </TableCell>
+                            <TableCell className="py-3 text-slate-600">
+                              {item.warehouse || item.warehouseName || "—"}
+                            </TableCell>
+                            <TableCell className="py-3 text-center">
+                              <div className="inline-flex justify-center w-full">
+                                {getStatusBadge(item.status)}
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-3 text-center pr-4" onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-lg hover:bg-slate-100 text-slate-500 cursor-pointer"
+                                onClick={() => navigate(`/stock/stock-outs/${item.id}`)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+
+                  {/* Stock Out Specific Pagination */}
+                  {totalStockOutPages > 1 && (
+                    <div className="flex items-center justify-between p-3 border-t border-slate-100 bg-slate-50/50">
+                      <span className="text-[11px] font-medium text-slate-500">
+                        Trang {stockOutPage} / {totalStockOutPages} ({stockOutsData?.total || 0} phiếu)
+                      </span>
+                      <div className="flex gap-1.5">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-[10px] px-2.5 cursor-pointer font-semibold"
+                          onClick={() => setStockOutPage(p => Math.max(1, p - 1))}
+                          disabled={stockOutPage === 1 || isLoadingStockOuts}
+                        >
+                          Trước
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-[10px] px-2.5 cursor-pointer font-semibold"
+                          onClick={() => setStockOutPage(p => Math.min(totalStockOutPages, p + 1))}
+                          disabled={stockOutPage === totalStockOutPages || isLoadingStockOuts}
+                        >
+                          Sau
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
