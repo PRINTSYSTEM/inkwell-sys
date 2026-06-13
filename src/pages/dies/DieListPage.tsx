@@ -155,10 +155,10 @@ export default function DieListPage() {
   return (
     <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 pb-6 -mt-4 space-y-4">
       <Helmet>
-        <title>Quản lý khuôn bế</title>
+        <title>Quản lý khuôn cắt</title>
         <meta
           name="description"
-          content="Màn hình quản lý khuôn bế: tra cứu, lọc và theo dõi tình trạng sử dụng khuôn bế."
+          content="Màn hình quản lý khuôn cắt: tra cứu, lọc và theo dõi tình trạng sử dụng khuôn cắt."
         />
         <link rel="canonical" href="/proofing/dies" />
       </Helmet>
@@ -168,10 +168,10 @@ export default function DieListPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <Layers className="h-6 w-6 text-primary" />
-            Quản lý khuôn bế
+            Quản lý khuôn cắt
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Theo dõi danh sách khuôn bế, tình trạng sử dụng và vị trí lưu kho.
+            Theo dõi danh sách khuôn cắt, tình trạng sử dụng và vị trí lưu kho.
           </p>
         </div>
         <div className="flex items-center gap-2">

@@ -137,6 +137,13 @@ export const MENU_ITEMS: MenuItem[] = [
         path: ROUTE_PATHS.DESIGN.SALE_LOOKUP,
         allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.SALE],
       },
+       {
+        id: "shared-addresses",
+        title: "Địa chỉ giao hàng",
+        icon: MapPin,
+        path: ROUTE_PATHS.ADMIN.SHARED_ADDRESSES,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
+      },
     ],
   },
 
@@ -388,35 +395,7 @@ export const MENU_ITEMS: MenuItem[] = [
     ],
   },
 
-  {
-    id: "production-tools",
-    title: "Kỹ thuật & Công cụ",
-    icon: Scissors,
-    allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
-    children: [
-      {
-        id: "dies-management",
-        title: "Danh sách khuôn bế",
-        icon: Layers,
-        path: ROUTE_PATHS.DIES.ROOT,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
-      },
-      {
-        id: "plate-exports",
-        title: "Danh sách xuất kẽm",
-        icon: Package,
-        path: ROUTE_PATHS.PLATE_EXPORTS.ROOT,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
-      },
-      {
-        id: "outside-printing-orders",
-        title: "Danh sách lệnh in (in ngoài)",
-        icon: Package,
-        path: ROUTE_PATHS.PLATE_EXPORTS.ROOT,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
-      },
-    ],
-  },
+  
 
   // ==== Quản lý kho ====
   {
@@ -443,7 +422,35 @@ export const MENU_ITEMS: MenuItem[] = [
       ROLE.PRODUCTION,
     ],
   },
-
+{
+    id: "production-tools",
+    title: "Vật tư khuôn mẫu",
+    icon: Scissors,
+    allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
+    children: [
+      {
+        id: "dies-management",
+        title: "Quản lý khuôn cắt",
+        icon: Layers,
+        path: ROUTE_PATHS.DIES.ROOT,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
+      },
+      {
+        id: "plate-exports",
+        title: "Quản lý bản kẽm",
+        icon: Package,
+        path: ROUTE_PATHS.PLATE_EXPORTS.ROOT,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
+      },
+      {
+        id: "outside-printing-orders",
+        title: "Quản lý in gia công",
+        icon: Package,
+        path: ROUTE_PATHS.PLATE_EXPORTS.ROOT + "?type=outsource",
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
+      },
+    ],
+  },
   // ==== Quản lý hệ thống ====
   {
     id: "system",
@@ -458,13 +465,7 @@ export const MENU_ITEMS: MenuItem[] = [
         path: ROUTE_PATHS.ADMIN.USERS,
         allowedRoles: [ROLE.ADMIN],
       },
-      {
-        id: "shared-addresses",
-        title: "Địa chỉ giao hàng",
-        icon: MapPin,
-        path: ROUTE_PATHS.ADMIN.SHARED_ADDRESSES,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
-      },
+     
       // {
       //   id: "admin-roles",
       //   title: "Quản lý vai trò",
