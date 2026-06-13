@@ -55,9 +55,16 @@ export function CreateInvoiceFromLinesDialog({
   onOpenChange,
   customerId,
 }: CreateInvoiceFromLinesDialogProps) {
-  const { data: billableItems, isLoading } = useBillableItems(
+  const { data: billableItems, isLoading, refetch } = useBillableItems(
     customerId ? { customerId } : undefined
   );
+
+  // Refetch billable items when dialog opens
+  useEffect(() => {
+    if (open) {
+      refetch();
+    }
+  }, [open, refetch]);
 
   // Load customer data
   const { data: customersData } = useCustomers({ pageSize: 1000 });
