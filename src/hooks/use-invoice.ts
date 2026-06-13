@@ -23,9 +23,13 @@ import type {
 
 // ================== GET INVOICES ==================
 // GET /invoices
-export const useInvoices = (params?: InvoicListParams) => {
+export const useInvoices = (
+  params?: InvoicListParams,
+  enabled: boolean = true
+) => {
   return useQuery({
     queryKey: ["invoices", params],
+    enabled,
     queryFn: async () => {
       const normalizedParams = normalizeParams(
         (params ?? {}) as Record<string, unknown>

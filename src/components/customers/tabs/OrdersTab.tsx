@@ -52,6 +52,7 @@ const ORDER_STATUSES = [
   { value: "production_completed", label: "Hoàn thành SX" },
   { value: "invoice_issued", label: "Đã xuất HĐ" },
   { value: "delivering", label: "Đang giao" },
+  { value: "waiting_for_redelivery", label: "Chờ giao lại" },
   { value: "completed", label: "Hoàn thành" },
   { value: "cancelled", label: "Đã hủy" },
 ];
@@ -188,8 +189,8 @@ export function OrdersTab({ customerId }: OrdersTabProps) {
                           <StatusBadge
                             status={order.status || ""}
                             label={
-                              order.statusName ||
                               orderStatusLabels[order.status || ""] ||
+                              order.statusName ||
                               order.status ||
                               "N/A"
                             }
