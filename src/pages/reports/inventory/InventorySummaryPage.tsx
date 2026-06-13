@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
 import { useInventorySummary, useExportInventorySummary } from "@/hooks/use-inventory-report";
 import { formatCurrency } from "@/lib/status-utils";
 import { toast } from "sonner";
@@ -56,8 +56,6 @@ export default function InventorySummaryPage() {
   });
 
   const exportMutation = useExportInventorySummary();
-
-  const totalValue = summaryData?.items?.reduce((sum, item) => sum + (item.totalValue || 0), 0) || 0;
 
   const handleExportExcel = async () => {
     exportMutation.mutate({
@@ -127,22 +125,6 @@ export default function InventorySummaryPage() {
           </Alert>
         )}
 
-        {/* Summary Card */}
-        <Card className="border-0 shadow-sm max-w-sm">
-          <CardContent className="p-3 flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <span className="text-sm font-bold text-primary">₫</span>
-            </div>
-            <div>
-              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none">
-                Tổng giá trị tồn kho
-              </p>
-              <p className="text-base sm:text-xl font-bold mt-1 leading-none text-primary">
-                {formatCurrency(totalValue)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-3">

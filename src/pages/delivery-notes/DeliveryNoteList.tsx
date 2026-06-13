@@ -1301,7 +1301,7 @@ function OrdersView({
                                   </Badge>
                                 </TableCell>
                                 <TableCell className="text-center py-1.5 font-bold tabular-nums text-sm">
-                                  x{new Intl.NumberFormat('vi-VN').format(detail.remainingToDeliver || 0)}
+                                  x{new Intl.NumberFormat('vi-VN').format(detail.orderedQty || 0)}
                                 </TableCell>
                                 <TableCell />
                               </TableRow>

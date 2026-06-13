@@ -19,6 +19,7 @@ import {
   Scissors,
   ChevronDown,
   ChevronRight,
+  Truck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -78,6 +79,24 @@ const departments: SidebarDepartment[] = [
     ],
   },
   {
+    title: "Phiếu giao hàng",
+    icon: Truck,
+    items: [
+      { title: "Danh sách phiếu giao", href: "/delivery-notes" },
+    ],
+  },
+  {
+    title: "Kế toán",
+    icon: Calculator,
+    items: [
+      { title: "Quản lý thanh toán", href: "/accounting" },
+      { title: "Báo cáo công nợ", href: "/accounting/debt-report" },
+      { title: "Doanh thu", href: "/accounting/revenue" },
+      { title: "Chi phí", href: "/accounting/expenses" },
+      { title: "Nhà cung cấp", href: "/vendors" },
+    ],
+  },
+  {
     title: "Prepress",
     icon: Scissors,
     items: [
@@ -111,17 +130,6 @@ const departments: SidebarDepartment[] = [
       { title: "Danh sách khách hàng", href: "/customers" },
       { title: "Thêm khách hàng", href: "/customers/create" },
       { title: "Lịch sử giao dịch", href: "/customers/history" },
-    ],
-  },
-  {
-    title: "Kế toán",
-    icon: Calculator,
-    items: [
-      { title: "Quản lý thanh toán", href: "/accounting" },
-      { title: "Báo cáo công nợ", href: "/accounting/debt-report" },
-      { title: "Doanh thu", href: "/accounting/revenue" },
-      { title: "Chi phí", href: "/accounting/expenses" },
-      { title: "Nhà cung cấp", href: "/vendors" },
     ],
   },
   {
