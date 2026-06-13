@@ -76,7 +76,9 @@ export type InvoiceLineInput = z.infer<typeof InvoiceLineInputSchema>;
 
 // ===== CreateInvoiceFromLinesRequest =====
 export const CreateInvoiceFromLinesRequestSchema =
-  GenCreateInvoiceFromLinesRequestSchema.passthrough();
+  GenCreateInvoiceFromLinesRequestSchema.extend({
+    issuedAt: z.string().datetime({ offset: true }).nullish(),
+  }).passthrough();
 export type CreateInvoiceFromLinesRequest = z.infer<
   typeof CreateInvoiceFromLinesRequestSchema
 >;

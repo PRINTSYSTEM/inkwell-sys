@@ -112,9 +112,6 @@ export function CreateInvoiceFromLinesDialog({
   }, [open, customerId, customers]);
 
   const handleSelectCustomer = (cust: any) => {
-    if (cust.id !== billToCustomerId) {
-      setSelectedLines(new Map());
-    }
     setBillToCustomerId(cust.id);
     setBuyerCompanyName(cust.companyName || "");
     setBuyerName(cust.name || "");
@@ -130,29 +127,7 @@ export function CreateInvoiceFromLinesDialog({
     const newSelected = new Map(selectedLines);
     if (newSelected.has(item.deliveryLineId)) {
       newSelected.delete(item.deliveryLineId);
-      // Clear customer selection if no items are selected anymore
-      if (newSelected.size === 0) {
-        setBillToCustomerId(null);
-        setBuyerCompanyName("");
-        setBuyerName("");
-        setBuyerTaxCode("");
-        setBuyerAddress("");
-        setBuyerEmail("");
-      }
     } else {
-      // If no customer selected yet, auto-select this item's customer
-      if (!billToCustomerId && item.customerId) {
-        const cust = customers.find((c: any) => c.id === item.customerId);
-        if (cust) {
-          setBillToCustomerId(item.customerId);
-          setBuyerCompanyName(cust.companyName || "");
-          setBuyerName(cust.name || "");
-          setBuyerTaxCode(cust.taxCode || "");
-          setBuyerAddress(cust.address || "");
-          setBuyerEmail(cust.email || "");
-        }
-      }
-
       newSelected.set(item.deliveryLineId, {
         deliveryLineId: item.deliveryLineId,
         invoiceQty: item.remainingToInvoice || 1,
@@ -160,6 +135,38 @@ export function CreateInvoiceFromLinesDialog({
       });
     }
     setSelectedLines(newSelected);
+
+    // Calculate unique customer IDs from currently selected items
+    const uniqueCustomerIds = new Set<number>();
+    newSelected.forEach((line, deliveryLineId) => {
+      const bItem = billableItems?.find(
+        (i) => i.deliveryLineId === deliveryLineId
+      );
+      if (bItem && bItem.customerId) {
+        uniqueCustomerIds.add(bItem.customerId);
+      }
+    });
+
+    if (uniqueCustomerIds.size === 1) {
+      const singleCustId = Array.from(uniqueCustomerIds)[0];
+      const cust = customers.find((c: any) => c.id === singleCustId);
+      if (cust) {
+        setBillToCustomerId(singleCustId);
+        setBuyerCompanyName(cust.companyName || "");
+        setBuyerName(cust.name || "");
+        setBuyerTaxCode(cust.taxCode || "");
+        setBuyerAddress(cust.address || "");
+        setBuyerEmail(cust.email || "");
+      }
+    } else {
+      // 0 or more than 1 customers selected -> do not map anything automatically
+      setBillToCustomerId(null);
+      setBuyerCompanyName("");
+      setBuyerName("");
+      setBuyerTaxCode("");
+      setBuyerAddress("");
+      setBuyerEmail("");
+    }
   };
 
 
@@ -168,10 +175,6 @@ export function CreateInvoiceFromLinesDialog({
     if (!billableItems) return [];
     
     let items = billableItems;
-    // Auto-filter by selected customer
-    if (billToCustomerId) {
-      items = items.filter((item) => item.customerId === billToCustomerId);
-    }
     
     const query = searchQuery.trim().toLowerCase();
     if (!query) return items;
@@ -183,7 +186,7 @@ export function CreateInvoiceFromLinesDialog({
         (item.orderCode || "").toLowerCase().includes(query)
       );
     });
-  }, [billableItems, billToCustomerId, searchQuery]);
+  }, [billableItems, searchQuery]);
 
   // Calculate totals
   const totals = useMemo(() => {
@@ -222,6 +225,7 @@ export function CreateInvoiceFromLinesDialog({
       buyerTaxCode: buyerTaxCode || null,
       buyerAddress: buyerAddress || null,
       buyerEmail: buyerEmail || null,
+      issuedAt: new Date().toISOString(),
     };
 
     try {
@@ -319,7 +323,7 @@ export function CreateInvoiceFromLinesDialog({
                               
                               <div className="grid grid-cols-2 gap-1 text-[11px] text-muted-foreground pt-1 border-t border-dashed mt-1.5">
                                 <div>Đơn giá: <span className="font-semibold text-foreground">{formatCurrency(item.unitPrice || 0)}</span></div>
-                                <div>Còn lại: <span className="font-semibold text-foreground">{item.remainingToInvoice || 0} {item.unit || "Tờ"}</span></div>
+                                <div>Số lượng: <span className="font-semibold text-foreground">{item.remainingToInvoice || 0} {item.unit || "Tờ"}</span></div>
                               </div>
                             </div>
                           </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -169,6 +169,56 @@ export default function CashPaymentDetailPage() {
   const { data: cashFundsData } = useCashFunds();
   const { data: bankAccountsData } = useBankAccounts({ pageNumber: 1, pageSize: 100 });
   const bankAccounts = bankAccountsData?.items || [];
+  const paymentMethods = paymentMethodsData?.items || [];
+  const expenseCategories = expenseCategoriesData?.items || [];
+
+  // Auto-set default payment method to cash (code: "TM") for new payment
+  useEffect(() => {
+    if (
+      isNew &&
+      paymentMethods.length > 0 &&
+      (!createFormValues.paymentMethodId || createFormValues.paymentMethodId === 0)
+    ) {
+      const cashMethod = paymentMethods.find(
+        (m) => m.code === "TM" || m.name?.toLowerCase().includes("tiền mặt")
+      );
+      if (cashMethod?.id) {
+        setCreateFormValues((prev) => ({
+          ...prev,
+          paymentMethodId: cashMethod.id,
+        }));
+      } else if (paymentMethods[0]?.id) {
+        setCreateFormValues((prev) => ({
+          ...prev,
+          paymentMethodId: paymentMethods[0].id,
+        }));
+      }
+    }
+  }, [isNew, paymentMethods, createFormValues.paymentMethodId]);
+
+  // Auto-select first expense category once loaded for new payment
+  useEffect(() => {
+    if (
+      isNew &&
+      expenseCategories.length > 0 &&
+      (!createFormValues.expenseCategoryId || createFormValues.expenseCategoryId === 0)
+    ) {
+      const defaultCat = expenseCategories.find(
+        (c) => c.code === "CPVT" || c.name?.toLowerCase().includes("vật tư")
+      );
+      if (defaultCat?.id) {
+        setCreateFormValues((prev) => ({
+          ...prev,
+          expenseCategoryId: defaultCat.id,
+        }));
+      } else if (expenseCategories[0]?.id) {
+        setCreateFormValues((prev) => ({
+          ...prev,
+          expenseCategoryId: expenseCategories[0].id,
+        }));
+      }
+    }
+  }, [isNew, expenseCategories, createFormValues.expenseCategoryId]);
 
   const createMutation = useCreateCashPayment();
   const updateMutation = useUpdateCashPayment();
