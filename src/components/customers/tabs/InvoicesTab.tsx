@@ -20,10 +20,10 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { useOrdersForAccounting } from "@/hooks/use-order";
+import { useInvoices } from "@/hooks/use-invoice";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
-  orderStatusLabels,
+  invoiceStatusLabels,
   formatCurrency,
   formatDate,
 } from "@/lib/status-utils";
@@ -39,16 +39,14 @@ export function InvoicesTab({ customerId, isActive = true }: InvoicesTabProps) {
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
-  const { data, isLoading } = useOrdersForAccounting(
+  const { data, isLoading } = useInvoices(
     {
-      pageNumber: page,
-      pageSize,
-      filterType: "invoice",
-      search: search || undefined,
-      // Pass customerId to filter by current customer
-      // Note: We cast to any because the generated type might not include it
-      // but the backend API often supports it
-      ...({ customerId } as any),
+      PageNumber: page,
+      PageSize: pageSize,
+      CustomerId: customerId,
+      Search: search || undefined,
+      SortColumn: "CreatedAt",
+      SortOrder: "desc",
     },
     isActive
   );
@@ -92,37 +90,41 @@ export function InvoicesTab({ customerId, isActive = true }: InvoicesTabProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data?.items?.map((order) => {
-                  const orderId = order.orderId || order.id || 0;
-                  const totalAmount = order.totalAmount ?? 0;
-                  const paidAmount = order.paidAmount ?? order.depositAmount ?? 0;
-                  const remainingAmount = order.remainingAmount ?? (totalAmount - paidAmount);
+                {data?.items?.map((invoice) => {
+                  const invoiceId = invoice.id || 0;
+                  const totalAmount = invoice.grandTotal ?? 0;
+                  const paidAmount = invoice.paidAmount ?? 0;
+                  const remainingAmount = invoice.remainingDebt ?? (totalAmount - paidAmount);
+                  const orderCodes = invoice.orders?.map((o) => o.orderCode).filter(Boolean).join(", ") || "-";
+                  const invoiceDate = invoice.issuedAt && !invoice.issuedAt.startsWith("0001-01-01")
+                    ? formatDate(invoice.issuedAt)
+                    : (invoice.createdAt ? formatDate(invoice.createdAt) : "-");
 
                   return (
                     <TableRow
-                      key={orderId}
+                      key={invoiceId}
                       className="hover:bg-muted/50 cursor-pointer"
-                      onClick={() => navigate(`/orders/${orderId}`)}
+                      onClick={() => navigate(`/accounting/invoice/${invoiceId}`)}
                     >
                       <TableCell className="text-xs font-mono font-medium">
                         <div className="flex items-center gap-2">
                           <Receipt className="h-3 w-3 text-muted-foreground" />
-                          {order.invoiceNumber || "-"}
+                          {invoice.invoiceNumber || `HĐ #${invoiceId}`}
                         </div>
                       </TableCell>
                       <TableCell className="text-xs font-mono">
-                        {order.orderCode || "-"}
+                        {orderCodes}
                       </TableCell>
                       <TableCell className="text-xs">
-                        {order.createdAt ? formatDate(order.createdAt) : "-"}
+                        {invoiceDate}
                       </TableCell>
                       <TableCell className="text-xs">
                         <StatusBadge
-                          status={order.status || ""}
+                          status={invoice.status || ""}
                           label={
-                            order.statusName ||
-                            orderStatusLabels[order.status || ""] ||
-                            order.status ||
+                            invoiceStatusLabels[invoice.status || ""] ||
+                            invoice.statusName ||
+                            invoice.status ||
                             "N/A"
                           }
                         />
@@ -143,7 +145,7 @@ export function InvoicesTab({ customerId, isActive = true }: InvoicesTabProps) {
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7"
-                          onClick={() => navigate(`/orders/${orderId}`)}
+                          onClick={() => navigate(`/accounting/invoice/${invoiceId}`)}
                         >
                           <ExternalLink className="h-3.5 w-3.5" />
                         </Button>
@@ -159,7 +161,7 @@ export function InvoicesTab({ customerId, isActive = true }: InvoicesTabProps) {
                     >
                       <div className="flex flex-col items-center gap-2">
                         <Receipt className="h-8 w-8 opacity-20" />
-                        <p>Chưa có hoá đơn nào cần xử lý</p>
+                        <p>Chưa có hoá đơn nào</p>
                       </div>
                     </TableCell>
                   </TableRow>
