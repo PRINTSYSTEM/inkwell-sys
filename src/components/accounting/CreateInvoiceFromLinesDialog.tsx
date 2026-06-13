@@ -162,24 +162,6 @@ export function CreateInvoiceFromLinesDialog({
     setSelectedLines(newSelected);
   };
 
-  const updateLineQuantity = (
-    deliveryLineId: number,
-    quantity: number
-  ) => {
-    const newSelected = new Map(selectedLines);
-    const existing = newSelected.get(deliveryLineId);
-    const item = billableItems?.find(
-      (i) => i.deliveryLineId === deliveryLineId
-    );
-    if (existing && item) {
-      const maxQty = item.remainingToInvoice || 1;
-      newSelected.set(deliveryLineId, {
-        ...existing,
-        invoiceQty: Math.max(1, Math.min(quantity, maxQty)),
-      });
-    }
-    setSelectedLines(newSelected);
-  };
 
   // Filter billable items
   const filteredItems = useMemo(() => {
@@ -339,26 +321,6 @@ export function CreateInvoiceFromLinesDialog({
                                 <div>Đơn giá: <span className="font-semibold text-foreground">{formatCurrency(item.unitPrice || 0)}</span></div>
                                 <div>Còn lại: <span className="font-semibold text-foreground">{item.remainingToInvoice || 0} {item.unit || "Tờ"}</span></div>
                               </div>
-                              
-                              {isSelected && lineData && (
-                                <div className="mt-2 pt-2 border-t flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                                  <Label className="text-xs shrink-0 text-muted-foreground">Số lượng HĐ:</Label>
-                                  <Input
-                                    type="number"
-                                    min={1}
-                                    max={item.remainingToInvoice}
-                                    value={lineData.invoiceQty}
-                                    onChange={(e) =>
-                                      updateLineQuantity(
-                                        item.deliveryLineId || 0,
-                                        parseInt(e.target.value) || 1
-                                      )
-                                    }
-                                    className="h-7 text-xs font-bold w-24 text-right bg-white"
-                                  />
-                                  <span className="text-xs text-muted-foreground">{item.unit || "Tờ"}</span>
-                                </div>
-                              )}
                             </div>
                           </div>
                         </CardContent>
