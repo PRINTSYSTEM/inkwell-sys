@@ -153,7 +153,7 @@ export default function DieListPage() {
   };
 
   return (
-    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 pb-6 -mt-4 space-y-4">
       <Helmet>
         <title>Quản lý khuôn bế</title>
         <meta
@@ -183,37 +183,49 @@ export default function DieListPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-3 gap-3">
         <Card className="border-0 shadow-sm">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground">Tổng số khuôn bế</p>
-              <p className="text-2xl font-bold mt-0.5">{totalCount}</p>
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <Layers className="h-4 w-4 text-primary" />
             </div>
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <Layers className="h-5 w-5 text-primary" />
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
+                Tổng số khuôn
+              </p>
+              <p className="text-base sm:text-xl font-bold mt-1 leading-none">
+                {totalCount}
+              </p>
             </div>
           </CardContent>
         </Card>
         <Card className="border-0 shadow-sm">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground">Sử dụng được (trang này)</p>
-              <p className="text-2xl font-bold mt-0.5 text-emerald-600">{usableCount}</p>
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
             </div>
-            <div className="h-10 w-10 rounded-full bg-emerald-50 flex items-center justify-center">
-              <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
+                Sử dụng được
+              </p>
+              <p className="text-base sm:text-xl font-bold mt-1 leading-none text-emerald-600">
+                {usableCount}
+              </p>
             </div>
           </CardContent>
         </Card>
         <Card className="border-0 shadow-sm">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground">Cần kiểm tra / hỏng (trang này)</p>
-              <p className="text-2xl font-bold mt-0.5 text-destructive">{unusableCount}</p>
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-destructive/10 flex items-center justify-center shrink-0">
+              <XCircle className="h-4 w-4 text-destructive" />
             </div>
-            <div className="h-10 w-10 rounded-full bg-destructive/10 flex items-center justify-center">
-              <XCircle className="h-5 w-5 text-destructive" />
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
+                Cần kiểm tra/hỏng
+              </p>
+              <p className="text-base sm:text-xl font-bold mt-1 leading-none text-destructive">
+                {unusableCount}
+              </p>
             </div>
           </CardContent>
         </Card>

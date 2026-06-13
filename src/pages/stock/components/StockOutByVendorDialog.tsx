@@ -152,6 +152,7 @@ export function StockOutByVendorDialog({
 
   // General fields
   const [receiverName, setReceiverName] = useState("");
+  const [productionReason, setProductionReason] = useState("Xuất sản xuất");
   const [warehouseName, setWarehouseName] = useState("");
   const [warehouseAddress, setWarehouseAddress] = useState("");
   const [notes, setNotes] = useState("");
@@ -232,6 +233,7 @@ export function StockOutByVendorDialog({
     if (open) {
       setPurpose("production");
       setReceiverName("");
+      setProductionReason("Xuất sản xuất");
       setWarehouseName("");
       setWarehouseAddress("");
       setNotes("");
@@ -302,6 +304,10 @@ export function StockOutByVendorDialog({
         toast.error("Vui lòng nhập họ và tên người nhận hàng!");
         return;
       }
+      if (!productionReason.trim()) {
+        toast.error("Vui lòng nhập lý do xuất hàng!");
+        return;
+      }
       
       const invalidItem = items.some((item) => !item.materialId || !item.quantity || item.quantity <= 0);
       if (invalidItem) {
@@ -323,7 +329,7 @@ export function StockOutByVendorDialog({
       const payload = {
         vendorId: selectedVendorId,
         receiverName: receiverName.trim(),
-        exportReason: "Xuất sản xuất",
+        exportReason: productionReason.trim(),
         stockOutDate: new Date().toISOString(),
         items: items.map((item) => ({
           materialId: item.materialId,
@@ -469,9 +475,9 @@ export function StockOutByVendorDialog({
                   </SelectTrigger>
                   <SelectContent className="rounded-lg">
                     <SelectItem value="production" className="text-xs cursor-pointer">Xuất sản xuất</SelectItem>
-                    <SelectItem value="outsource" className="text-xs cursor-pointer">Xuất in gia công (Outsource)</SelectItem>
-                    <SelectItem value="return_vendor" className="text-xs cursor-pointer">Xuất trả hàng nhà cung cấp (Return Vendor)</SelectItem>
-                    <SelectItem value="adjustment" className="text-xs cursor-pointer">Xuất điều chỉnh giảm kho (Adjustment)</SelectItem>
+                    <SelectItem value="outsource" className="text-xs cursor-pointer">Xuất in gia công</SelectItem>
+                    <SelectItem value="return_vendor" className="text-xs cursor-pointer">Xuất trả hàng nhà cung cấp</SelectItem>
+                    <SelectItem value="adjustment" className="text-xs cursor-pointer">Xuất điều chỉnh giảm kho</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -479,13 +485,23 @@ export function StockOutByVendorDialog({
 
             {/* Dynamic sections based on purpose */}
             {purpose === "production" && (
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-bold text-slate-700">Họ và tên người nhận hàng <span className="text-red-500">*</span></Label>
                   <Input
                     placeholder="Nhập tên người nhận hàng..."
                     value={receiverName}
                     onChange={(e) => setReceiverName(e.target.value)}
+                    className="h-10 text-xs border-slate-200 focus-visible:ring-rose-500 rounded-lg"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-slate-700">Lý do xuất hàng <span className="text-red-500">*</span></Label>
+                  <Input
+                    placeholder="Ví dụ: Xuất sản xuất, Xuất test mẫu..."
+                    value={productionReason}
+                    onChange={(e) => setProductionReason(e.target.value)}
                     className="h-10 text-xs border-slate-200 focus-visible:ring-rose-500 rounded-lg"
                     required
                   />
