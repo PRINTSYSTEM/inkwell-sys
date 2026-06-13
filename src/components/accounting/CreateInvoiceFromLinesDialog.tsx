@@ -130,6 +130,15 @@ export function CreateInvoiceFromLinesDialog({
     const newSelected = new Map(selectedLines);
     if (newSelected.has(item.deliveryLineId)) {
       newSelected.delete(item.deliveryLineId);
+      // Clear customer selection if no items are selected anymore
+      if (newSelected.size === 0) {
+        setBillToCustomerId(null);
+        setBuyerCompanyName("");
+        setBuyerName("");
+        setBuyerTaxCode("");
+        setBuyerAddress("");
+        setBuyerEmail("");
+      }
     } else {
       // If no customer selected yet, auto-select this item's customer
       if (!billToCustomerId && item.customerId) {
