@@ -60,7 +60,6 @@ export function CreateCashReceiptDialog({
   const [notes, setNotes] = useState<string>("");
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [payerName, setPayerName] = useState<string>(customerName || "");
-  const [address, setAddress] = useState<string>("");
   const [reason, setReason] = useState<string>("");
   const [customerSearchOpen, setCustomerSearchOpen] = useState(false);
 
@@ -97,20 +96,9 @@ export function CreateCashReceiptDialog({
       setBankAccountId("");
       setSelectedCustomerId(customerId || null);
       setPayerName(customerName || "");
-      setAddress("");
       setReason("Thu tiền khách hàng");
     }
   }, [open, customerId, customerName]);
-
-  // Pre-fill address when customers data is loaded
-  useEffect(() => {
-    if (open && selectedCustomerId && customers.length > 0 && !address) {
-      const cust = customers.find((c: any) => c.id === selectedCustomerId);
-      if (cust?.address) {
-        setAddress(cust.address);
-      }
-    }
-  }, [open, selectedCustomerId, customers, address]);
 
   // Auto-set default payment method to cash (code: "TM")
   useEffect(() => {
@@ -173,8 +161,6 @@ export function CreateCashReceiptDialog({
     const voucherDate = now.toISOString();
     const postingDate = now.toISOString();
 
-    const finalNotes = [notes.trim(), address.trim() ? `Địa chỉ: ${address.trim()}` : ""].filter(Boolean).join("\n");
-
     const request: CreateCashReceiptRequest = {
       voucherDate,
       postingDate,
@@ -183,7 +169,7 @@ export function CreateCashReceiptDialog({
       amount: parseFloat(amount),
       paymentMethodId: parseInt(paymentMethodId, 10),
       customerId: selectedCustomerId || undefined,
-      notes: finalNotes || undefined,
+      notes: notes.trim() || undefined,
       bankAccountId: isBankTransfer && bankAccountId ? parseInt(bankAccountId, 10) : undefined,
     };
 
@@ -266,7 +252,6 @@ export function CreateCashReceiptDialog({
                               onSelect={() => {
                                 setSelectedCustomerId(c.id);
                                 setPayerName(c.companyName || c.name || "");
-                                setAddress(c.address || "");
                                 setCustomerSearchOpen(false);
                               }}
                               className="cursor-pointer text-xs py-2"
@@ -303,19 +288,6 @@ export function CreateCashReceiptDialog({
               value={payerName}
               onChange={(e) => setPayerName(e.target.value)}
               placeholder="Nhập tên người nộp"
-              className="h-9 bg-white"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="address" className="text-sm font-medium">
-              Địa chỉ
-            </Label>
-            <Input
-              id="address"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="Địa chỉ người nộp"
               className="h-9 bg-white"
             />
           </div>
