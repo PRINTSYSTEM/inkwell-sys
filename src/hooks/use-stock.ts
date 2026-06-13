@@ -619,6 +619,8 @@ export const useCompleteMaterialCut = () => {
               itemType: "material",
               notes: cutDetail.notes || `Xuất kho sản xuất tự động sau khi cắt từ cuộn #${cutDetail.inputMaterialId}`,
               stockOutDate: new Date().toISOString(),
+              warehouseName: "CÔNG TY QUANG ĐẠT",
+              warehouseAddress: "97/3 Đường Tân Thời Nhất 8, P. Đông Hưng Thuận, TP. HCM",
               items: [
                 {
                   itemName: matDetail?.name || output.outputMaterialName || "",
