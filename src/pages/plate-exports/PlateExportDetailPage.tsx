@@ -190,11 +190,15 @@ export default function PlateExportDetailPage() {
     );
   }
 
+  const isOutsource = plateExport.productionMethod === "outsource";
+  const detailTitle = isOutsource ? "Chi tiết in gia công" : "Chi tiết xuất kẽm";
+  const infoTitle = isOutsource ? "Thông tin in gia công" : "Thông tin xuất kẽm";
+
   return (
     <>
       <Helmet>
         <title>
-          Chi tiết xuất kẽm {plateExport.proofingOrderCode || `#${plateExport.id}`}
+          {detailTitle} {plateExport.proofingOrderCode || `#${plateExport.id}`}
         </title>
       </Helmet>
 
@@ -210,7 +214,7 @@ export default function PlateExportDetailPage() {
                 <div>
                   <div className="flex items-center gap-3">
                     <h1 className="text-xl font-semibold font-mono">
-                      {plateExport.proofingOrderCode || `Xuất kẽm #${plateExport.id}`}
+                      {plateExport.proofingOrderCode || `${isOutsource ? "In gia công" : "Xuất kẽm"} #${plateExport.id}`}
                     </h1>
                     <Badge
                       variant={plateExport.isActive ? "default" : "secondary"}
@@ -243,7 +247,7 @@ export default function PlateExportDetailPage() {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
                     <Package className="h-4 w-4 text-primary" />
-                    Thông tin xuất kẽm
+                    {infoTitle}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">

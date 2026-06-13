@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useMemo, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -30,19 +30,34 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { usePlateExports } from "@/hooks/use-plate-export";
-import { useActivePlateVendors } from "@/hooks/use-vendor";
+import { useActivePlateVendors, useActivePrintingVendors } from "@/hooks/use-vendor";
 import type { PlateExportResponse, PlateExportListParams } from "@/Schema";
 import { formatCurrency } from "@/lib/status-utils";
 
 export default function PlateExportListPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isOutsource = searchParams.get("type") === "outsource";
+  const title = isOutsource ? "Quản lý in gia công" : "Quản lý bản kẽm";
+
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
   const [searchTerm, setSearchTerm] = useState("");
   const [vendorId, setVendorId] = useState<number | null>(null);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [showInHouse, setShowInHouse] = useState(false);
+
+  useEffect(() => {
+    setPage(1);
+    setVendorId(null);
+    setSearchTerm("");
+    setFromDate("");
+    setToDate("");
+    setShowInHouse(false);
+  }, [isOutsource]);
 
   const fromDateISO = fromDate
     ? new Date(`${fromDate}T00:00:00`).toISOString()
@@ -50,20 +65,51 @@ export default function PlateExportListPage() {
   const toDateISO = toDate ? new Date(`${toDate}T23:59:59`).toISOString() : "";
 
   const params: PlateExportListParams = {
-    pageNumber: page,
-    pageSize,
+    pageNumber: 1,
+    pageSize: 1000,
     search: searchTerm || "",
-    vendorId: vendorId || undefined,
+    vendorId: isOutsource ? undefined : (vendorId || undefined),
     fromDate: fromDateISO || "",
     toDate: toDateISO || "",
   };
 
   const { data, isLoading, isFetching, refetch } = usePlateExports(params);
-  const { data: vendors } = useActivePlateVendors();
+  const { data: plateVendors } = useActivePlateVendors();
+  const { data: printingVendors } = useActivePrintingVendors();
 
-  const plateExports: PlateExportResponse[] = data?.items ?? [];
-  const totalPages = data?.totalPages ?? 1;
-  const totalCount = data?.total ?? 0;
+  const vendors = isOutsource ? printingVendors : plateVendors;
+
+  const plateExportsRaw: PlateExportResponse[] = data?.items ?? [];
+
+  const statsList = useMemo(() => {
+    let filtered = plateExportsRaw;
+    if (isOutsource) {
+      filtered = filtered.filter((p) => p.productionMethod === "outsource");
+      if (vendorId) {
+        filtered = filtered.filter(
+          (p) => p.printingVendorId === vendorId || p.printingVendor?.id === vendorId
+        );
+      }
+    } else {
+      if (!showInHouse) {
+        filtered = filtered.filter((p) => p.productionMethod === "outsource");
+      }
+    }
+    return filtered;
+  }, [plateExportsRaw, isOutsource, vendorId, showInHouse]);
+
+  const displayedPlateExports = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return statsList.slice(start, start + pageSize);
+  }, [statsList, page, pageSize]);
+
+  const totalPages = useMemo(() => {
+    return Math.ceil(statsList.length / pageSize) || 1;
+  }, [statsList.length, pageSize]);
+
+  const totalCount = useMemo(() => {
+    return statsList.length;
+  }, [statsList.length]);
 
   const handleResetFilters = () => {
     setSearchTerm("");
@@ -71,6 +117,7 @@ export default function PlateExportListPage() {
     setFromDate("");
     setToDate("");
     setPage(1);
+    setShowInHouse(false);
   };
 
   const handleViewDetail = (id: number | undefined) => {
@@ -91,10 +138,10 @@ export default function PlateExportListPage() {
   return (
     <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 pb-6 -mt-4 space-y-4">
       <Helmet>
-        <title>Danh sách xuất kẽm</title>
+        <title>{title}</title>
         <meta
           name="description"
-          content="Màn hình quản lý danh sách xuất kẽm: tra cứu, lọc và theo dõi tình trạng xuất kẽm."
+          content={`Màn hình quản lý ${title.toLowerCase()}: tra cứu, lọc và theo dõi tình trạng.`}
         />
         <link rel="canonical" href="/plate-exports" />
       </Helmet>
@@ -104,10 +151,10 @@ export default function PlateExportListPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <Package className="h-6 w-6 text-primary" />
-            Danh sách xuất kẽm
+            {title}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Theo dõi danh sách xuất kẽm, nhà cung cấp và tình trạng nhận kẽm.
+            Theo dõi danh sách {title.toLowerCase()}, nhà cung cấp và tình trạng.
           </p>
         </div>
       </div>
@@ -139,7 +186,7 @@ export default function PlateExportListPage() {
                 Đang hoạt động
               </p>
               <p className="text-base sm:text-xl font-bold mt-1 leading-none text-emerald-600">
-                {plateExports.filter((p) => p.isActive).length}
+                {statsList.filter((p) => p.isActive).length}
               </p>
             </div>
           </CardContent>
@@ -151,10 +198,10 @@ export default function PlateExportListPage() {
             </div>
             <div className="min-w-0">
               <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
-                Đã nhận kẽm
+                {isOutsource ? "Đã nhận hàng" : "Đã nhận kẽm"}
               </p>
               <p className="text-base sm:text-xl font-bold mt-1 leading-none text-blue-600">
-                {plateExports.filter((p) => p.receivedAt).length}
+                {statsList.filter((p) => p.receivedAt).length}
               </p>
             </div>
           </CardContent>
@@ -168,7 +215,7 @@ export default function PlateExportListPage() {
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
-                placeholder="Tìm theo mã bài, nhà cung cấp..."
+                placeholder={isOutsource ? "Tìm theo mã bài, nhà in..." : "Tìm theo mã bài, nhà cung cấp..."}
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
@@ -186,10 +233,12 @@ export default function PlateExportListPage() {
             >
               <SelectTrigger className="w-[200px] h-9 text-sm bg-muted/50 border-0">
                 <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                <SelectValue placeholder="Nhà cung cấp" />
+                <SelectValue placeholder={isOutsource ? "Nhà in" : "Nhà cung cấp"} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tất cả nhà cung cấp</SelectItem>
+                <SelectItem value="all">
+                  {isOutsource ? "Tất cả nhà in" : "Tất cả nhà cung cấp"}
+                </SelectItem>
                 {vendors?.map((vendor) => (
                   <SelectItem
                     key={vendor.id}
@@ -222,6 +271,25 @@ export default function PlateExportListPage() {
                 className="h-7 border-0 bg-transparent shadow-none p-0 text-sm focus-visible:ring-0 w-[120px]"
               />
             </div>
+            {!isOutsource && (
+              <div className="flex items-center gap-2 bg-muted/50 rounded-md px-3 h-9">
+                <Checkbox
+                  id="show-in-house"
+                  checked={showInHouse}
+                  onCheckedChange={(checked) => {
+                    setShowInHouse(!!checked);
+                    setPage(1);
+                  }}
+                  className="data-[state=checked]:bg-primary"
+                />
+                <label
+                  htmlFor="show-in-house"
+                  className="text-xs font-semibold text-muted-foreground cursor-pointer select-none"
+                >
+                  Hiện cả in tại xưởng
+                </label>
+              </div>
+            )}
             <Button
               variant="ghost"
               size="sm"
@@ -248,10 +316,10 @@ export default function PlateExportListPage() {
               <Loader2 className="h-7 w-7 animate-spin text-primary" />
               <span className="ml-3 text-slate-500">Đang tải...</span>
             </div>
-          ) : plateExports.length === 0 ? (
+          ) : displayedPlateExports.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
               <Package className="h-12 w-12 mb-3 opacity-20" />
-              <p className="font-medium">Không có dữ liệu xuất kẽm</p>
+              <p className="font-medium">Không có dữ liệu {title.toLowerCase()}</p>
             </div>
           ) : (
             <>
@@ -270,7 +338,7 @@ export default function PlateExportListPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {plateExports.map((plateExport) => (
+                    {displayedPlateExports.map((plateExport) => (
                       <TableRow
                         key={plateExport.id}
                         className="cursor-pointer hover:bg-muted/30 transition-colors border-b border-slate-100"
