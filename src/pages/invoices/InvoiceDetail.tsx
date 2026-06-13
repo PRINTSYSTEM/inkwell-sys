@@ -161,7 +161,7 @@ export default function InvoiceDetailPage() {
             <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
               <span className="flex items-center gap-1.5">
                 <Calendar className="w-4 h-4" />
-                {invoice.issuedAt
+                {invoice.issuedAt && !invoice.issuedAt.startsWith("0001-01-01")
                   ? formatDate(invoice.issuedAt)
                   : formatDateTime(invoice.createdAt)}
               </span>

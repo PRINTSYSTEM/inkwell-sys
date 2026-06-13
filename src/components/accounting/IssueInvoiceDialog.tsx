@@ -66,7 +66,7 @@ export function IssueInvoiceDialog({
         id: invoiceId,
         data: {
           invoiceNumber: invoiceNumber.trim(),
-          issuedAt: issuedAt || undefined,
+          issuedAt: issuedAt ? new Date(issuedAt).toISOString() : undefined,
           parentCompanyId: parentCompanyId === "none" ? undefined : Number(parentCompanyId),
         },
       });

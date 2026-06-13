@@ -299,7 +299,7 @@ export default function InvoiceListPage() {
                     )}
                   </TableCell>
                   <TableCell className="text-center text-sm text-muted-foreground">
-                    {invoice.issuedAt
+                    {invoice.issuedAt && !invoice.issuedAt.startsWith("0001-01-01")
                       ? formatDate(invoice.issuedAt)
                       : formatDate(invoice.createdAt)}
                   </TableCell>

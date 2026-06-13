@@ -217,11 +217,11 @@ export const MENU_ITEMS: MenuItem[] = [
     ],
   },
 
-  // ==== Kế toán ====
+  // ==== Nhà cung cấp ====
   {
-    id: "accounting-dept",
-    title: "Kế toán",
-    icon: Calculator,
+    id: "vendor-group",
+    title: "Nhà cung cấp",
+    icon: Building2,
     allowedRoles: [
       ROLE.ADMIN,
       ROLE.MANAGER,
@@ -230,34 +230,10 @@ export const MENU_ITEMS: MenuItem[] = [
     ],
     children: [
       {
-        id: "accounting-payment",
-        title: "Thanh toán",
-        icon: CreditCard,
-        path: ROUTE_PATHS.ACCOUNTING.PAYMENT,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.ACCOUNTING,
-          ROLE.ACCOUNTING_LEAD,
-        ],
-      },
-      {
-        id: "accounting-invoice",
-        title: "Hóa đơn",
-        icon: FileText,
-        path: ROUTE_PATHS.ACCOUNTING.INVOICE,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.ACCOUNTING,
-          ROLE.ACCOUNTING_LEAD,
-        ],
-      },
-      {
-        id: "accounting-debt-report",
-        title: "Báo cáo công nợ",
-        icon: FileBarChart,
-        path: ROUTE_PATHS.ACCOUNTING.DEBT_REPORT,
+        id: "accounting-vendors",
+        title: "Danh sách nhà cung cấp",
+        icon: Building2,
+        path: ROUTE_PATHS.VENDORS.ROOT,
         allowedRoles: [
           ROLE.ADMIN,
           ROLE.MANAGER,
@@ -272,59 +248,26 @@ export const MENU_ITEMS: MenuItem[] = [
         path: ROUTE_PATHS.ACCOUNTING.COST_PRICING,
         allowedRoles: [ROLE.ADMIN, ROLE.ACCOUNTING, ROLE.ACCOUNTING_LEAD],
       },
+    ],
+  },
+
+  // ==== Công nợ ====
+  {
+    id: "debt-group",
+    title: "Công nợ",
+    icon: Calculator,
+    allowedRoles: [
+      ROLE.ADMIN,
+      ROLE.MANAGER,
+      ROLE.ACCOUNTING,
+      ROLE.ACCOUNTING_LEAD,
+    ],
+    children: [
       {
-        id: "accounting-vendors",
-        title: "Nhà cung cấp",
-        icon: Building2,
-        path: ROUTE_PATHS.VENDORS.ROOT,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.ACCOUNTING,
-          ROLE.ACCOUNTING_LEAD,
-        ],
-      },
-      {
-        id: "cash-payments",
-        title: "Phiếu chi",
-        icon: Receipt,
-        path: ROUTE_PATHS.ACCOUNTING.CASH_PAYMENTS,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.ACCOUNTING,
-          ROLE.ACCOUNTING_LEAD,
-        ],
-      },
-      {
-        id: "cash-receipts",
-        title: "Phiếu thu",
-        icon: Banknote,
-        path: ROUTE_PATHS.ACCOUNTING.CASH_RECEIPTS,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.ACCOUNTING,
-          ROLE.ACCOUNTING_LEAD,
-        ],
-      },
-      {
-        id: "cash-book",
-        title: "Sổ quỹ",
-        icon: BookOpen,
-        path: ROUTE_PATHS.ACCOUNTING.CASH_BOOK,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.ACCOUNTING,
-          ROLE.ACCOUNTING_LEAD,
-        ],
-      },
-      {
-        id: "bank-accounts",
-        title: "Tài khoản ngân hàng",
-        icon: Landmark,
-        path: ROUTE_PATHS.ACCOUNTING.BANK_ACCOUNTS,
+        id: "accounting-invoice",
+        title: "Hóa đơn",
+        icon: FileText,
+        path: ROUTE_PATHS.ACCOUNTING.INVOICE,
         allowedRoles: [
           ROLE.ADMIN,
           ROLE.MANAGER,
@@ -357,6 +300,18 @@ export const MENU_ITEMS: MenuItem[] = [
         ],
       },
       {
+        id: "accounting-debt-report",
+        title: "Báo cáo công nợ",
+        icon: FileBarChart,
+        path: ROUTE_PATHS.ACCOUNTING.DEBT_REPORT,
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.ACCOUNTING,
+          ROLE.ACCOUNTING_LEAD,
+        ],
+      },
+      {
         id: "collection-schedule",
         title: "Lịch thu tiền",
         icon: Calendar,
@@ -368,11 +323,26 @@ export const MENU_ITEMS: MenuItem[] = [
           ROLE.ACCOUNTING_LEAD,
         ],
       },
+    ],
+  },
+
+  // ==== Tài chính ====
+  {
+    id: "finance-group",
+    title: "Tài chính",
+    icon: Wallet,
+    allowedRoles: [
+      ROLE.ADMIN,
+      ROLE.MANAGER,
+      ROLE.ACCOUNTING,
+      ROLE.ACCOUNTING_LEAD,
+    ],
+    children: [
       {
-        id: "expense-categories",
-        title: "Danh mục chi phí",
-        icon: DollarSign,
-        path: ROUTE_PATHS.ACCOUNTING.EXPENSE_CATEGORIES,
+        id: "cash-book",
+        title: "Sổ quỹ",
+        icon: BookOpen,
+        path: ROUTE_PATHS.ACCOUNTING.CASH_BOOK,
         allowedRoles: [
           ROLE.ADMIN,
           ROLE.MANAGER,
@@ -381,10 +351,22 @@ export const MENU_ITEMS: MenuItem[] = [
         ],
       },
       {
-        id: "payment-methods",
-        title: "Phương thức thanh toán",
-        icon: CreditCard,
-        path: ROUTE_PATHS.ACCOUNTING.PAYMENT_METHODS,
+        id: "cash-receipts",
+        title: "Phiếu thu",
+        icon: Banknote,
+        path: ROUTE_PATHS.ACCOUNTING.CASH_RECEIPTS,
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.ACCOUNTING,
+          ROLE.ACCOUNTING_LEAD,
+        ],
+      },
+      {
+        id: "cash-payments",
+        title: "Phiếu chi",
+        icon: Receipt,
+        path: ROUTE_PATHS.ACCOUNTING.CASH_PAYMENTS,
         allowedRoles: [
           ROLE.ADMIN,
           ROLE.MANAGER,

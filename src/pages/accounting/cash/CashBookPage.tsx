@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
-import { RefreshCw, Download, Loader2, AlertCircle } from "lucide-react";
+import { RefreshCw, Download, Loader2, AlertCircle, Landmark, DollarSign, CreditCard } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { DateRangePicker } from "@/components/forms/DateRangePicker";
 import { addDays } from "date-fns";
@@ -32,6 +32,10 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import BankAccountListPage from "../bank/BankAccountListPage";
+import ExpenseCategoryListPage from "../expense/ExpenseCategoryListPage";
+import PaymentMethodListPage from "../payment-method/PaymentMethodListPage";
 import { useCashBook } from "@/hooks/use-cash";
 import { useBankAccounts, useBankLedger } from "@/hooks/use-bank";
 import { formatCurrency } from "@/lib/status-utils";
@@ -56,6 +60,9 @@ export default function CashBookPage() {
   });
   const [bookType, setBookType] = useState<"cash" | "bank">("cash");
   const [bankAccountId, setBankAccountId] = useState<string>("");
+  const [bankAccountsOpen, setBankAccountsOpen] = useState(false);
+  const [expenseCategoriesOpen, setExpenseCategoriesOpen] = useState(false);
+  const [paymentMethodsOpen, setPaymentMethodsOpen] = useState(false);
 
   const { data: bankAccountsData } = useBankAccounts({ pageNumber: 1, pageSize: 100 });
   const bankAccounts = bankAccountsData?.items || [];
@@ -137,7 +144,19 @@ export default function CashBookPage() {
               Xem sổ quỹ tiền mặt theo quỹ và khoảng thời gian
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" onClick={() => setBankAccountsOpen(true)}>
+              <Landmark className="h-4 w-4 mr-2" />
+              Tài khoản ngân hàng
+            </Button>
+            <Button variant="outline" onClick={() => setExpenseCategoriesOpen(true)}>
+              <DollarSign className="h-4 w-4 mr-2" />
+              Danh mục chi phí
+            </Button>
+            <Button variant="outline" onClick={() => setPaymentMethodsOpen(true)}>
+              <CreditCard className="h-4 w-4 mr-2" />
+              Phương thức thanh toán
+            </Button>
             <Button variant="outline" onClick={() => refetch()}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Làm mới
@@ -368,6 +387,24 @@ export default function CashBookPage() {
           </Table>
         </div>
       </div>
+
+      <Dialog open={bankAccountsOpen} onOpenChange={setBankAccountsOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <BankAccountListPage />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={expenseCategoriesOpen} onOpenChange={setExpenseCategoriesOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <ExpenseCategoryListPage />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={paymentMethodsOpen} onOpenChange={setPaymentMethodsOpen}>
+        <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+          <PaymentMethodListPage />
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

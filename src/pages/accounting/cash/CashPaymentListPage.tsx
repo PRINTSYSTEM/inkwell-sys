@@ -61,6 +61,8 @@ import {
   getPaymentMethodLabel,
 } from "@/lib/status-utils";
 import { toast } from "sonner";
+import { CreateCashPaymentDialog } from "@/components/vendors/CreateCashPaymentDialog";
+
 
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
@@ -99,6 +101,7 @@ export default function CashPaymentListPage() {
   const [expenseCategoryFilter, setExpenseCategoryFilter] =
     useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const itemsPerPage = 10;
 
   const { data: paymentMethodsData } = usePaymentMethods({
@@ -190,7 +193,7 @@ export default function CashPaymentListPage() {
             </div>
             <Button
               size="sm"
-              onClick={() => navigate("/accounting/cash-payments/new")}
+              onClick={() => setCreateDialogOpen(true)}
             >
               <Plus className="h-4 w-4 mr-2" />
               Tạo phiếu chi
@@ -541,6 +544,11 @@ export default function CashPaymentListPage() {
           )}
         </div>
       </div>
+
+      <CreateCashPaymentDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+      />
     </>
   );
 }
