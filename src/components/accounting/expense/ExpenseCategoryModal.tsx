@@ -45,7 +45,7 @@ interface ExpenseCategoryModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   categoryId?: number | null;
-  onSuccess?: () => void;
+  onSuccess?: (category?: ExpenseCategoryResponse) => void;
 }
 
 export function ExpenseCategoryModal({
@@ -105,17 +105,19 @@ export function ExpenseCategoryModal({
   ) => {
     try {
       if (isEdit && categoryId) {
-        await updateMutation.mutateAsync({
+        const result = await updateMutation.mutateAsync({
           id: categoryId,
           data: values as UpdateExpenseCategoryRequest,
         });
+        onOpenChange(false);
+        onSuccess?.(result);
       } else {
-        await createMutation.mutateAsync(
+        const result = await createMutation.mutateAsync(
           values as CreateExpenseCategoryRequest
         );
+        onOpenChange(false);
+        onSuccess?.(result);
       }
-      onOpenChange(false);
-      onSuccess?.();
     } catch (error) {
       // Error is handled by the hook
     }
