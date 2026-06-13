@@ -83,7 +83,7 @@ export default function InventorySummaryPage() {
         />
       </Helmet>
 
-      <div className="space-y-6">
+      <div className="pt-0 -mt-4 space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -128,13 +128,18 @@ export default function InventorySummaryPage() {
         )}
 
         {/* Summary Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Tổng giá trị tồn kho</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {formatCurrency(totalValue)}
+        <Card className="border-0 shadow-sm max-w-sm">
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <span className="text-sm font-bold text-primary">₫</span>
+            </div>
+            <div>
+              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none">
+                Tổng giá trị tồn kho
+              </p>
+              <p className="text-base sm:text-xl font-bold mt-1 leading-none text-primary">
+                {formatCurrency(totalValue)}
+              </p>
             </div>
           </CardContent>
         </Card>

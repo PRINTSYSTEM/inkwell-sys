@@ -362,7 +362,7 @@ export default function AccountingDebtReport() {
   };
 
   return (
-    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 pb-6 -mt-4 space-y-4">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
@@ -376,80 +376,67 @@ export default function AccountingDebtReport() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Card className="border-0 shadow-sm">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground">Tổng KH</p>
-              <div className="text-2xl font-bold mt-0.5">{stats.totalCustomers}</div>
-              <p className="text-xs text-muted-foreground">khách hàng</p>
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <Users className="h-4 w-4 text-primary" />
             </div>
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <Users className="h-5 w-5 text-primary" />
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
+                Tổng KH
+              </p>
+              <p className="text-base sm:text-xl font-bold mt-1 leading-none">
+                {stats.totalCustomers}
+              </p>
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-0 shadow-sm">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground">Tình trạng tốt</p>
-              <div className="text-2xl font-bold mt-0.5 text-green-600">
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-green-50 flex items-center justify-center shrink-0">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
+                Tình trạng tốt
+              </p>
+              <p className="text-base sm:text-xl font-bold mt-1 leading-none text-green-600">
                 {stats.goodStatus}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {stats.totalCustomers > 0
-                  ? Math.round((stats.goodStatus / stats.totalCustomers) * 100)
-                  : 0}
-                % khách hàng
               </p>
-            </div>
-            <div className="h-10 w-10 rounded-full bg-green-50 flex items-center justify-center">
-              <CheckCircle className="h-5 w-5 text-green-600" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-0 shadow-sm">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground">Cần theo dõi</p>
-              <div className="text-2xl font-bold mt-0.5 text-yellow-600">
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-yellow-50 flex items-center justify-center shrink-0">
+              <AlertTriangle className="h-4 w-4 text-yellow-600" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
+                Cần theo dõi
+              </p>
+              <p className="text-base sm:text-xl font-bold mt-1 leading-none text-yellow-600">
                 {stats.warningStatus}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {stats.totalCustomers > 0
-                  ? Math.round(
-                      (stats.warningStatus / stats.totalCustomers) * 100
-                    )
-                  : 0}
-                % khách hàng
               </p>
-            </div>
-            <div className="h-10 w-10 rounded-full bg-yellow-50 flex items-center justify-center">
-              <AlertTriangle className="h-5 w-5 text-yellow-600" />
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-0 shadow-sm">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground">Bị chặn</p>
-              <div className="text-2xl font-bold mt-0.5 text-red-600">
-                {stats.blockedStatus}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                {stats.totalCustomers > 0
-                  ? Math.round(
-                      (stats.blockedStatus / stats.totalCustomers) * 100
-                    )
-                  : 0}
-                % khách hàng
-              </p>
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-red-50 flex items-center justify-center shrink-0">
+              <AlertCircle className="h-4 w-4 text-red-600" />
             </div>
-            <div className="h-10 w-10 rounded-full bg-red-50 flex items-center justify-center">
-              <AlertCircle className="h-5 w-5 text-red-600" />
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
+                Bị chặn
+              </p>
+              <p className="text-base sm:text-xl font-bold mt-1 leading-none text-red-600">
+                {stats.blockedStatus}
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -457,31 +444,31 @@ export default function AccountingDebtReport() {
 
       {/* Summary Card */}
       <Card className="border-0 shadow-sm">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-2 mb-3">
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-semibold">Tổng quan công nợ</span>
+        <CardContent className="p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <TrendingUp className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-xs font-semibold">Tổng quan công nợ</span>
           </div>
-          <div className="grid sm:grid-cols-3 gap-4">
-            <div className="text-center p-3 bg-red-50 rounded-lg">
-              <p className="text-xs text-muted-foreground">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="text-center p-2.5 bg-red-50 rounded-lg">
+              <p className="text-[10px] sm:text-xs text-muted-foreground leading-none">
                 Tổng công nợ hiện tại
               </p>
-              <p className="text-xl font-bold text-red-600 mt-0.5">
+              <p className="text-base sm:text-lg font-bold text-red-600 mt-1.5 leading-none">
                 {formatCurrency(stats.totalCurrentDebt)}
               </p>
             </div>
-            <div className="text-center p-3 bg-muted/50 rounded-lg">
-              <p className="text-xs text-muted-foreground">
+            <div className="text-center p-2.5 bg-muted/50 rounded-lg">
+              <p className="text-[10px] sm:text-xs text-muted-foreground leading-none">
                 Tổng hạn mức cho phép
               </p>
-              <p className="text-xl font-bold mt-0.5">
+              <p className="text-base sm:text-lg font-bold mt-1.5 leading-none">
                 {formatCurrency(stats.totalMaxDebt)}
               </p>
             </div>
-            <div className="text-center p-3 bg-blue-50 rounded-lg">
-              <p className="text-xs text-muted-foreground">Tỷ lệ sử dụng</p>
-              <p className="text-xl font-bold text-blue-600 mt-0.5">
+            <div className="text-center p-2.5 bg-blue-50 rounded-lg">
+              <p className="text-[10px] sm:text-xs text-muted-foreground leading-none">Tỷ lệ sử dụng</p>
+              <p className="text-base sm:text-lg font-bold text-blue-600 mt-1.5 leading-none">
                 {stats.totalMaxDebt > 0
                   ? Math.round(
                       (stats.totalCurrentDebt / stats.totalMaxDebt) * 100

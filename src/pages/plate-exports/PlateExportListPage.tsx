@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { usePlateExports } from "@/hooks/use-plate-export";
-import { useVendors } from "@/hooks/use-vendor";
+import { useActivePlateVendors } from "@/hooks/use-vendor";
 import type { PlateExportResponse, PlateExportListParams } from "@/Schema";
 import { formatCurrency } from "@/lib/status-utils";
 
@@ -59,7 +59,7 @@ export default function PlateExportListPage() {
   };
 
   const { data, isLoading, isFetching, refetch } = usePlateExports(params);
-  const { data: vendorsData } = useVendors();
+  const { data: vendors } = useActivePlateVendors();
 
   const plateExports: PlateExportResponse[] = data?.items ?? [];
   const totalPages = data?.totalPages ?? 1;
@@ -89,7 +89,7 @@ export default function PlateExportListPage() {
   };
 
   return (
-    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-5">
+    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 pb-6 -mt-4 space-y-4">
       <Helmet>
         <title>Danh sách xuất kẽm</title>
         <meta
@@ -113,41 +113,49 @@ export default function PlateExportListPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-3 gap-3">
         <Card className="border-0 shadow-sm">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground">Tổng lệnh xuất kẽm</p>
-              <p className="text-2xl font-bold mt-0.5">{totalCount}</p>
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <Package className="h-4 w-4 text-primary" />
             </div>
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <Package className="h-5 w-5 text-primary" />
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
+                Tổng lệnh
+              </p>
+              <p className="text-base sm:text-xl font-bold mt-1 leading-none">
+                {totalCount}
+              </p>
             </div>
           </CardContent>
         </Card>
         <Card className="border-0 shadow-sm">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground">Đang hoạt động</p>
-              <p className="text-2xl font-bold mt-0.5 text-emerald-600">
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+              <Package className="h-4 w-4 text-emerald-500" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
+                Đang hoạt động
+              </p>
+              <p className="text-base sm:text-xl font-bold mt-1 leading-none text-emerald-600">
                 {plateExports.filter((p) => p.isActive).length}
               </p>
             </div>
-            <div className="h-10 w-10 rounded-full bg-emerald-50 flex items-center justify-center">
-              <Package className="h-5 w-5 text-emerald-500" />
-            </div>
           </CardContent>
         </Card>
         <Card className="border-0 shadow-sm">
-          <CardContent className="p-4 flex items-center justify-between">
-            <div>
-              <p className="text-xs text-muted-foreground">Đã nhận kẽm</p>
-              <p className="text-2xl font-bold mt-0.5 text-blue-600">
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
+              <Package className="h-4 w-4 text-blue-500" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
+                Đã nhận kẽm
+              </p>
+              <p className="text-base sm:text-xl font-bold mt-1 leading-none text-blue-600">
                 {plateExports.filter((p) => p.receivedAt).length}
               </p>
-            </div>
-            <div className="h-10 w-10 rounded-full bg-blue-50 flex items-center justify-center">
-              <Package className="h-5 w-5 text-blue-500" />
             </div>
           </CardContent>
         </Card>
@@ -182,7 +190,7 @@ export default function PlateExportListPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả nhà cung cấp</SelectItem>
-                {vendorsData?.items?.map((vendor) => (
+                {vendors?.map((vendor) => (
                   <SelectItem
                     key={vendor.id}
                     value={vendor.id?.toString() || ""}
