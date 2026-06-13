@@ -799,6 +799,25 @@ function ProductionTableRow({
 
   const startEditingPackaging = () => {
     if (!proofingOrder?.proofingOrderDesigns) return;
+
+    // Auto-jump packaging step status to 'ready' if not already in ready or in_progress state
+    if (
+      packagingStep &&
+      packagingStep.id &&
+      packagingStep.status !== "ready" &&
+      packagingStep.status !== "in_progress"
+    ) {
+      updateStep({
+        stepId: packagingStep.id,
+        data: {
+          status: "ready",
+          inputQty: packagingStep.inputQty || undefined,
+          outputQty: packagingStep.outputQty || undefined,
+          defectQty: packagingStep.defectQty || undefined,
+        },
+      });
+    }
+
     const initialValues: Record<number, { outputQty: string; defectQty: string; notes: string }> = {};
     proofingOrder.proofingOrderDesigns.forEach((pod: any) => {
       const prodItem = productionItems.find(
