@@ -240,15 +240,15 @@ export default function StockOutListPage() {
       </Helmet>
 
       <div className="min-h-screen bg-background">
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 pb-6 -mt-4 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Quản lý xuất kho</h1>
-              <p className="text-muted-foreground mt-1">Quản lý các phiếu xuất kho Chất liệu</p>
+              <h1 className="text-2xl font-bold tracking-tight">Quản lý xuất kho</h1>
+              <p className="text-sm text-muted-foreground mt-1">Quản lý các phiếu xuất kho Chất liệu</p>
             </div>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-4">
           {/* COMPACT TOOLBAR FILTERS ROW */}
           <div className="flex flex-col xl:flex-row items-center justify-between gap-2.5 bg-slate-50/60 p-2.5 rounded-xl border border-slate-200/50 shadow-sm mb-4">
             <div className="flex flex-col sm:flex-row items-center gap-2 w-full xl:w-auto flex-1">
