@@ -24,10 +24,6 @@ import {
   Edit,
   XCircle,
   AlertTriangle,
-  Check,
-  ChevronsUpDown,
-  Plus,
-  Trash2,
   FileImage,
 } from "lucide-react";
 import {
@@ -54,7 +50,6 @@ import {
   useUpdateProductionStep,
   useUpdateProductionOrderItem,
 } from "@/hooks/use-production";
-import { useCreateStockOutForProduction } from "@/hooks/use-stock";
 import {
   Select,
   SelectContent,
@@ -63,29 +58,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
   HoverCard,
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { CursorTooltip } from "@/components/ui/cursor-tooltip";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { useMaterials } from "@/hooks/use-material";
 import { formatDieSize } from "@/utils/format-die-size";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 
@@ -256,7 +237,6 @@ interface StepItemProps {
   isStatusLocked?: boolean;
   defaultPrintQty: number;
   productionItems: any[];
-  onShowMaterialExport?: () => void;
 }
 
 function StepItem({
@@ -274,7 +254,6 @@ function StepItem({
   isStatusLocked = false,
   defaultPrintQty,
   productionItems,
-  onShowMaterialExport,
 }: StepItemProps) {
   const { mutate: updateStep } = useUpdateProductionStep();
   const { mutate: updateOrderItem } = useUpdateProductionOrderItem();
@@ -468,17 +447,6 @@ function StepItem({
               </SelectItem>
             </SelectContent>
           </Select>
-          {step.stepType === "material_export" && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-6 mt-1 text-[10px] w-full bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800"
-              disabled={!isEnabled || step.status === "done"}
-              onClick={() => onShowMaterialExport?.()}
-            >
-              Xuất nguyên liệu
-            </Button>
-          )}
         </>
       )}
 
@@ -609,7 +577,6 @@ interface StepCellProps {
   isStatusLocked?: boolean;
   defaultPrintQty: number;
   productionItems: any[];
-  onShowMaterialExport?: () => void;
 }
 
 function StepCell({
@@ -621,7 +588,6 @@ function StepCell({
   isStatusLocked = false,
   defaultPrintQty,
   productionItems,
-  onShowMaterialExport,
 }: StepCellProps) {
   // If no step AND no info, show empty
   if (!step && !info)
@@ -645,7 +611,6 @@ function StepCell({
             isStatusLocked={isStatusLocked}
             defaultPrintQty={defaultPrintQty}
             productionItems={productionItems}
-            onShowMaterialExport={onShowMaterialExport}
           />
         )}
         {info && <div className="w-full text-center">{info}</div>}
@@ -667,7 +632,6 @@ function ProductionTableRow({
   const [openDiePopover, setOpenDiePopover] = useState(false);
   const [openPlatePopover, setOpenPlatePopover] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
-  const [showMaterialExportDialog, setShowMaterialExportDialog] = useState(false);
   const [isEditingPackaging, setIsEditingPackaging] = useState(false);
   const [tempPackagingValues, setTempPackagingValues] = useState<
     Record<number, { outputQty: string; defectQty: string; notes: string }>
@@ -749,7 +713,6 @@ function ProductionTableRow({
 
   const { mutate: updateStep } = useUpdateProductionStep();
   const { mutate: updateOrderItem } = useUpdateProductionOrderItem();
-  const { mutateAsync: createStockOutForProduction } = useCreateStockOutForProduction();
 
   const steps = prod.steps || [];
 
@@ -1042,10 +1005,8 @@ function ProductionTableRow({
         <StepCell
           step={materialExportStep}
           isEnabled={isMaterialExportEnabled}
-          isStatusLocked={true}
           defaultPrintQty={defaultPrintQty}
           productionItems={productionItems}
-          onShowMaterialExport={() => setShowMaterialExportDialog(true)}
         />
         <TableCell className="py-3 align-top w-[120px] max-w-[120px]">
           {isProofingLoading ? (
@@ -1636,28 +1597,7 @@ function ProductionTableRow({
         </DialogContent>
       </Dialog>
       
-      {showMaterialExportDialog && materialExportStep && prod.id && (
-        <MaterialExportDialog
-          isOpen={showMaterialExportDialog}
-          onOpenChange={setShowMaterialExportDialog}
-          productionOrderId={prod.id}
-          proofingOrder={proofingOrder}
-          defaultPrintQty={Number(materialExportStep.inputQty) || defaultPrintQty || 1}
-          onExportSuccess={() => {
-            if (materialExportStep && materialExportStep.id && materialExportStep.status !== "done") {
-              updateStep({
-                stepId: materialExportStep.id,
-                data: {
-                  status: "done",
-                  inputQty: materialExportStep.inputQty || undefined,
-                  outputQty: materialExportStep.outputQty || undefined,
-                  defectQty: materialExportStep.defectQty || undefined,
-                }
-              });
-            }
-          }}
-        />
-      )}
+
 
       {viewingImageUrl && (
         <ImageViewerDialog
@@ -1864,236 +1804,4 @@ export function ProductionListTable({
   );
 }
 
-export function MaterialExportDialog({
-  isOpen,
-  onOpenChange,
-  productionOrderId,
-  proofingOrder,
-  defaultPrintQty,
-  onExportSuccess,
-}: {
-  isOpen: boolean;
-  onOpenChange: (open: boolean) => void;
-  productionOrderId: number;
-  proofingOrder: any;
-  defaultPrintQty: number;
-  onExportSuccess?: () => void;
-}) {
-  const { data: materialsData, isLoading: isMaterialsLoading } = useMaterials(
-    { pageSize: 100 }
-  );
-  const materials = (materialsData as any)?.items || [];
-  
-  const { mutateAsync: createStockOutForProduction, isPending } = useCreateStockOutForProduction();
-  // State for selected export items
-  const [selectedItems, setSelectedItems] = useState<{materialId: string, quantity: string}[]>([]);
-  const [materialSearchOpen, setMaterialSearchOpen] = useState(false);
 
-  // Reset state when dialog opens
-  React.useEffect(() => {
-    if (isOpen) {
-      setSelectedItems([]);
-    }
-  }, [isOpen]);
-
-  const handleSelectMaterial = (matId: string) => {
-    if (!selectedItems.find(i => i.materialId === matId)) {
-      setSelectedItems([...selectedItems, { 
-        materialId: matId, 
-        quantity: defaultPrintQty?.toString() || "1" 
-      }]);
-    }
-    setMaterialSearchOpen(false);
-  };
-
-  const handleRemoveItem = (matId: string) => {
-    setSelectedItems(selectedItems.filter(item => item.materialId !== matId));
-  };
-
-  const handleQuantityChange = (matId: string, qty: string) => {
-    setSelectedItems(selectedItems.map(item => 
-      item.materialId === matId ? { ...item, quantity: qty } : item
-    ));
-  };
-
-  const handleConfirm = async () => {
-    if (selectedItems.length === 0) {
-      toast.error("Vui lòng chọn ít nhất một nguyên vật liệu");
-      return;
-    }
-    
-    const payloadItems = selectedItems.map(item => {
-      const mat = materials.find((m: any) => m.id?.toString() === item.materialId);
-      return {
-        itemName: mat?.name || proofingOrder?.materialType?.name || "Nguyên liệu",
-        itemCode: mat?.code || proofingOrder?.materialType?.code || "NL",
-        unit: mat?.unit || "Tờ",
-        quantity: Number(item.quantity) || 1,
-        notes: "",
-        materialId: Number(item.materialId) || proofingOrder?.materialTypeId || null,
-        orderDetailId: proofingOrder?.orderDetailId || null
-      };
-    });
-    
-    try {
-      await createStockOutForProduction({
-        productionOrderId,
-        itemType: "material",
-        notes: "Xuất NL cho lệnh sản xuất",
-        stockOutDate: new Date().toISOString(),
-        items: payloadItems
-      });
-      onOpenChange(false);
-      onExportSuccess?.();
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[450px] max-h-[85vh] flex flex-col overflow-hidden">
-        <DialogHeader className="shrink-0">
-          <DialogTitle>Xuất Nguyên Liệu</DialogTitle>
-          <DialogDescription>
-            Tìm và chọn các loại vật tư cần xuất cho đơn này
-          </DialogDescription>
-        </DialogHeader>
-        
-        {isMaterialsLoading ? (
-          <div className="py-8 flex justify-center shrink-0">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <div className="space-y-4 py-4 flex-1 overflow-y-auto pr-1">
-            <div className="space-y-2">
-              <Label>Tìm chọn nguyên vật liệu</Label>
-              <Popover open={materialSearchOpen} onOpenChange={setMaterialSearchOpen}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={materialSearchOpen}
-                    className="w-full justify-between font-normal text-muted-foreground"
-                  >
-                    <span className="flex items-center gap-2">
-                      <Plus className="h-4 w-4" />
-                      Nhấn để tìm và thêm vật tư...
-                    </span>
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[400px] p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Tìm kiếm loại giấy, màng..." className="h-9" />
-                    <CommandList className="max-h-[250px]">
-                      <CommandEmpty>Không tìm thấy NVL nào.</CommandEmpty>
-                      <CommandGroup>
-                        {materials.map((m: any) => {
-                          const isSelected = selectedItems.some(i => i.materialId === m.id!.toString());
-                          return (
-                            <CommandItem
-                              key={m.id}
-                              value={m.name || m.code || ""}
-                              onSelect={() => handleSelectMaterial(m.id!.toString())}
-                              className={cn("py-2", isSelected && "opacity-50 pointer-events-none")}
-                            >
-                              <Check
-                                className={cn(
-                                  "mr-2 h-4 w-4 text-primary",
-                                  isSelected ? "opacity-100" : "opacity-0"
-                                )}
-                              />
-                              <div className="flex flex-col">
-                                <span className="font-medium">{m.name}</span>
-                                <span className="text-[11px] text-muted-foreground flex gap-2">
-                                  {m.code && <span>Mã: {m.code}</span>}
-                                  {m.stockQuantity !== undefined && (
-                                    <span className="text-blue-600">Tồn: {m.stockQuantity} {m.unit || 'Tờ'}</span>
-                                  )}
-                                </span>
-                              </div>
-                            </CommandItem>
-                          );
-                        })}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-muted-foreground text-xs">Kích thước tham khảo từ thiết kế:</Label>
-              <div className="h-8 px-3 py-1 bg-muted/30 rounded-md text-sm border flex items-center text-muted-foreground">
-                {proofingOrder?.paperSize
-                  ? [
-                      proofingOrder.paperSize.name,
-                      proofingOrder.paperSize.width && proofingOrder.paperSize.height
-                        ? `(${proofingOrder.paperSize.width} x ${proofingOrder.paperSize.height} cm)`
-                        : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")
-                  : proofingOrder?.customPaperSize || "Không xác định"}
-              </div>
-            </div>
-
-            {selectedItems.length > 0 && (
-              <div className="space-y-3 mt-6 pt-4 border-t">
-                <Label>Các vật tư đã chọn xuất</Label>
-                <div className="space-y-2">
-                  {selectedItems.map((item) => {
-                    const mat = materials.find((m: any) => m.id?.toString() === item.materialId);
-                    return (
-                      <div key={item.materialId} className="flex items-center gap-3 bg-muted/20 p-2.5 rounded-lg border border-border/50">
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold truncate" title={mat?.name}>
-                            {mat?.name || "Nguyên liệu"}
-                          </p>
-                          <p className="text-[11px] text-muted-foreground">
-                            {mat?.stockQuantity !== undefined ? `Tồn kho: ${mat.stockQuantity} ${mat?.unit || 'Tờ'}` : "Không rõ tồn kho"}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <div className="flex items-center gap-1.5">
-                            <Input 
-                              type="number" 
-                              min="1"
-                              value={item.quantity} 
-                              onChange={e => handleQuantityChange(item.materialId, e.target.value)} 
-                              className="h-8 w-20 text-right font-bold tabular-nums"
-                            />
-                            <span className="text-xs font-medium text-muted-foreground w-6">
-                              {mat?.unit || "Tờ"}
-                            </span>
-                          </div>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => handleRemoveItem(item.materialId)}
-                            disabled={isPending}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-        <DialogFooter className="shrink-0 mt-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isPending}>Hủy</Button>
-          <Button onClick={handleConfirm} disabled={isPending || isMaterialsLoading || selectedItems.length === 0}>
-            {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-            Xác nhận xuất ({selectedItems.length})
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
