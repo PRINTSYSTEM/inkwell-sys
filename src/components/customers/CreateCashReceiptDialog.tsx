@@ -18,9 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, DollarSign, CreditCard } from "lucide-react";
+import { Loader2, DollarSign, CreditCard, Landmark } from "lucide-react";
 import { useCreateCashReceipt } from "@/hooks/use-cash";
 import { usePaymentMethods } from "@/hooks/use-expense";
+import { useBankAccounts } from "@/hooks/use-bank";
 import type { CreateCashReceiptRequest } from "@/Schema/accounting.schema";
 import { toast } from "sonner";
 import { getPaymentMethodLabel } from "@/lib/status-utils";
@@ -41,6 +42,7 @@ export function CreateCashReceiptDialog({
   const navigate = useNavigate();
   const [amount, setAmount] = useState<string>("");
   const [paymentMethodId, setPaymentMethodId] = useState<string>("");
+  const [bankAccountId, setBankAccountId] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
 
   const { mutateAsync: createCashReceipt, isPending } = useCreateCashReceipt();
@@ -48,17 +50,51 @@ export function CreateCashReceiptDialog({
     isActive: true,
     pageSize: 100,
   });
+  const { data: bankAccountsData } = useBankAccounts({
+    isActive: true,
+    pageSize: 100,
+  });
 
   const paymentMethods = paymentMethodsData?.items || [];
+  const bankAccounts = bankAccountsData?.items || [];
+
+  const selectedMethod = paymentMethods.find(
+    (m) => m.id?.toString() === paymentMethodId
+  );
+  const isBankTransfer =
+    selectedMethod?.code === "CK" ||
+    selectedMethod?.name?.toLowerCase().includes("chuyển khoản") ||
+    selectedMethod?.description?.toLowerCase().includes("chuyển khoản");
 
   // Reset form when dialog opens/closes
   useEffect(() => {
     if (open) {
       setAmount("");
-      setPaymentMethodId("");
       setNotes("");
+      setBankAccountId("");
     }
   }, [open]);
+
+  // Auto-set default payment method to cash (code: "TM")
+  useEffect(() => {
+    if (open && paymentMethods.length > 0) {
+      const cashMethod = paymentMethods.find(
+        (m) => m.code === "TM" || m.name?.toLowerCase().includes("tiền mặt")
+      );
+      if (cashMethod?.id) {
+        setPaymentMethodId(cashMethod.id.toString());
+      } else if (paymentMethods[0]?.id) {
+        setPaymentMethodId(paymentMethods[0].id.toString());
+      }
+    }
+  }, [open, paymentMethods]);
+
+  // Auto-select first bank account when switching to bank transfer
+  useEffect(() => {
+    if (isBankTransfer && !bankAccountId && bankAccounts.length > 0) {
+      setBankAccountId(bankAccounts[0].id?.toString() || "");
+    }
+  }, [isBankTransfer, bankAccountId, bankAccounts]);
 
   const handleSubmit = async () => {
     if (!amount || parseFloat(amount) <= 0) {
@@ -75,6 +111,13 @@ export function CreateCashReceiptDialog({
       return;
     }
 
+    if (isBankTransfer && !bankAccountId) {
+      toast.error("Lỗi", {
+        description: "Vui lòng chọn tài khoản ngân hàng nhận tiền",
+      });
+      return;
+    }
+
     const now = new Date();
     const voucherDate = now.toISOString();
     const postingDate = now.toISOString();
@@ -87,6 +130,7 @@ export function CreateCashReceiptDialog({
       paymentMethodId: parseInt(paymentMethodId, 10),
       customerId: customerId,
       notes: notes.trim() || undefined,
+      bankAccountId: isBankTransfer && bankAccountId ? parseInt(bankAccountId, 10) : undefined,
     };
 
     try {
@@ -153,6 +197,30 @@ export function CreateCashReceiptDialog({
             </Select>
           </div>
 
+          {isBankTransfer && (
+            <div className="space-y-2">
+              <Label htmlFor="bankAccountId">
+                Tài khoản ngân hàng <span className="text-destructive">*</span>
+              </Label>
+              <Select value={bankAccountId} onValueChange={setBankAccountId}>
+                <SelectTrigger id="bankAccountId">
+                  <Landmark className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <SelectValue placeholder="Chọn tài khoản ngân hàng" />
+                </SelectTrigger>
+                <SelectContent>
+                  {bankAccounts.map((account) => (
+                    <SelectItem
+                      key={account.id}
+                      value={account.id?.toString() || ""}
+                    >
+                      {account.bankName} - {account.accountNumber} ({account.accountHolder})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="notes">Ghi chú</Label>
             <Input
@@ -174,7 +242,7 @@ export function CreateCashReceiptDialog({
           </Button>
           <Button
             onClick={handleSubmit}
-            disabled={isPending || !amount || !paymentMethodId}
+            disabled={isPending || !amount || !paymentMethodId || (isBankTransfer && !bankAccountId)}
           >
             {isPending ? (
               <>
