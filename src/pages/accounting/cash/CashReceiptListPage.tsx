@@ -58,6 +58,7 @@ import { usePaymentMethods } from "@/hooks/use-expense";
 import { useCustomers } from "@/hooks/use-customer";
 import { formatCurrency, getPaymentMethodLabel } from "@/lib/status-utils";
 import { toast } from "sonner";
+import { CreateCashReceiptDialog } from "@/components/customers/CreateCashReceiptDialog";
 
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
@@ -92,6 +93,7 @@ export default function CashReceiptListPage() {
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
   const { data: paymentMethodsData } = usePaymentMethods({
     pageNumber: 1,
@@ -178,7 +180,7 @@ export default function CashReceiptListPage() {
             </div>
             <Button
               size="sm"
-              onClick={() => navigate("/accounting/cash-receipts/new")}
+              onClick={() => setCreateDialogOpen(true)}
             >
               <Plus className="h-4 w-4 mr-2" />
               Tạo phiếu thu
@@ -536,6 +538,10 @@ export default function CashReceiptListPage() {
           )}
         </div>
       </div>
+      <CreateCashReceiptDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+      />
     </>
   );
 }
