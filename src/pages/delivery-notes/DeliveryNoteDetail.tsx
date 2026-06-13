@@ -717,7 +717,7 @@ export default function DeliveryNoteDetailPage() {
               Tổng SL giao
             </div>
             <div className="text-xl font-bold text-primary">
-              {totalNetQty.toLocaleString("vi-VN")}
+              {totalDeliveryQty.toLocaleString("vi-VN")}
             </div>
           </Card>
           <Card className="p-4">
