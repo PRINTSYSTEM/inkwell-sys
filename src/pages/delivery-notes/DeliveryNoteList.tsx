@@ -973,10 +973,6 @@ export default function DeliveryNoteListPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-1.5 text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">
-            <Truck className="h-3.5 w-3.5" />
-            VẬN HÀNH GIAO HÀNG
-          </div>
           <h1 className="text-3xl font-extrabold tracking-tight text-stone-900 dark:text-stone-50">
             Phiếu giao hàng
           </h1>
