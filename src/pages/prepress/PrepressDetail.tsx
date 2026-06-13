@@ -386,7 +386,6 @@ export default function ProofingOrderDetailPage() {
   const [isAddDieDialogOpen, setIsAddDieDialogOpen] = useState(false);
 
   // Form state cho từng card
-  const [isQuantityEditOpen, setIsQuantityEditOpen] = useState(false);
 
   // Confirm remove design dialog
   const [isConfirmRemoveDesignDialogOpen, setIsConfirmRemoveDesignDialogOpen] =
@@ -421,7 +420,7 @@ export default function ProofingOrderDetailPage() {
 
   // Inline editing state for order info
   const [editingField, setEditingField] = useState<
-    "totalQuantity" | "paperSize" | "notes" | null
+    "totalQuantity" | "paperSize" | "notes" | "all" | null
   >(null);
   const [inlineTotalQuantity, setInlineTotalQuantity] = useState<string>("");
   const [inlinePaperSizeId, setInlinePaperSizeId] = useState<string>("custom");
@@ -1370,6 +1369,17 @@ export default function ProofingOrderDetailPage() {
     }
   };
 
+  const handleStartEditAllFields = () => {
+    if (!order || order.status === "completed") return;
+    setEditingField("all");
+    setInlineTotalQuantity((order.totalQuantity ?? 0).toString());
+    setInlinePaperSizeId(
+      order.paperSizeId ? order.paperSizeId.toString() : "custom",
+    );
+    setInlineCustomPaperSize(order.customPaperSize || "");
+    setInlineNotes(order.notes || "");
+  };
+
   const handleCancelEditField = () => {
     setEditingField(null);
     setInlineTotalQuantity("");
@@ -1383,19 +1393,21 @@ export default function ProofingOrderDetailPage() {
 
     const updateData: UpdateProofingOrderRequest = {};
 
-    if (editingField === "totalQuantity") {
+    const processTotalQuantity = () => {
       const qty = parseInt(inlineTotalQuantity, 10);
       if (isNaN(qty) || qty < 1) {
         toast.error("Lỗi", {
           description: "Số giấy in phải là số nguyên lớn hơn 0",
         });
-        return;
+        return false;
       }
       if (qty !== order.totalQuantity) {
         updateData.totalQuantity = qty;
       }
-    } else if (editingField === "paperSize") {
-      // Handle paper size
+      return true;
+    };
+
+    const processPaperSize = async () => {
       if (inlinePaperSizeId === "custom" && inlineCustomPaperSize?.trim()) {
         try {
           const createdPaperSizeId = await ensurePaperSizeExistsForUpdate(
@@ -1413,7 +1425,7 @@ export default function ProofingOrderDetailPage() {
           toast.error("Lỗi", {
             description: "Không thể tạo khổ giấy mới",
           });
-          return;
+          return false;
         }
       } else if (
         inlinePaperSizeId !== "none" &&
@@ -1428,10 +1440,26 @@ export default function ProofingOrderDetailPage() {
         updateData.paperSizeId = null;
         updateData.customPaperSize = null;
       }
-    } else if (editingField === "notes") {
+      return true;
+    };
+
+    const processNotes = () => {
       if (inlineNotes !== order.notes) {
         updateData.notes = inlineNotes || null;
       }
+      return true;
+    };
+
+    if (editingField === "totalQuantity") {
+      if (!processTotalQuantity()) return;
+    } else if (editingField === "paperSize") {
+      if (!(await processPaperSize())) return;
+    } else if (editingField === "notes") {
+      processNotes();
+    } else if (editingField === "all") {
+      if (!processTotalQuantity()) return;
+      if (!(await processPaperSize())) return;
+      processNotes();
     }
 
     // Only update if there are changes
@@ -1467,20 +1495,6 @@ export default function ProofingOrderDetailPage() {
     setIsUpdateInfoDialogOpen(true);
   };
 
-  const handleOpenQuantityEdit = () => {
-    if (!order) return;
-
-    setUpdateTotalQuantity((order.totalQuantity ?? 0).toString());
-
-    const initialQuantities: Record<number, string> = {};
-    order.proofingOrderDesigns?.forEach((pod) => {
-      if (pod.id) {
-        initialQuantities[pod.id] = pod.quantity?.toString() || "";
-      }
-    });
-    setUpdateDesignQuantities(initialQuantities);
-    setIsQuantityEditOpen(true);
-  };
   const handleUpdateInfo = async () => {
     if (!order?.id) return;
 
@@ -2142,6 +2156,7 @@ export default function ProofingOrderDetailPage() {
                 uniqueSpecifications={uniqueSpecifications}
                 isUpdatingInfo={isUpdatingInfo}
                 handleStartEditField={handleStartEditField}
+                handleStartEditAllFields={handleStartEditAllFields}
                 handleCancelEditField={handleCancelEditField}
                 handleSaveField={handleSaveField}
                 setIsUploadDialogOpen={setIsUploadDialogOpen}
@@ -2171,13 +2186,6 @@ export default function ProofingOrderDetailPage() {
                   setSelectedDesignForRelatedDies
                 }
                 setIsRelatedDiesDialogOpen={setIsRelatedDiesDialogOpen}
-                isQuantityEditOpen={isQuantityEditOpen}
-                handleOpenQuantityEdit={handleOpenQuantityEdit}
-                setIsQuantityEditOpen={setIsQuantityEditOpen}
-                updateTotalQuantity={updateTotalQuantity}
-                setUpdateTotalQuantity={setUpdateTotalQuantity}
-                updateDesignQuantities={updateDesignQuantities}
-                setUpdateDesignQuantities={setUpdateDesignQuantities}
                 onReject={handleOpenRejectDialog}
                 isRejecting={isRejecting}
                 onFindDie={handleFindDie}

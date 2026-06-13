@@ -52,7 +52,7 @@ export function InventoryViewDialog({
   const [vendorId, setVendorId] = useState<number | null>(null);
   const [showOutOfStock, setShowOutOfStock] = useState(false);
 
-  const { data: vendorsData } = useActiveVendors();
+  const { data: vendorsData } = useActiveVendors("material");
 
   // Reset page when search changes
   useEffect(() => {
