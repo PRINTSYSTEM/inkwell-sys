@@ -1382,12 +1382,8 @@ function OrdersView({
 
                   <div className="flex items-center gap-4 shrink-0">
                     <div className="text-right">
-                      <div className="text-xs text-stone-400 font-medium">
-                        x{new Intl.NumberFormat('vi-VN').format(totalOrderQty)} ({order.details?.length || 0} mã)
-                      </div>
-                      <div className="font-extrabold text-stone-900 dark:text-stone-50 mt-0.5 text-sm tabular-nums">
-                        {formatCurrency(order.totalAmount || 0)}
-                      </div>
+
+
                     </div>
                     <div onClick={(e) => e.stopPropagation()}>
                       <Button
@@ -1458,7 +1454,7 @@ function OrdersView({
                             <div className="text-right text-xs">
                               <span className="text-stone-400 font-medium mr-1">SL:</span>
                               <span className="font-bold text-stone-800 dark:text-stone-200 tabular-nums">
-                                {new Intl.NumberFormat('vi-VN').format(detail.orderedQty ?? 0)}
+                                {new Intl.NumberFormat('vi-VN').format(detail.remainingToDeliver ?? 0)}
                               </span>
                             </div>
                             <div className="text-right font-extrabold text-stone-800 dark:text-stone-200 text-xs w-24 tabular-nums">
