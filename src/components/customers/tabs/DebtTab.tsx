@@ -148,7 +148,7 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
   const isLoading = isLoadingMonthly || isLoadingHistory || isLoadingStats;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 h-full flex flex-col overflow-hidden">
       {/* Filters */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -259,16 +259,16 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
       </div>
 
       {/* Tables Grid */}
-      <div className="grid grid-cols-1 gap-4">
+      <div className="flex-1 min-h-0 flex flex-col">
         {/* Debt History Table */}
-        <Card>
-          <CardHeader className="py-3 px-4">
+        <Card className="flex-1 min-h-0 flex flex-col">
+          <CardHeader className="py-3 px-4 flex-shrink-0">
             <CardTitle className="text-sm font-medium">
               Lịch sử công nợ
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
-            <div className="max-h-[400px] overflow-auto">
+          <CardContent className="p-0 flex-1 min-h-0 flex flex-col">
+            <div className="flex-1 min-h-0 [&>div]:max-h-full [&>div]:overflow-y-auto">
               {isLoadingHistory ? (
                 <div className="p-4 space-y-2">
                   {[...Array(5)].map((_, i) => (
@@ -277,7 +277,7 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
                 </div>
               ) : (
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="sticky top-0 bg-background z-10 border-b">
                     <TableRow>
                       <TableHead className="text-xs h-8">Ngày</TableHead>
                       <TableHead className="text-xs h-8">Mã</TableHead>
