@@ -31,7 +31,8 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Loader2, DollarSign, CreditCard, Landmark, Check, ChevronsUpDown } from "lucide-react";
+import { Loader2, DollarSign, CreditCard, Landmark, Check, ChevronsUpDown, Plus } from "lucide-react";
+import { ExpenseCategoryModal } from "@/components/accounting/expense/ExpenseCategoryModal";
 import { useCreateCashPayment } from "@/hooks/use-cash";
 import { usePaymentMethods, useExpenseCategories } from "@/hooks/use-expense";
 import { useBankAccounts } from "@/hooks/use-bank";
@@ -63,6 +64,7 @@ export function CreateCashPaymentDialog({
   const [reason, setReason] = useState<string>("");
   const [expenseCategoryId, setExpenseCategoryId] = useState<string>("");
   const [vendorSearchOpen, setVendorSearchOpen] = useState(false);
+  const [createExpenseModalOpen, setCreateExpenseModalOpen] = useState(false);
 
   const { mutateAsync: createCashPayment, isPending } = useCreateCashPayment();
   const { data: paymentMethodsData } = usePaymentMethods({
@@ -102,7 +104,7 @@ export function CreateCashPaymentDialog({
       setBankAccountId("");
       setSelectedVendorId(vendorId || null);
       setReceiverName(vendorName || "");
-      setReason("Thanh toán tiền nhà cung cấp");
+      setReason(vendorId ? "Thanh toán tiền nhà cung cấp" : "");
       setExpenseCategoryId("");
     }
   }, [open, vendorId, vendorName]);
@@ -259,6 +261,7 @@ export function CreateCashPaymentDialog({
                           value="none"
                           onSelect={() => {
                             setSelectedVendorId(null);
+                            setReason("");
                             setVendorSearchOpen(false);
                           }}
                           className="cursor-pointer text-xs"
@@ -282,6 +285,7 @@ export function CreateCashPaymentDialog({
                               onSelect={() => {
                                 setSelectedVendorId(v.id);
                                 setReceiverName(v.companyName || v.name || "");
+                                setReason("Thanh toán tiền nhà cung cấp");
                                 setVendorSearchOpen(false);
                               }}
                               className="cursor-pointer text-xs py-2"
@@ -358,18 +362,29 @@ export function CreateCashPaymentDialog({
             <Label htmlFor="expenseCategoryId" className="text-sm font-medium">
               Khoản mục chi <span className="text-destructive">*</span>
             </Label>
-            <Select value={expenseCategoryId} onValueChange={setExpenseCategoryId}>
-              <SelectTrigger id="expenseCategoryId" className="h-9 bg-white">
-                <SelectValue placeholder="Chọn khoản mục chi" />
-              </SelectTrigger>
-              <SelectContent>
-                {expenseCategories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id?.toString() || ""}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              <Select value={expenseCategoryId} onValueChange={setExpenseCategoryId}>
+                <SelectTrigger id="expenseCategoryId" className="h-9 bg-white flex-1">
+                  <SelectValue placeholder="Chọn khoản mục chi" />
+                </SelectTrigger>
+                <SelectContent>
+                  {expenseCategories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id?.toString() || ""}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 shrink-0"
+                onClick={() => setCreateExpenseModalOpen(true)}
+              >
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -459,6 +474,15 @@ export function CreateCashPaymentDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+      <ExpenseCategoryModal
+        open={createExpenseModalOpen}
+        onOpenChange={setCreateExpenseModalOpen}
+        onSuccess={(newCategory) => {
+          if (newCategory?.id) {
+            setExpenseCategoryId(newCategory.id.toString());
+          }
+        }}
+      />
     </Dialog>
   );
 }
