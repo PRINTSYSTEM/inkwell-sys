@@ -137,13 +137,6 @@ export const MENU_ITEMS: MenuItem[] = [
         path: ROUTE_PATHS.DESIGN.SALE_LOOKUP,
         allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.SALE],
       },
-       {
-        id: "shared-addresses",
-        title: "Địa chỉ giao hàng",
-        icon: MapPin,
-        path: ROUTE_PATHS.ADMIN.SHARED_ADDRESSES,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
-      },
     ],
   },
 
