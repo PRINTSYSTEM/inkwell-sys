@@ -21,6 +21,7 @@ import {
   Image as ImageIcon,
   Maximize2,
   Trash2,
+  Loader2,
 } from "lucide-react";
 import {
   processClassificationLabels,
@@ -32,7 +33,7 @@ import { vi } from "date-fns/locale";
 
 interface DetailOrderInfoCardProps {
   order: any;
-  editingField: "totalQuantity" | "paperSize" | "notes" | null;
+  editingField: "totalQuantity" | "paperSize" | "notes" | "all" | null;
   inlineTotalQuantity: string;
   setInlineTotalQuantity: (val: string) => void;
   inlinePaperSizeId: string;
@@ -49,6 +50,7 @@ interface DetailOrderInfoCardProps {
   handleStartEditField: (
     field: "totalQuantity" | "paperSize" | "notes",
   ) => void;
+  handleStartEditAllFields: () => void;
   handleCancelEditField: () => void;
   handleSaveField: () => void;
   setIsUploadDialogOpen: (val: boolean) => void;
@@ -74,6 +76,7 @@ export function DetailOrderInfoCard({
   uniqueSpecifications,
   isUpdatingInfo,
   handleStartEditField,
+  handleStartEditAllFields,
   handleCancelEditField,
   handleSaveField,
   setIsUploadDialogOpen,
@@ -120,11 +123,22 @@ export function DetailOrderInfoCard({
 
   return (
     <Card className="relative h-full flex flex-col">
-      <CardHeader className="pb-1.5 px-4">
-        <CardTitle className="text-sm flex items-center gap-2">
-          <FileText className="h-3.5 w-3.5" />
+      <CardHeader className="pb-1.5 px-4 flex flex-row items-center justify-between space-y-0 gap-2">
+        <CardTitle className="text-sm flex items-center gap-2 whitespace-nowrap">
+          <FileText className="h-3.5 w-3.5 shrink-0" />
           Thông tin bình bài
         </CardTitle>
+        {order.status !== "completed" && editingField !== "all" && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-primary hover:bg-primary/5 shrink-0"
+            onClick={handleStartEditAllFields}
+            title="Cập nhật thông tin"
+          >
+            <Edit className="h-3.5 w-3.5" />
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="px-4 pb-4 pt-0 flex-1 flex flex-col gap-2">
         {/* Image Display - Narrower Aspect */}
@@ -209,6 +223,7 @@ export function DetailOrderInfoCard({
               className="flex items-center justify-between group cursor-pointer"
               onClick={() =>
                 order.status !== "completed" &&
+                editingField !== "all" &&
                 handleStartEditField("totalQuantity")
               }
             >
@@ -216,29 +231,31 @@ export function DetailOrderInfoCard({
                 Số giấy in
               </Label>
               <div className="flex items-center gap-1">
-                {editingField === "totalQuantity" ? (
+                {(editingField === "totalQuantity" || editingField === "all") ? (
                   <div className="flex gap-1 items-center">
                     <Input
                       type="number"
                       min="1"
                       value={inlineTotalQuantity}
                       onChange={(e) => setInlineTotalQuantity(e.target.value)}
-                      className="h-6 text-xs font-bold px-2 w-20"
+                      className="h-6 text-xs font-bold px-2 w-24"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") handleSaveField();
                         else if (e.key === "Escape") handleCancelEditField();
                       }}
-                      autoFocus
+                      autoFocus={editingField === "totalQuantity"}
                     />
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-5 px-1.5 text-[10px] text-green-600"
-                      onClick={handleSaveField}
-                      disabled={isUpdatingInfo}
-                    >
-                      Lưu
-                    </Button>
+                    {editingField !== "all" && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-5 px-1.5 text-[10px] text-green-600"
+                        onClick={handleSaveField}
+                        disabled={isUpdatingInfo}
+                      >
+                        Lưu
+                      </Button>
+                    )}
                   </div>
                 ) : (
                   <>
@@ -271,6 +288,7 @@ export function DetailOrderInfoCard({
               className="flex items-center justify-between group cursor-pointer"
               onClick={() =>
                 order.status !== "completed" &&
+                editingField !== "all" &&
                 handleStartEditField("paperSize")
               }
             >
@@ -278,8 +296,8 @@ export function DetailOrderInfoCard({
                 Khổ giấy
               </Label>
               <div className="flex items-center gap-1">
-                {editingField === "paperSize" ? (
-                  <div className="flex gap-1 items-center">
+                {(editingField === "paperSize" || editingField === "all") ? (
+                  <div className="flex gap-1.5 items-center">
                     <Select
                       value={inlinePaperSizeId}
                       onValueChange={setInlinePaperSizeId}
@@ -298,34 +316,23 @@ export function DetailOrderInfoCard({
                         ))}
                       </SelectContent>
                     </Select>
-                    {/* If custom selected, show input for manual size */}
-                    {inlinePaperSizeId === "custom" ? (
-                      <div className="flex items-center gap-2">
-                        <Input
-                          value={inlineCustomPaperSize}
-                          onChange={(e) =>
-                            setInlineCustomPaperSize(e.target.value)
-                          }
-                          placeholder="ví dụ: 90×90"
-                          className="h-6 text-xs px-2 w-28"
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleSaveField();
-                            else if (e.key === "Escape")
-                              handleCancelEditField();
-                          }}
-                          autoFocus
-                        />
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-5 px-1.5 text-[10px] text-green-600"
-                          onClick={handleSaveField}
-                          disabled={isUpdatingInfo}
-                        >
-                          Lưu
-                        </Button>
-                      </div>
-                    ) : (
+                    {inlinePaperSizeId === "custom" && (
+                      <Input
+                        value={inlineCustomPaperSize}
+                        onChange={(e) =>
+                          setInlineCustomPaperSize(e.target.value)
+                        }
+                        placeholder="ví dụ: 90×90"
+                        className="h-6 text-xs px-2 w-24"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSaveField();
+                          else if (e.key === "Escape")
+                            handleCancelEditField();
+                        }}
+                        autoFocus={editingField === "paperSize"}
+                      />
+                    )}
+                    {editingField !== "all" && (
                       <Button
                         size="sm"
                         variant="ghost"
@@ -472,7 +479,7 @@ export function DetailOrderInfoCard({
               <span className="text-[9px] font-bold uppercase tracking-widest text-amber-800/60 font-sans">
                 Ghi chú
               </span>
-              {order.status !== "completed" && editingField !== "notes" && (
+              {order.status !== "completed" && editingField !== "notes" && editingField !== "all" && (
                 <button
                   onClick={() => handleStartEditField("notes")}
                   className="text-amber-800/40 hover:text-amber-800 transition-colors"
@@ -481,35 +488,37 @@ export function DetailOrderInfoCard({
                 </button>
               )}
             </div>
-            {editingField === "notes" ? (
+            {(editingField === "notes" || editingField === "all") ? (
               <div className="space-y-1 mt-1">
                 <Textarea
                   value={inlineNotes}
                   onChange={(e) => setInlineNotes(e.target.value)}
                   rows={2}
-                  className="text-[12px] p-1.5 h-auto min-h-[40px]"
-                  autoFocus
+                  className="text-[12px] p-1.5 h-auto min-h-[40px] not-italic"
+                  autoFocus={editingField === "notes"}
                 />
-                <div className="flex gap-1 justify-end">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-5 px-1.5 text-[10px]"
-                    onClick={handleSaveField}
-                    disabled={isUpdatingInfo}
-                  >
-                    Lưu
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-5 px-1.5 text-[10px]"
-                    onClick={handleCancelEditField}
-                    disabled={isUpdatingInfo}
-                  >
-                    Hủy
-                  </Button>
-                </div>
+                {editingField !== "all" && (
+                  <div className="flex gap-1 justify-end">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-5 px-1.5 text-[10px]"
+                      onClick={handleSaveField}
+                      disabled={isUpdatingInfo}
+                    >
+                      Lưu
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-5 px-1.5 text-[10px]"
+                      onClick={handleCancelEditField}
+                      disabled={isUpdatingInfo}
+                    >
+                      Hủy
+                    </Button>
+                  </div>
+                )}
               </div>
             ) : (
               <p className="line-clamp-3">
@@ -517,6 +526,29 @@ export function DetailOrderInfoCard({
               </p>
             )}
           </div>
+
+          {editingField === "all" && (
+            <div className="flex gap-2 justify-end pt-1">
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-3 text-xs"
+                onClick={handleCancelEditField}
+                disabled={isUpdatingInfo}
+              >
+                Hủy
+              </Button>
+              <Button
+                size="sm"
+                className="h-7 px-3 text-xs"
+                onClick={handleSaveField}
+                disabled={isUpdatingInfo}
+              >
+                {isUpdatingInfo && <Loader2 className="h-3 w-3 animate-spin mr-1 shrink-0" />}
+                Lưu tất cả
+              </Button>
+            </div>
+          )}
 
           <div className="pt-1.5 space-y-1.5 flex-none mb-auto">
             {order.proofingFileUrl ? (

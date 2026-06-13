@@ -86,13 +86,6 @@ interface DetailDesignsListCardProps {
   setRemoveDesignTarget: (data: any) => void;
   setIsConfirmRemoveDesignDialogOpen: (val: boolean) => void;
   isRemovingDesign: boolean;
-  isQuantityEditOpen: boolean;
-  handleOpenQuantityEdit: () => void;
-  setIsQuantityEditOpen: (val: boolean) => void;
-  updateTotalQuantity: string;
-  setUpdateTotalQuantity: (val: string) => void;
-  updateDesignQuantities: Record<number, string>;
-  setUpdateDesignQuantities: (val: (prev: any) => any) => void;
   onReject?: (pod: any) => void;
   isRejecting?: boolean;
   onFindDie?: (design: any, dimensions: string) => void;
@@ -116,13 +109,6 @@ export function DetailDesignsListCard({
   setRemoveDesignTarget,
   setIsConfirmRemoveDesignDialogOpen,
   isRemovingDesign,
-  isQuantityEditOpen,
-  handleOpenQuantityEdit,
-  setIsQuantityEditOpen,
-  updateTotalQuantity,
-  setUpdateTotalQuantity,
-  updateDesignQuantities,
-  setUpdateDesignQuantities,
   onReject,
   isRejecting,
   onFindDie,
@@ -177,7 +163,7 @@ export function DetailDesignsListCard({
           <Table>
             <TableHeader>
               <TableRow className="h-9">
-                <TableHead className="h-9 px-6 text-[10px] w-12">STT</TableHead>
+                <TableHead className="h-9 px-2 text-[10px] w-10 text-center">STT</TableHead>
                 <TableHead className="h-9 px-2 text-[10px]">Ảnh</TableHead>
                 <TableHead className="h-9 px-2 text-[10px]">Mã hàng</TableHead>
                 <TableHead className="h-9 px-2 text-[10px]">
@@ -187,8 +173,6 @@ export function DetailDesignsListCard({
                 <TableHead className="h-9 px-2 text-[10px]">
                   Số mặt in
                 </TableHead>
-                <TableHead className="h-9 px-2 text-[10px]">Quy cách</TableHead>
-                <TableHead className="h-9 px-2 text-[10px]">Cán màng</TableHead>
                 <TableHead className="h-9 px-2 text-[10px]">
                   Quy cách đầy đủ
                 </TableHead>
@@ -392,7 +376,7 @@ export function DetailDesignsListCard({
                   <HoverCard key={pod.id} openDelay={300}>
                     <HoverCardTrigger asChild>
                       <TableRow className="h-14">
-                      <TableCell className="px-6 py-1">
+                      <TableCell className="px-2 py-1 text-center">
                         <p className="text-xs text-muted-foreground">
                           {index + 1}
                         </p>
@@ -466,24 +450,6 @@ export function DetailDesignsListCard({
                         </span>
                       </TableCell>
                       <TableCell className="px-2 py-1">
-                        <span className="text-xs">
-                          {pod.design?.processClassification
-                            ? processClassificationLabels[
-                                pod.design.processClassification
-                              ] || pod.design.processClassification
-                            : "—"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-2 py-1">
-                        <span className="text-xs">
-                          {pod.design?.laminationType
-                            ? laminationTypeLabels[
-                                pod.design.laminationType
-                              ] || pod.design.laminationType
-                            : "—"}
-                        </span>
-                      </TableCell>
-                      <TableCell className="px-2 py-1">
                         <div className="flex flex-wrap gap-1">
                           {(() => {
                             const rawSpec =
@@ -546,13 +512,13 @@ export function DetailDesignsListCard({
                           })()}
                         </div>
                       </TableCell>
-                      <TableCell className="px-6 py-1 text-right">
-                        <div className="flex items-center justify-end gap-1">
+                      <TableCell className="px-6 py-2 text-right">
+                        <div className="flex flex-col gap-1 items-stretch w-28 ml-auto py-1">
                           {pod.design?.id && (
                             <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 px-2 justify-start gap-1.5 text-[11px] font-normal"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 const dims = formatDesignDimensions(
@@ -564,14 +530,15 @@ export function DetailDesignsListCard({
                               }}
                               title="Tìm khuôn liên quan"
                             >
-                              <Search className="h-3.5 w-3.5" />
+                              <Search className="h-3 w-3 text-muted-foreground shrink-0" />
+                              <span className="truncate">Tìm khuôn</span>
                             </Button>
                           )}
                           {order && order.status !== "completed" && pod.id && (
                             <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 px-2 justify-start gap-1.5 text-[11px] font-normal"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setEditingQuantityDesignId(pod.id!);
@@ -585,14 +552,15 @@ export function DetailDesignsListCard({
                               }
                               title="Cập nhật số lượng"
                             >
-                              <Edit className="h-3.5 w-3.5" />
+                              <Edit className="h-3 w-3 text-muted-foreground shrink-0" />
+                              <span className="truncate">Sửa số lượng</span>
                             </Button>
                           )}
                           {pod.design?.designFileUrl && (
                             <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 px-2 justify-start gap-1.5 text-[11px] font-normal"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 downloadFile(
@@ -600,8 +568,10 @@ export function DetailDesignsListCard({
                                   pod.design.code || `DES-${pod.design.id}`,
                                 );
                               }}
+                              title="Tải thiết kế"
                             >
-                              <Download className="h-3.5 w-3.5" />
+                              <Download className="h-3 w-3 text-muted-foreground shrink-0" />
+                              <span className="truncate">Tải thiết kế</span>
                             </Button>
                           )}
                           {order &&
@@ -609,9 +579,9 @@ export function DetailDesignsListCard({
                             pod.id &&
                             onReject && (
                               <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-orange-500 hover:text-orange-600 hover:bg-orange-50"
+                                variant="outline"
+                                size="sm"
+                                className="h-7 px-2 justify-start gap-1.5 text-[11px] font-normal text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-orange-100 hover:border-orange-200"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   onReject(pod);
@@ -620,17 +590,18 @@ export function DetailDesignsListCard({
                                 title="Hoàn hàng về phòng thiết kế"
                               >
                                 {isRejecting ? (
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  <Loader2 className="h-3 w-3 animate-spin shrink-0" />
                                 ) : (
-                                  <RotateCcw className="h-3.5 w-3.5" />
+                                  <RotateCcw className="h-3 w-3 shrink-0" />
                                 )}
+                                <span className="truncate">Hoàn hàng</span>
                               </Button>
                             )}
                           {order && order.status !== "completed" && pod.id && (
                             <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                              variant="outline"
+                              size="sm"
+                              className="h-7 px-2 justify-start gap-1.5 text-[11px] font-normal text-destructive hover:text-destructive hover:bg-destructive/5 border-destructive/10 hover:border-destructive/20"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setRemoveDesignTarget({
@@ -641,8 +612,10 @@ export function DetailDesignsListCard({
                                 setIsConfirmRemoveDesignDialogOpen(true);
                               }}
                               disabled={isRemovingDesign}
+                              title="Xóa mã hàng"
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <Trash2 className="h-3 w-3 shrink-0" />
+                              <span className="truncate">Xóa mã hàng</span>
                             </Button>
                           )}
                         </div>
@@ -658,147 +631,6 @@ export function DetailDesignsListCard({
             </TableBody>
           </Table>
         </div>
-
-        {order.status !== "completed" && (
-          <div className="border-t px-6 py-6 space-y-3">
-            {!isQuantityEditOpen && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5 h-7 text-xs w-full"
-                onClick={handleOpenQuantityEdit}
-              >
-                <Edit className="h-3 w-3" />
-                Cập nhật số lượng mã hàng
-              </Button>
-            )}
-
-            {isQuantityEditOpen && (
-              <div className="rounded-md bg-muted/30 border px-3 py-3 space-y-3">
-                <div className="space-y-2">
-                  <Label htmlFor="update-total-quantity">Số giấy in</Label>
-                  <Input
-                    id="update-total-quantity"
-                    type="number"
-                    min="1"
-                    value={updateTotalQuantity}
-                    onChange={(e) => setUpdateTotalQuantity(e.target.value)}
-                    placeholder="Nhập số giấy in..."
-                  />
-                </div>
-
-                {orderDesigns.length > 0 && (
-                  <div className="space-y-2">
-                    <Label>Cập nhật số lượng theo mã hàng</Label>
-                    <div className="space-y-2 max-h-56 overflow-y-auto border rounded-lg p-3 bg-background/40">
-                      {orderDesigns.map((pod) => {
-                        const designId = pod.id;
-                        if (!designId) return null;
-
-                        const currentQty =
-                          updateDesignQuantities[designId] || "";
-                        const hasChanged =
-                          currentQty &&
-                          parseInt(currentQty, 10) !== pod.quantity;
-                        const isUpdating = updatingDesignId === designId;
-
-                        return (
-                          <div
-                            key={designId}
-                            className="flex items-center gap-2 p-2 rounded border bg-muted/30"
-                          >
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium text-sm truncate">
-                                {pod.design?.code || `Design #${designId}`}
-                              </div>
-                              <div className="text-xs text-muted-foreground truncate">
-                                {pod.design?.designName || "—"}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                Hiện tại: {pod.quantity?.toLocaleString() || 0}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Input
-                                type="number"
-                                min="1"
-                                value={currentQty}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  setUpdateDesignQuantities((prev) => ({
-                                    ...prev,
-                                    [designId]: value,
-                                  }));
-                                }}
-                                onKeyDown={(e) => {
-                                  if (
-                                    e.key === "Enter" &&
-                                    hasChanged &&
-                                    !isUpdating
-                                  ) {
-                                    handleUpdateDesignQuantity(designId);
-                                  }
-                                }}
-                                onBlur={() => {
-                                  if (hasChanged && !isUpdating) {
-                                    handleUpdateDesignQuantity(designId);
-                                  }
-                                }}
-                                placeholder={
-                                  pod.quantity?.toString() || "Số lượng"
-                                }
-                                className="w-24 text-sm"
-                                disabled={isUpdating}
-                              />
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-8 px-2 text-xs shrink-0"
-                                onClick={() =>
-                                  handleUpdateDesignQuantity(designId)
-                                }
-                                disabled={
-                                  !hasChanged ||
-                                  isUpdating ||
-                                  !currentQty ||
-                                  parseInt(currentQty, 10) < 1
-                                }
-                              >
-                                {isUpdating ? (
-                                  <Loader2 className="h-3 w-3 animate-spin" />
-                                ) : (
-                                  "Cập nhật"
-                                )}
-                              </Button>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Nhập số lượng mới và nhấn "Cập nhật" hoặc Enter cho từng
-                      mã hàng
-                    </p>
-                  </div>
-                )}
-
-                <div className="flex justify-end gap-2 pt-2 border-t mt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setIsQuantityEditOpen(false);
-                      setUpdateDesignQuantities((prev) => ({}));
-                    }}
-                    disabled={updatingDesignId !== null}
-                  >
-                    Đóng
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
       </CardContent>
     </Card>
   );

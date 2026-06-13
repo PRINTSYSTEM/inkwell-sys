@@ -470,7 +470,7 @@ export default function DeliveryNoteListPage() {
   };
 
   const [viewMode, setViewMode] = useState<"orders" | "delivery-notes">(
-    "orders",
+    "delivery-notes",
   );
 
   // Orders state
@@ -486,7 +486,30 @@ export default function DeliveryNoteListPage() {
   // Delivery notes state
   const [deliveryNoteStatusFilter, setDeliveryNoteStatusFilter] =
     useState<string>("all");
+  const [deliveryNoteSearchQuery, setDeliveryNoteSearchQuery] = useState("");
   const [deliveryNotePage, setDeliveryNotePage] = useState(1);
+
+  // Query background notes to calculate stats
+  const { data: allNotesForStats } = useDeliveryNotes({ pageSize: 200 });
+  const stats = useMemo(() => {
+    const items = allNotesForStats?.items || [];
+    const total = allNotesForStats?.total || items.length;
+    const todayStr = format(new Date(), "yyyy-MM-dd");
+    const todayCount = items.filter(note => note.createdAt && note.createdAt.startsWith(todayStr)).length;
+    const deliveredCount = items.filter(note => getDisplayStatus(note) === "completed").length;
+    const pendingCount = items.filter(note => ["pending", "in_transit", "ready_to_ship", "handed_over", "confirmed"].includes(getDisplayStatus(note) || "")).length;
+    const failedCount = items.filter(note => ["failed", "failed_reschedule", "cancelled", "returned", "partial"].includes(getDisplayStatus(note) || "")).length;
+    const successRate = total > 0 ? Math.round((deliveredCount / total) * 100) : 0;
+
+    return {
+      total,
+      todayCount,
+      deliveredCount,
+      successRate,
+      pendingCount,
+      failedCount,
+    };
+  }, [allNotesForStats]);
 
   const itemsPerPage = 10;
 
@@ -496,6 +519,23 @@ export default function DeliveryNoteListPage() {
   const [selectedOrderDetailIds, setSelectedOrderDetailIds] = useState<Set<number>>(new Set());
   const [deliveryQtys, setDeliveryQtys] = useState<Record<number, number>>({});
   const [lineNotes, setLineNotes] = useState<Record<number, string>>({});
+
+  const { data: customerAddresses } = useCustomerAddresses(
+    selectedCustomerId,
+    !!selectedCustomerId
+  );
+
+  // Auto-populate default address in Create dialog
+  useEffect(() => {
+    if (isCreateDialogOpen && customerAddresses && !selectedAddressId) {
+      const defaultAddr = customerAddresses.find((a) => a.isDefault);
+      if (defaultAddr) {
+        setSelectedAddressId(defaultAddr.id);
+      } else if (customerAddresses.length > 0) {
+        setSelectedAddressId(customerAddresses[0].id);
+      }
+    }
+  }, [isCreateDialogOpen, customerAddresses, selectedAddressId, setSelectedAddressId]);
 
   // Data fetching for all available orders
   const {
@@ -578,6 +618,7 @@ export default function DeliveryNoteListPage() {
     pageSize: itemsPerPage,
     status:
       deliveryNoteStatusFilter === "all" ? undefined : deliveryNoteStatusFilter,
+    searchTerm: deliveryNoteSearchQuery || undefined,
   });
 
   const handleToggleSelectNote = (noteId?: number) => {
@@ -674,17 +715,26 @@ export default function DeliveryNoteListPage() {
     setDeliveryQtys({});
   };
 
-  const handleToggleOrderDetail = (orderDetailId: number) => {
+  const handleToggleOrderDetail = (orderDetailId: number | number[]) => {
     if (orderDetailId === -1) {
       setSelectedOrderDetailIds(new Set());
       return;
     }
     setSelectedOrderDetailIds((prev) => {
       const newSet = new Set(prev);
-      if (newSet.has(orderDetailId)) {
-        newSet.delete(orderDetailId);
+      if (Array.isArray(orderDetailId)) {
+        const allSelected = orderDetailId.every(id => newSet.has(id));
+        if (allSelected) {
+          orderDetailId.forEach(id => newSet.delete(id));
+        } else {
+          orderDetailId.forEach(id => newSet.add(id));
+        }
       } else {
-        newSet.add(orderDetailId);
+        if (newSet.has(orderDetailId)) {
+          newSet.delete(orderDetailId);
+        } else {
+          newSet.add(orderDetailId);
+        }
       }
       return newSet;
     });
@@ -918,17 +968,125 @@ export default function DeliveryNoteListPage() {
       navigate(`/delivery-notes/${id}`);
     }
   };
-
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          Phiếu giao hàng
-        </h1>
-        <p className="text-muted-foreground">
-          Quản lý đơn hàng và phiếu giao hàng
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-1.5 text-xs font-bold text-stone-500 uppercase tracking-wider mb-1">
+            <Truck className="h-3.5 w-3.5" />
+            VẬN HÀNH GIAO HÀNG
+          </div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-stone-900 dark:text-stone-50">
+            Phiếu giao hàng
+          </h1>
+          <p className="text-sm text-stone-500 mt-1">
+            Theo dõi KPI, lọc nhanh và tạo phiếu chỉ trong vài cú nhấp.
+          </p>
+        </div>
+      </div>
+
+      {/* KPI Cards Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        {/* Total Notes */}
+        <Card className="border-0 shadow-sm bg-white dark:bg-stone-900">
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <Package className="h-4 w-4 text-primary" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
+                Tổng phiếu
+              </p>
+              <p className="text-base sm:text-xl font-bold mt-1 leading-none text-stone-900 dark:text-stone-50">
+                {stats.total}
+              </p>
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground font-medium mt-1 leading-none truncate">
+                30 ngày gần nhất
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Created Today */}
+        <Card className="border-0 shadow-sm bg-white dark:bg-stone-900">
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center shrink-0">
+              <Plus className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
+                Tạo hôm nay
+              </p>
+              <p className="text-base sm:text-xl font-bold mt-1 leading-none text-stone-900 dark:text-stone-50">
+                {stats.todayCount}
+              </p>
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground font-medium mt-1 leading-none truncate">
+                {format(new Date(), "dd/MM/yyyy")}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Delivered (Success) */}
+        <Card className="border-0 shadow-sm bg-white dark:bg-stone-900">
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-emerald-50 dark:bg-emerald-950/20 flex items-center justify-center shrink-0">
+              <Check className="h-4 w-4 text-emerald-500" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
+                Đã giao
+              </p>
+              <p className="text-base sm:text-xl font-bold mt-1 leading-none text-emerald-600 dark:text-emerald-400">
+                {stats.deliveredCount}
+              </p>
+              <p className="text-[9px] sm:text-[10px] text-emerald-600 dark:text-emerald-400 font-bold mt-1 leading-none truncate">
+                {stats.successRate}% thành công
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Pending / Transit */}
+        <Card className="border-0 shadow-sm bg-white dark:bg-stone-900">
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-stone-100 dark:bg-stone-800 flex items-center justify-center shrink-0">
+              <RefreshCw className="h-3.5 w-3.5 text-stone-600 dark:text-stone-400" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
+                Chờ / Đang giao
+              </p>
+              <p className="text-base sm:text-xl font-bold mt-1 leading-none text-stone-900 dark:text-stone-50">
+                {stats.pendingCount}
+              </p>
+              <p className="text-[9px] sm:text-[10px] text-muted-foreground font-medium mt-1 leading-none truncate">
+                Cần xử lý
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Failed */}
+        <Card className="border-0 shadow-sm bg-white dark:bg-stone-900">
+          <CardContent className="p-3 flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-destructive/10 dark:bg-red-950/20 flex items-center justify-center shrink-0">
+              <X className="h-4 w-4 text-destructive" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
+                Thất bại
+              </p>
+              <p className="text-base sm:text-xl font-bold mt-1 leading-none text-destructive">
+                {stats.failedCount}
+              </p>
+              <p className="text-[9px] sm:text-[10px] text-destructive font-medium mt-1 leading-none truncate">
+                Cần hẹn lại / hủy
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Tabs */}
@@ -936,9 +1094,21 @@ export default function DeliveryNoteListPage() {
         value={viewMode}
         onValueChange={(value) => setViewMode(value as "orders" | "delivery-notes")}
       >
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="orders">Tạo Phiếu Giao Hàng</TabsTrigger>
-          <TabsTrigger value="delivery-notes">Phiếu giao hàng đã tạo</TabsTrigger>
+        <TabsList className="flex bg-stone-100/80 dark:bg-stone-900/80 p-1 rounded-full w-fit mb-6">
+          <TabsTrigger
+            value="delivery-notes"
+            className="rounded-full px-6 py-2 text-sm font-semibold transition-all data-[state=active]:bg-white data-[state=active]:text-stone-900 data-[state=active]:shadow-sm text-stone-500 hover:text-stone-900 dark:data-[state=active]:bg-stone-800 dark:data-[state=active]:text-stone-50"
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            Phiếu đã tạo
+          </TabsTrigger>
+          <TabsTrigger
+            value="orders"
+            className="rounded-full px-6 py-2 text-sm font-semibold transition-all data-[state=active]:bg-white data-[state=active]:text-stone-900 data-[state=active]:shadow-sm text-stone-500 hover:text-stone-900 dark:data-[state=active]:bg-stone-800 dark:data-[state=active]:text-stone-50"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Tạo phiếu
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="orders" className="mt-6">
@@ -958,6 +1128,7 @@ export default function DeliveryNoteListPage() {
             selectedOrders={selectedOrders}
             totalSelectedAmount={totalSelectedAmount}
             handleCreateDeliveryNote={handleCreateDeliveryNote}
+            onImageClick={handleImageClick}
           />
         </TabsContent>
 
@@ -965,6 +1136,8 @@ export default function DeliveryNoteListPage() {
           <DeliveryNotesView
             deliveryNoteStatusFilter={deliveryNoteStatusFilter}
             setDeliveryNoteStatusFilter={setDeliveryNoteStatusFilter}
+            deliveryNoteSearchQuery={deliveryNoteSearchQuery}
+            setDeliveryNoteSearchQuery={setDeliveryNoteSearchQuery}
             deliveryNotesData={deliveryNotesData}
             deliveryNotesLoading={deliveryNotesLoading}
             deliveryNotesError={deliveryNotesError}
@@ -1054,10 +1227,11 @@ interface OrdersViewProps {
   currentPage: number;
   setCurrentPage: (page: number) => void;
   selectedOrderDetailIds: Set<number>;
-  handleToggleOrderDetail: (id: number) => void;
+  handleToggleOrderDetail: (id: number | number[]) => void;
   selectedOrders: Array<SelectedOrderDetail>;
   totalSelectedAmount: number;
   handleCreateDeliveryNote: () => void;
+  onImageClick: (url: string, e: React.MouseEvent) => void;
 }
 
 function OrdersView({
@@ -1076,13 +1250,14 @@ function OrdersView({
   selectedOrders,
   totalSelectedAmount,
   handleCreateDeliveryNote,
+  onImageClick,
 }: OrdersViewProps) {
   const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set());
 
   // Auto-expand all orders when the list loads or changes
   useEffect(() => {
     if (ordersList.length > 0) {
-      setExpandedOrders(new Set(ordersList.map((o) => o.orderId)));
+      setExpandedOrders(new Set(ordersList.map((o) => o.orderId).filter((id): id is number => id != null)));
     }
   }, [ordersList]);
 
@@ -1096,266 +1271,277 @@ function OrdersView({
     setExpandedOrders(next);
   };
 
+  const selectedOrdersCount = useMemo(() => {
+    return new Set(selectedOrders.map(o => o.orderId)).size;
+  }, [selectedOrders]);
+
   return (
-    <div className="space-y-4">
-      {/* Selection Summary */}
-      {selectedOrderDetailIds.size > 0 && (
-        <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl flex items-center justify-between animate-in fade-in zoom-in-95 duration-200">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                <Package className="h-4 w-4 text-primary" />
-              </div>
-              <p className="text-sm">
-                Đã chọn <span className="font-bold">{selectedOrderDetailIds.size}</span> sản phẩm
-              </p>
+    <div className="space-y-4 pb-24">
+      {/* Toolbar */}
+      <div className="flex flex-col md:flex-row gap-3 items-center justify-between p-4 bg-white dark:bg-stone-900 rounded-xl border border-stone-200/80 dark:border-stone-850 shadow-sm">
+        <div className="relative flex-1 w-full max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
+          <Input
+            placeholder="Tìm đơn hàng, khách hàng..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 h-10 text-sm border-stone-200 dark:border-stone-800 bg-transparent rounded-lg focus-visible:ring-primary focus-visible:border-primary"
+          />
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => refetchOrders()}
+          disabled={ordersLoading}
+          className="h-10 border-stone-200 dark:border-stone-800 font-semibold w-full md:w-auto"
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${ordersLoading ? "animate-spin" : ""}`} />
+          Làm mới
+        </Button>
+      </div>
+
+      {/* Error Alert */}
+      {ordersError && (
+        <Alert variant="destructive" className="rounded-xl">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Lỗi</AlertTitle>
+          <AlertDescription>
+            {ordersErrorObj instanceof Error ? ordersErrorObj.message : "Có lỗi xảy ra khi tải danh sách đơn hàng"}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Orders List */}
+      <div className="space-y-4">
+        {ordersLoading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i} className="border border-stone-200 dark:border-stone-800 rounded-xl overflow-hidden p-5 space-y-4 bg-white dark:bg-stone-900">
+              <div className="flex justify-between items-center"><Skeleton className="h-6 w-1/3" /><Skeleton className="h-8 w-1/4" /></div>
+              <Skeleton className="h-12 w-full" />
+            </Card>
+          ))
+        ) : ordersList.length === 0 ? (
+          <Card className="border border-stone-200/80 dark:border-stone-800 rounded-xl p-12 text-center bg-white dark:bg-stone-900 shadow-xs">
+            <div className="flex flex-col items-center gap-3">
+              <Package className="h-10 w-10 text-stone-300 dark:text-stone-700" />
+              <p className="text-stone-500 font-semibold">Không tìm thấy đơn hàng nào khả dụng</p>
+              <p className="text-stone-400 text-xs mt-0.5">Tất cả đơn hàng đã được giao hoặc không trùng khớp với tìm kiếm</p>
             </div>
-            <div className="h-6 w-px bg-primary/20" />
-            <p className="text-sm">
-              Tổng cộng: <span className="font-bold text-primary">{formatCurrency(totalSelectedAmount)}</span>
-            </p>
+          </Card>
+        ) : (
+          ordersList.map((order) => {
+            if (order.orderId == null) return null;
+            const isExpanded = expandedOrders.has(order.orderId);
+            
+            const detailIds = (order.details || []).map((d) => d.orderDetailId).filter((id): id is number => id != null);
+            const selectedCount = detailIds.filter((id) => selectedOrderDetailIds.has(id)).length;
+            const isAllSelected = detailIds.length > 0 && selectedCount === detailIds.length;
+            const isSomeSelected = selectedCount > 0 && selectedCount < detailIds.length;
+
+            const totalOrderQty = (order.details || []).reduce((sum, d) => sum + (d.remainingToDeliver || d.orderedQty || 0), 0);
+
+            return (
+              <div
+                key={order.orderId}
+                className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl overflow-hidden shadow-sm transition-all duration-200"
+              >
+                {/* Card Header */}
+                <div
+                  onClick={() => toggleOrder(order.orderId!)}
+                  className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-stone-50/40 dark:hover:bg-stone-900/60"
+                >
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div onClick={(e) => e.stopPropagation()} className="flex items-center">
+                      <Checkbox
+                        checked={isAllSelected}
+                        onCheckedChange={() => handleToggleOrderDetail(detailIds)}
+                        className="rounded"
+                      />
+                    </div>
+                    <div className="text-stone-400 hover:text-stone-600">
+                      {isExpanded ? (
+                        <ChevronDown className="h-4.5 w-4.5" />
+                      ) : (
+                        <ChevronRight className="h-4.5 w-4.5" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-stone-900 dark:text-stone-50 font-mono text-sm">
+                          {order.orderCode}
+                        </span>
+                        <Badge variant="outline" className={`h-5 text-[10px] font-bold px-2 ${getStatusColorClass(order.status)}`}>
+                          {orderStatusLabels[order.status || ""] || order.status}
+                        </Badge>
+                        <span className="text-[11px] text-stone-400">
+                          {formatDate(order.createdAt)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1 text-xs text-stone-500 mt-1">
+                        <User className="h-3.5 w-3.5 text-stone-400" />
+                        <span className="truncate font-semibold">{order.customerName}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 shrink-0">
+                    <div className="text-right">
+                      <div className="text-xs text-stone-400 font-medium">
+                        x{new Intl.NumberFormat('vi-VN').format(totalOrderQty)} ({order.details?.length || 0} mã)
+                      </div>
+                      <div className="font-extrabold text-stone-900 dark:text-stone-50 mt-0.5 text-sm tabular-nums">
+                        {formatCurrency(order.totalAmount || 0)}
+                      </div>
+                    </div>
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleOrderDetail(detailIds);
+                        }}
+                        className="text-xs font-semibold h-8 border-stone-200 dark:border-stone-800 hover:bg-stone-50 text-stone-700 dark:text-stone-300"
+                      >
+                        Chọn tất cả sản phẩm
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card Collapsible Content */}
+                {isExpanded && order.details && order.details.length > 0 && (
+                  <div className="border-t border-stone-100 dark:border-stone-850 bg-stone-50/10 dark:bg-stone-900/30 p-2 space-y-2">
+                    {order.details.map((detail) => {
+                      if (detail.orderDetailId == null) return null;
+                      const isChecked = selectedOrderDetailIds.has(detail.orderDetailId);
+                      return (
+                        <div
+                          key={detail.orderDetailId}
+                          onClick={() => handleToggleOrderDetail(detail.orderDetailId!)}
+                          className={`flex items-center justify-between p-3 rounded-lg border transition-all duration-150 cursor-pointer ${
+                            isChecked
+                              ? "border-primary/20 bg-primary/[0.03] dark:bg-primary/[0.02]"
+                              : "border-stone-150 dark:border-stone-850 bg-white dark:bg-stone-900 hover:bg-stone-50/50 dark:hover:bg-stone-950/50"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div onClick={(e) => e.stopPropagation()} className="flex items-center">
+                              <Checkbox
+                                checked={isChecked}
+                                onCheckedChange={() => handleToggleOrderDetail(detail.orderDetailId!)}
+                                className="rounded"
+                              />
+                            </div>
+                            <div className="h-8 w-8 rounded-lg bg-stone-100 dark:bg-stone-800 border flex items-center justify-center flex-shrink-0 overflow-hidden relative">
+                              {detail.designImageUrl ? (
+                                <img
+                                  src={detail.designImageUrl}
+                                  alt={detail.designCode || "Thiết kế"}
+                                  className="h-full w-full object-cover cursor-zoom-in"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onImageClick(detail.designImageUrl!, e);
+                                  }}
+                                />
+                              ) : (
+                                <ImageIcon className="h-4 w-4 text-stone-400" />
+                              )}
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-mono font-black text-[11px] uppercase leading-none text-stone-800 dark:text-stone-200">
+                                {detail.designCode}
+                              </span>
+                              <span className="text-[11px] text-stone-500 font-medium mt-1 truncate max-w-[280px] md:max-w-[400px]">
+                                {detail.designName}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-6 shrink-0 ml-4">
+                            <div className="text-right text-xs">
+                              <span className="text-stone-400 font-medium mr-1">SL:</span>
+                              <span className="font-bold text-stone-800 dark:text-stone-200 tabular-nums">
+                                {new Intl.NumberFormat('vi-VN').format(detail.orderedQty ?? 0)}
+                              </span>
+                            </div>
+                            <div className="text-right font-extrabold text-stone-800 dark:text-stone-200 text-xs w-24 tabular-nums">
+                              {formatCurrency(detail.unitPrice ? (detail.orderedQty ?? 0) * detail.unitPrice : 0)}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="px-4 py-3 border border-stone-200 dark:border-stone-800 rounded-xl bg-white dark:bg-stone-900 flex items-center justify-between flex-wrap gap-4 shadow-xs">
+          <div className="text-xs text-stone-500 font-medium">
+             Trang {currentPage} / {totalPages}
           </div>
           <div className="flex items-center gap-2">
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
-              onClick={() => handleToggleOrderDetail(-1)}
-              className="h-9 text-red-600 hover:bg-red-50 hover:text-red-700 font-bold"
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1}
+              className="h-8 w-8 p-0 border-stone-200"
             >
-              Hủy
+              <ChevronLeft className="h-4 w-4" />
             </Button>
+            <div className="text-xs font-semibold bg-stone-50 border px-3 py-1.5 rounded-md min-w-[80px] text-center">
+              Trang {currentPage} / {totalPages}
+            </div>
             <Button
+              variant="outline"
               size="sm"
-              className="h-9 px-6 font-bold bg-primary hover:bg-primary/90"
-              onClick={handleCreateDeliveryNote}
+              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              disabled={currentPage === totalPages}
+              className="h-8 w-8 p-0 border-stone-200"
             >
-              TIẾP TỤC
-              <ChevronRight className="h-4 w-4 ml-1" />
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
       )}
 
-      {/* Main Content Card */}
-      <div className="flex flex-col bg-background rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-        {/* Toolbar */}
-        <div className="p-4 border-b border-slate-200 dark:border-slate-800 bg-muted/5 flex items-center gap-3">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Tìm theo mã đơn, khách hàng..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9 text-sm"
-            />
+      {/* Floating Selection Action Bar */}
+      {selectedOrderDetailIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-3xl bg-white dark:bg-stone-900 border border-stone-250 dark:border-stone-800 shadow-xl rounded-full px-6 py-4 flex items-center justify-between z-50 animate-in slide-in-from-bottom-6 fade-in duration-300">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <span className="text-sm text-stone-600 dark:text-stone-400 font-medium">
+              Đã chọn <strong className="text-primary font-bold">{selectedOrderDetailIds.size}</strong> sản phẩm từ <strong className="text-stone-800 dark:text-stone-250 font-bold">{selectedOrdersCount}</strong> đơn
+            </span>
+            <span className="text-stone-300 hidden sm:inline">|</span>
+            <span className="text-sm font-black text-primary tabular-nums">
+              {formatCurrency(totalSelectedAmount)}
+            </span>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetchOrders()}
-            disabled={ordersLoading}
-            className="h-9"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${ordersLoading ? "animate-spin" : ""}`} />
-            Làm mới
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleToggleOrderDetail(-1)}
+              className="text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 font-bold text-xs hover:bg-transparent h-9 px-3 rounded-full"
+            >
+              Bỏ chọn
+            </Button>
+            <Button
+              onClick={handleCreateDeliveryNote}
+              className="bg-primary hover:bg-primary/90 text-white font-bold text-xs rounded-full px-5 py-2.5 h-9 shadow-sm"
+            >
+              Tạo phiếu giao hàng ({selectedOrderDetailIds.size})
+            </Button>
+          </div>
         </div>
-
-        {/* Error Alert */}
-        {ordersError && (
-          <div className="p-4">
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Lỗi</AlertTitle>
-              <AlertDescription>
-                {ordersErrorObj instanceof Error ? ordersErrorObj.message : "Có lỗi xảy ra khi tải danh sách đơn hàng"}
-              </AlertDescription>
-            </Alert>
-          </div>
-        )}
-
-        <div className="flex-1 overflow-auto">
-          <Table>
-            <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-900/95 backdrop-blur-sm z-10 border-b border-slate-200 dark:border-slate-800">
-              <TableRow className="hover:bg-transparent border-slate-200 dark:border-slate-800">
-                <TableHead className="w-[40px]"></TableHead>
-                <TableHead className="w-[120px] font-semibold text-slate-700 dark:text-slate-300">Đơn hàng</TableHead>
-                <TableHead className="font-semibold text-slate-700 dark:text-slate-300">Khách hàng</TableHead>
-                <TableHead className="text-center font-semibold text-slate-700 dark:text-slate-300">Trạng thái</TableHead>
-                <TableHead className="text-center font-semibold text-slate-700 dark:text-slate-300">Số lượng bài</TableHead>
-                <TableHead className="text-right font-semibold text-slate-700 dark:text-slate-300">Thành tiền</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {ordersLoading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell colSpan={6}><Skeleton className="h-12 w-full" /></TableCell>
-                  </TableRow>
-                ))
-              ) : ordersList.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="h-48 text-center"
-                  >
-                    <div className="flex flex-col items-center gap-3">
-                      <Package className="h-10 w-10 text-slate-200" />
-                      <p className="text-slate-500 font-medium">Không tìm thấy đơn hàng nào khả dụng</p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                ordersList.map((order) => {
-                  const isExpanded = expandedOrders.has(order.orderId);
-                  return (
-                    <React.Fragment key={order.orderId}>
-                      <TableRow
-                        className={`cursor-pointer transition-all duration-150 border-slate-200 dark:border-slate-800 ${
-                          isExpanded
-                            ? "bg-slate-50/80 dark:bg-slate-900/50"
-                            : "hover:bg-slate-50 dark:hover:bg-slate-900/50"
-                        }`}
-                        onClick={() => toggleOrder(order.orderId)}
-                      >
-                        <TableCell className="text-center py-2">
-                          {isExpanded ? (
-                            <ChevronDown className="h-4 w-4 text-primary" />
-                          ) : (
-                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                          )}
-                        </TableCell>
-                        <TableCell className="py-2">
-                          <div className="font-medium font-mono text-xs">{order.orderCode}</div>
-                          <div className="text-[10px] text-muted-foreground mt-0.5">{formatDate(order.createdAt)}</div>
-                        </TableCell>
-                        <TableCell className="font-semibold text-sm">
-                          {order.customerName}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <StatusBadge
-                            status={order.status || ""}
-                            label={orderStatusLabels[order.status || ""]}
-                            className="px-3"
-                          />
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-bold">
-                            {order.details?.length || 0}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-right font-bold tabular-nums text-sm">
-                          {formatCurrency(order.totalAmount || 0)}
-                        </TableCell>
-                      </TableRow>
-
-                      {/* Detail rows and sub-headers under expanded parent */}
-                      {isExpanded && (
-                        <>
-                          {/* Detail Rows */}
-                          {order.details?.map((detail: OrderDetailForDeliveryResponse) => {
-                            const isChecked = selectedOrderDetailIds.has(detail.orderDetailId);
-                            return (
-                              <TableRow
-                                key={detail.orderDetailId}
-                                className={`cursor-pointer transition-all duration-150 border-slate-200 dark:border-slate-800 ${
-                                  isChecked
-                                    ? "bg-primary/[0.04] hover:bg-primary/[0.06]"
-                                    : "hover:bg-slate-50 dark:hover:bg-slate-900/50"
-                                }`}
-                                onClick={() => handleToggleOrderDetail(detail.orderDetailId)}
-                              >
-                                <TableCell />
-                                <TableCell colSpan={2} className="pl-12 py-1.5">
-                                  <div className="flex items-center gap-3">
-                                    <Checkbox
-                                      checked={isChecked}
-                                      onCheckedChange={() => handleToggleOrderDetail(detail.orderDetailId)}
-                                      onClick={(e) => e.stopPropagation()}
-                                      className="h-4 w-4 rounded flex-shrink-0"
-                                    />
-                                    <div className="h-8 w-8 rounded-lg bg-muted/50 border flex items-center justify-center flex-shrink-0 overflow-hidden relative">
-                                      {detail.designImageUrl ? (
-                                        <img
-                                          src={detail.designImageUrl}
-                                          alt={detail.designCode || "Thiết kế"}
-                                          className="h-full w-full object-cover cursor-zoom-in"
-                                          onClick={(e) => handleImageClick(detail.designImageUrl!, e)}
-                                        />
-                                      ) : (
-                                        <ImageIcon className="h-4 w-4 text-muted-foreground/40" />
-                                      )}
-                                    </div>
-                                    <div className="flex flex-col min-w-0">
-                                      <span className="font-mono font-black text-xs uppercase leading-none">{detail.designCode}</span>
-                                      <span className="text-[11px] text-muted-foreground font-medium mt-0.5 truncate max-w-[280px]">{detail.designName}</span>
-                                    </div>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="text-center py-1.5">
-                                  <Badge
-                                    variant="outline"
-                                    className={`h-6 text-[10px] font-bold px-2 ${getStatusColorClass(detail.itemStatus)}`}
-                                  >
-                                    {orderDetailItemStatusLabels[detail.itemStatus as string] || detail.itemStatus || "—"}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="text-center py-1.5 font-bold tabular-nums text-sm">
-                                  x{new Intl.NumberFormat('vi-VN').format(detail.orderedQty || 0)}
-                                </TableCell>
-                                <TableCell />
-                              </TableRow>
-                            );
-                          })}
-                        </>
-                      )}
-                      
-                      {/* Spacer between orders if not expanded */}
-                      {!isExpanded && (
-                        <TableRow className="h-2 bg-transparent hover:bg-transparent border-0 pointer-events-none">
-                          <TableCell colSpan={6} className="p-0" />
-                        </TableRow>
-                      )}
-                    </React.Fragment>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="px-4 py-3 border-t bg-muted/5 flex items-center justify-between flex-wrap gap-4">
-            <div className="text-xs text-muted-foreground">
-               Trang {currentPage} / {totalPages}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="h-8 w-8 p-0"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <div className="text-xs font-medium bg-background border px-3 py-1.5 rounded-md min-w-[80px] text-center">
-                Trang {currentPage} / {totalPages}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
-                className="h-8 w-8 p-0"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
@@ -1367,6 +1553,8 @@ function OrdersView({
 interface DeliveryNotesViewProps {
   deliveryNoteStatusFilter: string;
   setDeliveryNoteStatusFilter: (filter: string) => void;
+  deliveryNoteSearchQuery: string;
+  setDeliveryNoteSearchQuery: (query: string) => void;
   deliveryNotesData: unknown;
   deliveryNotesLoading: boolean;
   deliveryNotesError: boolean;
@@ -1388,6 +1576,8 @@ interface DeliveryNotesViewProps {
 function DeliveryNotesView({
   deliveryNoteStatusFilter,
   setDeliveryNoteStatusFilter,
+  deliveryNoteSearchQuery,
+  setDeliveryNoteSearchQuery,
   deliveryNotesLoading,
   deliveryNotesError,
   deliveryNotesErrorObj,
@@ -1405,11 +1595,13 @@ function DeliveryNotesView({
   handleBulkStartShipping,
   updatingIds,
 }: DeliveryNotesViewProps) {
+  const itemsPerPage = 10;
   const deliveryNotesDataTyped = deliveryNotesData as
     | {
         items?: Array<{
           id?: number;
           code?: string | null;
+          lines?: any[];
           orders?: Array<{
             orderId?: number;
             orderCode?: string | null;
@@ -1454,60 +1646,118 @@ function DeliveryNotesView({
 
   return (
     <div className="space-y-6">
-      {/* Filters */}
-      <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex items-center gap-2">
-              <Select
-                value={deliveryNoteStatusFilter}
-                onValueChange={setDeliveryNoteStatusFilter}
-              >
-              <SelectTrigger className="w-full sm:w-[200px] h-11 border-slate-300 dark:border-slate-700">
-                <Filter className="h-4 w-4 mr-2 text-slate-400" />
+      {/* Toolbar */}
+      <div className="flex flex-col md:flex-row gap-3 items-center justify-between p-4 bg-white dark:bg-stone-900 rounded-xl border border-stone-200/80 dark:border-stone-850 shadow-sm">
+        <div className="flex-1 w-full flex flex-col md:flex-row gap-3 items-stretch md:items-center">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
+            <Input
+              placeholder="Nhập mã phiếu để xem nhanh, hoặc tìm khách hàng..."
+              value={deliveryNoteSearchQuery}
+              onChange={(e) => setDeliveryNoteSearchQuery(e.target.value)}
+              className="pl-9 h-10 text-sm border-stone-200 dark:border-stone-800 bg-transparent rounded-lg focus-visible:ring-primary focus-visible:border-primary w-full"
+            />
+          </div>
+          <div className="flex items-center gap-3">
+            <Select
+              value={deliveryNoteStatusFilter}
+              onValueChange={setDeliveryNoteStatusFilter}
+            >
+              <SelectTrigger className="w-full md:w-[180px] h-10 border-stone-200 dark:border-stone-800 rounded-lg">
+                <Filter className="h-4 w-4 mr-2 text-stone-400" />
                 <SelectValue placeholder="Trạng thái" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tất cả</SelectItem>
+                <SelectItem value="all">Tất cả trạng thái</SelectItem>
                 {Object.entries(deliveryNoteStatusLabels).map(([key, label]) => (
                   <SelectItem key={key} value={key}>{label}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => refetchDeliveryNotes()}
-                disabled={deliveryNotesLoading}
-                className="h-11 w-11 border-slate-300 dark:border-slate-700"
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${deliveryNotesLoading ? "animate-spin" : ""}`}
-                />
-              </Button>
 
-                  {selectedNoteIds.size > 0 && (
-                <div className="ml-2 flex items-center gap-2">
-                  <div className="text-sm text-slate-700">Đã chọn <strong>{selectedNoteIds.size}</strong></div>
-                  <Button size="sm" onClick={() => handleClearSelection()} variant="outline">Bỏ chọn</Button>
-                  <Button size="sm" onClick={handleBulkStartShipping} disabled={bulkLoading}>
-                    {bulkLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-1" />
-                    ) : null}
-                    Bắt đầu giao
-                  </Button>
-                </div>
-              )}
-            </div>
+            <Select defaultValue="30-days">
+              <SelectTrigger className="w-full md:w-[180px] h-10 border-stone-200 dark:border-stone-800 rounded-lg">
+                <Calendar className="h-4 w-4 mr-2 text-stone-400" />
+                <SelectValue placeholder="Thời gian" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="30-days">30 ngày gần nhất</SelectItem>
+                <SelectItem value="today">Hôm nay</SelectItem>
+                <SelectItem value="yesterday">Hôm qua</SelectItem>
+                <SelectItem value="this-week">Tuần này</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => refetchDeliveryNotes()}
+              disabled={deliveryNotesLoading}
+              className="h-10 w-10 border-stone-200 dark:border-stone-800 rounded-lg animate-none"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${deliveryNotesLoading ? "animate-spin" : ""}`}
+              />
+            </Button>
+            
+            <Button
+              variant="outline"
+              className="h-10 border-stone-200 dark:border-stone-800 rounded-lg gap-2 text-sm font-semibold hidden md:flex text-stone-700 hover:text-stone-900"
+            >
+              <FileText className="h-4 w-4 text-stone-550" />
+              Xuất Excel
+            </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+
+        {selectedNoteIds.size > 0 && (
+          <div className="flex items-center gap-3 w-full md:w-auto border-t md:border-t-0 pt-3 md:pt-0 border-stone-150">
+            <span className="text-xs text-stone-500 font-medium">
+              Đã chọn <strong className="text-primary">{selectedNoteIds.size}</strong> phiếu
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleClearSelection()}
+              className="text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 font-bold text-xs h-9 px-3 hover:bg-transparent"
+            >
+              Bỏ chọn
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleBulkStartShipping}
+              disabled={bulkLoading}
+              className="bg-primary hover:bg-primary/90 text-white font-bold text-xs rounded-lg px-4 h-9 shadow-sm"
+            >
+              {bulkLoading && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
+              Bắt đầu giao
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Info label below Toolbar */}
+      <div className="flex items-center justify-between text-xs text-stone-500 font-medium px-1">
+        <div>
+          Hiển thị{" "}
+          <span className="font-bold text-stone-850 dark:text-stone-200">
+            {deliveryNotesDataTyped?.items && deliveryNotesDataTyped.items.length > 0 
+              ? `${(deliveryNotePage - 1) * itemsPerPage + 1}–${Math.min(deliveryNotePage * itemsPerPage, deliveryNotesDataTyped.total || 0)}` 
+              : "0"}
+          </span>{" "}
+          / <span className="font-bold text-stone-850 dark:text-stone-200">{deliveryNotesDataTyped?.total || 0}</span> phiếu
+        </div>
+        <div className="flex items-center gap-1">
+          <span>Sắp xếp:</span>
+          <span className="font-bold text-stone-850 dark:text-stone-200">Mới nhất</span>
+        </div>
+      </div>
 
       {/* Error Alert */}
       {deliveryNotesError && (
         <Alert
           variant="destructive"
-          className="border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/50"
+          className="border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/50 rounded-xl"
         >
           <AlertCircle className="h-4 w-4" />
           <AlertTitle className="font-semibold">Lỗi kết nối</AlertTitle>
@@ -1520,68 +1770,70 @@ function DeliveryNotesView({
       )}
 
       {/* Delivery Notes Table */}
-      <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
+      <Card className="border-stone-200 dark:border-stone-800 shadow-sm rounded-xl overflow-hidden bg-white dark:bg-stone-900">
         <div className="overflow-auto">
           <Table>
-            <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-900/95 backdrop-blur-sm z-10 border-b border-slate-200 dark:border-slate-800">
-              <TableRow className="hover:bg-transparent border-slate-200 dark:border-slate-800">
-                  <TableHead className="w-10"></TableHead>
-                  <TableHead className="w-[140px] font-semibold text-slate-700 dark:text-slate-300">
-                    Mã phiếu
-                  </TableHead>
-                <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
+            <TableHeader className="sticky top-0 bg-stone-50/75 dark:bg-stone-900/95 backdrop-blur-sm z-10 border-b border-stone-200 dark:border-stone-800">
+              <TableRow className="hover:bg-transparent border-stone-200 dark:border-stone-800">
+                <TableHead className="w-12 pl-6"></TableHead>
+                <TableHead className="w-[150px] font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">
+                  Mã phiếu
+                </TableHead>
+                <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">
                   Số lượng mã hàng
                 </TableHead>
-                <TableHead className="font-semibold text-slate-700 dark:text-slate-300">
+                <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">
                   Khách hàng
                 </TableHead>
-                <TableHead className="text-center font-semibold text-slate-700 dark:text-slate-300">
+                <TableHead className="text-center font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">
                   Trạng thái
                 </TableHead>
-                <TableHead className="text-center font-semibold text-slate-700 dark:text-slate-300">
+                <TableHead className="text-center font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">
                   Ngày tạo
+                </TableHead>
+                <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider pr-6 w-[120px]">
+                  Thao tác
                 </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {deliveryNotesLoading ? (
-                Array.from({ length: 10 }).map((_, i) => (
+                Array.from({ length: 5 }).map((_, i) => (
                   <TableRow
                     key={i}
-                    className="border-slate-200 dark:border-slate-800"
+                    className="border-stone-100 dark:border-stone-850"
                   >
-                    {Array.from({ length: 8 }).map((_, j) => (
-                      <TableCell key={j}>
-                        <Skeleton className="h-10 w-full" />
+                    {Array.from({ length: 7 }).map((_, j) => (
+                      <TableCell key={j} className={j === 0 ? "pl-6" : j === 6 ? "pr-6" : ""}>
+                        <Skeleton className="h-9 w-full rounded-md" />
                       </TableCell>
                     ))}
                   </TableRow>
                 ))
               ) : !deliveryNotesDataTyped?.items ||
-                deliveryNotesDataTyped.items.length === 0 ? (
+                sortedDeliveryNotes.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={8}
-                    className="h-32 text-center border-slate-200 dark:border-slate-800"
+                    colSpan={7}
+                    className="h-40 text-center border-stone-100 dark:border-stone-800"
                   >
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <FileText className="h-12 w-12 text-slate-300 dark:text-slate-700" />
-                      <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                    <div className="flex flex-col items-center justify-center gap-2.5">
+                      <FileText className="h-10 w-10 text-stone-300 dark:text-stone-700" />
+                      <p className="text-sm font-semibold text-stone-500 dark:text-stone-400">
                         Không tìm thấy phiếu giao hàng nào
                       </p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500">
-                        Thử thay đổi bộ lọc hoặc tạo phiếu mới từ đơn hàng
+                      <p className="text-xs text-stone-450 dark:text-stone-500">
+                        Thử thay đổi bộ lọc hoặc tìm kiếm theo từ khóa khác
                       </p>
                     </div>
                   </TableCell>
                 </TableRow>
               ) : (
                 sortedDeliveryNotes.map((deliveryNote) => {
-                  const totalAmount =
-                    deliveryNote.orders?.reduce(
-                      (sum, order) => sum + (order.totalAmount || 0),
-                      0,
-                    ) || 0;
+                  if (deliveryNote.id == null) return null;
+                  const status = getDisplayStatus(deliveryNote);
+                  const isSelectable = ["pending", "ready_to_ship", "confirmed", "handed_over"].includes(status || "");
+                  const isSelected = selectedNoteIds.has(deliveryNote.id as number);
 
                   const customers =
                     deliveryNote.orders
@@ -1592,109 +1844,105 @@ function DeliveryNotesView({
                   return (
                     <TableRow
                       key={deliveryNote.id}
-                      className={`cursor-pointer transition-all duration-150 border-slate-200 dark:border-slate-800 ${updatingIds.has(deliveryNote.id as number) ? 'opacity-70' : 'hover:bg-slate-50 dark:hover:bg-slate-900/50'}`}
+                      className={`cursor-pointer transition-all duration-150 border-stone-100 dark:border-stone-850 hover:bg-stone-50/50 dark:hover:bg-stone-900/50 ${
+                        updatingIds.has(deliveryNote.id as number) ? "opacity-70" : ""
+                      }`}
                       onClick={() => handleViewDeliveryNote(deliveryNote.id)}
                     >
-                      <TableCell>
-                        {getDisplayStatus(deliveryNote) === "completed" ? (
-                          <div className="w-4 h-4 flex items-center justify-center">
-                            <Check className="h-3 w-3 text-green-500" />
-                          </div>
-                        ) : ["failed", "failed_reschedule", "cancelled"].includes(getDisplayStatus(deliveryNote) || "") ? (
-                          <div className="w-4 h-4 flex items-center justify-center">
-                            <X className="h-3.5 w-3.5 text-red-500" />
-                          </div>
-                        ) : getDisplayStatus(deliveryNote) === "in_transit" ? (
-                          <div className="w-4 h-4" />
-                        ) : (
-                          <Checkbox
-                            checked={selectedNoteIds.has(deliveryNote.id as number)}
-                            onCheckedChange={() => handleToggleSelectNote(deliveryNote.id)}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                        )}
+                      <TableCell className="pl-6 w-12" onClick={(e) => {
+                        if (isSelectable) {
+                          e.stopPropagation();
+                          handleToggleSelectNote(deliveryNote.id);
+                        }
+                      }}>
+                        <div className="flex items-center justify-center w-6 h-6">
+                          {isSelectable ? (
+                            <div className="relative group/check">
+                              <div className={isSelected ? "block" : "hidden group-hover/check:block"}>
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={() => handleToggleSelectNote(deliveryNote.id)}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </div>
+                              <div className={isSelected ? "hidden" : "block group-hover/check:hidden"}>
+                                <div className="w-5 h-5 rounded-full bg-green-50 border border-green-200 dark:bg-green-950/20 dark:border-green-900/50 flex items-center justify-center">
+                                  <Check className="h-3 w-3 text-green-600 dark:text-green-400" />
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            ["failed", "failed_reschedule", "cancelled", "returned"].includes(status || "") ? (
+                              <div className="w-5 h-5 rounded-full bg-red-50 border border-red-200 dark:bg-red-950/20 dark:border-red-900/50 flex items-center justify-center">
+                                <X className="h-3 w-3 text-red-600 dark:text-red-400" />
+                              </div>
+                            ) : (
+                              <div className="w-5 h-5 rounded-full bg-green-50 border border-green-200 dark:bg-green-950/20 dark:border-green-900/50 flex items-center justify-center">
+                                <Check className="h-3 w-3 text-green-600 dark:text-green-400" />
+                              </div>
+                            )
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
-                        <div className="font-semibold font-mono text-sm text-slate-900 dark:text-slate-50">
+                        <div className="font-bold font-mono text-sm text-stone-900 dark:text-stone-50">
                           {deliveryNote.code || `#${deliveryNote.id}`}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="space-y-1">
-                          <div className="text-sm font-semibold text-slate-900 dark:text-slate-50 flex items-center gap-1.5">
-                            <Package className="h-3.5 w-3.5 text-slate-400" />
-                            {deliveryNote.lines?.length ?? 0} mã hàng
-                          </div>
-                          {/* <div className="space-y-0.5">
-                            {deliveryNote.lines?.slice(0, 2).map((line: any, idx: number) => (
-                              <div
-                                key={line?.id ?? idx}
-                                className="text-xs text-slate-500 dark:text-slate-400 font-mono"
-                              >
-                                {line?.designCode || line?.orderCode || "—"}
-                              </div>
-                            ))}
-                            {deliveryNote.lines && deliveryNote.lines.length > 2 && (
-                              <div className="text-xs text-slate-400 dark:text-slate-500">
-                                +{deliveryNote.lines.length - 2} mã hàng khác
-                              </div>
-                            )}
-                          </div> */}
-                        </div>
+                        <span className="flex items-center gap-1.5 text-sm text-stone-600 dark:text-stone-300">
+                          <Package className="h-4 w-4 text-stone-400" />
+                          x{deliveryNote.lines?.length ?? 0} mã hàng
+                        </span>
                       </TableCell>
                       <TableCell>
-                        <div className="space-y-1">
-                          {uniqueCustomers.length > 0 ? (
-                            <>
-                              <div className="text-sm font-semibold text-slate-900 dark:text-slate-50 flex items-center gap-1.5">
-                                <Users className="h-3.5 w-3.5 text-slate-400" />
-                                {uniqueCustomers[0]}
-                              </div>
-                              {uniqueCustomers.length > 1 && (
-                                <div className="text-xs text-slate-500 dark:text-slate-400">
-                                  +{uniqueCustomers.length - 1} khách hàng khác
-                                </div>
-                              )}
-                            </>
-                          ) : (
-                            <div className="text-sm text-slate-500 dark:text-slate-400">
-                              —
-                            </div>
+                        <span className="flex items-center gap-1.5 text-sm text-stone-700 dark:text-stone-300 font-medium">
+                          <User className="h-4 w-4 text-stone-400" />
+                          {uniqueCustomers[0] || "—"}
+                          {uniqueCustomers.length > 1 && (
+                            <span className="text-xs text-stone-400 font-normal">
+                              (+{uniqueCustomers.length - 1} khách khác)
+                            </span>
                           )}
-                        </div>
+                        </span>
                       </TableCell>
-                    
                       <TableCell className="text-center">
                         {updatingIds.has(deliveryNote.id as number) ? (
                           <Loader2 className="h-5 w-5 animate-spin text-primary mx-auto" />
                         ) : (
                           <StatusBadge
-                            status={getDisplayStatus(deliveryNote) || null}
-                            label={getDeliveryNoteStatusLabel(getDisplayStatus(deliveryNote))}
+                            status={status || null}
+                            label={getDeliveryNoteStatusLabel(status)}
                           />
                         )}
                       </TableCell>
                       <TableCell className="text-center">
-                        <div className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-center gap-1">
-                          <Calendar className="h-3 w-3 text-slate-400" />
+                        <span className="inline-flex items-center gap-1.5 text-sm text-stone-600 dark:text-stone-300">
+                          <Calendar className="h-3.5 w-3.5 text-stone-400" />
                           {formatDate(deliveryNote.createdAt)}
-                        </div>
+                        </span>
                       </TableCell>
-                      <TableCell className="text-right pr-6">
-                         {deliveryNote.status === "failed" && (
-                           <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 text-xs gap-1 border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-bold"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleOpenRecreate(deliveryNote.id!);
-                            }}
-                           >
-                             <RefreshCw className="h-3 w-3" />
-                             Giao lại
-                           </Button>
-                         )}
+                      <TableCell className="text-right pr-6 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-3">
+                          {deliveryNote.status === "failed" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 text-xs gap-1 border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-bold rounded-lg"
+                              onClick={() => handleOpenRecreate(deliveryNote.id!)}
+                            >
+                              <RefreshCw className="h-3 w-3" />
+                              Giao lại
+                            </Button>
+                          )}
+                          <Button
+                            variant="link"
+                            className="text-xs font-bold text-primary p-0 hover:no-underline"
+                            onClick={() => handleViewDeliveryNote(deliveryNote.id)}
+                          >
+                            Chi tiết &gt;
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -2250,12 +2498,12 @@ function CreateDeliveryNoteDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl w-[96vw] h-[85vh] max-h-[900px] overflow-hidden border-slate-200 dark:border-slate-800 flex flex-col">
+      <DialogContent className="max-w-7xl w-[96vw] h-[85vh] max-h-[900px] overflow-hidden border-stone-200 dark:border-stone-850 flex flex-col bg-white dark:bg-stone-900">
         <DialogHeader className="flex-shrink-0">
-          <DialogTitle className="text-xl font-bold text-slate-900 dark:text-slate-50">
+          <DialogTitle className="text-xl font-bold text-stone-900 dark:text-stone-50">
             Tạo phiếu giao hàng ({selectedOrders.length} sản phẩm)
           </DialogTitle>
-          <DialogDescription className="text-sm text-slate-600 dark:text-slate-400">
+          <DialogDescription className="text-sm text-stone-500 dark:text-stone-400">
             Xác nhận số lượng và chọn địa chỉ giao.
           </DialogDescription>
         </DialogHeader>

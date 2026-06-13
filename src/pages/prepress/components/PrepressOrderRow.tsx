@@ -11,7 +11,11 @@ import {
   TableBody,
 } from "@/components/ui/table";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { CursorTooltip } from "@/components/ui/cursor-tooltip";
+import {
+  HoverCard,
+  HoverCardTrigger,
+  HoverCardContent,
+} from "@/components/ui/hover-card";
 import { cn } from "@/lib/utils";
 import { formatDesignDimensions } from "@/utils/format-die-size";
 import { format } from "date-fns";
@@ -185,174 +189,184 @@ export function PrepressOrderRow({
   );
 
   return (
-    <CursorTooltip
-      content={tooltipContent}
-      delayDuration={1000}
-      className="p-3 bg-popover/95 backdrop-blur-sm border shadow-2xl ring-1 ring-black/5 rounded-xl"
+    <TableRow
+      className="h-10 cursor-pointer group hover:bg-muted/50 transition-colors"
+      onClick={() => onNavigate(order.id)}
     >
-      <TableRow
-        className="h-10 cursor-pointer group hover:bg-muted/50 transition-colors"
-        onClick={() => onNavigate(order.id)}
-      >
-        {shouldShowExpand && (
-          <TableCell className="py-3 w-10">
-            <div className="flex items-center justify-center">
-              <ChevronDown
-                className={cn(
-                  "h-4 w-4 text-muted-foreground transition-transform duration-200",
-                )}
-              />
-            </div>
-          </TableCell>
-        )}
-        <TableCell className="py-2 w-12 align-top">
-          <div className="flex flex-col gap-1">
-            {designs.slice(0, 3).map((pod: any, idx: number) => (
-              <div key={pod.id || idx} className="w-10 h-10 shrink-0">
-                {pod.design?.designImageUrl ? (
-                  <img
-                    src={pod.design.designImageUrl}
-                    alt={pod.design.code}
-                    className="w-10 h-10 object-cover rounded border shadow-sm"
-                  />
-                ) : (
-                  <div className="w-10 h-10 bg-muted rounded border flex items-center justify-center">
-                    <FileImage className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                )}
-              </div>
-            ))}
-            {designs.length > 3 && (
-              <div className="w-10 text-[9px] text-center font-bold text-muted-foreground">
-                +{designs.length - 3} nữa
-              </div>
-            )}
+      {shouldShowExpand && (
+        <TableCell className="py-3 w-10">
+          <div className="flex items-center justify-center">
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 text-muted-foreground transition-transform duration-200",
+              )}
+            />
           </div>
         </TableCell>
-        <TableCell className="py-3 font-semibold align-top">
-          {shouldShowExpand && orderCodeMatches
-            ? highlightText(order.code || "", debouncedSearchTerm.trim())
-            : order.code}
-        </TableCell>
-
-        <TableCell className="py-3 font-bold text-xs align-top text-slate-800 dark:text-slate-200">
-          <div className="flex flex-col gap-1">
-            {designs.map((pod: any, idx: number) => {
-              const code = pod.design?.code || "—";
-              return (
-                <div key={pod.id || idx} className="flex items-center gap-1.5 min-h-5">
-                  <span>{highlightText(code, debouncedSearchTerm.trim())}</span>
-                  {code !== "—" && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-4.5 w-4.5 p-0 shrink-0 text-muted-foreground hover:text-foreground"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigator.clipboard.writeText(code);
-                        toast.success("Đã sao chép mã hàng", {
-                          description: code,
-                          duration: 1500,
-                        });
-                      }}
-                      title="Sao chép mã hàng"
-                    >
-                      <Copy className="h-3 w-3" />
-                    </Button>
-                  )}
+      )}
+      <TableCell className="py-2 w-12 align-top">
+        <div className="flex flex-col gap-1">
+          {designs.slice(0, 3).map((pod: any, idx: number) => (
+            <div key={pod.id || idx} className="w-10 h-10 shrink-0">
+              {pod.design?.designImageUrl ? (
+                <img
+                  src={pod.design.designImageUrl}
+                  alt={pod.design.code}
+                  className="w-10 h-10 object-cover rounded border shadow-sm"
+                />
+              ) : (
+                <div className="w-10 h-10 bg-muted rounded border flex items-center justify-center">
+                  <FileImage className="h-4 w-4 text-muted-foreground" />
                 </div>
-              );
-            })}
-          </div>
-        </TableCell>
+              )}
+            </div>
+          ))}
+          {designs.length > 3 && (
+            <div className="w-10 text-[9px] text-center font-bold text-muted-foreground">
+              +{designs.length - 3} nữa
+            </div>
+          )}
+        </div>
+      </TableCell>
+      <TableCell className="py-3 font-semibold align-top">
+        {shouldShowExpand && orderCodeMatches
+          ? highlightText(order.code || "", debouncedSearchTerm.trim())
+          : order.code}
+      </TableCell>
 
-        <TableCell className="py-3 font-semibold text-xs align-top">
-          <div className="flex flex-col gap-1">
-            {designs.map((pod: any, idx: number) => (
-              <span key={pod.id || idx} className="text-muted-foreground">
-                {pod.design?.materialType?.name || "—"}
-              </span>
-            ))}
-          </div>
-        </TableCell>
-        <TableCell className="py-3 text-xs align-top">
-          <div className="flex flex-col gap-1">
-            {designs.map((pod: any, idx: number) => {
-              const d = pod.design;
-              const specs = d?.specification || (d as any)?.specifications;
-              const spec = Array.isArray(specs)
-                ? specs.join(", ")
-                : typeof specs === "string" && specs.trim().length > 0
-                  ? specs
-                  : d?.processClassification
-                    ? processClassificationLabels[d.processClassification] ||
-                      d.processClassification
-                    : d?.length != null
-                      ? `${d.length}x${d.height}mm`
-                      : "—";
-              return <span key={pod.id || idx}>{spec}</span>;
-            })}
-          </div>
-        </TableCell>
-        <TableCell className="py-3 align-top">
+      <TableCell className="py-3 font-bold text-xs align-top text-slate-800 dark:text-slate-200">
+        <HoverCard openDelay={300}>
+          <HoverCardTrigger asChild>
+            <div className="flex flex-col gap-1 cursor-help">
+              {designs.map((pod: any, idx: number) => {
+                const code = pod.design?.code || "—";
+                return (
+                  <div key={pod.id || idx} className="flex items-center gap-1.5 min-h-5">
+                    <span>{highlightText(code, debouncedSearchTerm.trim())}</span>
+                    {code !== "—" && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-4.5 w-4.5 p-0 shrink-0 text-muted-foreground hover:text-foreground"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigator.clipboard.writeText(code);
+                          toast.success("Đã sao chép mã hàng", {
+                            description: code,
+                            duration: 1500,
+                          });
+                        }}
+                        title="Sao chép mã hàng"
+                      >
+                        <Copy className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </HoverCardTrigger>
+          <HoverCardContent
+            className="w-[400px] p-3 bg-popover/95 backdrop-blur-sm border shadow-2xl ring-1 ring-black/5 rounded-xl max-h-[80vh] overflow-y-auto custom-scrollbar"
+            side="right"
+            align="start"
+            sideOffset={10}
+          >
+            {tooltipContent}
+          </HoverCardContent>
+        </HoverCard>
+      </TableCell>
+
+      <TableCell className="py-3 font-semibold text-xs align-top">
+        <div className="flex flex-col gap-1">
+          {Array.from(
+            new Set(
+              designs.map((pod: any) => pod.design?.materialType?.name || "—")
+            )
+          ).map((materialName: any, idx: number) => (
+            <span key={idx} className="text-muted-foreground">
+              {materialName}
+            </span>
+          ))}
+        </div>
+      </TableCell>
+      <TableCell className="py-3 text-xs align-top">
+        <div className="flex flex-col gap-1">
+          {designs.map((pod: any, idx: number) => {
+            const d = pod.design;
+            const specs = d?.specification || (d as any)?.specifications;
+            const spec = Array.isArray(specs)
+              ? specs.join(", ")
+              : typeof specs === "string" && specs.trim().length > 0
+                ? specs
+                : d?.processClassification
+                  ? processClassificationLabels[d.processClassification] ||
+                    d.processClassification
+                  : d?.length != null
+                    ? `${d.length}x${d.height}mm`
+                    : "—";
+            return <span key={pod.id || idx}>{spec}</span>;
+          })}
+        </div>
+      </TableCell>
+      <TableCell className="py-3 align-top">
+        <StatusBadge
+          status={order.status || ""}
+          label={
+            proofingStatusLabels[order.status || ""] || order.status || "—"
+          }
+          className={cn(
+            "text-xs font-bold",
+            order.status === "completed"
+              ? "bg-green-100 text-green-800 border-green-300"
+              : "bg-amber-100 text-amber-800 border-amber-300",
+          )}
+        />
+      </TableCell>
+      <TableCell className="py-3 align-top">
+        <StatusBadge
+          status={(order.plateOutputCount ?? 0) > 0 ? "exported" : "not_exported"}
+          label={(order.plateOutputCount ?? 0) > 0 ? "Đã xuất" : "Chưa xuất"}
+          className={cn(
+            "text-xs font-semibold",
+            (order.plateOutputCount ?? 0) > 0
+              ? "bg-green-100 text-green-800 border-green-300"
+              : "bg-red-100 text-red-800 border-red-300",
+          )}
+        />
+      </TableCell>
+      <TableCell className="py-3 align-top">
+        {order.proofingOrderDesigns?.some(
+          (pod: any) => pod.design?.processClassification === "die_cut",
+        ) ? (
           <StatusBadge
-            status={order.status || ""}
+            status={
+              (order.dieExports?.length ?? 0) > 0
+                ? "exported"
+                : "not_exported"
+            }
             label={
-              proofingStatusLabels[order.status || ""] || order.status || "—"
+              (order.dieExports?.length ?? 0) > 0 ? "Đã xuất" : "Chưa xuất"
             }
             className={cn(
-              "text-xs font-bold",
-              order.status === "completed"
-                ? "bg-green-100 text-green-800 border-green-300"
-                : "bg-amber-100 text-amber-800 border-amber-300",
-            )}
-          />
-        </TableCell>
-        <TableCell className="py-3 align-top">
-          <StatusBadge
-            status={(order.plateOutputCount ?? 0) > 0 ? "exported" : "not_exported"}
-            label={(order.plateOutputCount ?? 0) > 0 ? "Đã xuất" : "Chưa xuất"}
-            className={cn(
               "text-xs font-semibold",
-              (order.plateOutputCount ?? 0) > 0
+              (order.dieExports?.length ?? 0) > 0
                 ? "bg-green-100 text-green-800 border-green-300"
                 : "bg-red-100 text-red-800 border-red-300",
             )}
           />
-        </TableCell>
-        <TableCell className="py-3 align-top">
-          {order.proofingOrderDesigns?.some(
-            (pod: any) => pod.design?.processClassification === "die_cut",
-          ) ? (
-            <StatusBadge
-              status={
-                (order.dieExports?.length ?? 0) > 0
-                  ? "exported"
-                  : "not_exported"
-              }
-              label={
-                (order.dieExports?.length ?? 0) > 0 ? "Đã xuất" : "Chưa xuất"
-              }
-              className={cn(
-                "text-xs font-semibold",
-                (order.dieExports?.length ?? 0) > 0
-                  ? "bg-green-100 text-green-800 border-green-300"
-                  : "bg-red-100 text-red-800 border-red-300",
-              )}
-            />
-          ) : (
-            <span className="text-[10px] font-medium text-muted-foreground italic">
-              Không có bế
-            </span>
-          )}
-        </TableCell>
+        ) : (
+          <span className="text-[10px] font-medium text-muted-foreground italic">
+            Không có bế
+          </span>
+        )}
+      </TableCell>
 
-        <TableCell className="py-3 font-medium align-top whitespace-nowrap text-muted-foreground text-[11px]">
-          {order.createdAt
-            ? new Date(order.createdAt).toLocaleDateString("vi-VN")
-            : "—"}
-        </TableCell>
-      </TableRow>
-    </CursorTooltip>
+      <TableCell className="py-3 font-medium align-top whitespace-nowrap text-muted-foreground text-[11px]">
+        {order.createdAt
+          ? new Date(order.createdAt).toLocaleDateString("vi-VN")
+          : "—"}
+      </TableCell>
+    </TableRow>
   );
 }
