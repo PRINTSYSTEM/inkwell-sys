@@ -59,6 +59,7 @@ import {
 } from "@/hooks/use-stock";
 import { useCustomer } from "@/hooks/use-customer";
 import { useVendor } from "@/hooks/use-vendor";
+import { useProductionOrder, useUpdateProductionStep } from "@/hooks/use-production";
 import {
   formatDate,
   formatDateTime,
@@ -113,6 +114,12 @@ export default function StockOutDetailPage() {
 
   const { data: customerData } = useCustomer(stockOut?.customerId || null, !!stockOut?.customerId);
   const { data: vendorData } = useVendor(stockOut?.vendorId || null, !!stockOut?.vendorId);
+
+  const { data: production } = useProductionOrder(
+    stockOut?.productionOrderId || null,
+    !!stockOut?.productionOrderId
+  );
+  const { mutate: updateStep } = useUpdateProductionStep();
 
   const { mutate: completeStockOut, isPending: isCompleting } =
     useCompleteStockOut();
@@ -291,11 +298,33 @@ export default function StockOutDetailPage() {
     }
   };
 
+  const autoCompleteProductionStep = () => {
+    if (production?.steps) {
+      const materialExportStep = production.steps.find(
+        (step: any) => step.stepType === "material_export" && step.status !== "done"
+      );
+      if (materialExportStep?.id) {
+        const outputQty =
+          materialExportStep.inputQty ||
+          stockOut?.items?.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0) ||
+          0;
+        updateStep({
+          stepId: materialExportStep.id,
+          data: {
+            status: "done",
+            outputQty: outputQty,
+          },
+        });
+      }
+    }
+  };
+
   const handleComplete = () => {
     if (!stockOut?.id) return;
     completeStockOut(stockOut.id, {
       onSuccess: () => {
         toast.success("Đã hoàn thành phiếu xuất kho");
+        autoCompleteProductionStep();
       },
     });
   };
@@ -334,6 +363,7 @@ export default function StockOutDetailPage() {
         completeStockOut(stockOut.id, {
           onSuccess: () => {
             toast.success("Đã hoàn thành phiếu xuất kho");
+            autoCompleteProductionStep();
             setConfirmDialog({ ...confirmDialog, open: false });
           },
         });
@@ -433,8 +463,18 @@ export default function StockOutDetailPage() {
     stockOut.vendorPhone ||
     "";
   
-  const warehouseName = stockOut.warehouse || stockOut.warehouseName || "CÔNG TY QUANG ĐẠT";
-  const warehouseAddress = stockOut.warehouseAddress || "97/3 Đường Tân Thời Nhất 8, P. Đông Hưng Thuận, TP. HCM";
+  const rawWarehouseName = stockOut.warehouse || stockOut.warehouseName || "";
+  const isOutsourceOrReturn = ["outsource", "outsource_print", "return_vendor"].includes(purposeLower);
+  const warehouseName =
+    !rawWarehouseName || isOutsourceOrReturn
+      ? "CÔNG TY QUANG ĐẠT"
+      : rawWarehouseName;
+
+  const rawWarehouseAddress = stockOut.warehouseAddress || "";
+  const warehouseAddress =
+    !rawWarehouseAddress || isOutsourceOrReturn
+      ? "97/3 Đường Tân Thời Nhất 8, P. Đông Hưng Thuận, TP. HCM"
+      : rawWarehouseAddress;
 
   return (
     <>
@@ -623,26 +663,37 @@ export default function StockOutDetailPage() {
             
             {/* Paper Voucher Container */}
             <div className="bg-white text-slate-950 p-6 sm:p-8 shadow-xl shadow-slate-200/50 rounded-xl border border-slate-200/60 font-sans print:shadow-none print:border-none print:p-0 print:text-black mx-auto max-w-4xl transition-all duration-300 space-y-4">
-                {/* Header Info */}
-                <div className="text-xs space-y-1 leading-relaxed">
-                  <div>
-                    <span className="font-bold">Đơn vị:</span> CÔNG TY TNHH SX TMDV QUỐC TẾ QUANG ĐẠT
+                {/* Header Section */}
+                <div className="grid grid-cols-2 text-xs leading-relaxed">
+                  <div className="space-y-0.5">
+                    <div>
+                      <span className="font-bold">Đơn vị:</span> CÔNG TY TNHH SX TMDV QUỐC TẾ QUANG ĐẠT
+                    </div>
+                    <div>
+                      <span className="font-bold">Địa chỉ:</span> 97/3 Đường Tân Thời Nhất 8, P. Đông Hưng Thuận, TP. HCM
+                    </div>
                   </div>
-                  <div>
-                    <span className="font-bold">Địa chỉ:</span> 97/3 Đường Tân Thời Nhất 8, P. Đông Hưng Thuận, TP. HCM
+                  <div className="text-right space-y-0.5">
+                    <div className="font-bold text-sm">Mẫu số 02 - VT</div>
+                    <div className="italic text-[10px] text-slate-600 print:text-black">
+                      (Ban hành theo Thông tư số 200/2014/TT-BTC
+                    </div>
+                    <div className="italic text-[10px] text-slate-600 print:text-black">
+                      Ngày 22/12/2014 của Bộ Tài chính)
+                    </div>
                   </div>
                 </div>
 
                 {/* Title Section */}
                 <div className="text-center my-6 space-y-1">
-                  <h2 className="text-xl font-bold tracking-wider uppercase text-slate-900 print:text-black">
+                  <h2 className="text-2xl font-bold tracking-wider uppercase text-slate-900 print:text-black">
                     PHIẾU XUẤT KHO
                   </h2>
-                  <div className="text-xs italic text-slate-600 print:text-black">
-                    Ngày {day} tháng {month} năm {year}
+                  <div className="text-xs text-slate-800 print:text-black font-medium">
+                    Ngày...<span className="font-bold">{day}</span>...tháng...<span className="font-bold">{month}</span>...năm...<span className="font-bold">{year}</span>...
                   </div>
                   <div className="text-xs font-semibold text-slate-800 print:text-black">
-                    Số: <span className="font-mono">{stockOut.code || `PXK-${stockOut.id}`}</span>
+                    Số: ........<span className="font-mono font-bold text-red-600 print:text-black">{stockOut.code || stockOut.id}</span>........
                   </div>
                 </div>
 
@@ -651,7 +702,7 @@ export default function StockOutDetailPage() {
                   {/* Row 1 */}
                   <div className="flex items-end gap-1.5 w-full">
                     <span className="shrink-0 text-slate-700 print:text-black font-medium">- Họ và tên người nhận hàng:</span>
-                    <span className="font-semibold text-slate-900 print:text-black border-b border-dashed border-slate-300 flex-1 pb-0.5 min-h-[1.5rem] text-left flex items-end">
+                    <span className="font-semibold text-slate-900 print:text-black border-b border-dotted border-slate-400 flex-1 pb-0.5 min-h-[1.5rem] text-left flex items-end">
                       {isEditing ? (
                         <Input
                           value={editReceiverName}
@@ -669,7 +720,7 @@ export default function StockOutDetailPage() {
                   <div className="flex flex-col sm:flex-row items-end gap-3 sm:gap-6 w-full">
                     <div className="flex items-end gap-1.5 flex-1 w-full min-w-0">
                       <span className="shrink-0 text-slate-700 print:text-black font-medium">- Địa chỉ (bộ phận):</span>
-                      <span className="text-slate-900 print:text-black border-b border-dashed border-slate-300 flex-1 pb-0.5 min-h-[1.5rem] text-left flex items-end">
+                      <span className="text-slate-900 print:text-black border-b border-dotted border-slate-400 flex-1 pb-0.5 min-h-[1.5rem] text-left flex items-end font-medium">
                         {isEditing ? (
                           <Input
                             value={editReceiverAddress}
@@ -684,7 +735,7 @@ export default function StockOutDetailPage() {
                     </div>
                     <div className="flex items-end gap-1.5 shrink-0 w-full sm:w-auto">
                       <span className="shrink-0 text-slate-700 print:text-black font-medium">SĐT:</span>
-                      <span className="text-slate-900 print:text-black border-b border-dashed border-slate-300 pb-0.5 min-h-[1.5rem] text-left w-full sm:w-36">
+                      <span className="text-slate-900 print:text-black border-b border-dotted border-slate-400 pb-0.5 min-h-[1.5rem] text-left w-full sm:w-36 font-semibold">
                         {partnerPhone || "—"}
                       </span>
                     </div>
@@ -693,7 +744,7 @@ export default function StockOutDetailPage() {
                   {/* Row 3 */}
                   <div className="flex items-end gap-1.5 w-full">
                     <span className="shrink-0 text-slate-700 print:text-black font-medium">- Lý do xuất kho:</span>
-                    <span className="text-slate-900 print:text-black border-b border-dashed border-slate-300 flex-1 pb-0.5 min-h-[1.5rem] text-left flex items-end">
+                    <span className="text-slate-900 print:text-black border-b border-dotted border-slate-400 flex-1 pb-0.5 min-h-[1.5rem] text-left flex items-end">
                       {isEditing ? (
                         <Input
                           value={editNotes}
@@ -711,13 +762,13 @@ export default function StockOutDetailPage() {
                   <div className="flex flex-col sm:flex-row items-end gap-3 sm:gap-6 w-full">
                     <div className="flex items-end gap-1.5 flex-1 w-full min-w-0">
                       <span className="shrink-0 text-slate-700 print:text-black font-medium">- Xuất tại kho:</span>
-                      <span className="text-slate-900 print:text-black border-b border-dashed border-slate-300 flex-1 pb-0.5 min-h-[1.25rem] text-left">
+                      <span className="text-slate-900 print:text-black border-b border-dotted border-slate-400 flex-1 pb-0.5 min-h-[1.25rem] text-left font-semibold">
                         {warehouseName}
                       </span>
                     </div>
                     <div className="flex items-end gap-1.5 flex-[2] w-full min-w-0">
                       <span className="shrink-0 text-slate-700 print:text-black font-medium">Địa điểm:</span>
-                      <span className="text-slate-900 print:text-black border-b border-dashed border-slate-300 flex-1 pb-0.5 min-h-[1.25rem] text-left">
+                      <span className="text-slate-900 print:text-black border-b border-dotted border-slate-400 flex-1 pb-0.5 min-h-[1.25rem] text-left font-semibold">
                         {warehouseAddress}
                       </span>
                     </div>
@@ -729,87 +780,111 @@ export default function StockOutDetailPage() {
                   <table className="w-full border-collapse border border-black text-xs text-left">
                     <thead>
                       <tr className="bg-slate-50/50 print:bg-transparent border-b border-black">
-                        <th className="border-r border-black font-bold text-center py-2.5 px-1 w-12 text-slate-900 print:text-black">
+                        <th className="border border-black font-bold text-center py-2.5 px-1 w-12 text-slate-900 print:text-black">
                           STT
                         </th>
-                        <th className="border-r border-black font-bold text-left py-2.5 px-2 text-slate-900 print:text-black">
+                        <th className="border border-black font-bold text-left py-2.5 px-2 text-slate-900 print:text-black">
                           Tên, nhãn hiệu, quy cách, phẩm chất vật tư, dụng cụ, sp, hàng hoá
                         </th>
-                        <th className="border-r border-black font-bold text-center py-2.5 px-1 w-20 text-slate-900 print:text-black">
+                        <th className="border border-black font-bold text-center py-2.5 px-1 w-20 text-slate-900 print:text-black">
                           ĐVT
                         </th>
-                        <th className="border-r border-black font-bold text-right py-2.5 px-2 w-28 text-slate-900 print:text-black">
+                        <th className="border border-black font-bold text-right py-2.5 px-2 w-28 text-slate-900 print:text-black">
                           SỐ LƯỢNG
                         </th>
-                        <th className="font-bold text-left py-2.5 px-2 w-40 text-slate-900 print:text-black">
+                        <th className="border border-black font-bold text-left py-2.5 px-2 w-40 text-slate-900 print:text-black">
                           GHI CHÚ
                         </th>
                       </tr>
                     </thead>
                     <tbody>
                       {items.length === 0 ? (
-                        <tr className="border-b border-black">
+                        <tr className="border border-black">
                           <td
                             colSpan={5}
-                            className="text-center py-8 text-slate-400 italic"
+                            className="text-center py-8 text-slate-400 italic border border-black"
                           >
                             Không có vật tư nào trong phiếu xuất
                           </td>
                         </tr>
                       ) : (
-                        (isEditing ? editItems : items).map((item: any, index: number) => (
-                          <tr
-                            key={index}
-                            className="border-b border-black hover:bg-slate-50/30 print:hover:bg-transparent"
-                          >
-                            <td className="border-r border-black text-center py-2 px-1 font-mono text-slate-600 print:text-black">
-                              {index + 1}
-                            </td>
-                            <td className="border-r border-black font-semibold text-slate-900 print:text-black py-2 px-2 leading-relaxed">
-                              {item.itemName || "—"}
-                            </td>
-                            <td className="border-r border-black text-center py-2 px-1 text-slate-700 print:text-black">
-                              {item.unit || "—"}
-                            </td>
-                            <td className="border-r border-black text-right py-2 px-2 font-bold tabular-nums text-slate-900 print:text-black">
-                              {isEditing ? (
-                                <Input
-                                  type="number"
-                                  min="1"
-                                  step="1"
-                                  value={item.quantity ?? ""}
-                                  onChange={(e) => {
-                                    const val = parseInt(e.target.value, 10);
-                                    handleEditItemChange(index, "quantity", isNaN(val) ? 0 : val);
-                                  }}
-                                  className="h-7 w-24 text-xs font-semibold text-right ml-auto bg-blue-50/30 text-blue-900 border-blue-300 focus-visible:ring-blue-500/30 focus:border-blue-500 focus:bg-blue-50"
-                                />
-                              ) : (
-                                (item.quantity || 0).toLocaleString("vi-VN")
-                              )}
-                            </td>
-                            <td className="py-2 px-2 text-slate-600 print:text-black leading-normal">
-                              {isEditing ? (
-                                <Input
-                                  value={item.notes || ""}
-                                  onChange={(e) => handleEditItemChange(index, "notes", e.target.value)}
-                                  placeholder="Ghi chú dòng..."
-                                  className="h-7 text-xs bg-blue-50/30 text-blue-900 border-blue-300 focus-visible:ring-blue-500/30 focus:border-blue-500 focus:bg-blue-50 w-full"
-                                />
-                              ) : (
-                                item.notes || "—"
-                              )}
-                            </td>
-                          </tr>
-                        ))
+                        (isEditing ? editItems : items).map((item: any, index: number) => {
+                          const isOutsourcePrint = purposeLower === "outsource" || purposeLower === "outsource_print";
+                          const isCuonItem = (item.unit?.toLowerCase().includes("cuộn") || item.itemName?.toLowerCase().includes("cuộn")) && !item.itemName?.toLowerCase().includes("m tới");
+                          
+                          return (
+                            <tr
+                              key={index}
+                              className="border border-black hover:bg-slate-50/30 print:hover:bg-transparent"
+                            >
+                              <td className="border border-black text-center py-2 px-1 font-mono text-slate-600 print:text-black">
+                                {index + 1}
+                              </td>
+                              <td className="border border-black font-semibold text-slate-900 print:text-black py-2 px-2 leading-relaxed">
+                                {item.itemName || "—"}
+                                {isOutsourcePrint && isCuonItem ? " (m tới)" : ""}
+                              </td>
+                              <td className="border border-black text-center py-2 px-1 text-slate-700 print:text-black">
+                                {item.unit || "—"}
+                              </td>
+                              <td className="border border-black text-right py-2 px-2 font-bold tabular-nums text-slate-900 print:text-black">
+                                {isEditing ? (
+                                  <Input
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    value={item.quantity ?? ""}
+                                    onChange={(e) => {
+                                      const val = parseInt(e.target.value, 10);
+                                      handleEditItemChange(index, "quantity", isNaN(val) ? 0 : val);
+                                    }}
+                                    className="h-7 w-24 text-xs font-semibold text-right ml-auto bg-blue-50/30 text-blue-900 border-blue-300 focus-visible:ring-blue-500/30 focus:border-blue-500 focus:bg-blue-50"
+                                  />
+                                ) : (
+                                  (item.quantity || 0).toLocaleString("vi-VN")
+                                )}
+                              </td>
+                              <td className="border border-black py-2 px-2 text-slate-600 print:text-black leading-normal">
+                                {isEditing ? (
+                                  <Input
+                                    value={item.notes || ""}
+                                    onChange={(e) => handleEditItemChange(index, "notes", e.target.value)}
+                                    placeholder="Ghi chú dòng..."
+                                    className="h-7 text-xs bg-blue-50/30 text-blue-900 border-blue-300 focus-visible:ring-blue-500/30 focus:border-blue-500 focus:bg-blue-50 w-full"
+                                  />
+                                ) : (
+                                  item.notes || "—"
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
                 </div>
 
+                {/* Signatures Block */}
+                <div className="grid grid-cols-3 text-center text-xs mt-12 gap-y-16 leading-relaxed">
+                  <div>
+                    <div className="font-bold text-slate-900 print:text-black">Người lập</div>
+                    <div className="italic text-slate-500 print:text-black mt-0.5">(Ký, họ tên)</div>
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-900 print:text-black">Người nhận hàng</div>
+                    <div className="italic text-slate-500 print:text-black mt-0.5">(Ký, họ tên)</div>
+                  </div>
+                  <div>
+                    <div className="font-bold text-slate-900 print:text-black">Thủ kho</div>
+                    <div className="italic text-slate-500 print:text-black mt-0.5">(Ký, họ tên)</div>
+                  </div>
+                </div>
 
+                <div className="w-1/3 text-center text-xs mt-8">
+                  <div className="font-bold text-slate-900 print:text-black">Quản trị viên</div>
+                  <div className="italic text-slate-500 print:text-black mt-0.5">(Ký, họ tên)</div>
+                </div>
             </div>
-
           </div>
         </div>
       </div>

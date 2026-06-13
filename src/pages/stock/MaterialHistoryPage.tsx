@@ -180,8 +180,8 @@ export default function MaterialHistoryPage() {
     vendorId: undefined,
     receiverName: "",
     receiverAddress: "",
-    warehouseName: "",
-    warehouseAddress: "",
+    warehouseName: "CÔNG TY QUANG ĐẠT",
+    warehouseAddress: "97/3 Đường Tân Thời Nhất 8, P. Đông Hưng Thuận, TP. HCM",
   });
 
   const [inlineStockInQty, setInlineStockInQty] = useState<number>(0);
@@ -373,8 +373,8 @@ export default function MaterialHistoryPage() {
           vendorId: undefined,
           receiverName: undefined,
           receiverAddress: undefined,
-          warehouseName: undefined,
-          warehouseAddress: undefined,
+          warehouseName: "CÔNG TY QUANG ĐẠT",
+          warehouseAddress: "97/3 Đường Tân Thời Nhất 8, P. Đông Hưng Thuận, TP. HCM",
           items: [
             {
               itemName: materialDetail?.name || "",
@@ -940,8 +940,8 @@ export default function MaterialHistoryPage() {
                       vendorId: undefined,
                       receiverName: "",
                       receiverAddress: "",
-                      warehouseName: "",
-                      warehouseAddress: "",
+                      warehouseName: "CÔNG TY QUANG ĐẠT",
+                      warehouseAddress: "97/3 Đường Tân Thời Nhất 8, P. Đông Hưng Thuận, TP. HCM",
                     });
                     setIsStockOutOpen(true);
                   }}
