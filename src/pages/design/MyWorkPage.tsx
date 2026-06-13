@@ -296,7 +296,7 @@ export default function MyWorkPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 mb-3 shrink-0">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 mb-3 shrink-0">
         <Card
           className={`cursor-pointer transition-all p-2 ${
             statusFilter === "all" ? "ring-2 ring-primary" : "hover:shadow-md"
