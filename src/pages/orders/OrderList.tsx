@@ -375,6 +375,9 @@ export default function OrderList() {
                         Tổng tiền
                       </TableHead>
                       <TableHead className="h-10 font-bold text-sm text-right">
+                        Tiền cọc
+                      </TableHead>
+                      <TableHead className="h-10 font-bold text-sm text-right">
                         Còn lại
                       </TableHead>
                     </>
@@ -385,7 +388,7 @@ export default function OrderList() {
                 {/* Loading */}
                 {isLoading && (
                   <TableSkeleton
-                    cols={canViewPrice ? 7 : 5}
+                    cols={canViewPrice ? 8 : 5}
                     rows={8}
                     rowHeight="h-14"
                   />
@@ -395,7 +398,7 @@ export default function OrderList() {
                 {isError && !isLoading && (
                   <TableRow>
                     <TableCell
-                      colSpan={canViewPrice ? 7 : 5}
+                      colSpan={canViewPrice ? 8 : 5}
                       className="h-32 text-center"
                     >
                       <div className="flex flex-col items-center gap-2">
@@ -500,8 +503,19 @@ export default function OrderList() {
                               <TableCell className="text-right py-3">
                                 <span
                                   className={`text-sm font-bold ${
+                                    depositAmount > 0
+                                      ? "text-green-600"
+                                      : "text-muted-foreground"
+                                  }`}
+                                >
+                                  {formatCurrency(depositAmount)}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right py-3">
+                                <span
+                                  className={`text-sm font-bold ${
                                     remaining > 0
-                                      ? "text-amber-600"
+                                      ? "text-red-600"
                                       : "text-muted-foreground"
                                   }`}
                                 >
@@ -515,7 +529,7 @@ export default function OrderList() {
                         {orderDetails.length > 0 && (
                           <TableRow key={`designs-${order.id}`}>
                             <TableCell
-                              colSpan={canViewPrice ? 7 : 5}
+                              colSpan={canViewPrice ? 8 : 5}
                               className="p-0 bg-muted/20 border-x-2 border-b-2 border-border border-l-4 border-l-primary"
                             >
                               <div className="px-4 py-3 pl-6">
@@ -619,7 +633,7 @@ export default function OrderList() {
                 {!isLoading && !isError && orders.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={canViewPrice ? 7 : 5}
+                      colSpan={canViewPrice ? 8 : 5}
                       className="h-32 text-center"
                     >
                       <div className="flex flex-col items-center gap-2">
