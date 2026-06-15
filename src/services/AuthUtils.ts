@@ -105,6 +105,9 @@ export class AuthUtils {
     // ===== CSKH =====
     cskh: this.STAFF_ROUTES,
     cskh_lead: this.STAFF_ROUTES,
+
+    // ===== Sale =====
+    sale: this.STAFF_ROUTES,
   } as const;
 
   /** Kiểm tra xem user có quyền truy cập route không */

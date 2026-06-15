@@ -17,6 +17,7 @@ export const ROUTE_PATHS = {
     SALE_LOOKUP: "/design/sale-lookup" as const,
     DETAIL_BASE: "/design/detail" as const, // prefix cho /design/detail/:id
     DESIGNER_DETAIL: "/design/designer" as const, // prefix cho /design/designer/:id
+    READY_DESIGNS: "/design/ready-designs" as const,
   },
 
   ORDERS: {

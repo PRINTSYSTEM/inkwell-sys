@@ -22,7 +22,6 @@ export * from "./use-customer";
 export * from "./use-invoice";
 export * from "./use-delivery-note";
 export * from "./use-accounting";
-export * from "./use-order";
 export * from "./use-vendor";
 export * from "./use-die";
 export * from "./use-stock";

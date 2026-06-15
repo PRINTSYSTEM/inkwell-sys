@@ -313,8 +313,8 @@ export default function InvoiceDetailPage() {
                           </TableCell>
                           <TableCell className="text-right tabular-nums">
                             <div className="font-bold">
-                              {item.grandTotal
-                                ? formatCurrency(item.grandTotal)
+                              {(item as any).grandTotal
+                                ? formatCurrency((item as any).grandTotal)
                                 : (item.amountAfterDiscount || item.amount)
                                   ? formatCurrency(
                                       (item.amountAfterDiscount || item.amount || 0) *
@@ -322,13 +322,13 @@ export default function InvoiceDetailPage() {
                                     )
                                   : "—"}
                             </div>
-                            {(item.vatAmount !== undefined && item.vatAmount !== null) ||
+                            {((item as any).vatAmount !== undefined && (item as any).vatAmount !== null) ||
                             ((item.amountAfterDiscount || item.amount) &&
                               invoice.taxRate && invoice.taxRate > 0) ? (
                               <div className="text-[10px] text-muted-foreground">
                                 VAT:{" "}
-                                {item.vatAmount !== undefined && item.vatAmount !== null
-                                  ? formatCurrency(item.vatAmount)
+                                {(item as any).vatAmount !== undefined && (item as any).vatAmount !== null
+                                  ? formatCurrency((item as any).vatAmount)
                                   : formatCurrency(
                                       (item.amountAfterDiscount || item.amount || 0) *
                                         (invoice.taxRate || 0)

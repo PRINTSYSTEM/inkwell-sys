@@ -24,6 +24,10 @@ import {
   postApidesignsIdtimeline_BodySchema as GenPostApidesignsIdtimelineBodySchema,
   RevertDesignRequestSchema as GenRevertDesignRequestSchema,
   RejectDesignRequestSchema as GenRejectDesignRequestSchema,
+  CreateDesignStandaloneRequestSchema as GenCreateDesignStandaloneRequestSchema,
+  ReprintDesignRequestSchema as GenReprintDesignRequestSchema,
+  ReadyDesignResponseSchema as GenReadyDesignResponseSchema,
+  ReadyDesignResponsePaginateSchema as GenReadyDesignResponsePaginateSchema,
 } from "./generated";
 
 // ===== DesignTimelineEntryResponse =====
@@ -137,3 +141,27 @@ export type RevertDesignRequest = z.infer<typeof RevertDesignRequestSchema>;
 export const RejectDesignRequestSchema =
   GenRejectDesignRequestSchema.passthrough();
 export type RejectDesignRequest = z.infer<typeof RejectDesignRequestSchema>;
+
+// ===== CreateDesignStandaloneRequest =====
+export const CreateDesignStandaloneRequestSchema =
+  GenCreateDesignStandaloneRequestSchema.passthrough();
+export type CreateDesignStandaloneRequest = z.infer<
+  typeof CreateDesignStandaloneRequestSchema
+>;
+
+// ===== ReprintDesignRequest =====
+export const ReprintDesignRequestSchema =
+  GenReprintDesignRequestSchema.passthrough();
+export type ReprintDesignRequest = z.infer<typeof ReprintDesignRequestSchema>;
+
+// ===== ReadyDesignResponse =====
+export const ReadyDesignResponseSchema =
+  GenReadyDesignResponseSchema.passthrough();
+export type ReadyDesignResponse = z.infer<typeof ReadyDesignResponseSchema>;
+
+// ===== ReadyDesignResponsePaginate =====
+export const ReadyDesignResponsePaginateSchema =
+  GenReadyDesignResponsePaginateSchema.passthrough();
+export type ReadyDesignResponsePaginate = z.infer<
+  typeof ReadyDesignResponsePaginateSchema
+>;

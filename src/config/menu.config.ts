@@ -175,6 +175,21 @@ export const MENU_ITEMS: MenuItem[] = [
       ROLE.SALE,
     ],
   },
+  {
+    id: "ready-designs",
+    title: "Kho thiết kế",
+    icon: Package,
+    path: ROUTE_PATHS.DESIGN.READY_DESIGNS,
+    allowedRoles: [
+      ROLE.ADMIN,
+      ROLE.MANAGER,
+      ROLE.ACCOUNTING,
+      ROLE.ACCOUNTING_LEAD,
+      ROLE.DESIGN,
+      ROLE.DESIGN_LEAD,
+      ROLE.SALE,
+    ],
+  },
 
   // ==== Bình bài ====
   {

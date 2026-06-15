@@ -106,8 +106,8 @@ export default function OrderQuotePage() {
                 {(order.orderDetails || []).map((od) => (
                   <TableRow key={od.id}>
                     <TableCell>
-                      <div className="text-sm font-medium">{od.design?.designName || od.productName || "—"}</div>
-                      <div className="text-xs text-muted-foreground">{od.design?.code || od.productCode || ""}</div>
+                      <div className="text-sm font-medium">{od.design?.designName || (od as any).productName || "—"}</div>
+                      <div className="text-xs text-muted-foreground">{od.design?.code || (od as any).productCode || ""}</div>
                     </TableCell>
                     <TableCell>
                       <Input

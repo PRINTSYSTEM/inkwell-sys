@@ -436,8 +436,15 @@ export default function OrderList() {
                           onClick={() => handleOrderClick(order.id ?? 0)}
                         >
                           <TableCell className="py-3">
-                            <div className="font-bold text-sm text-primary">
-                              {order.code || `ORD-${order.id}`}
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-bold text-sm text-primary">
+                                {order.code || `ORD-${order.id}`}
+                              </span>
+                              {order.invoiceNumber && (
+                                <Badge variant="secondary" className="font-mono text-[10px] py-0 px-1 bg-indigo-50 text-indigo-700 border-indigo-200/60 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800/40">
+                                  HĐ: {order.invoiceNumber}
+                                </Badge>
+                              )}
                             </div>
                             {order.createdAt && (
                               <p className="text-xs font-medium text-muted-foreground mt-0.5">

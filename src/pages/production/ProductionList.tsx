@@ -19,7 +19,7 @@ import type { SortOrder } from "@/components/ui/sort-controls";
 import { ProductionListHeader } from "./components/ProductionListHeader";
 import { ProductionListFilter } from "./components/ProductionListFilter";
 import { ProductionListTable } from "./components/ProductionListTable";
-import { CreateProductionDialog } from "./components/CreateProductionDialog";
+
 
 import { useListState } from "@/hooks/use-list-state";
 

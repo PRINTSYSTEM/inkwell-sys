@@ -110,7 +110,7 @@ export default function DeliveryNoteUpdateDialog({
                     <SelectValue placeholder="Chọn loại thất bại" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from(
+                    {Object.entries(
                       FAILURE_REASONS.reduce((acc, cur) => {
                         const cat = cur.allowRedelivery ? "logistics" : "other";
                         (acc[cat] = acc[cat] || []).push(cur);

@@ -6,7 +6,7 @@ import { useDesignsSale } from "@/hooks/use-design";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/status-utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { apiRequest, API_SUFFIX } from "@/apis";
 import {
   Select,
@@ -79,7 +79,7 @@ export default function SaleDesignSearch() {
     : null;
 
   // Load materials; if a design type is selected, fetch by type id, else fetch all (use large pageSize)
-  const { data: materialOptions = [] } = useQuery({
+  const { data: materialOptions = [] } = useQuery<any[]>({
     queryKey: ["materials", selectedTypeId],
     queryFn: async () => {
       if (selectedTypeId) {
@@ -102,7 +102,7 @@ export default function SaleDesignSearch() {
       if (payload?.items && Array.isArray(payload.items)) return payload.items;
       return [];
     },
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   });
 
   const { data, isLoading } = useDesignsSale({

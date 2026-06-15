@@ -37,6 +37,7 @@ import {
   useUploadDesignImage,
   useAddDesignTimelineEntry,
   useUpdateDesign,
+  useReprintDesign,
 } from "@/hooks/use-design";
 import { useMaterialsByDesignType } from "@/hooks/use-material-type";
 import { ErrorBoundary, ErrorDisplay } from "@/components/ui/error-components";
@@ -242,6 +243,8 @@ export default function DesignDetailPage() {
     timelineData?.items ?? [];
 
   // ==== LOCAL UI STATE ====
+  const [reprintDialogOpen, setReprintDialogOpen] = useState(false);
+  const [reprintQuantity, setReprintQuantity] = useState(1000);
   const [viewingImage, setViewingImage] = useState<{
     url: string;
     title: string;
@@ -276,6 +279,7 @@ export default function DesignDetailPage() {
   const { mutate: uploadFile } = useUploadDesignFile();
   const { mutate: uploadImage } = useUploadDesignImage();
   const { mutate: addTimeline } = useAddDesignTimelineEntry();
+  const reprintDesignMutation = useReprintDesign();
 
   const { data: materialsByDesignType = [], isLoading: materialsLoading } =
     useMaterialsByDesignType(
@@ -599,6 +603,16 @@ export default function DesignDetailPage() {
     }
   };
 
+  const handleReprintSubmit = async () => {
+    if (!reprintQuantity || reprintQuantity <= 0) return;
+    try {
+      await reprintDesignMutation.mutate({ id: designId, quantity: reprintQuantity });
+      setReprintDialogOpen(false);
+    } catch {
+      // Handled in mutation hook toast
+    }
+  };
+
   const canEditDesign =
     (user?.role === ROLE.DESIGN ||
       user?.role === ROLE.DESIGN_LEAD ||
@@ -706,20 +720,74 @@ export default function DesignDetailPage() {
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              {canChangeStatus && validNextStatuses.length > 0 && (
-                <Button
-                  size="sm"
-                  className="gap-1.5 h-8"
-                  onClick={() => handleStatusTransition(validNextStatuses[0])}
-                  disabled={
-                    updatingStatus || !canTransitionTo(validNextStatuses[0])
-                  }
-                >
-                  <ArrowRight className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">
-                    {designStatusLabels[validNextStatuses[0]]}
-                  </span>
-                </Button>
+              {canChangeStatus && (
+                <>
+                  {currentStatus === "waiting_for_customer_approval" && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5 h-8 border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-400"
+                        onClick={() => handleStatusTransition("editing")}
+                        disabled={updatingStatus}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        <span>Sửa thiết kế</span>
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="gap-1.5 h-8 bg-emerald-600 hover:bg-emerald-700 text-white"
+                        onClick={() => handleStatusTransition("confirmed_for_printing")}
+                        disabled={updatingStatus}
+                      >
+                        <CheckCircleIcon className="h-3.5 w-3.5" />
+                        <span>Chốt in</span>
+                      </Button>
+                    </>
+                  )}
+
+                  {currentStatus === "confirmed_for_printing" && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="gap-1.5 h-8 border-destructive/30 hover:bg-destructive/10 text-destructive"
+                        onClick={() => handleStatusTransition("waiting_for_customer_approval")}
+                        disabled={updatingStatus}
+                      >
+                        <ArrowLeft className="h-3.5 w-3.5" />
+                        <span>Chờ khách duyệt</span>
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="gap-1.5 h-8 bg-gradient-to-r from-primary to-indigo-600 text-white font-semibold shadow-md"
+                        onClick={() => {
+                          setReprintQuantity(1000);
+                          setReprintDialogOpen(true);
+                        }}
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        <span>Tái bản</span>
+                      </Button>
+                    </>
+                  )}
+
+                  {currentStatus !== "waiting_for_customer_approval" && currentStatus !== "confirmed_for_printing" && validNextStatuses.length > 0 && (
+                    <Button
+                      size="sm"
+                      className="gap-1.5 h-8"
+                      onClick={() => handleStatusTransition(validNextStatuses[0])}
+                      disabled={
+                        updatingStatus || !canTransitionTo(validNextStatuses[0])
+                      }
+                    >
+                      <ArrowRight className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">
+                        {designStatusLabels[validNextStatuses[0]]}
+                      </span>
+                    </Button>
+                  )}
+                </>
               )}
 
               {canExportDocuments && (
@@ -1799,6 +1867,49 @@ export default function DesignDetailPage() {
           onOpenChange={setShowTimelineDialog}
           onAdd={handleTimelineAdd}
         />
+
+        {/* Reprint Dialog */}
+        <Dialog open={reprintDialogOpen} onOpenChange={setReprintDialogOpen}>
+          <DialogContent className="max-w-md bg-background border border-border shadow-2xl rounded-2xl p-6">
+            <DialogHeader className="pb-3 border-b border-border/40">
+              <DialogTitle className="text-lg font-bold bg-gradient-to-r from-primary to-indigo-600 bg-clip-text text-transparent">
+                Yêu cầu tái bản thiết kế
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground mt-1">
+                Nhập số lượng sản phẩm cần sản xuất thêm cho thiết kế này. Hệ thống sẽ tạo một yêu cầu in mới trong kho sẵn sàng.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4 text-sm">
+              <div className="space-y-2">
+                <Label className="font-semibold text-foreground">Số lượng in thêm *</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  placeholder="VD: 1000"
+                  value={reprintQuantity || ""}
+                  onChange={(e) => setReprintQuantity(Number(e.target.value))}
+                  className="h-11 bg-background"
+                />
+              </div>
+            </div>
+            <DialogFooter className="pt-3 border-t border-border/40 gap-2 shrink-0">
+              <Button
+                variant="outline"
+                onClick={() => setReprintDialogOpen(false)}
+                disabled={reprintDesignMutation.loading}
+              >
+                Hủy bỏ
+              </Button>
+              <Button
+                onClick={handleReprintSubmit}
+                disabled={reprintDesignMutation.loading || !reprintQuantity || reprintQuantity <= 0}
+                className="bg-gradient-to-r from-primary to-indigo-600 text-white font-semibold"
+              >
+                {reprintDesignMutation.loading ? "Đang xử lý..." : "Xác nhận tái bản"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </ErrorBoundary>
   );

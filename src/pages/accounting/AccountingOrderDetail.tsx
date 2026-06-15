@@ -79,6 +79,7 @@ import type {
   UpdateOrderForAccountingRequest,
   UpdateOrderDetailForAccountingRequest,
   CreateInvoiceRequest,
+  UpdateOrderRequest,
 } from "@/Schema";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1635,10 +1636,10 @@ export default function AccountingOrderDetail() {
                                       <Badge
                                         variant={
                                           receipt.status === "posted"
-                                            ? "success"
+                                            ? "outline"
                                             : "secondary"
                                         }
-                                        className="text-[10px] h-4 px-1"
+                                        className={`text-[10px] h-4 px-1${receipt.status === "posted" ? " border-green-500 text-green-700" : ""}`}
                                       >
                                         {receipt.status === "posted"
                                           ? "Đã ghi sổ"

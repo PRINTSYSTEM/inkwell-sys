@@ -134,8 +134,8 @@ export function APExportDialog() {
                 Khoảng thời gian
               </Label>
               <DateRangePicker
-                date={dateRange}
-                onDateChange={setDateRange}
+                value={dateRange}
+                onValueChange={setDateRange}
                 className="w-full"
               />
             </div>

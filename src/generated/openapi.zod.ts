@@ -1248,6 +1248,7 @@ const OrderDetailForDeliveryResponse = z
     unitPrice: z.number(),
     customerId: z.number().int(),
     customerName: z.string().nullable(),
+    proofingOrderCodes: z.array(z.string()).nullable(),
   })
   .partial();
 const OrderForDeliveryResponse = z
@@ -1409,6 +1410,21 @@ const UpdateDesignRequest = z
     additionalNotes: z.string().nullable(),
   })
   .partial();
+const CreateDesignStandaloneRequest = z.object({
+  customerId: z.number().int(),
+  designTypeId: z.number().int(),
+  materialTypeId: z.number().int(),
+  quantity: z.number().int().gte(1).lte(2147483647),
+  designName: z.string().min(0).max(255).nullish(),
+  length: z.number().gte(0).nullish(),
+  width: z.number().gte(0).nullish(),
+  height: z.number().gte(0).nullish(),
+  adhesiveOffset: z.number().gte(0).nullish(),
+  sidesClassification: z.string().nullish(),
+  processClassification: z.string().nullish(),
+  laminationType: z.string().min(0).max(20).nullish(),
+  notes: z.string().nullish(),
+});
 const DesignResponsePaginate = z
   .object({
     size: z.number().int(),
@@ -1418,6 +1434,9 @@ const DesignResponsePaginate = z
     items: z.array(DesignResponse).nullable(),
   })
   .partial();
+const ReprintDesignRequest = z.object({
+  quantity: z.number().int().gte(1).lte(2147483647),
+});
 const postApidesignsIdtimeline_Body = z
   .object({ File: z.instanceof(File), Description: z.string().optional() })
   .passthrough();
@@ -1991,6 +2010,7 @@ const MaterialResponse = z
     width: z.number().nullable(),
     unit: z.string().nullable(),
     unitPrice: z.number(),
+    basisWeight: z.number().int().nullable(),
     currentStock: z.number().int(),
     vendorId: z.number().int().nullable(),
     vendorName: z.string().nullable(),
@@ -2019,6 +2039,7 @@ const CreateMaterialRequest = z.object({
   width: z.number().gte(0).nullish(),
   unit: z.string().max(50).nullish(),
   unitPrice: z.number().gte(0),
+  basisWeight: z.number().int().nullish(),
   vendorId: z.number().int().nullish(),
 });
 const UpdateMaterialRequest = z
@@ -2032,6 +2053,7 @@ const UpdateMaterialRequest = z
     width: z.number().gte(0).nullable(),
     unit: z.string().max(50).nullable(),
     unitPrice: z.number().gte(0).nullable(),
+    basisWeight: z.number().int().nullable(),
     vendorId: z.number().int().nullable(),
     clearVendor: z.boolean().nullable(),
   })
@@ -2270,6 +2292,7 @@ const OrderResponse = z
     missingFields: z.array(z.string()).nullable(),
     orderDetails: z.array(OrderDetailResponse).nullable(),
     payments: z.array(PaymentSummaryResponse).nullable(),
+    invoiceNumber: z.string().nullable(),
   })
   .partial();
 const OrderDetailListResponse = z
@@ -2300,6 +2323,7 @@ const OrderListResponse = z
     deliveryDate: z.string().datetime({ offset: true }).nullable(),
     createdAt: z.string().datetime({ offset: true }),
     orderDetails: z.array(OrderDetailListResponse).nullable(),
+    invoiceNumber: z.string().nullable(),
   })
   .partial();
 const OrderListResponsePaginate = z
@@ -2311,6 +2335,13 @@ const OrderListResponsePaginate = z
     items: z.array(OrderListResponse).nullable(),
   })
   .partial();
+const CreateOrderFromReadyDesignsRequest = z.object({
+  readyDesignIds: z.array(z.number().int()),
+  customerAddressId: z.number().int(),
+  assignedToUserId: z.number().int().nullish(),
+  deliveryDate: z.string().datetime({ offset: true }).nullish(),
+  note: z.string().nullish(),
+});
 const UpdateOrderRequest = z
   .object({
     customerId: z.number().int().nullable(),
@@ -3035,6 +3066,32 @@ const VendorReceiptStatisticsRowIPaginate = z
     items: z.array(VendorReceiptStatisticsRow).nullable(),
   })
   .partial();
+const ReadyDesignResponse = z
+  .object({
+    id: z.number().int(),
+    designId: z.number().int(),
+    designCode: z.string().nullable(),
+    designName: z.string().nullable(),
+    customerId: z.number().int(),
+    customerName: z.string().nullable(),
+    quantity: z.number().int(),
+    dimensions: z.string().nullable(),
+    materialTypeName: z.string().nullable(),
+    status: z.string().nullable(),
+    orderCode: z.string().nullable(),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }).nullable(),
+  })
+  .partial();
+const ReadyDesignResponsePaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(ReadyDesignResponse).nullable(),
+  })
+  .partial();
 const ReportExportResponse = z
   .object({
     id: z.number().int(),
@@ -3286,6 +3343,7 @@ const StockInItemRequest = z.object({
   unit: z.string().nullish(),
   quantity: z.number().int().gte(1).lte(2147483647),
   unitPrice: z.number().nullish(),
+  lineAmount: z.number().nullish(),
   notes: z.string().nullish(),
   materialId: z.number().int().nullish(),
   orderDetailId: z.number().int().nullish(),
@@ -3729,7 +3787,9 @@ export const schemas = {
   DesignTimelineEntryResponse,
   DesignResponse,
   UpdateDesignRequest,
+  CreateDesignStandaloneRequest,
   DesignResponsePaginate,
+  ReprintDesignRequest,
   postApidesignsIdtimeline_Body,
   DesignTimelineEntryResponsePaginate,
   RevertDesignRequest,
@@ -3802,6 +3862,7 @@ export const schemas = {
   OrderDetailListResponse,
   OrderListResponse,
   OrderListResponsePaginate,
+  CreateOrderFromReadyDesignsRequest,
   UpdateOrderRequest,
   AddDesignToOrderRequest,
   OrderDetailResponseForDesigner,
@@ -3860,6 +3921,8 @@ export const schemas = {
   PurchaseJournalRowIPaginate,
   VendorReceiptStatisticsRow,
   VendorReceiptStatisticsRowIPaginate,
+  ReadyDesignResponse,
+  ReadyDesignResponsePaginate,
   ReportExportResponse,
   ReportExportResponseIPaginate,
   ReturnLineRequest,
@@ -6786,6 +6849,20 @@ const endpoints = makeApi([
     response: DeliveryNoteResponse,
   },
   {
+    method: "post",
+    path: "/api/designs",
+    alias: "postApidesigns",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateDesignStandaloneRequest,
+      },
+    ],
+    response: DesignResponse,
+  },
+  {
     method: "get",
     path: "/api/designs",
     alias: "getApidesigns",
@@ -6890,6 +6967,25 @@ const endpoints = makeApi([
       },
     ],
     response: z.string(),
+  },
+  {
+    method: "post",
+    path: "/api/designs/:id/reprint",
+    alias: "postApidesignsIdreprint",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: z.object({ quantity: z.number().int().gte(1).lte(2147483647) }),
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: DesignResponse,
   },
   {
     method: "post",
@@ -9491,6 +9587,20 @@ const endpoints = makeApi([
     response: OrderListResponsePaginate,
   },
   {
+    method: "post",
+    path: "/api/orders/from-ready-designs",
+    alias: "postApiordersfromReadyDesigns",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateOrderFromReadyDesignsRequest,
+      },
+    ],
+    response: OrderResponse,
+  },
+  {
     method: "get",
     path: "/api/orders/my",
     alias: "getApiordersmy",
@@ -11042,6 +11152,35 @@ const endpoints = makeApi([
       },
     ],
     response: VendorReceiptStatisticsRowIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/ready-designs",
+    alias: "getApireadyDesigns",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "customerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "search",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+    ],
+    response: ReadyDesignResponsePaginate,
   },
   {
     method: "get",

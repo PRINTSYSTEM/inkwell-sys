@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -18,9 +19,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Calendar,
+  Plus,
 } from "lucide-react";
 import { useDesigns, useFilters, useUsers, useUpdateDesign, useAuth } from "@/hooks";
 import type { DesignResponse } from "@/Schema";
+import { DesignCreateDialog } from "@/components/design";
 import { designStatusConfig, designStatusLabels } from "@/lib/status-utils";
 import {
   Table,
@@ -41,6 +44,8 @@ type DesignWithSearch = DesignResponse & {
 
 export default function AllDesignsPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInput, setPageInput] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState<number | null>(
@@ -101,8 +106,9 @@ export default function AllDesignsPage() {
 
   const { user } = useAuth();
   const isDesignLeadOrAdmin = user?.role === "design_lead" || user?.role === "admin";
+  const canCreateDesign = user?.role === "admin" || user?.role === "manager" || user?.role === "design" || user?.role === "design_lead";
 
-  const { mutate: updateDesign, loading: updatingDesign } = useUpdateDesign();
+  const { mutate: updateDesign, isPending: updatingDesign } = useUpdateDesign();
 
   // Memoize designs to prevent dependency warnings
   const designs = useMemo<DesignResponse[]>(
@@ -270,6 +276,15 @@ export default function AllDesignsPage() {
             )}
           </p>
         </div>
+        {canCreateDesign && (
+          <Button
+            onClick={() => setCreateDialogOpen(true)}
+            className="gap-2 bg-gradient-to-r from-primary to-indigo-600 text-white font-semibold shadow-md shrink-0 animate-in fade-in duration-300"
+          >
+            <Plus className="h-4 w-4" />
+            Tạo thiết kế mới
+          </Button>
+        )}
       </div>
 
       {/* Filters */}
@@ -441,7 +456,13 @@ export default function AllDesignsPage() {
                         onClick={() => navigate(`/design/detail/${design.id}`)}
                     >
                       <TableCell className="py-3 font-semibold text-sm">
-                        {design.code || `DES-${design.id}`}
+                        {design.code?.startsWith("NHAP") ? (
+                          <Badge variant="outline" className="bg-orange-50/80 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border-orange-200/80 dark:border-orange-900/50 font-semibold px-2 py-0.5 rounded">
+                            {design.code}
+                          </Badge>
+                        ) : (
+                          design.code || `DES-${design.id}`
+                        )}
                       </TableCell>
                       <TableCell className="py-3">
                         {design.latestOrderCode ? (
@@ -621,6 +642,13 @@ export default function AllDesignsPage() {
           )}
         </CardContent>
       </Card>
+      <DesignCreateDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["designs"] });
+        }}
+      />
     </div>
   );
 }
