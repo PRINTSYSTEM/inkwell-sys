@@ -112,6 +112,7 @@ export function DieExportDialog({
 
   // For selecting existing dies
   const [selectedDieIds, setSelectedDieIds] = useState<number[]>([]);
+  const [isBrowsingDie, setIsBrowsingDie] = useState(false);
   const [dieSearchTerm, setDieSearchTerm] = useState<string>("");
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [copiedProofingOrderCode, setCopiedProofingOrderCode] = useState<

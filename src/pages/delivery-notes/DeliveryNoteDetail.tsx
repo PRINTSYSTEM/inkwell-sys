@@ -505,7 +505,7 @@ export default function DeliveryNoteDetailPage() {
           const addr = (l as any).customerAddress;
           const key =
             addr?.id ?? `${addr?.recipientName || ""}|${addr?.address || ""}`;
-          return [key, addr];
+          return [key, addr] as [unknown, typeof addr];
         })
         .filter(([, a]) => !!a),
     ).values(),
@@ -686,7 +686,7 @@ export default function DeliveryNoteDetailPage() {
       )}
 
       {isCancelled && (
-        <Alert variant="warning" className="border-amber-200 bg-amber-50">
+        <Alert className="border-amber-200 bg-amber-50">
           <XCircle className="h-4 w-4 text-amber-600" />
           <AlertTitle className="text-amber-800">
             Phiếu giao hàng đã hủy

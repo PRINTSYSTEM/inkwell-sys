@@ -30,6 +30,7 @@ import {
   OrderDetailListResponseSchema as GenOrderDetailListResponseSchema,
   OrderDetailAvailableResponseSchema as GenOrderDetailAvailableResponseSchema,
   OrderDetailAvailableResponsePaginateSchema as GenOrderDetailAvailableResponsePaginateSchema,
+  CreateOrderFromReadyDesignsRequestSchema as GenCreateOrderFromReadyDesignsRequestSchema,
 } from "./generated";
 
 // ===== OrderDetailResponse =====
@@ -225,4 +226,11 @@ export type ProofingAllocationResponse = z.infer<
 >;
 export type PaymentSummaryResponse = z.infer<
   typeof GenPaymentSummaryResponseSchema
+>;
+
+// ===== CreateOrderFromReadyDesignsRequest =====
+export const CreateOrderFromReadyDesignsRequestSchema =
+  GenCreateOrderFromReadyDesignsRequestSchema.passthrough();
+export type CreateOrderFromReadyDesignsRequest = z.infer<
+  typeof CreateOrderFromReadyDesignsRequestSchema
 >;

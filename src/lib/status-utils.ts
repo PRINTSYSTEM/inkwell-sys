@@ -541,12 +541,8 @@ export const statusColorMap: Record<string, string> = {
   // completed đã được định nghĩa ở ORDER STATUSES ở trên
   // cancelled đã được định nghĩa ở ORDER STATUSES ở trên
 
-  // ===== STOCK OUT STATUSES =====
-  // pending đã được định nghĩa ở ORDER STATUSES ở trên
-  // completed đã được định nghĩa ở ORDER STATUSES ở trên
-  // returned đã được định nghĩa ở DELIVERY LINE STATUSES ở trên
-  partially_returned: "bg-amber-50 text-amber-700 border-amber-200",
-  // cancelled đã được định nghĩa ở ORDER STATUSES ở trên
+  // partially_returned already defined in DELIVERY LINE STATUSES above
+  // cancelled defined in ORDER STATUSES above
 
   // ===== DELIVERY FAILURE TYPES =====
   customer_refused: "bg-red-50 text-red-700 border-red-200",

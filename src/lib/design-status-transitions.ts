@@ -26,7 +26,7 @@ const statusTransitions: Record<DesignStatus, DesignStatus[]> = {
   designing: ["waiting_for_customer_approval"],
   waiting_for_customer_approval: ["editing", "confirmed_for_printing"],
   editing: ["waiting_for_customer_approval"],
-  confirmed_for_printing: [], // Final status - no transitions allowed
+  confirmed_for_printing: ["waiting_for_customer_approval"], // Can revert to waiting for customer approval
   returned: ["editing"], // Returned designs can only go to editing
 };
 

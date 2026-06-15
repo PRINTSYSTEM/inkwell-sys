@@ -13,6 +13,11 @@ import type {
   DesignSaleParams,
   RevertDesignRequest,
   DesignUserParams,
+  CreateDesignStandaloneRequest,
+  ReprintDesignRequest,
+  ReadyDesignResponse,
+  ReadyDesignResponsePaginate,
+  ReadyDesignListParams,
 } from "@/Schema";
 import { createCrudHooks } from "./use-base";
 import { API_SUFFIX } from "@/apis";
@@ -25,10 +30,11 @@ const {
   keys: designKeys,
   useList: useDesignListBase,
   useDetail: useDesignDetailBase,
+  useCreate: useCreateDesignBase,
   useUpdate: useUpdateDesignBase,
 } = createCrudHooks<
   DesignResponse,
-  never, // không có POST /designs, nên không dùng create
+  CreateDesignStandaloneRequest,
   UpdateDesignRequest,
   number,
   DesignListParams,
@@ -38,17 +44,20 @@ const {
   basePath: API_SUFFIX.DESIGNS,
   getItems: (resp) => resp.items ?? [],
   messages: {
+    createSuccess: "Đã tạo thiết kế độc lập thành công",
     updateSuccess: "Đã cập nhật thiết kế thành công",
   },
 });
 
-// ===== Base list/detail/update =====
+// ===== Base list/detail/create/update =====
 
 export const useDesigns = (params?: DesignListParams) =>
   useDesignListBase(params ?? ({} as DesignListParams));
 
 export const useDesign = (id: number | null, enabled = true) =>
   useDesignDetailBase(id, enabled);
+
+export const useCreateDesign = () => useCreateDesignBase();
 
 export const useUpdateDesign = () => useUpdateDesignBase();
 
@@ -421,6 +430,80 @@ export const useDesignsSale = (params?: DesignSaleParams) => {
     queryFn: async () => {
       const res = await apiRequest.get<DesignResponsePaginate>(
         API_SUFFIX.DESIGNS_SALE,
+        { params }
+      );
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
+// POST /api/designs/{id}/reprint
+export const useReprintDesign = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    DesignResponse,
+    [{ id: number; quantity: number }]
+  >(async ({ id, quantity }) => {
+    const res = await apiRequest.post<DesignResponse>(
+      API_SUFFIX.DESIGN_REPRINT(id),
+      { quantity } as ReprintDesignRequest
+    );
+    return res.data;
+  });
+
+  const mutate = async (payload: { id: number; quantity: number }) => {
+    try {
+      const result = await execute(payload);
+
+      // Invalidate design detail and related queries
+      queryClient.invalidateQueries({
+        queryKey: designKeys.detail(payload.id),
+      });
+      queryClient.invalidateQueries({
+        queryKey: designKeys.all,
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["ready-designs"],
+      });
+
+      toast.success("Thành công", {
+        description: "Đã yêu cầu tái bản thiết kế thành công",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể yêu cầu tái bản thiết kế",
+      });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
+};
+
+// GET /api/ready-designs
+export const useReadyDesigns = (params?: ReadyDesignListParams) => {
+  return useQuery({
+    queryKey: ["ready-designs", params ?? {}],
+    queryFn: async () => {
+      const res = await apiRequest.get<ReadyDesignResponsePaginate>(
+        API_SUFFIX.READY_DESIGNS,
         { params }
       );
       return res.data;

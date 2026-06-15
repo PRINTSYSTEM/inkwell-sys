@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-06-12T17:17:07.718Z */
+/* Generated at: 2026-06-15T17:53:31.696Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -77,6 +77,7 @@ export const CreateCustomerRequestSchema = schemas.CreateCustomerRequest;
 export const CreateDebtNotificationRequestSchema = schemas.CreateDebtNotificationRequest;
 export const CreateDeliveryNoteRequestSchema = schemas.CreateDeliveryNoteRequest;
 export const CreateDesignRequestSchema = schemas.CreateDesignRequest;
+export const CreateDesignStandaloneRequestSchema = schemas.CreateDesignStandaloneRequest;
 export const CreateDesignTypeRequestSchema = schemas.CreateDesignTypeRequest;
 export const CreateDieRequestSchema = schemas.CreateDieRequest;
 export const CreateExpenseCategoryRequestSchema = schemas.CreateExpenseCategoryRequest;
@@ -85,6 +86,7 @@ export const CreateInvoiceRequestSchema = schemas.CreateInvoiceRequest;
 export const CreateMaterialCutRequestSchema = schemas.CreateMaterialCutRequest;
 export const CreateMaterialRequestSchema = schemas.CreateMaterialRequest;
 export const CreateMaterialTypeRequestSchema = schemas.CreateMaterialTypeRequest;
+export const CreateOrderFromReadyDesignsRequestSchema = schemas.CreateOrderFromReadyDesignsRequest;
 export const CreateOrderRequestSchema = schemas.CreateOrderRequest;
 export const CreateOutsourceStockOutRequestSchema = schemas.CreateOutsourceStockOutRequest;
 export const CreatePaperSizeRequestSchema = schemas.CreatePaperSizeRequest;
@@ -227,6 +229,8 @@ export const PurchaseJournalRowSchema = schemas.PurchaseJournalRow;
 export const PurchaseJournalRowIPaginateSchema = schemas.PurchaseJournalRowIPaginate;
 export const PurchaseSummaryRowSchema = schemas.PurchaseSummaryRow;
 export const PurchaseSummaryRowIPaginateSchema = schemas.PurchaseSummaryRowIPaginate;
+export const ReadyDesignResponseSchema = schemas.ReadyDesignResponse;
+export const ReadyDesignResponsePaginateSchema = schemas.ReadyDesignResponsePaginate;
 export const RecordDieExportRequestSchema = schemas.RecordDieExportRequest;
 export const RecordPlateExportRequestSchema = schemas.RecordPlateExportRequest;
 export const RecreateDeliveryNoteRequestSchema = schemas.RecreateDeliveryNoteRequest;
@@ -234,6 +238,7 @@ export const RejectDesignRequestSchema = schemas.RejectDesignRequest;
 export const ReplaceDieRequestSchema = schemas.ReplaceDieRequest;
 export const ReportExportResponseSchema = schemas.ReportExportResponse;
 export const ReportExportResponseIPaginateSchema = schemas.ReportExportResponseIPaginate;
+export const ReprintDesignRequestSchema = schemas.ReprintDesignRequest;
 export const ResetPasswordRequestSchema = schemas.ResetPasswordRequest;
 export const ReturnItemRequestSchema = schemas.ReturnItemRequest;
 export const ReturnLineRequestSchema = schemas.ReturnLineRequest;

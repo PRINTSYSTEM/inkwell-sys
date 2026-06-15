@@ -6570,102 +6570,53 @@
         }
       }
     },
-    "/api/designs/user/{userId}": {
-      "get": {
+    "/api/designs": {
+      "post": {
         "tags": [
           "Design"
         ],
-        "parameters": [
-          {
-            "name": "userId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          },
-          {
-            "name": "status",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "month",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          },
-          {
-            "name": "year",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          },
-          {
-            "name": "pageNumber",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "default": 1
-            }
-          },
-          {
-            "name": "pageSize",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "default": 10
-            }
-          },
-          {
-            "name": "sortColumn",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "sortOrder",
-            "in": "query",
-            "schema": {
-              "type": "string"
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDesignStandaloneRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDesignStandaloneRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateDesignStandaloneRequest"
+              }
             }
           }
-        ],
+        },
         "responses": {
-          "200": {
-            "description": "OK",
+          "201": {
+            "description": "Created",
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/DesignResponsePaginate"
+                  "$ref": "#/components/schemas/DesignResponse"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DesignResponsePaginate"
+                  "$ref": "#/components/schemas/DesignResponse"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DesignResponsePaginate"
+                  "$ref": "#/components/schemas/DesignResponse"
                 }
               }
             }
           }
         }
-      }
-    },
-    "/api/designs": {
+      },
       "get": {
         "tags": [
           "Design"
@@ -6734,6 +6685,160 @@
             "schema": {
               "type": "string",
               "format": "date-time"
+            }
+          },
+          {
+            "name": "sortColumn",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sortOrder",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/DesignResponsePaginate"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DesignResponsePaginate"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DesignResponsePaginate"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/designs/{id}/reprint": {
+      "post": {
+        "tags": [
+          "Design"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReprintDesignRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReprintDesignRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReprintDesignRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/DesignResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DesignResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DesignResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/designs/user/{userId}": {
+      "get": {
+        "tags": [
+          "Design"
+        ],
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "month",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "pageNumber",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
             }
           },
           {
@@ -11721,6 +11826,54 @@
         }
       }
     },
+    "/api/orders/from-ready-designs": {
+      "post": {
+        "tags": [
+          "Order"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrderFromReadyDesignsRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrderFromReadyDesignsRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrderFromReadyDesignsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/orders/{id}": {
       "put": {
         "tags": [
@@ -16154,6 +16307,70 @@
                 "schema": {
                   "type": "string",
                   "format": "binary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ready-designs": {
+      "get": {
+        "tags": [
+          "ReadyDesign"
+        ],
+        "parameters": [
+          {
+            "name": "customerId",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageNumber",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadyDesignResponsePaginate"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadyDesignResponsePaginate"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadyDesignResponsePaginate"
                 }
               }
             }
@@ -23778,6 +23995,84 @@
         },
         "additionalProperties": false
       },
+      "CreateDesignStandaloneRequest": {
+        "required": [
+          "customerId",
+          "designTypeId",
+          "materialTypeId",
+          "quantity"
+        ],
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "designTypeId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "materialTypeId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "quantity": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
+          },
+          "designName": {
+            "maxLength": 255,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "length": {
+            "minimum": 0,
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "width": {
+            "minimum": 0,
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "height": {
+            "minimum": 0,
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "adhesiveOffset": {
+            "minimum": 0,
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "sidesClassification": {
+            "type": "string",
+            "nullable": true
+          },
+          "processClassification": {
+            "type": "string",
+            "nullable": true
+          },
+          "laminationType": {
+            "maxLength": 20,
+            "minLength": 0,
+            "type": "string",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "CreateDesignTypeRequest": {
         "required": [
           "code",
@@ -24084,6 +24379,11 @@
             "type": "number",
             "format": "double"
           },
+          "basisWeight": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
           "vendorId": {
             "type": "integer",
             "format": "int32",
@@ -24135,6 +24435,41 @@
             "minLength": 1,
             "pattern": "^(active|inactive)$",
             "type": "string"
+          }
+        },
+        "additionalProperties": false
+      },
+      "CreateOrderFromReadyDesignsRequest": {
+        "required": [
+          "customerAddressId",
+          "readyDesignIds"
+        ],
+        "type": "object",
+        "properties": {
+          "readyDesignIds": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "customerAddressId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "assignedToUserId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "deliveryDate": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "note": {
+            "type": "string",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -28052,6 +28387,11 @@
             "type": "number",
             "format": "double"
           },
+          "basisWeight": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
           "currentStock": {
             "type": "integer",
             "format": "int32"
@@ -28563,6 +28903,13 @@
           },
           "customerName": {
             "type": "string",
+            "nullable": true
+          },
+          "proofingOrderCodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
             "nullable": true
           }
         },
@@ -29207,6 +29554,10 @@
               "$ref": "#/components/schemas/OrderDetailListResponse"
             },
             "nullable": true
+          },
+          "invoiceNumber": {
+            "type": "string",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -29388,6 +29739,10 @@
             "items": {
               "$ref": "#/components/schemas/PaymentSummaryResponse"
             },
+            "nullable": true
+          },
+          "invoiceNumber": {
+            "type": "string",
             "nullable": true
           }
         },
@@ -30979,6 +31334,94 @@
         },
         "additionalProperties": false
       },
+      "ReadyDesignResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "designId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "designCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "designName": {
+            "type": "string",
+            "nullable": true
+          },
+          "customerId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "customerName": {
+            "type": "string",
+            "nullable": true
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "dimensions": {
+            "type": "string",
+            "nullable": true
+          },
+          "materialTypeName": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "string",
+            "nullable": true
+          },
+          "orderCode": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ReadyDesignResponsePaginate": {
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReadyDesignResponse"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
       "RecordDieExportRequest": {
         "required": [
           "dieIds"
@@ -31194,6 +31637,21 @@
             },
             "nullable": true,
             "readOnly": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ReprintDesignRequest": {
+        "required": [
+          "quantity"
+        ],
+        "type": "object",
+        "properties": {
+          "quantity": {
+            "maximum": 2147483647,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int32"
           }
         },
         "additionalProperties": false
@@ -32188,6 +32646,11 @@
             "format": "double",
             "nullable": true
           },
+          "lineAmount": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
           "notes": {
             "type": "string",
             "nullable": true
@@ -33075,6 +33538,11 @@
             "minimum": 0,
             "type": "number",
             "format": "double",
+            "nullable": true
+          },
+          "basisWeight": {
+            "type": "integer",
+            "format": "int32",
             "nullable": true
           },
           "vendorId": {

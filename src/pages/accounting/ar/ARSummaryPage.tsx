@@ -68,7 +68,7 @@ export default function ARSummaryPage() {
     searchTerm: searchQuery || undefined,
   });
 
-  const { mutate: exportSummary, isPending: isExporting } = useExportARSummary();
+  const { mutate: exportSummary, loading: isExporting } = useExportARSummary();
 
   const handleExportExcel = async () => {
     await exportSummary({
@@ -110,16 +110,18 @@ export default function ARSummaryPage() {
     setSelectedOrders(newSelected);
   };
 
-  const totals = arData?.items?.reduce(
+  const totals = (arData?.items?.reduce(
     (acc, item) => ({
-      opening: acc.opening + (item.openingBalance || 0),
-      increase: acc.increase + (item.increase || 0),
-      decrease: acc.decrease + (item.decrease || 0),
-      closing: acc.closing + (item.closingBalance || 0),
-      overdue: acc.overdue + (item.overdue || 0),
+      opening: (acc as any).opening + (item.openingBalance || 0),
+      increase: (acc as any).increase + (item.increase || 0),
+      decrease: (acc as any).decrease + (item.decrease || 0),
+      closing: (acc as any).closing + (item.closingBalance || 0),
+      overdue: (acc as any).overdue + (item.overdue || 0),
     }),
-    { opening: 0, increase: 0, decrease: 0, closing: 0, overdue: 0 }
-  ) || { opening: 0, increase: 0, decrease: 0, closing: 0, overdue: 0 };
+    { opening: 0, increase: 0, decrease: 0, closing: 0, overdue: 0 } as any
+  ) || { opening: 0, increase: 0, decrease: 0, closing: 0, overdue: 0 }) as {
+    opening: number; increase: number; decrease: number; closing: number; overdue: number;
+  };
 
   return (
     <div className="flex flex-col h-full space-y-4">

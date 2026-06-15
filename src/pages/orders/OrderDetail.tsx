@@ -301,7 +301,7 @@ export default function OrderDetailPage() {
 
   const { mutateAsync: updateOrder, isPending: isUpdatingOrder } =
     useUpdateOrder();
-  const { execute: updateOrderForAccounting, loading: isUpdatingForAccounting } =
+  const { mutate: updateOrderForAccounting, loading: isUpdatingForAccounting } =
     useUpdateOrderForAccounting();
   const { mutate: addDesignToOrder, loading: isAddingDesign } =
     useAddDesignToOrder();
@@ -792,8 +792,13 @@ export default function OrderDetailPage() {
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
           <div className="space-y-2">
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl font-bold tracking-tight">
+              <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
                 {order.code}
+                {order.invoiceNumber && (
+                  <Badge variant="secondary" className="font-mono text-sm font-semibold bg-indigo-50 text-indigo-700 border-indigo-200/60 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800/40">
+                    HĐ: {order.invoiceNumber}
+                  </Badge>
+                )}
               </h1>
               <span className="text-sm text-muted-foreground">
                 Trạng thái hiện tại:
@@ -1218,7 +1223,7 @@ export default function OrderDetailPage() {
                               </div>
                               {(() => {
                                 const specs =
-                                  design?.specification ||
+                                  (design as any)?.specification ||
                                   (design as any)?.specifications;
                                 const hasSpecs =
                                   (Array.isArray(specs) && specs.length > 0) ||

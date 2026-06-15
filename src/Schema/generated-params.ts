@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-06-12T17:17:07.788Z */
+/* Generated at: 2026-06-15T17:53:31.771Z */
 
 import { z } from "zod";
 import { IdSchema, PagedParamsSchema } from "./Common";
@@ -1071,6 +1071,13 @@ export const PurchaseReportVendorStatisticsParamsSchema = PagedParamsSchema.exte
   sortOrder: z.string().nullable().optional(),
 });
 export type PurchaseReportVendorStatisticsParams = z.infer<typeof PurchaseReportVendorStatisticsParamsSchema>;
+
+// ==== ReadyDesignListParams (GET /api/ready-designs) ====
+export const ReadyDesignListParamsSchema = PagedParamsSchema.extend({
+  customerId: z.number().int().nullable().optional(),
+  search: z.string().nullable().optional(),
+});
+export type ReadyDesignListParams = z.infer<typeof ReadyDesignListParamsSchema>;
 
 // ==== ReportExportListParams (GET /api/report-exports) ====
 export const ReportExportListParamsSchema = PagedParamsSchema.extend({

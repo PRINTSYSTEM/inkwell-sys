@@ -16,6 +16,7 @@ import type {
   OrdersMyListParams,
   OrderExportResponse,
   CashReceiptResponseIPaginate,
+  CreateOrderFromReadyDesignsRequest,
 } from "@/Schema";
 import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async";
@@ -962,4 +963,56 @@ export const useCancelOrder = () => {
   };
 
   return { data, loading, error, mutate, reset };
+};
+
+// POST /api/orders/from-ready-designs
+export const useCreateOrderFromReadyDesigns = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    OrderResponse,
+    [CreateOrderFromReadyDesignsRequest]
+  >(async (payload: CreateOrderFromReadyDesignsRequest) => {
+    const res = await apiRequest.post<OrderResponse>(
+      API_SUFFIX.ORDER_FROM_READY_DESIGNS,
+      payload
+    );
+    return res.data;
+  });
+
+  const mutate = async (payload: CreateOrderFromReadyDesignsRequest) => {
+    try {
+      const result = await execute(payload);
+
+      // Invalidate queries
+      queryClient.invalidateQueries({ queryKey: orderKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["ready-designs"] });
+
+      toast.success("Thành công", {
+        description: "Đã lên đơn hàng từ thiết kế sẵn sàng thành công",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể lên đơn hàng từ kho thiết kế",
+      });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
 };

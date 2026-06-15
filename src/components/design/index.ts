@@ -4,3 +4,4 @@ export { PerformanceMetrics } from './PerformanceMetrics';
 export { QuickStats } from './QuickStats';
 export { DesignerActions } from './DesignerActions';
 export { AssignmentHistory } from './AssignmentHistory';
+export { default as DesignCreateDialog } from './DesignCreateDialog';

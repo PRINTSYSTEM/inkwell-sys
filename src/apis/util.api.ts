@@ -50,6 +50,7 @@ export const API_SUFFIX = {
   ORDERS_FOR_DESIGNER: "/orders/for-designer",
   ORDERS_FOR_ACCOUNTING: "/orders/for-accounting",
   ORDERS_FOR_SALE: "/orders/for-sale",
+  ORDER_FROM_READY_DESIGNS: "/orders/from-ready-designs",
 
   ORDER_ADD_DESIGN: (id: number) => `/orders/${id}/add-design`,
   ORDER_REMOVE_DESIGN: (orderId: number, orderDetailId: number) =>
@@ -139,12 +140,14 @@ export const API_SUFFIX = {
   DESIGN_BY_CUSTOMER: (customerId: number) =>
     `/designs/by-customer/${customerId}`,
   DESIGNS_SALE: "/designs/sale",
+  READY_DESIGNS: "/ready-designs",
 
   DESIGN_TIMELINE: (id: number) => `/designs/${id}/timeline`,
   DESIGN_UPLOAD_FILE: (id: number) => `/designs/${id}/upload-design-file`,
   DESIGN_UPLOAD_IMAGE: (id: number) => `/designs/${id}/upload-design-image`,
   DESIGN_GENERATE_EXCEL: (id: number) => `/designs/${id}/generate-excel`,
   DESIGN_REVERT_TO_WAITING: (id: number) => `/designs/${id}/revert-to-waiting`,
+  DESIGN_REPRINT: (id: number) => `/designs/${id}/reprint`,
 
   DESIGN_EMPLOYEES_FIXED_QUERY: () =>
     `/users?pageNumber=1&pageSize=10&role=design`,
