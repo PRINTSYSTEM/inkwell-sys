@@ -62,18 +62,25 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
 
     // Handler function để xử lý thông báo real-time
     const handleNotification = (message: NotificationMessage) => {
-      // 1. Hiển thị Toast thông báo cho người dùng
-      toast(message.title, {
-        description: message.message,
-        duration: 8000,
-        action: message.data?.customerId
-          ? {
-              label: "Xem khách hàng",
-              onClick: () =>
-                (window.location.href = `/customers/${message.data.customerId}`),
-            }
-          : undefined,
-      });
+      // Tránh hiển thị trùng lặp với thông báo tạo lệnh sản xuất từ frontend
+      const isDuplicateProductionToast =
+        message.title === "Đã tạo lệnh sản xuất thành công" ||
+        message.message === "Theo dõi và quản lý tiến độ sản xuất";
+
+      if (!isDuplicateProductionToast) {
+        // 1. Hiển thị Toast thông báo cho người dùng
+        toast(message.title, {
+          description: message.message,
+          duration: 8000,
+          action: message.data?.customerId
+            ? {
+                label: "Xem khách hàng",
+                onClick: () =>
+                  (window.location.href = `/customers/${message.data.customerId}`),
+              }
+            : undefined,
+        });
+      }
 
       // 2. Tự động làm mới dữ liệu (Refetch) dựa trên loại thông báo
       switch (message.type) {

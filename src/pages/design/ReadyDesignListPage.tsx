@@ -399,9 +399,9 @@ export default function ReadyDesignListPage() {
       setOrderDialogOpen(false);
       setSelectedIds([]);
       if (result?.id) {
-        navigate(`/orders/${result.id}`);
+        navigate(`/accounting/orders/${result.id}?tab=payment`);
       } else {
-        navigate("/orders");
+        navigate("/accounting/orders");
       }
     } catch (err) {
       // Error handled by mutation hook

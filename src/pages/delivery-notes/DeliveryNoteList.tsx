@@ -831,8 +831,42 @@ export default function DeliveryNoteListPage() {
   const handleToggleOrderDetail = (orderDetailId: number | number[]) => {
     if (orderDetailId === -1) {
       setSelectedOrderDetailIds(new Set());
+      setSelectedCustomerId(null);
+      setSelectedCustomerName("");
       return;
     }
+
+    const findCustomerOfDetail = (id: number) => {
+      const order = availableOrdersRaw.find((o) =>
+        (o.details || []).some((d) => d.orderDetailId === id)
+      );
+      return order ? { id: order.customerId, name: order.customerName } : null;
+    };
+
+    const firstId = Array.isArray(orderDetailId) ? orderDetailId[0] : orderDetailId;
+    if (firstId == null) return;
+
+    const targetCustomer = findCustomerOfDetail(firstId);
+    if (!targetCustomer) return;
+
+    // Check if we are selecting new items
+    let isSelecting = false;
+    if (Array.isArray(orderDetailId)) {
+      const allSelected = orderDetailId.every(id => selectedOrderDetailIds.has(id));
+      if (!allSelected) isSelecting = true;
+    } else {
+      if (!selectedOrderDetailIds.has(orderDetailId)) isSelecting = true;
+    }
+
+    if (isSelecting && selectedOrderDetailIds.size > 0) {
+      const currentActiveId = Array.from(selectedOrderDetailIds)[0];
+      const activeCustomer = findCustomerOfDetail(currentActiveId);
+      if (activeCustomer && activeCustomer.id !== targetCustomer.id) {
+        toast.error("Phiếu giao hàng phải được tạo cho cùng 1 khách hàng. Không thể chọn sản phẩm của khách hàng khác!");
+        return;
+      }
+    }
+
     setSelectedOrderDetailIds((prev) => {
       const newSet = new Set(prev);
       if (Array.isArray(orderDetailId)) {
@@ -848,6 +882,15 @@ export default function DeliveryNoteListPage() {
         } else {
           newSet.add(orderDetailId);
         }
+      }
+
+      // Sync customer ID state
+      if (newSet.size === 0) {
+        setSelectedCustomerId(null);
+        setSelectedCustomerName("");
+      } else {
+        setSelectedCustomerId(targetCustomer.id ?? null);
+        setSelectedCustomerName(targetCustomer.name || "");
       }
       return newSet;
     });
@@ -1235,6 +1278,7 @@ export default function DeliveryNoteListPage() {
             totalSelectedAmount={totalSelectedAmount}
             handleCreateDeliveryNote={handleCreateDeliveryNote}
             onImageClick={handleImageClick}
+            selectedCustomerId={selectedCustomerId}
           />
         </TabsContent>
 
@@ -1298,6 +1342,7 @@ export default function DeliveryNoteListPage() {
         selectedAddressId={recreateSelectedAddressId}
         setSelectedAddressId={setRecreateSelectedAddressId}
         customerId={recreateCustomerId}
+        customerName={recreateNoteDataTyped?.orders?.[0]?.customerName || ""}
         notes={recreateNotes}
         setNotes={setRecreateNotes}
         onConfirm={handleConfirmedRecreate}
@@ -1338,6 +1383,7 @@ interface OrdersViewProps {
   totalSelectedAmount: number;
   handleCreateDeliveryNote: () => void;
   onImageClick: (url: string, e: React.MouseEvent) => void;
+  selectedCustomerId: number | null;
 }
 
 function OrdersView({
@@ -1357,6 +1403,7 @@ function OrdersView({
   totalSelectedAmount,
   handleCreateDeliveryNote,
   onImageClick,
+  selectedCustomerId,
 }: OrdersViewProps) {
   const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set());
 
@@ -1445,11 +1492,14 @@ function OrdersView({
             const isSomeSelected = selectedCount > 0 && selectedCount < detailIds.length;
 
             const totalOrderQty = (order.details || []).reduce((sum, d) => sum + (d.remainingToDeliver || d.orderedQty || 0), 0);
+            const isDifferentCustomer = selectedCustomerId !== null && order.customerId !== selectedCustomerId;
 
             return (
               <div
                 key={order.orderId}
-                className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl overflow-hidden shadow-sm transition-all duration-200"
+                className={`bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl overflow-hidden shadow-sm transition-all duration-200 ${
+                  isDifferentCustomer ? "opacity-60" : ""
+                }`}
               >
                 {/* Card Header */}
                 <div
@@ -1461,6 +1511,7 @@ function OrdersView({
                       <Checkbox
                         checked={isAllSelected}
                         onCheckedChange={() => handleToggleOrderDetail(detailIds)}
+                        disabled={isDifferentCustomer}
                         className="rounded"
                       />
                     </div>
@@ -1484,13 +1535,15 @@ function OrdersView({
                         </span>
                       </div>
                       <div className="flex items-center gap-1 text-xs text-stone-500 mt-1">
-                        <User className="h-3.5 w-3.5 text-stone-400" />
-                        <span className="truncate font-semibold">{order.customerName}</span>
+                        <User className="h-3.5 w-3.5 text-stone-400 shrink-0" />
+                        <span className="text-stone-400 mr-1 shrink-0">Khách hàng :</span>
+                        <span className="truncate font-semibold text-stone-850 dark:text-stone-200">{order.customerName}</span>
                       </div>
                       {order.deliveryAddress && (
                         <div className="flex items-center gap-1 text-xs text-stone-500 mt-1">
                           <MapPin className="h-3.5 w-3.5 text-stone-400 shrink-0" />
-                          <span className="truncate" title={order.deliveryAddress}>{order.deliveryAddress}</span>
+                          <span className="text-stone-400 mr-1 shrink-0">Địa chỉ giao hàng :</span>
+                          <span className="truncate text-stone-700 dark:text-stone-300" title={order.deliveryAddress}>{order.deliveryAddress}</span>
                         </div>
                       )}
                     </div>
@@ -1509,7 +1562,8 @@ function OrdersView({
                           e.stopPropagation();
                           handleToggleOrderDetail(detailIds);
                         }}
-                        className="text-xs font-semibold h-8 border-stone-200 dark:border-stone-800 hover:bg-stone-50 text-stone-700 dark:text-stone-300"
+                        disabled={isDifferentCustomer}
+                        className="text-xs font-semibold h-8 border-stone-200 dark:border-stone-850 hover:bg-stone-50 text-stone-700 dark:text-stone-300"
                       >
                         Chọn tất cả sản phẩm
                       </Button>
@@ -1539,8 +1593,16 @@ function OrdersView({
                           return (
                             <TableRow
                               key={detail.orderDetailId}
-                              onClick={() => handleToggleOrderDetail(detail.orderDetailId!)}
+                              onClick={() => {
+                                if (isDifferentCustomer) {
+                                  toast.error("Phiếu giao hàng phải được tạo cho cùng 1 khách hàng. Không thể chọn sản phẩm của khách hàng khác!");
+                                  return;
+                                }
+                                handleToggleOrderDetail(detail.orderDetailId!);
+                              }}
                               className={`cursor-pointer border-stone-100 dark:border-stone-850 transition-colors ${
+                                isDifferentCustomer ? "cursor-not-allowed" : ""
+                              } ${
                                 isChecked
                                   ? "bg-primary/[0.03] dark:bg-primary/[0.02] hover:bg-primary/[0.05] dark:hover:bg-primary/[0.03]"
                                   : "hover:bg-stone-50/50 dark:hover:bg-stone-950/30"
@@ -1550,6 +1612,7 @@ function OrdersView({
                                 <Checkbox
                                   checked={isChecked}
                                   onCheckedChange={() => handleToggleOrderDetail(detail.orderDetailId!)}
+                                  disabled={isDifferentCustomer}
                                   className="rounded"
                                 />
                               </TableCell>
@@ -2756,23 +2819,33 @@ function CreateDeliveryNoteDialog({
           </div>
 
           {/* Right Column: Address Book & Notes (5 cols) */}
-          <div className="md:col-span-5 flex flex-col min-h-0">
-            <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 flex-shrink-0">
-              Thông tin người nhận & Địa chỉ
+          <div className="md:col-span-5 flex flex-col min-h-0 space-y-4">
+            <div className="space-y-1 flex-shrink-0">
+              <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                Khách hàng :
+              </div>
+              <div className="text-sm font-semibold text-slate-900 dark:text-slate-50 bg-slate-50 dark:bg-slate-800/50 rounded-md px-3 py-2 border border-slate-200 dark:border-slate-800">
+                {selectedOrders[0]?.customerName || "—"}
+              </div>
             </div>
-            
-            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4 min-h-0">
-              {customerId && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1">
-                      <AddressBookManager
-                        customerId={customerId}
-                        compact
-                        selectedId={selectedAddressId ?? null}
-                        onSelect={(id) => setSelectedAddressId(id)}
-                      />
-                    </div>
+
+            <div className="space-y-1.5 flex-1 flex flex-col min-h-0">
+              <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex-shrink-0">
+                Địa chỉ giao hàng :
+              </div>
+              
+              <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4 min-h-0">
+                {customerId && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1">
+                        <AddressBookManager
+                          customerId={customerId}
+                          compact
+                          selectedId={selectedAddressId ?? null}
+                          onSelect={(id) => setSelectedAddressId(id)}
+                        />
+                      </div>
                     <div>
                       <button
                         type="button"
@@ -2800,6 +2873,7 @@ function CreateDeliveryNoteDialog({
             </div>
           </div>
         </div>
+      </div>
 
         <DialogFooter className="gap-2 flex-shrink-0 pt-2 border-t border-slate-200 dark:border-slate-800">
           <Button
@@ -2841,6 +2915,7 @@ interface RecreateDeliveryNoteDialogProps {
   selectedAddressId?: number | null;
   setSelectedAddressId?: React.Dispatch<React.SetStateAction<number | null>>;
   customerId: number | null;
+  customerName: string;
   notes: string;
   setNotes: (notes: string) => void;
   onConfirm: () => void;
@@ -2861,6 +2936,7 @@ function RecreateDeliveryNoteDialog({
   selectedAddressId,
   setSelectedAddressId,
   customerId,
+  customerName,
   notes,
   setNotes,
   onConfirm,
@@ -2978,23 +3054,33 @@ function RecreateDeliveryNoteDialog({
           </div>
 
           {/* Right Column: Address Book & Notes (5 cols) */}
-          <div className="md:col-span-5 flex flex-col min-h-0">
-            <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2 flex-shrink-0">
-              Thông tin người nhận & Địa chỉ
+          <div className="md:col-span-5 flex flex-col min-h-0 space-y-4">
+            <div className="space-y-1 flex-shrink-0">
+              <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                Khách hàng :
+              </div>
+              <div className="text-sm font-semibold text-slate-900 dark:text-slate-50 bg-slate-50 dark:bg-slate-800/50 rounded-md px-3 py-2 border border-slate-200 dark:border-slate-800">
+                {customerName || "—"}
+              </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4 min-h-0">
-              {customerId && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1">
-                      <AddressBookManager
-                        customerId={customerId}
-                        compact
-                        selectedId={selectedAddressId ?? null}
-                        onSelect={(id) => setSelectedAddressId && setSelectedAddressId(id)}
-                      />
-                    </div>
+            <div className="space-y-1.5 flex-1 flex flex-col min-h-0">
+              <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex-shrink-0">
+                Địa chỉ giao hàng :
+              </div>
+
+              <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-4 min-h-0">
+                {customerId && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1">
+                        <AddressBookManager
+                          customerId={customerId}
+                          compact
+                          selectedId={selectedAddressId ?? null}
+                          onSelect={(id) => setSelectedAddressId && setSelectedAddressId(id)}
+                        />
+                      </div>
                     <div>
                       <button
                         type="button"
@@ -3022,6 +3108,7 @@ function RecreateDeliveryNoteDialog({
             </div>
           </div>
         </div>
+      </div>
 
         <DialogFooter className="gap-2 flex-shrink-0 pt-2 border-t border-slate-200 dark:border-slate-800">
           <Button
