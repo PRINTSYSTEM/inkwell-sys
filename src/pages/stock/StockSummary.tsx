@@ -425,7 +425,7 @@ export default function StockSummary() {
                       <TableHeader>
                         <TableRow className="bg-slate-50/50 whitespace-nowrap text-xs border-b border-slate-200/60">
                           <TableHead className="w-[50px] font-bold py-2.5 pl-4">ID</TableHead>
-                          <TableHead className="min-w-[120px] font-bold py-2.5">Tên vật tư</TableHead>
+                          <TableHead className="min-w-[120px] font-bold py-2.5">Khổ cuộn</TableHead>
                           <TableHead className="w-[80px] text-right font-bold py-2.5 pr-4">Tồn kho</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -521,7 +521,7 @@ export default function StockSummary() {
                       <TableHeader>
                         <TableRow className="bg-slate-50/50 whitespace-nowrap text-xs border-b border-slate-200/60">
                           <TableHead className="w-[50px] font-bold py-2.5 pl-4">ID</TableHead>
-                          <TableHead className="min-w-[120px] font-bold py-2.5">Tên vật tư</TableHead>
+                          <TableHead className="min-w-[120px] font-bold py-2.5">Khổ tờ</TableHead>
                           <TableHead className="w-[80px] text-right font-bold py-2.5 pr-4">Tồn kho</TableHead>
                         </TableRow>
                       </TableHeader>

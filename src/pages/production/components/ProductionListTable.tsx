@@ -1,4 +1,5 @@
 import React from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -658,6 +659,20 @@ function ProductionTableRow({
     );
   const proofingOrder = (proofingOrderData || prod.proofingOrder) as any;
 
+  const [searchParams] = useSearchParams();
+  const searchHighlight = searchParams.get("search") || "";
+  const isHighlighted = React.useMemo(() => {
+    if (!searchHighlight) return false;
+    const cleanSearch = searchHighlight.toLowerCase().trim();
+    const cleanCode = (proofingOrder?.code || "").toLowerCase().trim();
+    const cleanBBId = proofingOrder?.id ? `bb${proofingOrder.id}` : "";
+    return (
+      cleanCode === cleanSearch ||
+      String(prod.id) === cleanSearch ||
+      cleanBBId === cleanSearch
+    );
+  }, [searchHighlight, proofingOrder?.code, proofingOrder?.id, prod.id]);
+
   const orderImages = React.useMemo(() => {
     if (!proofingOrder) return [];
     const urls: string[] = [];
@@ -899,7 +914,13 @@ function ProductionTableRow({
   return (
     <>
       <TableRow
-        className={`border-b ${isDraft ? "bg-blue-50/20 dark:bg-blue-900/10" : ""}`}
+        className={`border-b transition-all duration-300 ${
+          isHighlighted 
+            ? "bg-amber-100/50 dark:bg-amber-900/30 font-medium border-amber-500 dark:border-amber-700" 
+            : isDraft 
+              ? "bg-blue-50/20 dark:bg-blue-900/10" 
+              : ""
+        }`}
       >
         <TableCell className="py-3 align-top font-bold text-sm text-primary bg-muted/20 border-r border-border/50 text-center w-[90px] max-w-[90px]">
           {isProofingLoading ? (

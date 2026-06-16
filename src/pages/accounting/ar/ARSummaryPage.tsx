@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -33,6 +33,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useARSummary, useARDetail, useExportARSummary } from "@/hooks/use-ar-ap";
+import { useExportDebtComparison } from "@/hooks/use-customer";
 import { ARCreateReceiptDialog } from "./ARCreateReceiptDialog";
 import { formatCurrency } from "@/lib/status-utils";
 import { cn } from "@/lib/utils";
@@ -69,6 +70,20 @@ export default function ARSummaryPage() {
   });
 
   const { mutate: exportSummary, loading: isExporting } = useExportARSummary();
+  const { mutate: exportCustomerDebt } = useExportDebtComparison();
+  const [exportingCustomerId, setExportingCustomerId] = useState<number | null>(null);
+
+  const handleExportCustomerDebtExcel = async (customerId: number | undefined) => {
+    if (!customerId) return;
+    setExportingCustomerId(customerId);
+    try {
+      await exportCustomerDebt(customerId);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setExportingCustomerId(null);
+    }
+  };
 
   const handleExportExcel = async () => {
     await exportSummary({
@@ -284,13 +299,14 @@ export default function ARSummaryPage() {
                 <TableHead className="text-right">Thanh toán</TableHead>
                 <TableHead className="text-right">Dư cuối kỳ</TableHead>
                 <TableHead className="text-right w-[150px]">Quá hạn</TableHead>
+                <TableHead className="text-center w-[80px]">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 8 }).map((_, j) => (
+                    {Array.from({ length: 9 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
                       </TableCell>
@@ -299,7 +315,7 @@ export default function ARSummaryPage() {
                 ))
               ) : !arData?.items || arData.items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-32 text-center">
+                  <TableCell colSpan={9} className="h-32 text-center">
                     <div className="flex flex-col items-center justify-center text-muted-foreground">
                       <Calendar className="h-8 w-8 mb-2 opacity-20" />
                       <p>Không tìm thấy dữ liệu công nợ trong khoảng thời gian này</p>
@@ -307,10 +323,10 @@ export default function ARSummaryPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                arData.items.map((item) => {
+                arData.items.map((item, index) => {
                   const isExpanded = item.customerId ? expandedCustomers.has(item.customerId) : false;
                   return (
-                    <>
+                    <Fragment key={item.customerId ?? index}>
                       <TableRow 
                         key={item.customerId}
                         className={cn(
@@ -353,6 +369,22 @@ export default function ARSummaryPage() {
                             "—"
                           )}
                         </TableCell>
+                        <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg cursor-pointer"
+                            onClick={() => handleExportCustomerDebtExcel(item.customerId)}
+                            disabled={exportingCustomerId === item.customerId}
+                            title="Xuất Excel đối chiếu công nợ"
+                          >
+                            {exportingCustomerId === item.customerId ? (
+                              <Loader2 className="h-4 w-4 animate-spin text-green-600" />
+                            ) : (
+                              <Download className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </TableCell>
                       </TableRow>
                       {isExpanded && item.customerId && (
                         <>
@@ -391,7 +423,7 @@ export default function ARSummaryPage() {
                           />
                         </>
                       )}
-                    </>
+                    </Fragment>
                   );
                 })
               )}

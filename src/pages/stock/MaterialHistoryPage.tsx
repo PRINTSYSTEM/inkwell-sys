@@ -160,6 +160,8 @@ export default function MaterialHistoryPage() {
     documentCode: "",
     notes: "",
     laborCost: 0,
+    unitPrice: 0,
+    totalAmount: 0,
   });
 
   const [stockOutForm, setStockOutForm] = useState<{
@@ -187,7 +189,26 @@ export default function MaterialHistoryPage() {
   const [inlineStockInQty, setInlineStockInQty] = useState<number>(0);
   const [inlineStockInNotes, setInlineStockInNotes] = useState<string>("");
   const [inlineStockInJobCode, setInlineStockInJobCode] = useState<string>("");
+  const [inlineStockInUnitPrice, setInlineStockInUnitPrice] = useState<number>(0);
+  const [inlineStockInTotalAmount, setInlineStockInTotalAmount] = useState<number>(0);
   const [isSubmittingStockIn, setIsSubmittingStockIn] = useState(false);
+
+  const handleQtyChange = (qty: number) => {
+    setInlineStockInQty(qty);
+    setInlineStockInTotalAmount(Math.round(qty * inlineStockInUnitPrice));
+  };
+
+  const handleUnitPriceChange = (price: number) => {
+    setInlineStockInUnitPrice(price);
+    setInlineStockInTotalAmount(Math.round(inlineStockInQty * price));
+  };
+
+  const handleTotalAmountChange = (amount: number) => {
+    setInlineStockInTotalAmount(amount);
+    if (inlineStockInQty > 0) {
+      setInlineStockInUnitPrice(Math.round((amount / inlineStockInQty) * 100) / 100);
+    }
+  };
 
   const [sortKey, setSortKey] = useState<string>("createdAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc" | null>("desc");
@@ -221,6 +242,13 @@ export default function MaterialHistoryPage() {
     isNumericId ? materialId : null,
     isNumericId
   );
+
+  useEffect(() => {
+    if (materialDetail?.unitPrice) {
+      setInlineStockInUnitPrice(materialDetail.unitPrice);
+      setInlineStockInTotalAmount(Math.round(inlineStockInQty * materialDetail.unitPrice));
+    }
+  }, [materialDetail]);
 
   const showSheetOutputColumn = materialDetail?.type !== "to";
 
@@ -283,7 +311,7 @@ export default function MaterialHistoryPage() {
     setIsSubmittingStockIn(true);
     let toastId: string | number | undefined;
     try {
-      const calculatedTotalAmount = (inlineStockInQty || 0) * (materialDetail?.unitPrice || 0);
+      const calculatedTotalAmount = inlineStockInTotalAmount || (inlineStockInQty || 0) * (inlineStockInUnitPrice || 0);
       const lineKind = isRoll ? "roll" : "sheet";
 
       if (isRoll || !inlineStockInJobCode.trim()) {
@@ -307,7 +335,7 @@ export default function MaterialHistoryPage() {
               itemCode: materialDetail?.code || undefined,
               unit: materialDetail?.unit || undefined,
               quantity: inlineStockInQty,
-              unitPrice: materialDetail?.unitPrice || undefined,
+              unitPrice: inlineStockInUnitPrice || undefined,
               notes: inlineStockInNotes || undefined,
               materialId: materialId ? Number(materialId) : undefined,
               orderDetailId: undefined,
@@ -342,7 +370,7 @@ export default function MaterialHistoryPage() {
               itemCode: materialDetail?.code || undefined,
               unit: materialDetail?.unit || undefined,
               quantity: inlineStockInQty,
-              unitPrice: materialDetail?.unitPrice || undefined,
+              unitPrice: inlineStockInUnitPrice || undefined,
               notes: inlineStockInNotes || undefined,
               materialId: materialId ? Number(materialId) : undefined,
               orderDetailId: undefined,
@@ -400,6 +428,8 @@ export default function MaterialHistoryPage() {
       setInlineStockInQty(0);
       setInlineStockInNotes("");
       setInlineStockInJobCode("");
+      setInlineStockInUnitPrice(materialDetail?.unitPrice || 0);
+      setInlineStockInTotalAmount(0);
       refetchAll();
     } catch (error: any) {
       console.error(error);
@@ -879,7 +909,7 @@ export default function MaterialHistoryPage() {
                   step="any"
                   placeholder="Nhập số lượng..."
                   value={inlineStockInQty || ""}
-                  onChange={(e) => setInlineStockInQty(parseFloat(e.target.value) || 0)}
+                  onChange={(e) => handleQtyChange(parseFloat(e.target.value) || 0)}
                   className="h-10 text-xs border-slate-200 focus-visible:ring-[#93631F] font-mono font-bold text-slate-800"
                 />
               </div>
@@ -897,7 +927,37 @@ export default function MaterialHistoryPage() {
                 </div>
               )}
 
-              <div className="flex-[2] space-y-1.5">
+              <div className="flex-1 space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-500 block">
+                  Đơn giá (đ/{isRoll ? "m tới" : "m²"})
+                </label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="any"
+                  placeholder="Nhập đơn giá..."
+                  value={inlineStockInUnitPrice || ""}
+                  onChange={(e) => handleUnitPriceChange(parseFloat(e.target.value) || 0)}
+                  className="h-10 text-xs border-slate-200 focus-visible:ring-[#93631F] font-mono font-bold text-slate-800"
+                />
+              </div>
+
+              <div className="flex-1 space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-500 block">
+                  Thành tiền (đ)
+                </label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="any"
+                  placeholder="Thành tiền..."
+                  value={inlineStockInTotalAmount || ""}
+                  onChange={(e) => handleTotalAmountChange(parseFloat(e.target.value) || 0)}
+                  className="h-10 text-xs border-slate-200 focus-visible:ring-[#93631F] font-mono font-bold text-slate-800"
+                />
+              </div>
+
+              <div className="flex-[1.5] space-y-1.5">
                 <label className="text-[11px] font-bold text-slate-500 block">Ghi chú</label>
                 <Input
                   type="text"
@@ -1253,11 +1313,14 @@ export default function MaterialHistoryPage() {
                                   setIsEditMode(true);
                                   setEditId(anyEntry.id);
                                   if (anyEntry.type === "stock_in") {
+                                    const rawItem = (anyEntry.raw.items || []).find((i: any) => i.materialId === materialId);
                                     setStockInForm({
                                       quantity: anyEntry.quantity,
                                       documentCode: anyEntry.raw.code || "",
                                       notes: anyEntry.notes || "",
                                       laborCost: anyEntry.raw.laborCost || 0,
+                                      unitPrice: rawItem?.unitPrice || materialDetail?.unitPrice || 0,
+                                      totalAmount: anyEntry.raw.totalAmount || (anyEntry.quantity * (rawItem?.unitPrice || 0)),
                                     });
                                     setIsStockInOpen(true);
                                   } else if (anyEntry.type === "stock_out") {

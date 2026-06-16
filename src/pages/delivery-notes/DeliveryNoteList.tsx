@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import {
@@ -28,7 +28,15 @@ import {
   Image as ImageIcon,
   Edit2,
   Loader2,
+  ExternalLink,
 } from "lucide-react";
+
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import { useProductionOrders } from "@/hooks/use-production";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -120,6 +128,7 @@ type SelectedOrderDetail = OrderDetailForDeliveryResponse & {
   customerName?: string | null;
   orderId?: number;
   customerId?: number;
+  deliveryAddress?: string | null;
 };
 
 const getDeliveryNoteStatusLabel = (
@@ -134,7 +143,7 @@ const getDisplayStatus = (note: { lines?: Array<{ status?: string | null }>; sta
 
   const hasDelivered = lines.some((l) => l.status === "delivered");
   const hasReschedule = lines.some((l) => l.status === "failed_reschedule");
-  const hasFailed = lines.some((l) => l.status === "failed");
+  const hasFailed = lines.some((l) => ["failed", "returned", "cancelled"].includes(l.status || ""));
 
   if (note.status === "cancelled" && (hasDelivered || hasReschedule)) {
     return "partial";
@@ -147,6 +156,109 @@ const getDisplayStatus = (note: { lines?: Array<{ status?: string | null }>; sta
 
   return note.status;
 };
+
+const getRemainingQty = (detail: any) => {
+  const netQty = detail.netQtyTotal ?? 0;
+  const deliveredQty = detail.deliveredQtyTotal ?? 0;
+  if (netQty > 0) return Math.max(0, netQty - deliveredQty);
+  return Math.max(0, detail.remainingToDeliver ?? 0);
+};
+
+interface ProofingCodeProps {
+  code: string;
+}
+
+function ProofingCodeWithProductions({ code }: ProofingCodeProps) {
+  const match = code.match(/\d+/);
+  const proofingOrderId = match ? parseInt(match[0], 10) : null;
+
+  const { data: productionsResp, isLoading } = useProductionOrders(
+    proofingOrderId ? { proofingOrderId, pageSize: 50 } : undefined
+  );
+
+  const productions = useMemo(() => {
+    if (!productionsResp) return [];
+    if (Array.isArray(productionsResp)) return productionsResp;
+    if (typeof productionsResp === "object" && "items" in productionsResp) {
+      return (productionsResp.items || []) as any[];
+    }
+    return [];
+  }, [productionsResp]);
+
+  if (!proofingOrderId) {
+    return <span className="font-extrabold text-amber-600 dark:text-amber-400 font-mono">{code}</span>;
+  }
+
+  return (
+    <HoverCard openDelay={200} closeDelay={150}>
+      <HoverCardTrigger asChild>
+        <Link
+          to={`/productions?search=${code}`}
+          className="font-extrabold text-amber-600 dark:text-amber-400 font-mono hover:underline inline-flex items-center gap-0.5 cursor-pointer"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {code}
+          <ExternalLink className="h-3.5 w-3.5 inline opacity-70" />
+        </Link>
+      </HoverCardTrigger>
+      <HoverCardContent 
+        className="w-80 p-3 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-lg rounded-lg text-left"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="space-y-2">
+          <div className="font-bold text-xs text-stone-500 uppercase tracking-wider">
+            Lệnh sản xuất liên quan ({code})
+          </div>
+          {isLoading ? (
+            <div className="flex items-center gap-2 text-stone-400 text-xs py-1">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Đang tải lệnh sản xuất...
+            </div>
+          ) : productions.length === 0 ? (
+            <div className="text-stone-400 text-xs py-1 italic">
+              Chưa có lệnh sản xuất nào cho bài này
+            </div>
+          ) : (
+            <div className="divide-y divide-stone-100 dark:divide-stone-800 max-h-48 overflow-y-auto pr-1">
+              {productions.map((prod: any) => (
+                <div key={prod.id} className="py-2 first:pt-0 last:pb-0 flex flex-col gap-1 text-[11px]">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-stone-500">Mã lệnh:</span>
+                    <Link
+                      to={`/productions/${prod.id}`}
+                      className="font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5"
+                    >
+                      PO{String(prod.id).padStart(4, '0')}
+                      <ExternalLink className="h-2.5 w-2.5" />
+                    </Link>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-stone-500">Người phụ trách:</span>
+                    <span className="font-medium text-stone-700 dark:text-stone-300">
+                      {prod.productionLeadName || "—"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-stone-500">Tiến độ / SL sản xuất:</span>
+                    <span className="font-bold text-stone-800 dark:text-stone-200">
+                      {prod.progressPercent || 0}% ({prod.producedQty || 0} tờ)
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-stone-500">Trạng thái:</span>
+                    <span className="font-semibold text-stone-700 dark:text-stone-300">
+                      {prod.status || "—"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </HoverCardContent>
+    </HoverCard>
+  );
+}
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat("vi-VN", {
@@ -593,6 +705,7 @@ export default function DeliveryNoteListPage() {
             customerName: order.customerName,
             orderId: order.orderId,
             customerId: order.customerId,
+            deliveryAddress: order.deliveryAddress,
           });
         }
       });
@@ -602,7 +715,7 @@ export default function DeliveryNoteListPage() {
 
   const totalSelectedAmount = useMemo(() => {
     return selectedOrders.reduce(
-      (sum, item) => sum + (item.remainingToDeliver || 0) * (item.unitPrice || 0),
+      (sum, item) => sum + getRemainingQty(item) * (item.unitPrice || 0),
       0,
     );
   }, [selectedOrders]);
@@ -856,7 +969,7 @@ export default function DeliveryNoteListPage() {
     const defaultLineNotes: Record<number, string> = {};
     selectedOrders.forEach(od => {
       if (od.orderDetailId != null) {
-        qtys[od.orderDetailId] = od.remainingToDeliver || 0;
+        qtys[od.orderDetailId] = getRemainingQty(od);
         defaultLineNotes[od.orderDetailId] = getDefaultLineNote(od.designName);
       }
     });
@@ -1374,6 +1487,12 @@ function OrdersView({
                         <User className="h-3.5 w-3.5 text-stone-400" />
                         <span className="truncate font-semibold">{order.customerName}</span>
                       </div>
+                      {order.deliveryAddress && (
+                        <div className="flex items-center gap-1 text-xs text-stone-500 mt-1">
+                          <MapPin className="h-3.5 w-3.5 text-stone-400 shrink-0" />
+                          <span className="truncate" title={order.deliveryAddress}>{order.deliveryAddress}</span>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1459,13 +1578,17 @@ function OrdersView({
                               </TableCell>
                               <TableCell className="text-right font-extrabold text-amber-600 dark:text-amber-400 text-xs tabular-nums w-40">
                                 {detail.proofingOrderCodes && detail.proofingOrderCodes.length > 0 ? (
-                                  detail.proofingOrderCodes.join(", ")
+                                  <div className="flex flex-col items-end gap-1">
+                                    {detail.proofingOrderCodes.map((code) => (
+                                      <ProofingCodeWithProductions key={code} code={code} />
+                                    ))}
+                                  </div>
                                 ) : (
                                   <span className="text-stone-400 font-normal">—</span>
                                 )}
                               </TableCell>
                               <TableCell className="text-right text-xs font-bold text-stone-800 dark:text-stone-200 tabular-nums w-24">
-                                {new Intl.NumberFormat('vi-VN').format(detail.remainingToDeliver ?? 0)}
+                                {new Intl.NumberFormat('vi-VN').format(getRemainingQty(detail) ?? 0)}
                               </TableCell>
                               <TableCell className="text-right font-extrabold text-stone-800 dark:text-stone-200 text-xs pr-4 w-32 tabular-nums">
                                 {formatCurrency(detail.unitPrice ? (detail.orderedQty ?? 0) * detail.unitPrice : 0)}
@@ -2552,7 +2675,7 @@ function CreateDeliveryNoteDialog({
                             <span>
                               Tối đa:{" "}
                               <span className="font-bold text-primary">
-                                {new Intl.NumberFormat("vi-VN").format(od.remainingToDeliver || 0)}
+                                {new Intl.NumberFormat("vi-VN").format(getRemainingQty(od) || 0)}
                               </span>
                             </span>
                             {od.proofingOrderCodes && od.proofingOrderCodes.length > 0 && (
@@ -2564,18 +2687,25 @@ function CreateDeliveryNoteDialog({
                               </span>
                             )}
                           </div>
+                          {od.deliveryAddress && (
+                            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
+                              <MapPin className="h-3 w-3 text-stone-400 shrink-0" />
+                              <span className="truncate" title={od.deliveryAddress}>Địa chỉ giao: {od.deliveryAddress}</span>
+                            </div>
+                          )}
                         </div>
                         <div className="w-[110px] flex-shrink-0">
                           <Label className="text-xs text-slate-500 mb-1 block">Số lượng giao</Label>
                           <Input
                             type="number"
                             min="1"
-                            max={od.remainingToDeliver || 1}
+                            max={getRemainingQty(od) || 1}
                             value={deliveryQtys[od.orderDetailId] || ""}
                             onChange={(e) => {
                               let val = parseInt(e.target.value, 10);
                               if (isNaN(val)) val = 0;
-                              if (val > (od.remainingToDeliver || 0)) val = od.remainingToDeliver || 0;
+                              const maxVal = getRemainingQty(od);
+                              if (val > maxVal) val = maxVal;
                               setDeliveryQtys((prev: Record<number, number>) => ({
                                 ...prev,
                                 [od.orderDetailId]: val,

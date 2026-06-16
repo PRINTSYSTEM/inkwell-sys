@@ -174,12 +174,17 @@ export default function ProductionListPage() {
     // Apply client-side search/status filter
     return merged.filter((prod: any) => {
       const search = debouncedSearch.toLowerCase().trim();
+      const cleanSearch = search.replace(/^bb0*/, "bb");
+      const cleanProdCode = (prod.proofingOrderCode || prod.proofingOrder?.code || "").toLowerCase().trim().replace(/^bb0*/, "bb");
+
       const matchSearch =
         search.length === 0 ||
         String(prod.id ?? "")
           .toLowerCase()
           .includes(search) ||
         (prod.proofingOrder?.code ?? "").toLowerCase().includes(search) ||
+        (prod.proofingOrderCode ?? "").toLowerCase().includes(search) ||
+        cleanProdCode.includes(cleanSearch) ||
         (prod.productionLeadName ?? "").toLowerCase().includes(search);
 
       const matchStatus =
