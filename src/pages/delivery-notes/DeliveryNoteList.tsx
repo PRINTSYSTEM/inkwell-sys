@@ -1400,67 +1400,81 @@ function OrdersView({
 
                 {/* Card Collapsible Content */}
                 {isExpanded && order.details && order.details.length > 0 && (
-                  <div className="border-t border-stone-100 dark:border-stone-850 bg-stone-50/10 dark:bg-stone-900/30 p-2 space-y-2">
-                    {order.details.map((detail) => {
-                      if (detail.orderDetailId == null) return null;
-                      const isChecked = selectedOrderDetailIds.has(detail.orderDetailId);
-                      return (
-                        <div
-                          key={detail.orderDetailId}
-                          onClick={() => handleToggleOrderDetail(detail.orderDetailId!)}
-                          className={`flex items-center justify-between p-3 rounded-lg border transition-all duration-150 cursor-pointer ${
-                            isChecked
-                              ? "border-primary/20 bg-primary/[0.03] dark:bg-primary/[0.02]"
-                              : "border-stone-150 dark:border-stone-850 bg-white dark:bg-stone-900 hover:bg-stone-50/50 dark:hover:bg-stone-950/50"
-                          }`}
-                        >
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div onClick={(e) => e.stopPropagation()} className="flex items-center">
-                              <Checkbox
-                                checked={isChecked}
-                                onCheckedChange={() => handleToggleOrderDetail(detail.orderDetailId!)}
-                                className="rounded"
-                              />
-                            </div>
-                            <div className="h-8 w-8 rounded-lg bg-stone-100 dark:bg-stone-800 border flex items-center justify-center flex-shrink-0 overflow-hidden relative">
-                              {detail.designImageUrl ? (
-                                <img
-                                  src={detail.designImageUrl}
-                                  alt={detail.designCode || "Thiết kế"}
-                                  className="h-full w-full object-cover cursor-zoom-in"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onImageClick(detail.designImageUrl!, e);
-                                  }}
+                  <div className="border-t border-stone-100 dark:border-stone-850 bg-stone-50/10 dark:bg-stone-900/30 overflow-auto">
+                    <Table>
+                      <TableHeader className="bg-stone-50/30 dark:bg-stone-900/50 border-b border-stone-200 dark:border-stone-800">
+                        <TableRow className="hover:bg-transparent border-stone-200 dark:border-stone-800">
+                          <TableHead className="w-12 pl-4"></TableHead>
+                          <TableHead className="w-12">Hình</TableHead>
+                          <TableHead className="w-[120px] font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Mã thiết kế</TableHead>
+                          <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Tên sản phẩm</TableHead>
+                          <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-40">Mã bài</TableHead>
+                          <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-24">Số lượng</TableHead>
+                          <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider pr-4 w-32">Thành tiền</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {order.details.map((detail) => {
+                          if (detail.orderDetailId == null) return null;
+                          const isChecked = selectedOrderDetailIds.has(detail.orderDetailId);
+                          return (
+                            <TableRow
+                              key={detail.orderDetailId}
+                              onClick={() => handleToggleOrderDetail(detail.orderDetailId!)}
+                              className={`cursor-pointer border-stone-100 dark:border-stone-850 transition-colors ${
+                                isChecked
+                                  ? "bg-primary/[0.03] dark:bg-primary/[0.02] hover:bg-primary/[0.05] dark:hover:bg-primary/[0.03]"
+                                  : "hover:bg-stone-50/50 dark:hover:bg-stone-950/30"
+                              }`}
+                            >
+                              <TableCell className="pl-4 w-12" onClick={(e) => e.stopPropagation()}>
+                                <Checkbox
+                                  checked={isChecked}
+                                  onCheckedChange={() => handleToggleOrderDetail(detail.orderDetailId!)}
+                                  className="rounded"
                                 />
-                              ) : (
-                                <ImageIcon className="h-4 w-4 text-stone-400" />
-                              )}
-                            </div>
-                            <div className="flex flex-col min-w-0">
-                              <span className="font-mono font-black text-[11px] uppercase leading-none text-stone-800 dark:text-stone-200">
+                              </TableCell>
+                              <TableCell className="w-12">
+                                <div className="h-8 w-8 rounded-lg bg-stone-100 dark:bg-stone-800 border flex items-center justify-center overflow-hidden relative">
+                                  {detail.designImageUrl ? (
+                                    <img
+                                      src={detail.designImageUrl}
+                                      alt={detail.designCode || "Thiết kế"}
+                                      className="h-full w-full object-cover cursor-zoom-in"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onImageClick(detail.designImageUrl!, e);
+                                      }}
+                                    />
+                                  ) : (
+                                    <ImageIcon className="h-4 w-4 text-stone-400" />
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell className="w-[120px] font-mono font-black text-[11px] uppercase text-stone-800 dark:text-stone-200">
                                 {detail.designCode}
-                              </span>
-                              <span className="text-[11px] text-stone-500 font-medium mt-1 truncate max-w-[280px] md:max-w-[400px]">
+                              </TableCell>
+                              <TableCell className="text-[11px] text-stone-500 font-medium truncate max-w-[200px] md:max-w-[300px]">
                                 {detail.designName}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-6 shrink-0 ml-4">
-                            <div className="text-right text-xs">
-                              <span className="text-stone-400 font-medium mr-1">SL:</span>
-                              <span className="font-bold text-stone-800 dark:text-stone-200 tabular-nums">
+                              </TableCell>
+                              <TableCell className="text-right font-extrabold text-amber-600 dark:text-amber-400 text-xs tabular-nums w-40">
+                                {detail.proofingOrderCodes && detail.proofingOrderCodes.length > 0 ? (
+                                  detail.proofingOrderCodes.join(", ")
+                                ) : (
+                                  <span className="text-stone-400 font-normal">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right text-xs font-bold text-stone-800 dark:text-stone-200 tabular-nums w-24">
                                 {new Intl.NumberFormat('vi-VN').format(detail.remainingToDeliver ?? 0)}
-                              </span>
-                            </div>
-                            <div className="text-right font-extrabold text-stone-800 dark:text-stone-200 text-xs w-24 tabular-nums">
-                              {formatCurrency(detail.unitPrice ? (detail.orderedQty ?? 0) * detail.unitPrice : 0)}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                              </TableCell>
+                              <TableCell className="text-right font-extrabold text-stone-800 dark:text-stone-200 text-xs pr-4 w-32 tabular-nums">
+                                {formatCurrency(detail.unitPrice ? (detail.orderedQty ?? 0) * detail.unitPrice : 0)}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
                   </div>
                 )}
               </div>
@@ -2534,11 +2548,21 @@ function CreateDeliveryNoteDialog({
                           <div className="text-sm text-slate-700 dark:text-slate-300 mt-0.5 line-clamp-1">
                             {od.designName}
                           </div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                            Tối đa:{" "}
-                            <span className="font-bold text-primary">
-                              {new Intl.NumberFormat("vi-VN").format(od.remainingToDeliver || 0)}
+                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                            <span>
+                              Tối đa:{" "}
+                              <span className="font-bold text-primary">
+                                {new Intl.NumberFormat("vi-VN").format(od.remainingToDeliver || 0)}
+                              </span>
                             </span>
+                            {od.proofingOrderCodes && od.proofingOrderCodes.length > 0 && (
+                              <span className="flex items-center gap-1">
+                                <span className="text-slate-400 font-medium">| Mã bài:</span>
+                                <span className="font-mono font-extrabold text-amber-600 dark:text-amber-400 text-xs">
+                                  {od.proofingOrderCodes.join(", ")}
+                                </span>
+                              </span>
+                            )}
                           </div>
                         </div>
                         <div className="w-[110px] flex-shrink-0">

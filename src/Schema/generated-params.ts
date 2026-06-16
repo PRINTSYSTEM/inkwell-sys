@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-06-15T17:53:31.771Z */
+/* Generated at: 2026-06-16T10:50:12.511Z */
 
 import { z } from "zod";
 import { IdSchema, PagedParamsSchema } from "./Common";

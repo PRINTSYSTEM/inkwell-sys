@@ -154,6 +154,7 @@ export const OrderDetailForDeliveryResponseSchema = z
     unitPrice: z.number(),
     customerId: z.number().int(),
     customerName: z.string().nullable(),
+    proofingOrderCodes: z.array(z.string()).nullable().optional(),
   })
   .partial()
   .passthrough();

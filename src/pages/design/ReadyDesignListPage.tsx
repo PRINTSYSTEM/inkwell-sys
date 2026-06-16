@@ -510,9 +510,6 @@ export default function ReadyDesignListPage() {
                         </TableCell>
                         <TableCell className="py-2 text-sm font-medium">
                           {design.customerName}
-                          <Badge variant="outline" className="ml-1.5 font-mono text-[9px] scale-95">
-                            {design.customerId}
-                          </Badge>
                         </TableCell>
                         <TableCell className="py-2 text-sm font-bold text-indigo-600 dark:text-indigo-400">
                           {design.quantity?.toLocaleString("vi-VN")}
@@ -671,18 +668,18 @@ export default function ReadyDesignListPage() {
                 </div>
               ) : (
                 <Select value={selectedAddressId} onValueChange={setSelectedAddressId}>
-                  <SelectTrigger className="h-11 bg-background border-border/80">
+                  <SelectTrigger className="h-auto min-h-11 py-1.5 bg-background border-border/80 [&>span]:line-clamp-none [&>span]:w-full [&>span]:flex [&>span]:flex-col [&>span]:items-start [&>span]:justify-center">
                     <SelectValue placeholder="Chọn địa chỉ giao hàng..." />
                   </SelectTrigger>
                   <SelectContent>
                     {addresses.map((addr) => (
                       <SelectItem key={addr.id} value={addr.id!.toString()} className="text-sm">
-                        <div className="flex flex-col text-left">
+                        <div className="flex flex-col text-left min-w-0">
                           <span className="font-medium">
                             {addr.label} {addr.isDefault && <Badge className="ml-1 py-0 scale-90">Mặc định</Badge>}
                           </span>
                           {addr.address && (
-                            <span className="text-xs text-muted-foreground truncate max-w-[350px]">{addr.address}</span>
+                            <span className="text-xs text-muted-foreground truncate max-w-[280px] sm:max-w-[360px] md:max-w-[420px]">{addr.address}</span>
                           )}
                         </div>
                       </SelectItem>
