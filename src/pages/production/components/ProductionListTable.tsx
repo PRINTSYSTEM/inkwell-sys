@@ -482,7 +482,7 @@ function StepItem({
             variant="outline"
             size="sm"
             className="h-6 mt-1 text-[10px] w-full"
-            disabled={!isEnabled}
+            disabled={!isEnabled || (isCheckStep && (step.outputQty ?? 0) !== 0)}
             onClick={() => {
               setIsEditing(true);
               // Auto-jump to ready when clicking Edit (requested by user)
@@ -547,6 +547,13 @@ function StepItem({
             className="h-6 mt-1 text-[10px] w-full"
             disabled={!isEnabled}
             onClick={() => {
+              if (isCheckStep) {
+                const outQty = Number(outputQty);
+                if (isNaN(outQty) || outQty <= 0) {
+                  toast.error("Số lượng ra phải lớn hơn 0!");
+                  return;
+                }
+              }
               handleUpdate({
                 inputQty: Number(inputQty) || 0,
                 outputQty: Number(outputQty) || 0,
@@ -839,6 +846,20 @@ function ProductionTableRow({
 
   const handleSaveAllPackaging = async () => {
     if (!proofingOrder?.proofingOrderDesigns) return;
+
+    // Validate outputQty is not 0 or negative
+    const hasZeroOrInvalid = proofingOrder.proofingOrderDesigns.some((pod: any) => {
+      const values = tempPackagingValues[pod.id];
+      if (!values) return true;
+      const outQty = Number(values.outputQty);
+      return isNaN(outQty) || outQty <= 0;
+    });
+
+    if (hasZeroOrInvalid) {
+      toast.error("Số lượng ra phải lớn hơn 0!");
+      return;
+    }
+
     try {
       const promises = proofingOrder.proofingOrderDesigns.map(async (pod: any) => {
         const prodItem = productionItems.find(
@@ -1535,7 +1556,13 @@ function ProductionTableRow({
                       variant="outline"
                       size="sm"
                       className="h-7 text-[10px] w-full"
-                      disabled={!isPackagingEnabled}
+                      disabled={
+                        !isPackagingEnabled ||
+                        productionItems.some((item: any) => {
+                          const qty = item.outputQty ?? item.producedQty ?? 0;
+                          return qty !== 0;
+                        })
+                      }
                       onClick={startEditingPackaging}
                     >
                       <Edit className="w-3.5 h-3.5 mr-1" />

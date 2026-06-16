@@ -985,6 +985,7 @@ export default function OrderDetailPage() {
                     </Badge>
                   )}
                 </CardTitle>
+                {/* TODO: tạm ẩn nút thêm sản phẩm
                 {canAddRemoveProducts && (
                   <Button
                     size="sm"
@@ -996,6 +997,7 @@ export default function OrderDetailPage() {
                     Thêm sản phẩm
                   </Button>
                 )}
+                */}
               </div>
             </CardHeader>
             <CardContent>

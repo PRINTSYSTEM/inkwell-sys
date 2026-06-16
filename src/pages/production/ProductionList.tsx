@@ -251,9 +251,6 @@ export default function ProductionListPage() {
       await createProduction({
         proofingOrderId: proofingOrderId,
       });
-      toast.success("Thành công", {
-        description: "Đã tạo lệnh sản xuất mới",
-      });
     } catch (error) {
       // Error handled by hook
     }

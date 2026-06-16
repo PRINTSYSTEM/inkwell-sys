@@ -287,7 +287,7 @@ export default function DesignCreateDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col bg-background/95 backdrop-blur-md border border-border/60 shadow-2xl rounded-2xl">
         <DialogHeader className="pb-3 border-b border-border/40">
-          <DialogTitle className="text-xl font-bold bg-gradient-to-r from-primary to-indigo-600 bg-clip-text text-transparent">
+          <DialogTitle className="text-xl font-bold text-foreground">
             Tạo thiết kế độc lập mới
           </DialogTitle>
         </DialogHeader>
@@ -506,7 +506,7 @@ export default function DesignCreateDialog({
             </div>
 
             {/* 6. Quantity */}
-            <div className="space-y-2">
+            <div className="space-y-2 flex flex-col justify-between">
               <Label className="font-semibold text-foreground flex items-center justify-between">
                 <span>Số lượng *</span>
                 {selectedMaterial?.minimumQuantity ? (
@@ -515,14 +515,17 @@ export default function DesignCreateDialog({
                   </span>
                 ) : null}
               </Label>
-              <Input
-                type="number"
-                min="1"
-                placeholder="Số lượng sản phẩm"
-                value={quantity || ""}
-                onChange={(e) => setQuantity(e.target.value === "" ? 0 : Number(e.target.value))}
-                className="h-11 bg-background"
-              />
+              <div>
+                <Label className="text-xs text-transparent select-none hidden md:block">Số lượng</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  placeholder="Số lượng sản phẩm"
+                  value={quantity || ""}
+                  onChange={(e) => setQuantity(e.target.value === "" ? 0 : Number(e.target.value))}
+                  className="h-11 bg-background"
+                />
+              </div>
             </div>
           </div>
 
