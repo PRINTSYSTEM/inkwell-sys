@@ -425,7 +425,26 @@ export default function DeliveryNoteDetailPage() {
     );
   }
 
-  const currentStatus = (deliveryNote?.status || "draft").toLowerCase();
+  const getDisplayStatus = (note: any) => {
+    if (!note) return "draft";
+    const lines = note.lines || [];
+    const hasDelivered = lines.some((l: any) => l.status === "delivered");
+    const hasReschedule = lines.some((l: any) => l.status === "failed_reschedule");
+    const hasFailed = lines.some((l: any) => ["failed", "returned", "cancelled"].includes(l.status || ""));
+
+    if (note.status === "cancelled" && (hasDelivered || hasReschedule)) {
+      return "partial";
+    }
+
+    if (hasReschedule) return "failed_reschedule";
+    if (hasDelivered && hasFailed) return "partial";
+    if (hasDelivered) return "completed";
+    if (hasFailed) return "failed";
+
+    return (note.status || "draft").toLowerCase();
+  };
+
+  const currentStatus = getDisplayStatus(deliveryNote);
 
   const statusRanks: Record<string, number> = {
     draft: 0,

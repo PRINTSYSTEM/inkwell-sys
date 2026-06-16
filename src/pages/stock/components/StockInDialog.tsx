@@ -27,6 +27,8 @@ interface StockInDialogProps {
     documentCode: string;
     notes: string;
     laborCost: number;
+    unitPrice: number;
+    totalAmount: number;
   };
   setStockInForm: React.Dispatch<
     React.SetStateAction<{
@@ -34,6 +36,8 @@ interface StockInDialogProps {
       documentCode: string;
       notes: string;
       laborCost: number;
+      unitPrice: number;
+      totalAmount: number;
     }>
   >;
   refetchAll: () => void;
@@ -53,6 +57,39 @@ export function StockInDialog({
   const { mutateAsync: createStockIn } = useCreateStockIn();
   const { mutateAsync: updateStockIn } = useUpdateStockIn();
 
+  const isRollType = materialDetail?.type === "cuon" || 
+                     materialDetail?.materialTypeName?.toLowerCase()?.includes("cuộn") || 
+                     materialDetail?.materialTypeName?.toLowerCase()?.includes("cuon") ||
+                     materialDetail?.unit?.toLowerCase()?.includes("cuộn") ||
+                     materialDetail?.unit?.toLowerCase()?.includes("cuon");
+
+  const handleQtyChange = (qty: number) => {
+    setStockInForm((prev) => ({
+      ...prev,
+      quantity: qty,
+      totalAmount: Math.round(qty * prev.unitPrice),
+    }));
+  };
+
+  const handleUnitPriceChange = (price: number) => {
+    setStockInForm((prev) => ({
+      ...prev,
+      unitPrice: price,
+      totalAmount: Math.round(prev.quantity * price),
+    }));
+  };
+
+  const handleTotalAmountChange = (amount: number) => {
+    setStockInForm((prev) => {
+      const nextUnitPrice = prev.quantity > 0 ? Math.round((amount / prev.quantity) * 100) / 100 : prev.unitPrice;
+      return {
+        ...prev,
+        totalAmount: amount,
+        unitPrice: nextUnitPrice,
+      };
+    });
+  };
+
   const handleStockInSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!stockInForm.quantity || stockInForm.quantity <= 0) {
@@ -62,12 +99,7 @@ export function StockInDialog({
 
     let toastId: string | number | undefined;
     try {
-      const calculatedTotalAmount = (stockInForm.quantity || 0) * (materialDetail?.unitPrice || 0);
-      const isRollType = materialDetail?.type === "cuon" || 
-                         materialDetail?.materialTypeName?.toLowerCase()?.includes("cuộn") || 
-                         materialDetail?.materialTypeName?.toLowerCase()?.includes("cuon") ||
-                         materialDetail?.unit?.toLowerCase()?.includes("cuộn") ||
-                         materialDetail?.unit?.toLowerCase()?.includes("cuon");
+      const calculatedTotalAmount = stockInForm.totalAmount || (stockInForm.quantity || 0) * (stockInForm.unitPrice || 0);
       const lineKind = isRollType ? "roll" : "sheet";
       
       if (isEditMode && editId) {
@@ -85,7 +117,7 @@ export function StockInDialog({
                 itemCode: materialDetail?.code || undefined,
                 unit: materialDetail?.unit || undefined,
                 quantity: stockInForm.quantity,
-                unitPrice: materialDetail?.unitPrice || undefined,
+                unitPrice: stockInForm.unitPrice || undefined,
                 notes: stockInForm.notes || undefined,
                 materialId: materialId ? Number(materialId) : undefined,
                 orderDetailId: undefined,
@@ -120,7 +152,7 @@ export function StockInDialog({
               itemCode: materialDetail?.code || undefined,
               unit: materialDetail?.unit || undefined,
               quantity: stockInForm.quantity,
-              unitPrice: materialDetail?.unitPrice || undefined,
+              unitPrice: stockInForm.unitPrice || undefined,
               notes: stockInForm.notes || undefined,
               materialId: materialId ? Number(materialId) : undefined,
               orderDetailId: undefined,
@@ -178,12 +210,43 @@ export function StockInDialog({
                 placeholder="Nhập số lượng..."
                 value={stockInForm.quantity || ""}
                 onChange={(e) =>
-                  setStockInForm((prev) => ({ ...prev, quantity: parseFloat(e.target.value) || 0 }))
+                  handleQtyChange(parseFloat(e.target.value) || 0)
                 }
                 className="rounded-md border-slate-200 h-10 text-xs font-mono font-bold focus-visible:ring-[#93631F] text-[#93631F]"
               />
             </div>
 
+            {/* Đơn giá */}
+            <div className="space-y-1.5">
+              <Label className="font-semibold text-slate-700">
+                Đơn giá (đ/{isRollType ? "m tới" : "m²"})
+              </Label>
+              <Input
+                type="number"
+                placeholder="Nhập đơn giá..."
+                value={stockInForm.unitPrice || ""}
+                onChange={(e) =>
+                  handleUnitPriceChange(parseFloat(e.target.value) || 0)
+                }
+                className="rounded-md border-slate-200 h-10 text-xs font-mono font-bold focus-visible:ring-[#93631F]"
+              />
+            </div>
+
+            {/* Thành tiền */}
+            <div className="space-y-1.5">
+              <Label className="font-semibold text-slate-700">
+                Thành tiền (đ)
+              </Label>
+              <Input
+                type="number"
+                placeholder="Thành tiền..."
+                value={stockInForm.totalAmount || ""}
+                onChange={(e) =>
+                  handleTotalAmountChange(parseFloat(e.target.value) || 0)
+                }
+                className="rounded-md border-slate-200 h-10 text-xs font-mono font-bold focus-visible:ring-[#93631F]"
+              />
+            </div>
 
             {/* Ghi chú */}
             <div className="space-y-1.5">
