@@ -144,7 +144,9 @@ const isTuiXepHongDesignType = (
 function getTimelineVisual(entry: DesignTimelineEntryResponse) {
   const description = (entry.description as string | undefined) || "";
   const normalized = description.toLowerCase();
-  const hasImage = Boolean((entry as any).imageUrl || entry.fileUrl);
+  type TimelineEntryLike = { imageUrl?: string; fileUrl?: string };
+  const e = entry as TimelineEntryLike;
+  const hasImage = Boolean(e.imageUrl || e.fileUrl);
 
   if (hasImage) {
     return {
@@ -260,6 +262,7 @@ export default function DesignDetailPage() {
     adhesiveOffset: undefined as number | undefined,
     requirements: "",
     additionalNotes: "",
+    requestedQuantity: undefined as number | undefined,
     materialTypeId: undefined as number | undefined,
     sidesClassificationOptionId: undefined as number | undefined,
     processClassificationOptionId: undefined as number | undefined,
@@ -283,7 +286,8 @@ export default function DesignDetailPage() {
 
   const { data: materialsByDesignType = [], isLoading: materialsLoading } =
     useMaterialsByDesignType(
-      ((design as any)?.designType as any)?.id as number | undefined
+      ((design as unknown as { designType?: { id?: number } })?.designType
+        ?.id as number | undefined)
     );
 
   // ==== ORDER BY DESIGN ====
@@ -395,7 +399,13 @@ export default function DesignDetailPage() {
     try {
       await updateDesign.mutateAsync({
         id: designId,
-        data: { designStatus: targetStatus },
+        data: {
+          designStatus: targetStatus,
+          requestedQuantity:
+            typeof design.requestedQuantity === "number"
+              ? design.requestedQuantity
+              : null,
+        },
       });
 
       toast.success("Thành công", {
@@ -526,11 +536,13 @@ export default function DesignDetailPage() {
       height: design.height || 0,
       adhesiveOffset:
         (design.adhesiveOffset as number | undefined) || undefined,
+      requestedQuantity: (design.requestedQuantity as number | undefined) || undefined,
       requirements: design.latestRequirements || "",
       additionalNotes: design.notes || "",
       materialTypeId:
         (design.materialTypeId as number | undefined) ||
-        ((design.materialType as any)?.id as number | undefined) ||
+        ((design.materialType as unknown as { id?: number })?.id as
+          number | undefined) ||
         undefined,
       sidesClassificationOptionId:
         (design.sidesClassificationOptionId as number | undefined) || undefined,
@@ -557,6 +569,7 @@ export default function DesignDetailPage() {
       width: 0,
       height: 0,
       adhesiveOffset: undefined,
+      requestedQuantity: undefined,
       requirements: "",
       additionalNotes: "",
       materialTypeId: undefined,
@@ -579,6 +592,10 @@ export default function DesignDetailPage() {
           width: editFormData.width || null,
           height: editFormData.height || null,
           adhesiveOffset: editFormData.adhesiveOffset ?? null,
+          requestedQuantity:
+            typeof editFormData.requestedQuantity === "number"
+              ? editFormData.requestedQuantity
+              : null,
           requirements: editFormData.requirements || null,
           additionalNotes: editFormData.additionalNotes || null,
           materialTypeId: editFormData.materialTypeId || null,
@@ -626,7 +643,7 @@ export default function DesignDetailPage() {
     return d.width
       ? `${d.length ?? ""} x ${d.width ?? ""} x ${d.height ?? ""}`
       : `${d.length ?? ""} x ${d.height ?? ""}`;
-  }, [design?.length, design?.width, design?.height]);
+  }, [design, design?.length, design?.width, design?.height]);
 
   // ==== LOADING / ERROR ====
   if (designLoading) {
@@ -844,6 +861,7 @@ export default function DesignDetailPage() {
                   extraNote={d.extraNote as string}
                   createdAt={d.createdAt}
                   adhesiveOffset={d.adhesiveOffset}
+                  showCopy={false}
                 />
 
                 {/* Designer info */}
@@ -1127,7 +1145,11 @@ export default function DesignDetailPage() {
                             Số lượng
                           </span>
                           <span className="font-bold text-blue-700 dark:text-blue-300">
-                            {orderDetails[0].quantity.toLocaleString("vi-VN")}
+                            {typeof orderDetails[0].quantity === "number"
+                              ? new Intl.NumberFormat("vi-VN").format(
+                                  orderDetails[0].quantity
+                                )
+                              : orderDetails[0].quantity}
                           </span>
                         </div>
                       )}
@@ -1213,6 +1235,42 @@ export default function DesignDetailPage() {
                         ) : (
                           <p className="font-bold text-sm text-amber-900 dark:text-amber-100">
                             {d.materialType?.name ?? "—"}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                    </div>
+
+                  {/* Requested Quantity */}
+                  <div className="mt-2">
+                    <Card className="border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20">
+                      <CardContent className="p-2.5">
+                        <p className="text-xs text-blue-700 dark:text-blue-300 uppercase mb-1.5 font-bold">
+                          Số lượng 
+                        </p>
+                        {isEditing && canEditDesign ? (
+                          <Input
+                            type="number"
+                            min="0"
+                            value={editFormData.requestedQuantity ?? ""}
+                            onChange={(e) =>
+                              setEditFormData((prev) => ({
+                                ...prev,
+                                requestedQuantity:
+                                  e.target.value === ""
+                                    ? undefined
+                                    : Number(e.target.value),
+                              }))
+                            }
+                            className="h-9 max-w-xs"
+                          />
+                        ) : (
+                          <p className="font-bold text-sm text-blue-900 dark:text-blue-100">
+                            {typeof d.requestedQuantity === "number"
+                              ? new Intl.NumberFormat("vi-VN").format(
+                                  d.requestedQuantity
+                                )
+                              : "—"}
                           </p>
                         )}
                       </CardContent>
@@ -1483,39 +1541,7 @@ export default function DesignDetailPage() {
                   </Collapsible>
                 )}
 
-                {/* Timestamps */}
-                <div className="grid grid-cols-2 gap-3 pt-2 border-t">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="h-3.5 w-3.5" />
-                    <div>
-                      <p className="font-semibold">Tạo</p>
-                      <p className="text-xs font-medium">
-                        {d.createdAt
-                          ? new Date(d.createdAt).toLocaleDateString("vi-VN", {
-                              day: "2-digit",
-                              month: "2-digit",
-                              year: "numeric",
-                            })
-                          : "—"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="h-3.5 w-3.5" />
-                    <div>
-                      <p className="font-semibold">Cập nhật</p>
-                      <p className="text-xs font-medium">
-                        {d.updatedAt
-                          ? new Date(d.updatedAt).toLocaleDateString("vi-VN", {
-                              day: "2-digit",
-                              month: "2-digit",
-                              year: "numeric",
-                            })
-                          : "—"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
+               
               </div>
             </ScrollArea>
           </div>
@@ -1881,7 +1907,7 @@ export default function DesignDetailPage() {
             </DialogHeader>
             <div className="space-y-4 py-4 text-sm">
               <div className="space-y-2">
-                <Label className="font-semibold text-foreground">Số lượng in thêm *</Label>
+                <Label className="font-semibold text-foreground">Số lượng tái bản *</Label>
                 <Input
                   type="number"
                   min="1"

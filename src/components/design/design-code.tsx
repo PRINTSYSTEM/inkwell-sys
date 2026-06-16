@@ -8,6 +8,7 @@ interface Props {
   extraNote?: string; // "bao gồm 15mm mép dán"
   createdAt: string; // "2025-11-26T10:38:30.3642249"
   adhesiveOffset?: number; // "15"
+  showCopy?: boolean;
 }
 
 export default function DesignCode(props: Props) {
@@ -84,19 +85,21 @@ export default function DesignCode(props: Props) {
           </span>
         </div>
 
-        <button
-          type="button"
-          onClick={handleCopyToClipboard}
-          className="ml-auto inline-flex items-center gap-1 rounded bg-primary text-primary-foreground px-2 py-1 hover:opacity-90 transition shadow-sm active:scale-95"
-          title="Copy nội dung"
-        >
-          {copied ? (
-            <Check className="w-3.5 h-3.5" />
-          ) : (
-            <Copy className="w-3.5 h-3.5" />
-          )}
-          <span className="text-[10px] font-bold uppercase">Copy</span>
-        </button>
+        {props.showCopy !== false && (
+          <button
+            type="button"
+            onClick={handleCopyToClipboard}
+            className="ml-auto inline-flex items-center gap-1 rounded bg-primary text-primary-foreground px-2 py-1 hover:opacity-90 transition shadow-sm active:scale-95"
+            title="Copy nội dung"
+          >
+            {copied ? (
+              <Check className="w-3.5 h-3.5" />
+            ) : (
+              <Copy className="w-3.5 h-3.5" />
+            )}
+            <span className="text-[10px] font-bold uppercase">Copy</span>
+          </button>
+        )}
       </div>
     </div>
   );

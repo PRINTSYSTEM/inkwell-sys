@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  Plus,
   ExternalLink,
   ImageIcon,
   Loader2,
@@ -47,8 +48,20 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 
-import { useMyDesigns, useGenerateDesignExcel } from "@/hooks";
+import { useMyDesigns, useGenerateDesignExcel, useReprintDesign } from "@/hooks";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { useQueryClient } from "@tanstack/react-query";
+import { DesignCreateDialog } from "@/components/design";
 import type { DesignResponse } from "@/Schema";
 import {
   designStatusConfig,
@@ -83,6 +96,14 @@ export default function MyWorkPage() {
   );
   const pageSize = 10;
   const tableContainerRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  // Reprint dialog state (from list)
+  const [reprintDialogOpen, setReprintDialogOpen] = useState(false);
+  const [reprintQuantity, setReprintQuantity] = useState<number | undefined>(1000);
+  const [reprintTargetId, setReprintTargetId] = useState<number | null>(null);
+  const reprintDesignMutation = useReprintDesign();
+  const [viewingImage, setViewingImage] = useState<{ url: string; title?: string } | null>(null);
 
   // API
   const { data, isLoading, isError } = useMyDesigns({
@@ -292,11 +313,18 @@ export default function MyWorkPage() {
               })}
             </SelectContent>
           </Select>
+          <Button
+            onClick={() => setCreateDialogOpen(true)}
+            className="gap-2 bg-gradient-to-r from-primary to-indigo-600 text-white font-semibold shadow-md shrink-0 h-8 text-sm"
+          >
+            <Plus className="h-4 w-4" />
+            Tạo thiết kế mới
+          </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 mb-3 shrink-0">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 mb-3 shrink-0 px-3">
         <Card
           className={`cursor-pointer transition-all p-2 ${
             statusFilter === "all" ? "ring-2 ring-primary" : "hover:shadow-md"
@@ -410,6 +438,7 @@ export default function MyWorkPage() {
           <Table>
             <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>
+                <TableHead className="h-9 text-sm font-bold w-12">Ảnh</TableHead>
                 <TableHead className="h-9 text-sm font-bold">
                   Mã thiết kế
                 </TableHead>
@@ -429,11 +458,12 @@ export default function MyWorkPage() {
                 <TableHead className="h-9 text-sm font-bold">
                   Cập nhật
                 </TableHead>
+                <TableHead className="h-9 text-sm font-bold text-right">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableSkeleton cols={7} rows={10} rowHeight="h-14" />
+                <TableSkeleton cols={8} rows={10} rowHeight="h-14" />
               ) : filteredDesigns.length > 0 ? (
                 filteredDesigns.map((design) => {
                   const { config, Icon } = getStatusInfo(design);
@@ -445,6 +475,15 @@ export default function MyWorkPage() {
                       className="hover:bg-muted/50 cursor-pointer h-14"
                       onClick={() => navigate(`/design/detail/${design.id}`)}
                     >
+                      {/* Image thumbnail */}
+                      <TableCell className="py-2">
+                        <div className="w-10 h-10 rounded-md overflow-hidden bg-muted/20 flex items-center justify-center group relative">
+                          <img src={design.designImageUrl || design.designFileUrl || "/placeholder.svg"} alt={design.designName || "image"} className="w-full h-full object-cover cursor-pointer" onClick={(e)=>{e.stopPropagation(); if(design.designImageUrl||design.designFileUrl){ setViewingImage({url: design.designImageUrl || design.designFileUrl || "", title: design.designName}); } }} />
+                          <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Eye className="w-4 h-4 text-white" />
+                          </div>
+                        </div>
+                      </TableCell>
                       {/* Code */}
                       <TableCell className="py-3">
                         <span className="font-semibold text-sm text-primary">
@@ -498,12 +537,33 @@ export default function MyWorkPage() {
                           {formatDate(design.updatedAt)}
                         </span>
                       </TableCell>
+                      {/* Actions */}
+                      <TableCell className="py-3 text-right">
+                        {design.status === "confirmed_for_printing" ? (
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setReprintTargetId(design.id);
+                                setReprintQuantity(1000);
+                                setReprintDialogOpen(true);
+                              }}
+                              className="h-8"
+                            >
+                              Tái bản
+                            </Button>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
                     </TableRow>
                   );
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12">
+                  <TableCell colSpan={8} className="text-center py-12">
                     <div className="flex flex-col items-center justify-center text-muted-foreground">
                       <Palette className="w-10 h-10 mb-2 opacity-50" />
                       <h3 className="text-sm font-semibold mb-1">
@@ -592,6 +652,72 @@ export default function MyWorkPage() {
           </div>
         )}
       </Card>
+      <DesignCreateDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["designs"] });
+        }}
+      />
+      {viewingImage && (
+        <ImageViewerDialog
+          open={!!viewingImage}
+          onOpenChange={(open) => { if(!open) setViewingImage(null); }}
+          imageUrl={viewingImage.url}
+          title={viewingImage.title}
+        />
+      )}
+      {/* Reprint Dialog (from my work list) */}
+      <Dialog open={reprintDialogOpen} onOpenChange={setReprintDialogOpen}>
+        <DialogContent className="max-w-md bg-background border border-border shadow-2xl rounded-2xl p-6">
+          <DialogHeader className="pb-3 border-b border-border/40">
+            <DialogTitle className="text-lg font-bold bg-gradient-to-r from-primary to-indigo-600 bg-clip-text text-transparent">
+              Yêu cầu tái bản thiết kế
+            </DialogTitle>
+            <DialogDescription className="text-xs text-muted-foreground mt-1">
+              Nhập số lượng sản phẩm cần sản xuất thêm cho thiết kế này. Hệ thống sẽ tạo một yêu cầu in mới trong kho sẵn sàng.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4 text-sm">
+            <div className="space-y-2">
+              <Label className="font-semibold text-foreground">Số lượng tái bản *</Label>
+              <Input
+                type="number"
+                min="1"
+                placeholder="VD: 1000"
+                value={reprintQuantity || ""}
+                onChange={(e) => setReprintQuantity(Number(e.target.value))}
+                className="h-11 bg-background"
+              />
+            </div>
+          </div>
+          <DialogFooter className="pt-3 border-t border-border/40 gap-2 shrink-0">
+            <Button
+              variant="outline"
+              onClick={() => setReprintDialogOpen(false)}
+              disabled={reprintDesignMutation.loading}
+            >
+              Hủy bỏ
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!reprintTargetId || !reprintQuantity || reprintQuantity <= 0) return;
+                try {
+                  await reprintDesignMutation.mutate({ id: reprintTargetId, quantity: reprintQuantity });
+                  setReprintDialogOpen(false);
+                  setReprintTargetId(null);
+                } catch (err) {
+                  // handled in hook
+                }
+              }}
+              disabled={reprintDesignMutation.loading || !reprintQuantity || reprintQuantity <= 0}
+              className="bg-gradient-to-r from-primary to-indigo-600 text-white font-semibold"
+            >
+              {reprintDesignMutation.loading ? "Đang xử lý..." : "Xác nhận tái bản"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
