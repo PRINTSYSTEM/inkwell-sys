@@ -315,7 +315,7 @@ export default function MyWorkPage() {
           </Select>
           <Button
             onClick={() => setCreateDialogOpen(true)}
-            className="gap-2 bg-gradient-to-r from-primary to-indigo-600 text-white font-semibold shadow-md shrink-0 h-8 text-sm"
+            className="gap-2 font-semibold shadow-md shrink-0 h-8 text-sm"
           >
             <Plus className="h-4 w-4" />
             Tạo thiết kế mới
@@ -434,8 +434,8 @@ export default function MyWorkPage() {
 
       {/* Table */}
       <Card className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        <div ref={tableContainerRef} className="overflow-auto flex-1">
-          <Table>
+        <div ref={tableContainerRef} className="overflow-auto flex-1 relative">
+          <table className="w-full caption-bottom text-sm">
             <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>
                 <TableHead className="h-9 text-sm font-bold w-12">Ảnh</TableHead>
@@ -477,8 +477,23 @@ export default function MyWorkPage() {
                     >
                       {/* Image thumbnail */}
                       <TableCell className="py-2">
-                        <div className="w-10 h-10 rounded-md overflow-hidden bg-muted/20 flex items-center justify-center group relative">
-                          <img src={design.designImageUrl || design.designFileUrl || "/placeholder.svg"} alt={design.designName || "image"} className="w-full h-full object-cover cursor-pointer" onClick={(e)=>{e.stopPropagation(); if(design.designImageUrl||design.designFileUrl){ setViewingImage({url: design.designImageUrl || design.designFileUrl || "", title: design.designName}); } }} />
+                        <div 
+                          className="w-10 h-10 rounded-md overflow-hidden bg-muted/20 flex items-center justify-center group relative cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (design.designImageUrl || design.designFileUrl) {
+                              setViewingImage({
+                                url: design.designImageUrl || design.designFileUrl || "",
+                                title: design.designName
+                              });
+                            }
+                          }}
+                        >
+                          <img 
+                            src={design.designImageUrl || design.designFileUrl || "/placeholder.svg"} 
+                            alt={design.designName || "image"} 
+                            className="w-full h-full object-cover" 
+                          />
                           <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Eye className="w-4 h-4 text-white" />
                           </div>
@@ -587,7 +602,7 @@ export default function MyWorkPage() {
                 </TableRow>
               )}
             </TableBody>
-          </Table>
+          </table>
         </div>
 
         {/* Pagination */}
@@ -711,7 +726,7 @@ export default function MyWorkPage() {
                 }
               }}
               disabled={reprintDesignMutation.loading || !reprintQuantity || reprintQuantity <= 0}
-              className="bg-gradient-to-r from-primary to-indigo-600 text-white font-semibold"
+              className="font-semibold"
             >
               {reprintDesignMutation.loading ? "Đang xử lý..." : "Xác nhận tái bản"}
             </Button>

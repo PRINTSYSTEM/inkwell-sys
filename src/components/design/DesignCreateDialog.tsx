@@ -636,7 +636,7 @@ export default function DesignCreateDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isCreating}>
             Hủy bỏ
           </Button>
-          <Button onClick={handleSave} disabled={isCreating} className="bg-gradient-to-r from-primary to-indigo-600 text-white font-semibold">
+          <Button onClick={handleSave} disabled={isCreating} className="font-semibold">
             {isCreating ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Đang tạo...

@@ -133,6 +133,40 @@ export default function ReadyDesignListPage() {
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   const [notes, setNotes] = useState("");
 
+  // Quick address form state
+  const [isAddingNewAddress, setIsAddingNewAddress] = useState(false);
+  const [newAddressLabel, setNewAddressLabel] = useState("");
+  const [newAddressString, setNewAddressString] = useState("");
+  const [newAddressRecipient, setNewAddressRecipient] = useState("");
+  const [newAddressPhone, setNewAddressPhone] = useState("");
+
+  const resetNewAddressForm = () => {
+    setNewAddressLabel("");
+    setNewAddressString("");
+    setNewAddressRecipient("");
+    setNewAddressPhone("");
+  };
+
+  const handleSaveQuickAddress = async () => {
+    if (!targetCustomerIdForAddresses || !newAddressLabel.trim() || !newAddressString.trim()) return;
+    try {
+      const newAddr = await createAddressMutation.mutateAsync({
+        label: newAddressLabel.trim(),
+        address: newAddressString.trim(),
+        recipientName: newAddressRecipient.trim() || undefined,
+        recipientPhone: newAddressPhone.trim() || undefined,
+        isDefault: addresses.length === 0,
+      });
+      if (newAddr && newAddr.id) {
+        setSelectedAddressId(newAddr.id.toString());
+      }
+      setIsAddingNewAddress(false);
+      resetNewAddressForm();
+    } catch (err) {
+      // Error handled by mutation hook toast
+    }
+  };
+
   // Fetch customers
   const { data: customersData, isLoading: loadingCustomers } = useCustomers({
     pageNumber: 1,
@@ -273,6 +307,8 @@ export default function ReadyDesignListPage() {
     setDeliveryDate("");
     setSelectedAddressId("");
     setNotes("");
+    setIsAddingNewAddress(false);
+    resetNewAddressForm();
 
     // Try to auto-select default address if available
     const defaultAddr = addresses.find((a) => a.isDefault);
@@ -457,8 +493,8 @@ export default function ReadyDesignListPage() {
       {/* Pool Table */}
       <Card className="flex-1 flex flex-col min-h-0 overflow-hidden border-border/40">
         <CardContent className="p-0 flex-1 flex flex-col min-h-0 overflow-hidden">
-          <div className="overflow-auto flex-1">
-            <Table>
+          <div className="overflow-auto flex-1 relative">
+            <table className="w-full caption-bottom text-sm">
               <TableHeader className="sticky top-0 bg-background z-10 border-b">
                 <TableRow>
                   <TableHead className="w-[50px] text-center">
@@ -539,7 +575,7 @@ export default function ReadyDesignListPage() {
                   </TableRow>
                 )}
               </TableBody>
-            </Table>
+            </table>
           </div>
 
           {/* Pagination Controls */}
@@ -617,75 +653,161 @@ export default function ReadyDesignListPage() {
                 <Label className="font-semibold text-foreground flex items-center gap-1">
                   Địa chỉ giao hàng
                 </Label>
-                {addresses.length > 0 && customerDetail?.address && !addresses.some(a => a.address === customerDetail.address) && (
-                  <Button
-                    type="button"
-                    variant="link"
-                    size="sm"
-                    className="h-auto p-0 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-semibold"
-                    disabled={createAddressMutation.isPending}
-                    onClick={handleCreateAddressFromProfile}
-                  >
-                    {createAddressMutation.isPending ? (
-                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                    ) : (
-                      <Plus className="h-3 w-3 mr-1" />
-                    )}
-                    Thêm địa chỉ từ hồ sơ
-                  </Button>
-                )}
-              </div>
-              {loadingAddresses ? (
-                <div className="flex items-center text-xs text-muted-foreground gap-1.5">
-                  <Loader2 className="h-3 w-3 animate-spin" /> Đang tải sổ địa chỉ...
-                </div>
-              ) : addresses.length === 0 ? (
-                <div className="space-y-2">
-                  <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 border border-amber-200/50 p-2.5 rounded-lg">
-                    Khách hàng chưa đăng ký địa chỉ giao hàng nào. Vui lòng vào trang khách hàng để bổ sung.
-                  </div>
-                  {customerDetail?.address ? (
+                <div className="flex items-center gap-2.5">
+                  {addresses.length > 0 && customerDetail?.address && !addresses.some(a => a.address === customerDetail.address) && (
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="link"
                       size="sm"
-                      className="w-full text-xs gap-1.5 py-2.5 h-auto border-indigo-200 dark:border-indigo-900 bg-indigo-50/30 dark:bg-indigo-950/10 hover:bg-indigo-50/50 hover:text-indigo-600 dark:hover:text-indigo-400 text-indigo-600 dark:text-indigo-400 font-semibold transition-all shadow-sm"
+                      className="h-auto p-0 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-semibold"
                       disabled={createAddressMutation.isPending}
                       onClick={handleCreateAddressFromProfile}
                     >
                       {createAddressMutation.isPending ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
                       ) : (
-                        <Plus className="h-3.5 w-3.5" />
+                        <Plus className="h-3 w-3 mr-1" />
                       )}
-                      Sử dụng địa chỉ hồ sơ: <span className="underline truncate max-w-[200px]" title={customerDetail.address}>{customerDetail.address}</span>
+                      Thêm từ hồ sơ
                     </Button>
-                  ) : (
-                    <div className="text-xs text-muted-foreground italic pl-1">
-                      (Hồ sơ khách hàng cũng chưa đăng ký địa chỉ liên hệ)
-                    </div>
                   )}
+                  <Button
+                    type="button"
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 font-semibold flex items-center gap-1"
+                    onClick={() => setIsAddingNewAddress(!isAddingNewAddress)}
+                  >
+                    <Plus className="h-3 w-3" />
+                    {isAddingNewAddress ? "Hủy" : "Tạo mới"}
+                  </Button>
                 </div>
-              ) : (
-                <Select value={selectedAddressId} onValueChange={setSelectedAddressId}>
-                  <SelectTrigger className="h-auto min-h-11 py-1.5 bg-background border-border/80 [&>span]:line-clamp-none [&>span]:w-full [&>span]:flex [&>span]:flex-col [&>span]:items-start [&>span]:justify-center">
-                    <SelectValue placeholder="Chọn địa chỉ giao hàng..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {addresses.map((addr) => (
-                      <SelectItem key={addr.id} value={addr.id!.toString()} className="text-sm">
-                        <div className="flex flex-col text-left min-w-0">
-                          <span className="font-medium">
-                            {addr.label} {addr.isDefault && <Badge className="ml-1 py-0 scale-90">Mặc định</Badge>}
-                          </span>
-                          {addr.address && (
-                            <span className="text-xs text-muted-foreground truncate max-w-[280px] sm:max-w-[360px] md:max-w-[420px]">{addr.address}</span>
+              </div>
+              {!isAddingNewAddress ? (
+                <>
+                  {loadingAddresses ? (
+                    <div className="flex items-center text-xs text-muted-foreground gap-1.5">
+                      <Loader2 className="h-3 w-3 animate-spin" /> Đang tải sổ địa chỉ...
+                    </div>
+                  ) : addresses.length === 0 ? (
+                    <div className="space-y-2">
+                      <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 border border-amber-200/50 p-2.5 rounded-lg">
+                        Khách hàng chưa đăng ký địa chỉ giao hàng nào. Vui lòng tạo nhanh địa chỉ ở nút trên.
+                      </div>
+                      {customerDetail?.address ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full text-xs gap-1.5 py-2.5 h-auto border-indigo-200 dark:border-indigo-900 bg-indigo-50/30 dark:bg-indigo-950/10 hover:bg-indigo-50/50 hover:text-indigo-600 dark:hover:text-indigo-400 text-indigo-600 dark:text-indigo-400 font-semibold transition-all shadow-sm"
+                          disabled={createAddressMutation.isPending}
+                          onClick={handleCreateAddressFromProfile}
+                        >
+                          {createAddressMutation.isPending ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Plus className="h-3.5 w-3.5" />
                           )}
+                          Sử dụng địa chỉ hồ sơ: <span className="underline truncate max-w-[200px]" title={customerDetail.address}>{customerDetail.address}</span>
+                        </Button>
+                      ) : (
+                        <div className="text-xs text-muted-foreground italic pl-1">
+                          (Hồ sơ khách hàng cũng chưa đăng ký địa chỉ liên hệ)
                         </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                      )}
+                    </div>
+                  ) : (
+                    <Select value={selectedAddressId} onValueChange={setSelectedAddressId}>
+                      <SelectTrigger className="h-auto min-h-11 py-1.5 bg-background border-border/80 [&>span]:line-clamp-none [&>span]:w-full [&>span]:flex [&>span]:flex-col [&>span]:items-start [&>span]:justify-center">
+                        <SelectValue placeholder="Chọn địa chỉ giao hàng..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {addresses.map((addr) => (
+                          <SelectItem key={addr.id} value={addr.id!.toString()} className="text-sm">
+                            <div className="flex flex-col text-left min-w-0">
+                              <span className="font-medium">
+                                {addr.label} {addr.isDefault && <Badge className="ml-1 py-0 scale-90">Mặc định</Badge>}
+                              </span>
+                              {addr.address && (
+                                <span className="text-xs text-muted-foreground truncate max-w-[280px] sm:max-w-[360px] md:max-w-[420px]">{addr.address}</span>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </>
+              ) : (
+                <div className="p-3 bg-muted/40 border rounded-lg space-y-3 mt-2 animate-in slide-in-from-top-1 duration-150">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-[11px] font-semibold">Tên gợi nhớ *</Label>
+                      <Input
+                        placeholder="VD: Văn phòng, Kho..."
+                        value={newAddressLabel}
+                        onChange={(e) => setNewAddressLabel(e.target.value)}
+                        className="h-9 text-xs bg-background border-border/80"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px] font-semibold">Số điện thoại</Label>
+                      <Input
+                        placeholder="Số điện thoại nhận"
+                        value={newAddressPhone}
+                        onChange={(e) => setNewAddressPhone(e.target.value)}
+                        className="h-9 text-xs bg-background border-border/80"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-semibold">Người nhận</Label>
+                    <Input
+                      placeholder="Tên người nhận hàng"
+                      value={newAddressRecipient}
+                      onChange={(e) => setNewAddressRecipient(e.target.value)}
+                      className="h-9 text-xs bg-background border-border/80"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] font-semibold">Địa chỉ chi tiết *</Label>
+                    <Input
+                      placeholder="Nhập địa chỉ giao hàng..."
+                      value={newAddressString}
+                      onChange={(e) => setNewAddressString(e.target.value)}
+                      className="h-9 text-xs bg-background border-border/80"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-1.5 pt-1 border-t border-border/40">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs px-2.5"
+                      onClick={() => {
+                        setIsAddingNewAddress(false);
+                        resetNewAddressForm();
+                      }}
+                    >
+                      Hủy
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="default"
+                      size="sm"
+                      className="h-7 text-xs px-3 font-semibold"
+                      disabled={createAddressMutation.isPending || !newAddressLabel.trim() || !newAddressString.trim()}
+                      onClick={handleSaveQuickAddress}
+                    >
+                      {createAddressMutation.isPending ? (
+                        <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                      ) : (
+                        <Check className="h-3 w-3 mr-1" />
+                      )}
+                      Lưu địa chỉ
+                    </Button>
+                  </div>
+                </div>
               )}
             </div>
 
