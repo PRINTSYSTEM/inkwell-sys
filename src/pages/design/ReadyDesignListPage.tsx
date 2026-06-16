@@ -48,6 +48,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { TableSkeleton } from "@/components/ui/skeleton-components";
+import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import {
   useReadyDesigns,
   useCustomers,
@@ -63,6 +64,7 @@ import type { ReadyDesignResponse } from "@/Schema";
 function DesignImageThumbnail({ designId }: { designId: number }) {
   const { data: design, isLoading } = useDesign(designId, !!designId);
   const [hasError, setHasError] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
   if (isLoading) {
     return <div className="w-10 h-10 rounded-lg bg-muted animate-pulse border border-border/40" />;
@@ -70,14 +72,32 @@ function DesignImageThumbnail({ designId }: { designId: number }) {
 
   if (design?.designImageUrl && !hasError) {
     return (
-      <div className="relative group w-10 h-10 rounded-lg overflow-hidden border border-border/80 shadow-sm transition-all hover:scale-110 hover:shadow-md cursor-zoom-in bg-white dark:bg-zinc-900 flex items-center justify-center">
-        <img
-          src={design.designImageUrl}
-          alt={design.designName || ""}
-          className="w-full h-full object-cover"
-          onError={() => setHasError(true)}
+      <>
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsPreviewOpen(true);
+          }}
+          className="relative group w-10 h-10 rounded-lg overflow-hidden border border-border/80 shadow-sm transition-all hover:scale-110 hover:shadow-md cursor-zoom-in bg-white dark:bg-zinc-900 flex items-center justify-center"
+        >
+          <img
+            src={design.designImageUrl}
+            alt={design.designName || ""}
+            className="w-full h-full object-cover"
+            onError={() => setHasError(true)}
+          />
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+            <Search className="w-3.5 h-3.5 text-white" />
+          </div>
+        </div>
+
+        <ImageViewerDialog
+          open={isPreviewOpen}
+          onOpenChange={setIsPreviewOpen}
+          imageUrl={design.designImageUrl}
+          title={design.designName || ""}
         />
-      </div>
+      </>
     );
   }
 
