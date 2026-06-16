@@ -777,7 +777,7 @@ export default function DesignDetailPage() {
                       </Button>
                       <Button
                         size="sm"
-                        className="gap-1.5 h-8 bg-gradient-to-r from-primary to-indigo-600 text-white font-semibold shadow-md"
+                        className="gap-1.5 h-8 font-semibold shadow-md"
                         onClick={() => {
                           setReprintQuantity(1000);
                           setReprintDialogOpen(true);
@@ -1929,7 +1929,7 @@ export default function DesignDetailPage() {
               <Button
                 onClick={handleReprintSubmit}
                 disabled={reprintDesignMutation.loading || !reprintQuantity || reprintQuantity <= 0}
-                className="bg-gradient-to-r from-primary to-indigo-600 text-white font-semibold"
+                className="font-semibold"
               >
                 {reprintDesignMutation.loading ? "Đang xử lý..." : "Xác nhận tái bản"}
               </Button>
