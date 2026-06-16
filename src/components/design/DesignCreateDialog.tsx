@@ -288,7 +288,7 @@ export default function DesignCreateDialog({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col bg-background/95 backdrop-blur-md border border-border/60 shadow-2xl rounded-2xl">
         <DialogHeader className="pb-3 border-b border-border/40">
           <DialogTitle className="text-xl font-bold text-foreground">
-            Tạo thiết kế độc lập mới
+            Tạo thiết kế mới
           </DialogTitle>
         </DialogHeader>
 
@@ -559,28 +559,46 @@ export default function DesignCreateDialog({
               <Label className="font-semibold text-foreground">Số mặt in</Label>
               {shouldShowSidesClassification && ((isTheTreo && isNhan) || (isDecal && !isDecalCuon)) ? (
                 <div className="flex gap-1.5">
-                  {Object.entries(ENTITY_CONFIG.sidesClassification.values).map(([key, label]) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => setSidesClassification(key)}
-                      className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
-                        sidesClassification === key
-                          ? "border-primary bg-primary text-primary-foreground shadow-sm"
-                          : "border-border/80 bg-background hover:bg-accent text-muted-foreground"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
+                  {Object.entries(ENTITY_CONFIG.sidesClassification.values).map(([key, label]) => {
+                    const displayLabel =
+                      isDecal && !isDecalCuon
+                        ? key === "one_side"
+                          ? "Decal lẻ"
+                          : key === "two_side"
+                            ? "Decal bộ"
+                            : label
+                        : label;
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => setSidesClassification(key)}
+                        className={`px-3 py-1.5 rounded-lg border text-xs font-semibold transition-all ${
+                          sidesClassification === key
+                            ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                            : "border-border/80 bg-background hover:bg-accent text-muted-foreground"
+                        }`}
+                      >
+                        {displayLabel}
+                      </button>
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="flex items-center h-8 gap-1 text-xs font-semibold text-muted-foreground bg-muted/60 px-2 py-1 rounded-md border border-border/40">
                   <Badge variant="outline" className="text-[11px] bg-background">
                     {sidesClassification
-                      ? ENTITY_CONFIG.sidesClassification.values[
-                          sidesClassification as keyof typeof ENTITY_CONFIG.sidesClassification.values
-                        ]
+                      ? isDecal && !isDecalCuon
+                        ? sidesClassification === "one_side"
+                          ? "Decal lẻ"
+                          : sidesClassification === "two_side"
+                            ? "Decal bộ"
+                            : ENTITY_CONFIG.sidesClassification.values[
+                                sidesClassification as keyof typeof ENTITY_CONFIG.sidesClassification.values
+                              ]
+                        : ENTITY_CONFIG.sidesClassification.values[
+                            sidesClassification as keyof typeof ENTITY_CONFIG.sidesClassification.values
+                          ]
                       : "—"}
                   </Badge>
                   <span className="text-[10px] font-normal">(Tự động)</span>
