@@ -158,9 +158,6 @@ const getDisplayStatus = (note: { lines?: Array<{ status?: string | null }>; sta
 };
 
 const getRemainingQty = (detail: any) => {
-  const netQty = detail.netQtyTotal ?? 0;
-  const deliveredQty = detail.deliveredQtyTotal ?? 0;
-  if (netQty > 0) return Math.max(0, netQty - deliveredQty);
   return Math.max(0, detail.remainingToDeliver ?? 0);
 };
 
