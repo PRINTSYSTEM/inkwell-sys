@@ -2811,7 +2811,7 @@ export default function AccountingOrderDetail() {
                         <td style={{ border: "1px solid #333", padding: "4px 3px", textAlign: "center" }}>
                           {item.design?.designImageUrl ? (
                             <img
-                              src={item.design.designImageUrl}
+                              src={item.design.designImageUrl.replace("https://developer.quangdatgroup.com/uploads", "/uploads")}
                               alt=""
                               crossOrigin="anonymous"
                               style={{ width: "64px", height: "44px", objectFit: "cover", display: "block", margin: "0 auto" }}
@@ -2864,7 +2864,7 @@ export default function AccountingOrderDetail() {
 
               {/* Notes */}
               <div style={{ fontSize: "11px", lineHeight: 1.6 }}>
-                <div>* Đơn giá trên chưa bao gồm VAT 8%</div>
+                {/* <div>* Đơn giá trên chưa bao gồm VAT 8%</div> */}
                 <div>* Số lượng giao hàng: +-10%</div>
                 <div>* Thời gian giao hàng: nhận, decal từ 4-7 ngày; túi từ 6-8 ngày kể từ ngày chốt in (trừ ngày lễ, chủ nhật và ngày duyệt mẫu)</div>
                 {order?.note && <div>* Ghi chú: {order.note}</div>}

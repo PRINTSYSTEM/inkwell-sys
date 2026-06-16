@@ -1,8 +1,10 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, ChevronsUpDown, Loader2, Package, Search, Plus, Trash2, Calendar, FileText, User, Image as ImageIcon } from "lucide-react";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
+import { Check, ChevronsUpDown, Loader2, Package, Search, Plus, Trash2, Calendar, FileText, User, Image as ImageIcon, X } from "lucide-react";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
+import { apiRequest, API_SUFFIX } from "@/apis";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -120,6 +122,12 @@ export default function ReadyDesignListPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery] = useDebounce(searchQuery, 300);
 
+  // New filters (mirrored from SaleDesignSearch)
+  const [selectedTypeName, setSelectedTypeName] = useState<string | null>(null);
+  const [materialFilter, setMaterialFilter] = useState<string | null>(null);
+  const [dimensionsFilter, setDimensionsFilter] = useState("");
+  const [debouncedDimensions] = useDebounce(dimensionsFilter, 300);
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -167,6 +175,43 @@ export default function ReadyDesignListPage() {
     }
   };
 
+  // Fetch design types
+  const { data: designTypes = [] } = useQuery({
+    queryKey: ["design-types"],
+    queryFn: async () => {
+      const res = await apiRequest.get(API_SUFFIX.DESIGN_TYPES);
+      const payload = res.data;
+      if (Array.isArray(payload)) return payload;
+      if (payload?.items && Array.isArray(payload.items)) return payload.items;
+      return [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const selectedTypeId = selectedTypeName
+    ? (designTypes.find((t: any) => t.name === selectedTypeName)?.id ?? null)
+    : null;
+
+  // Fetch materials (filtered by type if selected)
+  const { data: materialOptions = [] } = useQuery<any[]>({
+    queryKey: ["materials", selectedTypeId],
+    queryFn: async () => {
+      if (selectedTypeId) {
+        const res = await apiRequest.get(API_SUFFIX.MATERIAL_TYPES_BY_DESIGN_TYPE(selectedTypeId));
+        const payload = res.data;
+        if (Array.isArray(payload)) return payload;
+        if (payload?.items && Array.isArray(payload.items)) return payload.items;
+        return [];
+      }
+      const res = await apiRequest.get(API_SUFFIX.MATERIAL_TYPES, { params: { pageNumber: 1, pageSize: 1000 } });
+      const payload = res.data;
+      if (Array.isArray(payload)) return payload;
+      if (payload?.items && Array.isArray(payload.items)) return payload.items;
+      return [];
+    },
+    placeholderData: keepPreviousData,
+  });
+
   // Fetch customers
   const { data: customersData, isLoading: loadingCustomers } = useCustomers({
     pageNumber: 1,
@@ -182,8 +227,11 @@ export default function ReadyDesignListPage() {
       pageSize: itemsPerPage,
       customerId: selectedCustomer?.id || undefined,
       search: debouncedSearchQuery.trim() || undefined,
+      designType: selectedTypeName || undefined,
+      materialType: materialFilter || undefined,
+      dimensions: debouncedDimensions.trim() || undefined,
     };
-  }, [currentPage, selectedCustomer, debouncedSearchQuery]);
+  }, [currentPage, selectedCustomer, debouncedSearchQuery, selectedTypeName, materialFilter, debouncedDimensions]);
 
   const { data: readyDesignsData, isLoading: loadingDesigns, refetch: refetchDesigns } = useReadyDesigns(
     readyDesignsParams
@@ -386,9 +434,9 @@ export default function ReadyDesignListPage() {
       {/* Filters */}
       <Card className="p-3 mb-3 shrink-0 border-border/40">
         <CardContent className="p-0">
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-4 lg:grid-cols-7">
             {/* Search */}
-            <div className="relative">
+            <div className="relative md:col-span-2">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
                 placeholder="Tìm theo mã, tên thiết kế..."
@@ -411,7 +459,7 @@ export default function ReadyDesignListPage() {
                 >
                   <span className="truncate">
                     {selectedCustomer
-                      ? `Khách hàng: ${selectedCustomer.name}`
+                      ? `KH: ${selectedCustomer.name}`
                       : "Lọc theo khách hàng..."}
                   </span>
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -471,21 +519,66 @@ export default function ReadyDesignListPage() {
               </PopoverContent>
             </Popover>
 
-            {/* Clear Filters Button */}
-            {(selectedCustomer || searchQuery) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setSelectedCustomer(null);
-                  setSearchQuery("");
-                  setCurrentPage(1);
-                }}
-                className="h-9 text-xs text-muted-foreground hover:text-foreground"
-              >
-                Xóa tất cả bộ lọc
-              </Button>
-            )}
+            {/* Design Type */}
+            <Select
+              value={selectedTypeName ?? "0"}
+              onValueChange={(v) => {
+                setSelectedTypeName(v && v !== "0" ? v : null);
+                setMaterialFilter(null);
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="Loại" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">Tất cả loại</SelectItem>
+                {designTypes.map((t: any) => (
+                  <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Material */}
+            <Select
+              value={materialFilter ?? "0"}
+              onValueChange={(v) => { setMaterialFilter(v && v !== "0" ? v : null); setCurrentPage(1); }}
+            >
+              <SelectTrigger className="h-9 text-sm">
+                <SelectValue placeholder="Chất liệu" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="0">Tất cả chất liệu</SelectItem>
+                {materialOptions.map((m: any) => (
+                  <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* Dimensions */}
+            <Input
+              placeholder="Kích thước"
+              value={dimensionsFilter}
+              onChange={(e) => { setDimensionsFilter(e.target.value); setCurrentPage(1); }}
+              className="h-9 text-sm"
+            />
+
+            {/* Clear Filters */}
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-9"
+              onClick={() => {
+                setSelectedCustomer(null);
+                setSearchQuery("");
+                setSelectedTypeName(null);
+                setMaterialFilter(null);
+                setDimensionsFilter("");
+                setCurrentPage(1);
+              }}
+            >
+              Làm sạch bộ lọc
+            </Button>
           </div>
         </CardContent>
       </Card>

@@ -1076,6 +1076,9 @@ export type PurchaseReportVendorStatisticsParams = z.infer<typeof PurchaseReport
 export const ReadyDesignListParamsSchema = PagedParamsSchema.extend({
   customerId: z.number().int().nullable().optional(),
   search: z.string().nullable().optional(),
+  designType: z.string().nullable().optional(),
+  materialType: z.string().nullable().optional(),
+  dimensions: z.string().nullable().optional(),
 });
 export type ReadyDesignListParams = z.infer<typeof ReadyDesignListParamsSchema>;
 
