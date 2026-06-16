@@ -976,9 +976,6 @@ export default function DeliveryNoteListPage() {
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
             Phiếu giao hàng
           </h1>
-          <p className="text-sm text-stone-500 mt-1">
-            Theo dõi KPI, lọc nhanh và tạo phiếu chỉ trong vài cú nhấp.
-          </p>
         </div>
       </div>
 
