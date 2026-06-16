@@ -26604,6 +26604,10 @@
             "type": "integer",
             "format": "int32"
           },
+          "requestedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
           "designerId": {
             "type": "integer",
             "format": "int32"
@@ -26784,6 +26788,10 @@
             "nullable": true
           },
           "customerId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "requestedQuantity": {
             "type": "integer",
             "format": "int32"
           },
@@ -33251,6 +33259,11 @@
             "maxLength": 50,
             "minLength": 0,
             "type": "string",
+            "nullable": true
+          },
+          "requestedQuantity": {
+            "type": "integer",
+            "format": "int32",
             "nullable": true
           },
           "designFileUrl": {
