@@ -130,6 +130,57 @@ export const useUpdateProductionStep = () => {
   };
 };
 
+// DELETE /api/production-orders/:id - Delete (cancel) a production order
+// Fetches the full order first to get steps, resets all to "ready", then deletes.
+export const useDeleteProductionOrder = () => {
+  const queryClient = useQueryClient();
+
+  const mutate = async (productionOrderId: number) => {
+    try {
+      // 1. Fetch the full production order to get actual steps
+      const orderResp = await apiRequest.get<any>(
+        API_SUFFIX.PRODUCTION_ORDER_BY_ID(productionOrderId),
+      );
+      const steps: any[] = orderResp.data?.steps ?? [];
+      // 2. Silently reset ALL steps to "ready"
+      if (steps.length > 0) {
+        await Promise.all(
+          steps
+            .filter((s) => s.id)
+            .map((s) =>
+              apiRequest.put(API_SUFFIX.PRODUCTION_STEP_STATUS(s.id!), {
+                status: "pending",
+                inputQty: 0,
+                outputQty: 0,
+                defectQty: 0,
+              }),
+            ),
+        );
+      }
+
+      // 3. Delete the production order
+      await apiRequest.delete(API_SUFFIX.PRODUCTION_ORDER_BY_ID(productionOrderId));
+
+      queryClient.invalidateQueries({ queryKey: productionOrderKeys.all });
+
+      toast.success("Thành công", {
+        description: "Đã hủy lệnh sản xuất",
+      });
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể hủy lệnh sản xuất",
+      });
+      throw err;
+    }
+  };
+
+  return { mutate };
+};
+
 // PUT /api/production-orders/:productionOrderId/items/:itemId - Update production order item (design)
 export const useUpdateProductionOrderItem = () => {
   const queryClient = useQueryClient();

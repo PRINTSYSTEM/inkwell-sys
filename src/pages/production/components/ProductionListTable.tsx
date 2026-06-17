@@ -50,6 +50,7 @@ import { useProofingOrder } from "@/hooks/use-proofing-order";
 import {
   useUpdateProductionStep,
   useUpdateProductionOrderItem,
+  useDeleteProductionOrder,
 } from "@/hooks/use-production";
 import {
   Select,
@@ -129,8 +130,10 @@ function getSteps(
 
 // Outer helper to get status colors
 function getStatusColorClass(status: string) {
-  const effectiveStatus = !status || status === "pending" ? "ready" : status;
+  const effectiveStatus = status || "pending";
   switch (effectiveStatus) {
+    case "pending":
+      return "text-slate-700 bg-slate-100 hover:bg-slate-200 dark:text-slate-300 dark:bg-slate-900/40";
     case "ready":
       return "text-blue-700 bg-blue-100 hover:bg-blue-200 dark:text-blue-300 dark:bg-blue-900/40";
     case "in_progress":
@@ -180,19 +183,25 @@ function InlineStepStatus({
     >
       <Select
         value={
-          !step.status || step.status === "pending" ? "ready" : step.status
+          step.status || "pending"
         }
         onValueChange={handleStatusChange}
         disabled={!isEnabled}
       >
         <SelectTrigger
           className={`h-7 min-w-[105px] text-[10px] px-2 font-bold border-transparent focus:ring-0 shadow-sm ${getStatusColorClass(
-            !step.status || step.status === "pending" ? "ready" : step.status,
+            step.status || "pending",
           )} ${isStatusLocked ? "opacity-100 select-none" : ""}`}
         >
           <SelectValue placeholder="Trạng thái" />
         </SelectTrigger>
         <SelectContent>
+          <SelectItem
+            value="pending"
+            className="text-xs font-semibold cursor-pointer"
+          >
+            Chờ
+          </SelectItem>
           <SelectItem
             value="ready"
             className="text-xs font-semibold cursor-pointer"
@@ -374,7 +383,7 @@ function StepItem({
       updateStep({
         stepId: step.id,
         data: {
-          status: updates.status || step.status,
+          status: updates.status ?? (step.status || "pending"),
           inputQty:
             updates.inputQty !== undefined
               ? updates.inputQty
@@ -411,17 +420,23 @@ function StepItem({
         <>
           <Select
             value={
-              !step.status || step.status === "pending" ? "ready" : step.status
+              step.status || "pending"
             }
             onValueChange={(val: any) => handleUpdate({ status: val })}
             disabled={!isEnabled}
           >
             <SelectTrigger
-              className={`h-7 text-[10px] font-bold w-full border-transparent focus:ring-0 shadow-sm ${getStatusColorClass(!step.status || step.status === "pending" ? "ready" : step.status)} ${!isEnabled ? "opacity-30 grayscale" : ""} ${isStatusLocked ? "opacity-100 pointer-events-none select-none" : ""}`}
+              className={`h-7 text-[10px] font-bold w-full border-transparent focus:ring-0 shadow-sm ${getStatusColorClass(step.status || "pending")} ${!isEnabled ? "opacity-30 grayscale" : ""} ${isStatusLocked ? "opacity-100 pointer-events-none select-none" : ""}`}
             >
               <SelectValue placeholder="Trạng thái" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem
+                value="pending"
+                className="text-xs font-semibold cursor-pointer"
+              >
+                Chờ
+              </SelectItem>
               <SelectItem
                 value="ready"
                 className="text-xs font-semibold cursor-pointer"
@@ -555,6 +570,7 @@ function StepItem({
                 }
               }
               handleUpdate({
+                ...(isCheckStep && { status: "done" }),
                 inputQty: Number(inputQty) || 0,
                 outputQty: Number(outputQty) || 0,
                 defectQty: Number(defectQty) || 0,
@@ -640,6 +656,8 @@ function ProductionTableRow({
   const [openDiePopover, setOpenDiePopover] = useState(false);
   const [openPlatePopover, setOpenPlatePopover] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const { mutate: deleteProductionOrder } = useDeleteProductionOrder();
   const [isEditingPackaging, setIsEditingPackaging] = useState(false);
   const [tempPackagingValues, setTempPackagingValues] = useState<
     Record<number, { outputQty: string; defectQty: string; notes: string }>
@@ -1632,10 +1650,17 @@ function ProductionTableRow({
               variant="destructive"
               size="sm"
               className="flex-1 gap-1.5"
-              onClick={(e) => {
+              disabled={isCancelling}
+              onClick={async (e) => {
                 e.stopPropagation();
-                // TODO: gọi API hủy lệnh SX ở đây
-                setShowCancelDialog(false);
+                if (!prod.id) return;
+                setIsCancelling(true);
+                try {
+                  await deleteProductionOrder(prod.id);
+                  setShowCancelDialog(false);
+                } finally {
+                  setIsCancelling(false);
+                }
               }}
             >
               <XCircle className="w-4 h-4" />
