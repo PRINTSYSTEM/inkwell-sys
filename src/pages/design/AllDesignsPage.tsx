@@ -98,7 +98,10 @@ export default function AllDesignsPage() {
             sortColumn: filterState.sortBy,
             sortOrder: filterState.sortOrder,
           }
-        : {}),
+        : {
+            sortColumn: "createdAt",
+            sortOrder: "desc",
+          }),
       ...(filterState.searchQuery.trim()
         ? { search: filterState.searchQuery.trim() }
         : {}),
@@ -140,6 +143,7 @@ export default function AllDesignsPage() {
   const [reprintQuantity, setReprintQuantity] = useState<number | undefined>(1000);
   const [reprintNotes, setReprintNotes] = useState<string>("");
   const [reprintTargetId, setReprintTargetId] = useState<number | null>(null);
+  const [reprintNotes, setReprintNotes] = useState("");
   const reprintDesignMutation = useReprintDesign();
   const [viewingImage, setViewingImage] = useState<{ url: string; title?: string } | null>(null);
 
@@ -153,6 +157,7 @@ export default function AllDesignsPage() {
       });
       setReprintDialogOpen(false);
       setReprintTargetId(null);
+      setReprintNotes("");
     } catch (err) {
       // error handled in hook
     }

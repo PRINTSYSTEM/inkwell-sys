@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
+import { useDebounce } from "use-debounce";
 import {
   Search,
   Filter,
@@ -596,13 +597,26 @@ export default function DeliveryNoteListPage() {
   const [deliveryNoteStatusFilter, setDeliveryNoteStatusFilter] =
     useState<string>("all");
   const [deliveryNoteSearchQuery, setDeliveryNoteSearchQuery] = useState("");
+  const [debouncedDeliveryNoteSearchQuery] = useDebounce(deliveryNoteSearchQuery, 300);
   const [deliveryNotePage, setDeliveryNotePage] = useState(1);
 
-  // Query background notes to calculate stats
-  const { data: allNotesForStats } = useDeliveryNotes({ pageSize: 200 });
+  // Reset page when search or status filters change to avoid page offset issues
+  useEffect(() => {
+    setDeliveryNotePage(1);
+  }, [debouncedDeliveryNoteSearchQuery, deliveryNoteStatusFilter]);
+
+  // Query background notes to calculate stats and perform client-side search/pagination
+  const {
+    data: allNotesData,
+    isLoading: deliveryNotesLoading,
+    isError: deliveryNotesError,
+    error: deliveryNotesErrorObj,
+    refetch: refetchDeliveryNotes,
+  } = useDeliveryNotes({ pageSize: 200 });
+
   const stats = useMemo(() => {
-    const items = allNotesForStats?.items || [];
-    const total = allNotesForStats?.total || items.length;
+    const items = allNotesData?.items || [];
+    const total = allNotesData?.total || items.length;
     const todayStr = format(new Date(), "yyyy-MM-dd");
     const todayCount = items.filter(note => note.createdAt && note.createdAt.startsWith(todayStr)).length;
     const deliveredCount = items.filter(note => getDisplayStatus(note) === "completed").length;
@@ -618,7 +632,7 @@ export default function DeliveryNoteListPage() {
       pendingCount,
       failedCount,
     };
-  }, [allNotesForStats]);
+  }, [allNotesData]);
 
   const itemsPerPage = 10;
 
@@ -797,19 +811,72 @@ export default function DeliveryNoteListPage() {
     );
   }, [selectedOrders]);
 
-  const {
-    data: deliveryNotesData,
-    isLoading: deliveryNotesLoading,
-    isError: deliveryNotesError,
-    error: deliveryNotesErrorObj,
-    refetch: refetchDeliveryNotes,
-  } = useDeliveryNotes({
-    pageNumber: deliveryNotePage,
-    pageSize: itemsPerPage,
-    status:
-      deliveryNoteStatusFilter === "all" ? undefined : deliveryNoteStatusFilter,
-    searchTerm: deliveryNoteSearchQuery || undefined,
-  });
+  // Client-side filtering, sorting, and pagination
+  const filteredAndSortedNotes = useMemo(() => {
+    const items = allNotesData?.items || [];
+    let result = [...items];
+
+    // 1. Filter by status
+    if (deliveryNoteStatusFilter !== "all") {
+      result = result.filter(note => getDisplayStatus(note) === deliveryNoteStatusFilter);
+    }
+
+    // 2. Filter by search query (code, id, customer name, order code, design name/code, recipient name/phone)
+    if (debouncedDeliveryNoteSearchQuery.trim() !== "") {
+      const q = debouncedDeliveryNoteSearchQuery.toLowerCase();
+      result = result.filter(note => {
+        const matchCode = String(note.code || "").toLowerCase().includes(q);
+        const matchId = String(note.id || "").includes(q);
+        const matchOrders = (note.orders || []).some(order => 
+          String(order.customerName || "").toLowerCase().includes(q) ||
+          String(order.orderCode || "").toLowerCase().includes(q)
+        );
+        const matchLines = (note.lines || []).some(line => 
+          String(line.designName || "").toLowerCase().includes(q) ||
+          String(line.designCode || "").toLowerCase().includes(q)
+        );
+        const matchRecipient = 
+          String(note.recipientName || "").toLowerCase().includes(q) ||
+          String(note.recipientPhone || "").toLowerCase().includes(q);
+
+        return matchCode || matchId || matchOrders || matchLines || matchRecipient;
+      });
+    }
+
+    // 3. Sort (priority: pending first, then undelivered, then others; newer first)
+    const priority = (note: any) => {
+      if (!note) return 3;
+      if (String(note.status) === "pending") return 0;
+      const lines = note.lines || [];
+      const hasDelivered = lines.some((l: any) => l && l.status === "delivered");
+      if (!hasDelivered) return 1;
+      return 2;
+    };
+
+    result.sort((a: any, b: any) => {
+      const pa = priority(a);
+      const pb = priority(b);
+      if (pa !== pb) return pa - pb;
+      const da = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const db = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return db - da; // newer first
+    });
+
+    return result;
+  }, [allNotesData, deliveryNoteStatusFilter, debouncedDeliveryNoteSearchQuery]);
+
+  const paginatedNotesList = useMemo(() => {
+    const start = (deliveryNotePage - 1) * itemsPerPage;
+    return filteredAndSortedNotes.slice(start, start + itemsPerPage);
+  }, [filteredAndSortedNotes, deliveryNotePage]);
+
+  const deliveryNotesData = useMemo(() => {
+    return {
+      items: paginatedNotesList,
+      totalPages: Math.ceil(filteredAndSortedNotes.length / itemsPerPage),
+      total: filteredAndSortedNotes.length,
+    };
+  }, [paginatedNotesList, filteredAndSortedNotes.length]);
 
   const handleToggleSelectNote = (noteId?: number) => {
     if (!noteId) return;
@@ -1983,6 +2050,30 @@ function DeliveryNotesView({
       return next;
     });
   };
+
+  const [expandedNoteIds, setExpandedNoteIds] = useState<Set<number>>(new Set());
+
+  const toggleNote = (noteId: number) => {
+    const next = new Set(expandedNoteIds);
+    if (next.has(noteId)) {
+      next.delete(noteId);
+    } else {
+      next.add(noteId);
+    }
+    setExpandedNoteIds(next);
+  };
+
+  // Auto-expand all found delivery notes only when searching is active
+  useEffect(() => {
+    if (debouncedSearchQuery.trim() !== "") {
+      const visibleIds = sortedDeliveryNotes
+        .map((n) => n.id)
+        .filter((id): id is number => id != null);
+      setExpandedNoteIds(new Set(visibleIds));
+    } else {
+      setExpandedNoteIds(new Set());
+    }
+  }, [debouncedSearchQuery, sortedDeliveryNotes]);
 
   return (
     <div className="space-y-6">
