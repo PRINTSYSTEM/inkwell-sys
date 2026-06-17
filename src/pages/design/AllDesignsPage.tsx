@@ -73,6 +73,10 @@ export default function AllDesignsPage() {
   const [filterState, filterActions] = useFilters({
     initialFilters: {},
     initialSearch: "",
+    initialSort: {
+      field: "createdAt",
+      order: "desc",
+    },
     persistKey: "designs-list",
   });
 
