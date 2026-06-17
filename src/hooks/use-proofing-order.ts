@@ -153,6 +153,12 @@ export const useAvailableOrderDetailsForProofing = (
             orderCode: (design as any).latestOrderCode || undefined,
             customerName: (design as any).customer?.name || undefined,
             customerCompanyName: (design as any).customer?.companyName || undefined,
+            designerName: (design as any).designer?.fullName || (design as any).designer?.username || undefined,
+            accountantName: od.lastUpdatedByAccountant?.fullName || od.lastUpdatedByAccountant?.username || undefined,
+            deliveryDate: (od as any).deliveryDate || (od as any).order?.deliveryDate || (od as any).orderDeliveryDate || undefined,
+            designNotes: design.notes || undefined,
+            orderCreatedByName: (od as any).order?.creator?.fullName || (od as any).order?.creator?.username || (od as any).creator?.fullName || (od as any).creator?.username || od.lastUpdatedByAccountant?.fullName || od.lastUpdatedByAccountant?.username || undefined,
+            dimensions: design.dimensions || undefined,
             specification: (() => {
               const rawSpec =
                 (od as any).specification ||

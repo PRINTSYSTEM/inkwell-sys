@@ -98,7 +98,7 @@ export function DesignTable({
               </TableHead>
               <TableHead className="h-10 text-sm font-bold">Số mặt</TableHead>
               <TableHead className="h-10 text-sm font-bold">Quy cách</TableHead>
-              <TableHead className="h-10 text-sm font-bold">Ngày tạo</TableHead>
+              <TableHead className="h-10 text-sm font-bold">Đặt / Giao hàng</TableHead>
               <TableHead className="h-10 text-sm font-bold text-right sticky right-0 bg-background z-20">
                 Thao tác
               </TableHead>
@@ -108,6 +108,22 @@ export function DesignTable({
             {designs.map((design) => {
               const isSelected = selectedIds.has(design.id);
               const selectable = canSelect(design);
+
+              // Calculate remaining days for delivery date
+              const deliveryDate = design.deliveryDate ? new Date(design.deliveryDate) : null;
+              let isUrgent = false;
+              if (deliveryDate) {
+                try {
+                  const now = new Date();
+                  const d1 = new Date(deliveryDate.getFullYear(), deliveryDate.getMonth(), deliveryDate.getDate());
+                  const d2 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                  const diffTime = d1.getTime() - d2.getTime();
+                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                  isUrgent = diffDays <= 2;
+                } catch (e) {
+                  // ignore
+                }
+              }
 
               // Build full info for tooltip
               const fullInfo = (
@@ -145,99 +161,36 @@ export function DesignTable({
                       <div className="space-y-1.5">
                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5">
                           <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                          Thông tin đơn hàng
+                          Thông tin bổ sung
                         </p>
                         <div className="bg-muted/30 rounded-md p-2.5 space-y-2 border">
                           <div className="flex justify-between text-xs items-center">
                             <span className="text-muted-foreground">
-                              Đơn hàng:
+                              Người tạo thiết kế:
                             </span>
-                            <span className="font-semibold text-primary">
-                              {design.orderCode || design.orderId}
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-xs">
-                            <span className="text-muted-foreground">
-                              Chất liệu:
-                            </span>
-                            <span className="font-medium">
-                              {design.materialTypeName}
+                            <span className="font-semibold text-foreground">
+                              {design.designerName || "—"}
                             </span>
                           </div>
-                          <div className="flex justify-between text-xs">
+                          <div className="flex justify-between text-xs items-center">
                             <span className="text-muted-foreground">
-                              Kích thước:
+                              Người tạo đơn hàng:
                             </span>
-                            <span className="font-medium">
-                              {design.length} × {design.height}
-                              {design.width ? ` × ${design.width}` : ""} mm
-                            </span>
-                          </div>
-                          <div className="flex justify-between text-xs pt-1 border-t">
-                            <span className="text-muted-foreground">
-                              SL có thể bình:
-                            </span>
-                            <span
-                              className={cn(
-                                "font-bold",
-                                design.availableQuantity &&
-                                  design.availableQuantity > 0
-                                  ? "text-green-600"
-                                  : "text-red-600",
-                              )}
-                            >
-                              {design.availableQuantity?.toLocaleString() ||
-                                "0"}{" "}
-                              / {design.quantity.toLocaleString()}
+                            <span className="font-semibold text-foreground">
+                              {design.orderCreatedByName || "—"}
                             </span>
                           </div>
                         </div>
                       </div>
 
-                      {(design.processClassificationOptionName ||
-                        design.laminationType ||
-                        (design.specification &&
-                          design.specification.length > 0)) && (
+                      {design.designNotes && (
                         <div className="space-y-1.5">
                           <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                            Quy cách sản xuất
+                            Ghi chú thiết kế
                           </p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {design.specification &&
-                            design.specification.length > 0
-                              ? design.specification.map((spec, i) => (
-                                  <Badge
-                                    key={i}
-                                    variant="secondary"
-                                    className="text-[10px] bg-blue-50 text-blue-700 border-blue-100"
-                                  >
-                                    {spec}
-                                  </Badge>
-                                ))
-                              : null}
-                            {!design.specification?.length &&
-                              design.processClassificationOptionName && (
-                                <Badge
-                                  variant="secondary"
-                                  className="text-[10px] bg-amber-100 text-amber-800 border-amber-200"
-                                >
-                                  {processClassificationLabels[
-                                    design.processClassificationOptionName
-                                  ] || design.processClassificationOptionName}
-                                </Badge>
-                              )}
-                            {!design.specification?.length &&
-                              design.laminationType && (
-                                <Badge
-                                  variant="secondary"
-                                  className="text-[10px]"
-                                >
-                                  {laminationTypeLabels[
-                                    design.laminationType
-                                  ] || design.laminationType}
-                                </Badge>
-                              )}
+                          <div className="bg-amber-50/50 dark:bg-amber-950/20 text-foreground text-xs p-2.5 rounded-md border border-amber-200/50 whitespace-pre-wrap leading-relaxed">
+                            {design.designNotes}
                           </div>
                         </div>
                       )}
@@ -263,7 +216,8 @@ export function DesignTable({
                       isSelectionEnabled && !selectable &&
                         !isSelected &&
                         "opacity-50 cursor-not-allowed",
-                      !isSelectionEnabled && !isSelected && "hover:bg-transparent"
+                      !isSelectionEnabled && !isSelected && "hover:bg-transparent",
+                      isUrgent && !isSelected && "bg-rose-50/60 hover:bg-rose-100/60 dark:bg-rose-950/20 dark:hover:bg-rose-900/20 shadow-[inset_4px_0_0_0_#f43f5e]"
                     )}
                     onClick={() => {
                       if (isSelectionEnabled && (selectable || isSelected)) {
@@ -366,7 +320,7 @@ export function DesignTable({
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
                         {(() => {
-                          const specs = design.specification;
+                          const specs = design.specification as any;
                           if (Array.isArray(specs) && specs.length > 0) {
                             return specs.map((spec, i) => (
                               <Badge
@@ -399,10 +353,21 @@ export function DesignTable({
                         })()}
                       </div>
                     </TableCell>
-                    <TableCell className="py-3 text-[11px] text-muted-foreground whitespace-nowrap">
-                      {design.createdAt
-                        ? new Date(design.createdAt).toLocaleDateString("vi-VN")
-                        : "—"}
+                    <TableCell className="py-3 text-[11px] text-muted-foreground whitespace-nowrap align-top">
+                      <div className="flex flex-col gap-1">
+                        <div>
+                          <span className="font-semibold text-slate-500">Đặt: </span>
+                          {design.createdAt
+                            ? new Date(design.createdAt).toLocaleDateString("vi-VN")
+                            : "—"}
+                        </div>
+                        <div className={cn(isUrgent && "text-red-600 font-bold dark:text-red-400")}>
+                          <span className={cn("font-semibold text-slate-500", isUrgent && "text-red-600 dark:text-red-400")}>Giao: </span>
+                          {design.deliveryDate
+                            ? new Date(design.deliveryDate).toLocaleDateString("vi-VN")
+                            : "—"}
+                        </div>
+                      </div>
                     </TableCell>
                     <TableCell
                       className={cn(

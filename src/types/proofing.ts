@@ -32,6 +32,10 @@ export interface DesignItem {
   designerName?: string; // from design.designer?.name
   accountantName?: string; // from design.accountant?.name
   specification?: string[]; // from design.specification
+  deliveryDate?: string; // from order or orderDetail
+  designNotes?: string; // from design.notes
+  orderCreatedByName?: string; // from order creator or accountant
+  dimensions?: string; // from design.dimensions
 }
 
 export interface FilterOption {
