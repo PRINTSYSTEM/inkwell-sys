@@ -444,16 +444,16 @@ export const useReprintDesign = () => {
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
     DesignResponse,
-    [{ id: number; quantity: number }]
-  >(async ({ id, quantity }) => {
+    [{ id: number; quantity: number; notes?: string }]
+  >(async ({ id, quantity, notes }) => {
     const res = await apiRequest.post<DesignResponse>(
       API_SUFFIX.DESIGN_REPRINT(id),
-      { quantity } as ReprintDesignRequest
+      { quantity, notes } as ReprintDesignRequest
     );
     return res.data;
   });
 
-  const mutate = async (payload: { id: number; quantity: number }) => {
+  const mutate = async (payload: { id: number; quantity: number; notes?: string }) => {
     try {
       const result = await execute(payload);
 

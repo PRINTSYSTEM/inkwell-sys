@@ -151,12 +151,17 @@ export type CreateDesignStandaloneRequest = z.infer<
 
 // ===== ReprintDesignRequest =====
 export const ReprintDesignRequestSchema =
-  GenReprintDesignRequestSchema.passthrough();
+  GenReprintDesignRequestSchema.extend({
+    notes: z.string().nullable().optional(),
+  }).passthrough();
 export type ReprintDesignRequest = z.infer<typeof ReprintDesignRequestSchema>;
 
 // ===== ReadyDesignResponse =====
 export const ReadyDesignResponseSchema =
-  GenReadyDesignResponseSchema.passthrough();
+  GenReadyDesignResponseSchema.extend({
+    notes: z.string().nullable().optional(),
+    isUrgent: z.boolean().nullable().optional(),
+  }).passthrough();
 export type ReadyDesignResponse = z.infer<typeof ReadyDesignResponseSchema>;
 
 // ===== ReadyDesignResponsePaginate =====

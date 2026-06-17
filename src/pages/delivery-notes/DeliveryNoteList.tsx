@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
+import { useDebounce } from "use-debounce";
 import {
   Search,
   Filter,
@@ -596,13 +597,26 @@ export default function DeliveryNoteListPage() {
   const [deliveryNoteStatusFilter, setDeliveryNoteStatusFilter] =
     useState<string>("all");
   const [deliveryNoteSearchQuery, setDeliveryNoteSearchQuery] = useState("");
+  const [debouncedDeliveryNoteSearchQuery] = useDebounce(deliveryNoteSearchQuery, 300);
   const [deliveryNotePage, setDeliveryNotePage] = useState(1);
 
-  // Query background notes to calculate stats
-  const { data: allNotesForStats } = useDeliveryNotes({ pageSize: 200 });
+  // Reset page when search or status filters change to avoid page offset issues
+  useEffect(() => {
+    setDeliveryNotePage(1);
+  }, [debouncedDeliveryNoteSearchQuery, deliveryNoteStatusFilter]);
+
+  // Query background notes to calculate stats and perform client-side search/pagination
+  const {
+    data: allNotesData,
+    isLoading: deliveryNotesLoading,
+    isError: deliveryNotesError,
+    error: deliveryNotesErrorObj,
+    refetch: refetchDeliveryNotes,
+  } = useDeliveryNotes({ pageSize: 200 });
+
   const stats = useMemo(() => {
-    const items = allNotesForStats?.items || [];
-    const total = allNotesForStats?.total || items.length;
+    const items = allNotesData?.items || [];
+    const total = allNotesData?.total || items.length;
     const todayStr = format(new Date(), "yyyy-MM-dd");
     const todayCount = items.filter(note => note.createdAt && note.createdAt.startsWith(todayStr)).length;
     const deliveredCount = items.filter(note => getDisplayStatus(note) === "completed").length;
@@ -618,7 +632,7 @@ export default function DeliveryNoteListPage() {
       pendingCount,
       failedCount,
     };
-  }, [allNotesForStats]);
+  }, [allNotesData]);
 
   const itemsPerPage = 10;
 
@@ -717,19 +731,72 @@ export default function DeliveryNoteListPage() {
     );
   }, [selectedOrders]);
 
-  const {
-    data: deliveryNotesData,
-    isLoading: deliveryNotesLoading,
-    isError: deliveryNotesError,
-    error: deliveryNotesErrorObj,
-    refetch: refetchDeliveryNotes,
-  } = useDeliveryNotes({
-    pageNumber: deliveryNotePage,
-    pageSize: itemsPerPage,
-    status:
-      deliveryNoteStatusFilter === "all" ? undefined : deliveryNoteStatusFilter,
-    searchTerm: deliveryNoteSearchQuery || undefined,
-  });
+  // Client-side filtering, sorting, and pagination
+  const filteredAndSortedNotes = useMemo(() => {
+    const items = allNotesData?.items || [];
+    let result = [...items];
+
+    // 1. Filter by status
+    if (deliveryNoteStatusFilter !== "all") {
+      result = result.filter(note => getDisplayStatus(note) === deliveryNoteStatusFilter);
+    }
+
+    // 2. Filter by search query (code, id, customer name, order code, design name/code, recipient name/phone)
+    if (debouncedDeliveryNoteSearchQuery.trim() !== "") {
+      const q = debouncedDeliveryNoteSearchQuery.toLowerCase();
+      result = result.filter(note => {
+        const matchCode = String(note.code || "").toLowerCase().includes(q);
+        const matchId = String(note.id || "").includes(q);
+        const matchOrders = (note.orders || []).some(order => 
+          String(order.customerName || "").toLowerCase().includes(q) ||
+          String(order.orderCode || "").toLowerCase().includes(q)
+        );
+        const matchLines = (note.lines || []).some(line => 
+          String(line.designName || "").toLowerCase().includes(q) ||
+          String(line.designCode || "").toLowerCase().includes(q)
+        );
+        const matchRecipient = 
+          String(note.recipientName || "").toLowerCase().includes(q) ||
+          String(note.recipientPhone || "").toLowerCase().includes(q);
+
+        return matchCode || matchId || matchOrders || matchLines || matchRecipient;
+      });
+    }
+
+    // 3. Sort (priority: pending first, then undelivered, then others; newer first)
+    const priority = (note: any) => {
+      if (!note) return 3;
+      if (String(note.status) === "pending") return 0;
+      const lines = note.lines || [];
+      const hasDelivered = lines.some((l: any) => l && l.status === "delivered");
+      if (!hasDelivered) return 1;
+      return 2;
+    };
+
+    result.sort((a: any, b: any) => {
+      const pa = priority(a);
+      const pb = priority(b);
+      if (pa !== pb) return pa - pb;
+      const da = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const db = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return db - da; // newer first
+    });
+
+    return result;
+  }, [allNotesData, deliveryNoteStatusFilter, debouncedDeliveryNoteSearchQuery]);
+
+  const paginatedNotesList = useMemo(() => {
+    const start = (deliveryNotePage - 1) * itemsPerPage;
+    return filteredAndSortedNotes.slice(start, start + itemsPerPage);
+  }, [filteredAndSortedNotes, deliveryNotePage]);
+
+  const deliveryNotesData = useMemo(() => {
+    return {
+      items: paginatedNotesList,
+      totalPages: Math.ceil(filteredAndSortedNotes.length / itemsPerPage),
+      total: filteredAndSortedNotes.length,
+    };
+  }, [paginatedNotesList, filteredAndSortedNotes.length]);
 
   const handleToggleSelectNote = (noteId?: number) => {
     if (!noteId) return;
@@ -1301,6 +1368,8 @@ export default function DeliveryNoteListPage() {
             bulkLoading={bulkLoading}
             handleBulkStartShipping={handleBulkStartShipping}
             updatingIds={updatingIds}
+            onImageClick={handleImageClick}
+            debouncedSearchQuery={debouncedDeliveryNoteSearchQuery}
           />
         </TabsContent>
       </Tabs>
@@ -1757,6 +1826,8 @@ interface DeliveryNotesViewProps {
   bulkLoading: boolean;
   handleBulkStartShipping: () => void;
   updatingIds: Set<number>;
+  onImageClick: (url: string, e: React.MouseEvent) => void;
+  debouncedSearchQuery: string;
 }
 
 function DeliveryNotesView({
@@ -1780,6 +1851,8 @@ function DeliveryNotesView({
   bulkLoading,
   handleBulkStartShipping,
   updatingIds,
+  onImageClick,
+  debouncedSearchQuery,
 }: DeliveryNotesViewProps) {
   const itemsPerPage = 10;
   const deliveryNotesDataTyped = deliveryNotesData as
@@ -1829,6 +1902,30 @@ function DeliveryNotesView({
       });
       return items;
     }, [deliveryNotesDataTyped]);
+
+  const [expandedNoteIds, setExpandedNoteIds] = useState<Set<number>>(new Set());
+
+  const toggleNote = (noteId: number) => {
+    const next = new Set(expandedNoteIds);
+    if (next.has(noteId)) {
+      next.delete(noteId);
+    } else {
+      next.add(noteId);
+    }
+    setExpandedNoteIds(next);
+  };
+
+  // Auto-expand all found delivery notes only when searching is active
+  useEffect(() => {
+    if (debouncedSearchQuery.trim() !== "") {
+      const visibleIds = sortedDeliveryNotes
+        .map((n) => n.id)
+        .filter((id): id is number => id != null);
+      setExpandedNoteIds(new Set(visibleIds));
+    } else {
+      setExpandedNoteIds(new Set());
+    }
+  }, [debouncedSearchQuery, sortedDeliveryNotes]);
 
   return (
     <div className="space-y-6">
@@ -2026,111 +2123,199 @@ function DeliveryNotesView({
                       ?.map((order) => order.customerName)
                       .filter((name): name is string => !!name) || [];
                   const uniqueCustomers = Array.from(new Set(customers));
+                  const isExpanded = expandedNoteIds.has(deliveryNote.id as number);
 
                   return (
-                    <TableRow
-                      key={deliveryNote.id}
-                      className={`cursor-pointer transition-all duration-150 border-stone-100 dark:border-stone-850 hover:bg-stone-50/50 dark:hover:bg-stone-900/50 ${
-                        updatingIds.has(deliveryNote.id as number) ? "opacity-70" : ""
-                      }`}
-                      onClick={() => handleViewDeliveryNote(deliveryNote.id)}
-                    >
-                      <TableCell className="pl-6 w-12" onClick={(e) => {
-                        if (isSelectable) {
-                          e.stopPropagation();
-                          handleToggleSelectNote(deliveryNote.id);
-                        }
-                      }}>
-                        <div className="flex items-center justify-center w-6 h-6">
-                          {isSelectable ? (
-                            <div className="relative group/check">
-                              <div className={isSelected ? "block" : "hidden group-hover/check:block"}>
-                                <Checkbox
-                                  checked={isSelected}
-                                  onCheckedChange={() => handleToggleSelectNote(deliveryNote.id)}
-                                  onClick={(e) => e.stopPropagation()}
-                                />
+                    <React.Fragment key={deliveryNote.id}>
+                      <TableRow
+                        className={`cursor-pointer transition-all duration-150 border-stone-100 dark:border-stone-850 hover:bg-stone-50/50 dark:hover:bg-stone-900/50 ${
+                          updatingIds.has(deliveryNote.id as number) ? "opacity-70" : ""
+                        }`}
+                        onClick={() => handleViewDeliveryNote(deliveryNote.id)}
+                      >
+                        <TableCell className="pl-6 w-12" onClick={(e) => {
+                          if (isSelectable) {
+                            e.stopPropagation();
+                            handleToggleSelectNote(deliveryNote.id);
+                          }
+                        }}>
+                          <div className="flex items-center justify-center w-6 h-6">
+                            {isSelectable ? (
+                              <div className="relative group/check">
+                                <div className={isSelected ? "block" : "hidden group-hover/check:block"}>
+                                  <Checkbox
+                                    checked={isSelected}
+                                    onCheckedChange={() => handleToggleSelectNote(deliveryNote.id)}
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                </div>
+                                <div className={isSelected ? "hidden" : "block group-hover/check:hidden"}>
+                                  <div className="w-5 h-5 rounded-full bg-green-50 border border-green-200 dark:bg-green-950/20 dark:border-green-900/50 flex items-center justify-center">
+                                    <Check className="h-3 w-3 text-green-600 dark:text-green-400" />
+                                  </div>
+                                </div>
                               </div>
-                              <div className={isSelected ? "hidden" : "block group-hover/check:hidden"}>
+                            ) : (
+                              ["failed", "failed_reschedule", "cancelled", "returned"].includes(status || "") ? (
+                                <div className="w-5 h-5 rounded-full bg-red-50 border border-red-200 dark:bg-red-950/20 dark:border-red-900/50 flex items-center justify-center">
+                                  <X className="h-3 w-3 text-red-600 dark:text-red-400" />
+                                </div>
+                              ) : (
                                 <div className="w-5 h-5 rounded-full bg-green-50 border border-green-200 dark:bg-green-950/20 dark:border-green-900/50 flex items-center justify-center">
                                   <Check className="h-3 w-3 text-green-600 dark:text-green-400" />
                                 </div>
-                              </div>
-                            </div>
-                          ) : (
-                            ["failed", "failed_reschedule", "cancelled", "returned"].includes(status || "") ? (
-                              <div className="w-5 h-5 rounded-full bg-red-50 border border-red-200 dark:bg-red-950/20 dark:border-red-900/50 flex items-center justify-center">
-                                <X className="h-3 w-3 text-red-600 dark:text-red-400" />
-                              </div>
-                            ) : (
-                              <div className="w-5 h-5 rounded-full bg-green-50 border border-green-200 dark:bg-green-950/20 dark:border-green-900/50 flex items-center justify-center">
-                                <Check className="h-3 w-3 text-green-600 dark:text-green-400" />
-                              </div>
-                            )
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-bold font-mono text-sm text-stone-900 dark:text-stone-50">
-                          {deliveryNote.code || `#${deliveryNote.id}`}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="flex items-center gap-1.5 text-sm text-stone-600 dark:text-stone-300">
-                          <Package className="h-4 w-4 text-stone-400" />
-                          x{deliveryNote.lines?.length ?? 0} mã hàng
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="flex items-center gap-1.5 text-sm text-stone-700 dark:text-stone-300 font-medium">
-                          <User className="h-4 w-4 text-stone-400" />
-                          {uniqueCustomers[0] || "—"}
-                          {uniqueCustomers.length > 1 && (
-                            <span className="text-xs text-stone-400 font-normal">
-                              (+{uniqueCustomers.length - 1} khách khác)
-                            </span>
-                          )}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {updatingIds.has(deliveryNote.id as number) ? (
-                          <Loader2 className="h-5 w-5 animate-spin text-primary mx-auto" />
-                        ) : (
-                          <StatusBadge
-                            status={status || null}
-                            label={getDeliveryNoteStatusLabel(status)}
-                          />
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <span className="inline-flex items-center gap-1.5 text-sm text-stone-600 dark:text-stone-300">
-                          <Calendar className="h-3.5 w-3.5 text-stone-400" />
-                          {formatDate(deliveryNote.createdAt)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right pr-6 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-3">
-                          {deliveryNote.status === "failed" && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 text-xs gap-1 border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-bold rounded-lg"
-                              onClick={() => handleOpenRecreate(deliveryNote.id!)}
+                              )
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleNote(deliveryNote.id!);
+                              }}
+                              className="text-stone-400 hover:text-stone-600 cursor-pointer p-1 rounded hover:bg-stone-100 dark:hover:bg-stone-850"
                             >
-                              <RefreshCw className="h-3 w-3" />
-                              Giao lại
-                            </Button>
+                              {isExpanded ? (
+                                <ChevronDown className="h-4 w-4" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4" />
+                              )}
+                            </div>
+                            <div className="font-bold font-mono text-sm text-stone-900 dark:text-stone-50">
+                              {deliveryNote.code || `#${deliveryNote.id}`}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="flex items-center gap-1.5 text-sm text-stone-600 dark:text-stone-300">
+                            <Package className="h-4 w-4 text-stone-400" />
+                            x{deliveryNote.lines?.length ?? 0} mã hàng
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="flex items-center gap-1.5 text-sm text-stone-700 dark:text-stone-300 font-medium">
+                            <User className="h-4 w-4 text-stone-400" />
+                            {uniqueCustomers[0] || "—"}
+                            {uniqueCustomers.length > 1 && (
+                              <span className="text-xs text-stone-400 font-normal">
+                                (+{uniqueCustomers.length - 1} khách khác)
+                              </span>
+                            )}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {updatingIds.has(deliveryNote.id as number) ? (
+                            <Loader2 className="h-5 w-5 animate-spin text-primary mx-auto" />
+                          ) : (
+                            <StatusBadge
+                              status={status || null}
+                              label={getDeliveryNoteStatusLabel(status)}
+                            />
                           )}
-                          <Button
-                            variant="link"
-                            className="text-xs font-bold text-primary p-0 hover:no-underline"
-                            onClick={() => handleViewDeliveryNote(deliveryNote.id)}
-                          >
-                            Chi tiết &gt;
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <span className="inline-flex items-center gap-1.5 text-sm text-stone-600 dark:text-stone-300">
+                            <Calendar className="h-3.5 w-3.5 text-stone-400" />
+                            {formatDate(deliveryNote.createdAt)}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right pr-6 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-3">
+                            {deliveryNote.status === "failed" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 text-xs gap-1 border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-bold rounded-lg"
+                                onClick={() => handleOpenRecreate(deliveryNote.id!)}
+                              >
+                                <RefreshCw className="h-3 w-3" />
+                                Giao lại
+                              </Button>
+                            )}
+                            <Button
+                              variant="link"
+                              className="text-xs font-bold text-primary p-0 hover:no-underline"
+                              onClick={() => handleViewDeliveryNote(deliveryNote.id)}
+                            >
+                              Chi tiết &gt;
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      {isExpanded && deliveryNote.lines && deliveryNote.lines.length > 0 && (
+                        <TableRow className="bg-stone-50/10 dark:bg-stone-900/30 hover:bg-transparent">
+                          <TableCell colSpan={7} className="p-0">
+                            <div className="border-t border-stone-150 dark:border-stone-850 p-4">
+                              <Table>
+                                <TableHeader className="bg-stone-50/30 dark:bg-stone-900/50 border-b border-stone-200 dark:border-stone-800">
+                                  <TableRow className="hover:bg-transparent border-stone-200 dark:border-stone-800">
+                                    <TableHead className="w-12 pl-4"></TableHead>
+                                    <TableHead className="w-12">Hình</TableHead>
+                                    <TableHead className="w-[120px] font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Mã thiết kế</TableHead>
+                                    <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Tên sản phẩm</TableHead>
+                                    <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-24">Số lượng giao</TableHead>
+                                    <TableHead className="text-center font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-36">Trạng thái dòng</TableHead>
+                                    <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider pr-4 w-48">Ghi chú dòng</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {deliveryNote.lines.map((line: any, index: number) => (
+                                    <TableRow
+                                      key={line.orderDetailId ?? index}
+                                      className="hover:bg-stone-50/50 dark:hover:bg-stone-950/30 border-stone-100 dark:border-stone-850"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                      }}
+                                    >
+                                      <TableCell className="pl-4 w-12">
+                                        <span className="text-stone-400 text-xs">{index + 1}</span>
+                                      </TableCell>
+                                      <TableCell className="w-12">
+                                        <div className="h-8 w-8 rounded-lg bg-stone-100 dark:bg-stone-800 border flex items-center justify-center overflow-hidden relative">
+                                          {line.designImageUrl ? (
+                                            <img
+                                              src={line.designImageUrl}
+                                              alt={line.designCode || "Thiết kế"}
+                                              className="h-full w-full object-cover cursor-zoom-in"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                onImageClick(line.designImageUrl!, e);
+                                              }}
+                                            />
+                                          ) : (
+                                            <ImageIcon className="h-4 w-4 text-stone-400" />
+                                          )}
+                                        </div>
+                                      </TableCell>
+                                      <TableCell className="w-[120px] font-mono font-black text-[11px] uppercase text-stone-800 dark:text-stone-200">
+                                        {line.designCode || "—"}
+                                      </TableCell>
+                                      <TableCell className="text-[11px] text-stone-500 font-medium truncate max-w-[200px] md:max-w-[300px]">
+                                        {line.designName || "—"}
+                                      </TableCell>
+                                      <TableCell className="text-right text-xs font-bold text-stone-800 dark:text-stone-200 tabular-nums w-24">
+                                        {new Intl.NumberFormat('vi-VN').format(line.deliveryQty ?? 0)}
+                                      </TableCell>
+                                      <TableCell className="text-center w-36">
+                                        <StatusBadge
+                                          status={line.status || ""}
+                                          label={deliveryLineStatusLabels[line.status || ""] || line.status}
+                                        />
+                                      </TableCell>
+                                      <TableCell className="text-xs text-stone-500 font-medium pr-4 w-48 truncate max-w-[150px]" title={line.note || ""}>
+                                        {line.note || "—"}
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
                   );
                 })
               )}

@@ -604,12 +604,13 @@ export default function ReadyDesignListPage() {
                   <TableHead className="h-9 text-sm font-bold">Số lượng sẵn sàng</TableHead>
                   <TableHead className="h-9 text-sm font-bold">Kích thước</TableHead>
                   <TableHead className="h-9 text-sm font-bold">Chất liệu</TableHead>
+                  <TableHead className="h-9 text-sm font-bold">Ghi chú</TableHead>
                   <TableHead className="h-9 text-sm font-bold">Ngày cập nhật</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loadingDesigns ? (
-                  <TableSkeleton cols={9} rows={8} rowHeight="h-12" />
+                  <TableSkeleton cols={10} rows={8} rowHeight="h-12" />
                 ) : designs.length > 0 ? (
                   designs.map((design) => {
                     const isSelected = selectedIds.includes(design.id!);
@@ -649,6 +650,9 @@ export default function ReadyDesignListPage() {
                         <TableCell className="py-2 text-xs font-medium text-muted-foreground truncate max-w-[150px]" title={design.materialTypeName || ""}>
                           {design.materialTypeName}
                         </TableCell>
+                        <TableCell className="py-2 text-xs text-muted-foreground truncate max-w-[150px]" title={design.notes || ""}>
+                          {design.notes || "—"}
+                        </TableCell>
                         <TableCell className="py-2 text-xs text-muted-foreground">
                           {design.updatedAt
                             ? new Date(design.updatedAt).toLocaleDateString("vi-VN")
@@ -659,7 +663,7 @@ export default function ReadyDesignListPage() {
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12">
+                    <TableCell colSpan={10} className="text-center py-12">
                       <div className="flex flex-col items-center justify-center text-muted-foreground">
                         <Package className="h-10 w-10 mb-2 opacity-50" />
                         <p className="text-sm">Không có thiết kế nào sẵn sàng trong kho</p>
