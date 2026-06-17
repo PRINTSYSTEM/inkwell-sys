@@ -25,6 +25,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -101,6 +102,7 @@ export default function MyWorkPage() {
   // Reprint dialog state (from list)
   const [reprintDialogOpen, setReprintDialogOpen] = useState(false);
   const [reprintQuantity, setReprintQuantity] = useState<number | undefined>(1000);
+  const [reprintNotes, setReprintNotes] = useState<string>("");
   const [reprintTargetId, setReprintTargetId] = useState<number | null>(null);
   const reprintDesignMutation = useReprintDesign();
   const [viewingImage, setViewingImage] = useState<{ url: string; title?: string } | null>(null);
@@ -562,6 +564,7 @@ export default function MyWorkPage() {
                               onClick={() => {
                                 setReprintTargetId(design.id);
                                 setReprintQuantity(1000);
+                                setReprintNotes("");
                                 setReprintDialogOpen(true);
                               }}
                               className="h-8"
@@ -705,6 +708,15 @@ export default function MyWorkPage() {
                 className="h-11 bg-background"
               />
             </div>
+            <div className="space-y-2">
+              <Label className="font-semibold text-foreground">Ghi chú tái bản</Label>
+              <Textarea
+                placeholder="Nhập lý do hoặc yêu cầu tái bản đặc biệt nếu có..."
+                value={reprintNotes}
+                onChange={(e) => setReprintNotes(e.target.value)}
+                className="min-h-[80px] bg-background"
+              />
+            </div>
           </div>
           <DialogFooter className="pt-3 border-t border-border/40 gap-2 shrink-0">
             <Button
@@ -718,7 +730,11 @@ export default function MyWorkPage() {
               onClick={async () => {
                 if (!reprintTargetId || !reprintQuantity || reprintQuantity <= 0) return;
                 try {
-                  await reprintDesignMutation.mutate({ id: reprintTargetId, quantity: reprintQuantity });
+                  await reprintDesignMutation.mutate({ 
+                    id: reprintTargetId, 
+                    quantity: reprintQuantity,
+                    notes: reprintNotes.trim() || undefined
+                  });
                   setReprintDialogOpen(false);
                   setReprintTargetId(null);
                 } catch (err) {

@@ -247,6 +247,7 @@ export default function DesignDetailPage() {
   // ==== LOCAL UI STATE ====
   const [reprintDialogOpen, setReprintDialogOpen] = useState(false);
   const [reprintQuantity, setReprintQuantity] = useState(1000);
+  const [reprintNotes, setReprintNotes] = useState("");
   const [viewingImage, setViewingImage] = useState<{
     url: string;
     title: string;
@@ -623,7 +624,11 @@ export default function DesignDetailPage() {
   const handleReprintSubmit = async () => {
     if (!reprintQuantity || reprintQuantity <= 0) return;
     try {
-      await reprintDesignMutation.mutate({ id: designId, quantity: reprintQuantity });
+      await reprintDesignMutation.mutate({ 
+        id: designId, 
+        quantity: reprintQuantity,
+        notes: reprintNotes.trim() || undefined
+      });
       setReprintDialogOpen(false);
     } catch {
       // Handled in mutation hook toast
@@ -780,6 +785,7 @@ export default function DesignDetailPage() {
                         className="gap-1.5 h-8 font-semibold shadow-md"
                         onClick={() => {
                           setReprintQuantity(1000);
+                          setReprintNotes("");
                           setReprintDialogOpen(true);
                         }}
                       >
@@ -1915,6 +1921,15 @@ export default function DesignDetailPage() {
                   value={reprintQuantity || ""}
                   onChange={(e) => setReprintQuantity(Number(e.target.value))}
                   className="h-11 bg-background"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="font-semibold text-foreground">Ghi chú tái bản</Label>
+                <Textarea
+                  placeholder="Nhập lý do hoặc yêu cầu tái bản đặc biệt nếu có..."
+                  value={reprintNotes}
+                  onChange={(e) => setReprintNotes(e.target.value)}
+                  className="min-h-[80px] bg-background"
                 />
               </div>
             </div>

@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Search,
   Package,
@@ -133,6 +134,7 @@ export default function AllDesignsPage() {
   // Reprint dialog state
   const [reprintDialogOpen, setReprintDialogOpen] = useState(false);
   const [reprintQuantity, setReprintQuantity] = useState<number | undefined>(1000);
+  const [reprintNotes, setReprintNotes] = useState<string>("");
   const [reprintTargetId, setReprintTargetId] = useState<number | null>(null);
   const reprintDesignMutation = useReprintDesign();
   const [viewingImage, setViewingImage] = useState<{ url: string; title?: string } | null>(null);
@@ -140,7 +142,11 @@ export default function AllDesignsPage() {
   const handleReprintSubmit = async () => {
     if (!reprintTargetId || !reprintQuantity || reprintQuantity <= 0) return;
     try {
-      await reprintDesignMutation.mutate({ id: reprintTargetId, quantity: reprintQuantity });
+      await reprintDesignMutation.mutate({ 
+        id: reprintTargetId, 
+        quantity: reprintQuantity,
+        notes: reprintNotes.trim() || undefined
+      });
       setReprintDialogOpen(false);
       setReprintTargetId(null);
     } catch (err) {
@@ -170,7 +176,8 @@ export default function AllDesignsPage() {
         d.designerFullName?.toLowerCase().includes(query) ||
         d.latestOrderCode?.toLowerCase().includes(query) ||
         d.customerName?.toLowerCase().includes(query) ||
-        d.latestRequirements?.toLowerCase().includes(query)
+        d.latestRequirements?.toLowerCase().includes(query) ||
+        d.notes?.toLowerCase().includes(query)
     );
   }, [designsWithSearch, filterState.searchQuery]);
 
@@ -473,6 +480,9 @@ export default function AllDesignsPage() {
                   <TableHead className="h-9 text-sm font-bold">
                     Kích thước
                   </TableHead>
+                  <TableHead className="h-9 text-sm font-bold">
+                    Ghi chú
+                  </TableHead>
                   <TableHead className="h-9 text-sm font-bold text-right">
                     Thao tác
                   </TableHead>
@@ -480,7 +490,7 @@ export default function AllDesignsPage() {
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableSkeleton cols={8} rows={10} rowHeight="h-14" />
+                  <TableSkeleton cols={11} rows={10} rowHeight="h-14" />
                 ) : filteredDesigns.length > 0 ? (
                   filteredDesigns.map((design) => (
                     <TableRow
@@ -610,6 +620,9 @@ export default function AllDesignsPage() {
                           </span>
                         </div>
                       </TableCell>
+                      <TableCell className="py-3 text-xs text-muted-foreground break-words max-w-[180px]" title={design.notes || ""}>
+                        {design.notes || "—"}
+                      </TableCell>
                       <TableCell className="py-3 text-right">
                         {design.status === "confirmed_for_printing" ? (
                           <div onClick={(e) => e.stopPropagation()}>
@@ -619,6 +632,7 @@ export default function AllDesignsPage() {
                               onClick={() => {
                                 setReprintTargetId(design.id);
                                 setReprintQuantity(1000);
+                                setReprintNotes("");
                                 setReprintDialogOpen(true);
                               }}
                               className="h-8"
@@ -634,7 +648,7 @@ export default function AllDesignsPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-12">
+                    <TableCell colSpan={11} className="text-center py-12">
                       <div className="flex flex-col items-center justify-center text-muted-foreground">
                         <Package className="h-10 w-10 mb-2 opacity-50" />
                         <p className="text-sm">Không tìm thấy thiết kế nào</p>
@@ -748,6 +762,15 @@ export default function AllDesignsPage() {
                 value={reprintQuantity || ""}
                 onChange={(e) => setReprintQuantity(Number(e.target.value))}
                 className="h-11 bg-background"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="font-semibold text-foreground">Ghi chú tái bản</Label>
+              <Textarea
+                placeholder="Nhập lý do hoặc yêu cầu tái bản đặc biệt nếu có..."
+                value={reprintNotes}
+                onChange={(e) => setReprintNotes(e.target.value)}
+                className="min-h-[80px] bg-background"
               />
             </div>
           </div>
