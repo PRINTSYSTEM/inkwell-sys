@@ -12,6 +12,7 @@ interface DetailPlateExportCardProps {
   setIsPlateExportDialogOpen: (val: boolean) => void;
   handleHandToProduction: () => void;
   isHandingToProduction: boolean;
+  isProofer?: boolean;
 }
 
 export function DetailPlateExportCard({
@@ -20,6 +21,7 @@ export function DetailPlateExportCard({
   setIsPlateExportDialogOpen,
   handleHandToProduction,
   isHandingToProduction,
+  isProofer = true,
 }: DetailPlateExportCardProps) {
   if (!order) return null;
 
@@ -54,7 +56,7 @@ export function DetailPlateExportCard({
                 Ghi nhận thông tin để tiếp tục
               </p>
             </div>
-            {order.status !== "completed" && (
+            {order.status !== "completed" && isProofer && (
               <Button
                 variant="outline"
                 size="sm"
@@ -169,7 +171,7 @@ export function DetailPlateExportCard({
                     </div>
                   )}
 
-                  {(exportItem.isActive || index === plateExportsList.length - 1) && (
+                  {(exportItem.isActive || index === plateExportsList.length - 1) && isProofer && (
                     <div className="pt-2 flex flex-wrap items-center justify-center gap-2 mt-2 border-t border-muted-foreground/10">
                       <Button
                         variant="ghost"

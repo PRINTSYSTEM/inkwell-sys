@@ -43,6 +43,7 @@ interface DetailEmptyOrderViewProps {
   handleCreatePaperSize: () => void;
   handleSubmitDesigns: () => void;
   isAddingDesigns: boolean;
+  isProofer?: boolean;
 }
 
 export function DetailEmptyOrderView({
@@ -66,6 +67,7 @@ export function DetailEmptyOrderView({
   handleCreatePaperSize,
   handleSubmitDesigns,
   isAddingDesigns,
+  isProofer = true,
 }: DetailEmptyOrderViewProps) {
   return (
     <div className="flex-1 flex min-h-0 w-full max-w-full overflow-hidden border rounded-lg shadow-sm bg-background relative">
@@ -176,16 +178,19 @@ export function DetailEmptyOrderView({
                                     val === "" ? 0 : parseInt(val, 10),
                                 }));
                               }}
+                              disabled={!isProofer}
                             />
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
-                            onClick={() => toggleSelection(design)}
-                          >
-                            <Plus className="h-4 w-4 rotate-45" />
-                          </Button>
+                          {isProofer && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+                              onClick={() => toggleSelection(design)}
+                            >
+                              <Plus className="h-4 w-4 rotate-45" />
+                            </Button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -220,6 +225,7 @@ export function DetailEmptyOrderView({
                               parseInt(e.target.value, 10)
                             )
                           }
+                          disabled={!isProofer}
                           className="h-10 text-base font-bold border-muted-foreground/20 focus:border-primary"
                         />
                       </div>
@@ -237,6 +243,7 @@ export function DetailEmptyOrderView({
                           <Select
                             value={paperSizeId}
                             onValueChange={setPaperSizeId}
+                            disabled={!isProofer}
                           >
                             <SelectTrigger
                               id="paper-size"
@@ -262,7 +269,7 @@ export function DetailEmptyOrderView({
                             </SelectContent>
                           </Select>
 
-                          {showCreateButton && (
+                          {showCreateButton && isProofer && (
                             <Button
                               variant="secondary"
                               className="h-10 px-3 bg-primary/10 text-primary hover:bg-primary/20"
@@ -292,6 +299,7 @@ export function DetailEmptyOrderView({
                               }}
                               className="h-10 text-sm border-primary/30 focus:border-primary shadow-sm"
                               autoFocus
+                              disabled={!isProofer}
                             />
                             {!customPaperSize && (
                               <div className="absolute right-3 top-2.5 opacity-40 group-hover:opacity-100 transition-opacity">
@@ -318,6 +326,7 @@ export function DetailEmptyOrderView({
                           value={notes}
                           onChange={(e) => setNotes(e.target.value)}
                           className="h-10 text-sm italic"
+                          disabled={!isProofer}
                         />
                       </div>
                     </div>
@@ -336,7 +345,8 @@ export function DetailEmptyOrderView({
                   disabled={
                     isAddingDesigns ||
                     !paperSizeId ||
-                    (paperSizeId === "custom" && !customPaperSize.trim())
+                    (paperSizeId === "custom" && !customPaperSize.trim()) ||
+                    !isProofer
                   }
                 >
                   {isAddingDesigns ? (

@@ -1121,6 +1121,82 @@ const APAgingResponseIPaginate = z
     items: z.array(APAgingResponse).nullable(),
   })
   .partial();
+const CreateDefectRecordRequest = z.object({
+  productionOrderId: z.number().int(),
+  productionStepId: z.number().int().nullish(),
+  productionOrderItemId: z.number().int().nullish(),
+  designId: z.number().int(),
+  orderDetailId: z.number().int().nullish(),
+  defectQuantity: z.number().int().gte(1).lte(2147483647),
+  description: z.string().min(1).max(1000),
+  defectSource: z.string().min(1),
+  assignedToUserId: z.number().int(),
+  defectOccurredAt: z.string().datetime({ offset: true }).nullish(),
+});
+const DefectRecordResponse = z
+  .object({
+    id: z.number().int(),
+    productionOrderId: z.number().int(),
+    productionStepId: z.number().int().nullable(),
+    productionStepType: z.string().nullable(),
+    productionOrderItemId: z.number().int().nullable(),
+    designId: z.number().int(),
+    designCode: z.string().nullable(),
+    designName: z.string().nullable(),
+    dimensions: z.string().nullable(),
+    orderDetailId: z.number().int().nullable(),
+    orderId: z.number().int().nullable(),
+    orderCode: z.string().nullable(),
+    defectQuantity: z.number().int(),
+    description: z.string().nullable(),
+    defectSource: z.string().nullable(),
+    defectSourceDisplay: z.string().nullable(),
+    assignedToUserId: z.number().int(),
+    assignedToUserName: z.string().nullable(),
+    assignedToUserRole: z.string().nullable(),
+    recordedByUserId: z.number().int(),
+    recordedByUserName: z.string().nullable(),
+    defectOccurredAt: z.string().datetime({ offset: true }),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }).nullable(),
+  })
+  .partial();
+const DefectRecordResponsePaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(DefectRecordResponse).nullable(),
+  })
+  .partial();
+const UpdateDefectRecordRequest = z
+  .object({
+    defectQuantity: z.number().int().gte(1).lte(2147483647).nullable(),
+    description: z.string().max(1000).nullable(),
+    defectSource: z.string().nullable(),
+    assignedToUserId: z.number().int().nullable(),
+    defectOccurredAt: z.string().datetime({ offset: true }).nullable(),
+  })
+  .partial();
+const DefectBySourceBreakdown = z
+  .object({
+    design: z.number().int(),
+    proofing: z.number().int(),
+    production: z.number().int(),
+    managementDecision: z.number().int(),
+  })
+  .partial();
+const DefectRecordSummaryByUserResponse = z
+  .object({
+    userId: z.number().int(),
+    userName: z.string().nullable(),
+    userRole: z.string().nullable(),
+    totalDefectRecords: z.number().int(),
+    totalDefectQuantity: z.number().int(),
+    bySource: DefectBySourceBreakdown,
+  })
+  .partial();
 const DeliveryLineRequest = z.object({
   orderDetailId: z.number().int(),
   deliveryQty: z.number().int().gte(1).lte(2147483647),
@@ -1145,6 +1221,7 @@ const DeliveryNoteLineResponse = z
     id: z.number().int(),
     orderDetailId: z.number().int(),
     orderCode: z.string().nullable(),
+    proofingOrderCodes: z.array(z.string()).nullable(),
     designId: z.number().int(),
     designName: z.string().nullable(),
     designCode: z.string().nullable(),
@@ -1410,6 +1487,7 @@ const UpdateDesignRequest = z
     laminationType: z.string().min(0).max(20).nullable(),
     requirements: z.string().nullable(),
     additionalNotes: z.string().nullable(),
+    isUrgent: z.boolean().nullable(),
   })
   .partial();
 const CreateDesignStandaloneRequest = z.object({
@@ -1438,6 +1516,8 @@ const DesignResponsePaginate = z
   .partial();
 const ReprintDesignRequest = z.object({
   quantity: z.number().int().gte(1).lte(2147483647),
+  notes: z.string().nullish(),
+  isUrgent: z.boolean().nullish(),
 });
 const postApidesignsIdtimeline_Body = z
   .object({ File: z.instanceof(File), Description: z.string().optional() })
@@ -3084,6 +3164,8 @@ const ReadyDesignResponse = z
     orderCode: z.string().nullable(),
     createdAt: z.string().datetime({ offset: true }),
     updatedAt: z.string().datetime({ offset: true }).nullable(),
+    notes: z.string().nullable(),
+    isUrgent: z.boolean(),
   })
   .partial();
 const ReadyDesignResponsePaginate = z
@@ -3094,6 +3176,9 @@ const ReadyDesignResponsePaginate = z
     totalPages: z.number().int(),
     items: z.array(ReadyDesignResponse).nullable(),
   })
+  .partial();
+const UpdateReadyDesignRequest = z
+  .object({ isUrgent: z.boolean().nullable(), notes: z.string().nullable() })
   .partial();
 const ReportExportResponse = z
   .object({
@@ -3770,6 +3855,12 @@ export const schemas = {
   APDetailResponseIPaginate,
   APAgingResponse,
   APAgingResponseIPaginate,
+  CreateDefectRecordRequest,
+  DefectRecordResponse,
+  DefectRecordResponsePaginate,
+  UpdateDefectRecordRequest,
+  DefectBySourceBreakdown,
+  DefectRecordSummaryByUserResponse,
   DeliveryLineRequest,
   CreateDeliveryNoteRequest,
   DeliveryNoteOrderResponse,
@@ -3926,6 +4017,7 @@ export const schemas = {
   VendorReceiptStatisticsRowIPaginate,
   ReadyDesignResponse,
   ReadyDesignResponsePaginate,
+  UpdateReadyDesignRequest,
   ReportExportResponse,
   ReportExportResponseIPaginate,
   ReturnLineRequest,
@@ -6608,6 +6700,174 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/defect-records",
+    alias: "postApidefectRecords",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateDefectRecordRequest,
+      },
+    ],
+    response: DefectRecordResponse,
+  },
+  {
+    method: "get",
+    path: "/api/defect-records",
+    alias: "getApidefectRecords",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "assignedToUserId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "defectSource",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "productionOrderId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "designId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: DefectRecordResponsePaginate,
+  },
+  {
+    method: "get",
+    path: "/api/defect-records/:id",
+    alias: "getApidefectRecordsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: DefectRecordResponse,
+  },
+  {
+    method: "put",
+    path: "/api/defect-records/:id",
+    alias: "putApidefectRecordsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateDefectRecordRequest,
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: DefectRecordResponse,
+  },
+  {
+    method: "delete",
+    path: "/api/defect-records/:id",
+    alias: "deleteApidefectRecordsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/defect-records/by-production-order/:productionOrderId",
+    alias: "getApidefectRecordsbyProductionOrderProductionOrderId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "productionOrderId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+    ],
+    response: DefectRecordResponsePaginate,
+  },
+  {
+    method: "get",
+    path: "/api/defect-records/summary-by-user",
+    alias: "getApidefectRecordssummaryByUser",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "defectSource",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: z.array(DefectRecordSummaryByUserResponse),
+  },
+  {
+    method: "post",
     path: "/api/delivery-notes",
     alias: "postApideliveryNotes",
     requestFormat: "json",
@@ -6779,6 +7039,11 @@ const endpoints = makeApi([
       },
       {
         name: "productName",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "proofingOrderCode",
         type: "Query",
         schema: z.string().optional(),
       },
@@ -6980,7 +7245,7 @@ const endpoints = makeApi([
       {
         name: "body",
         type: "Body",
-        schema: z.object({ quantity: z.number().int().gte(1).lte(2147483647) }),
+        schema: ReprintDesignRequest,
       },
       {
         name: "id",
@@ -11184,6 +11449,25 @@ const endpoints = makeApi([
       },
     ],
     response: ReadyDesignResponsePaginate,
+  },
+  {
+    method: "put",
+    path: "/api/ready-designs/:id",
+    alias: "putApireadyDesignsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateReadyDesignRequest,
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: ReadyDesignResponse,
   },
   {
     method: "get",

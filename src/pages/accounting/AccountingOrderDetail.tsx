@@ -71,6 +71,7 @@ import {
   useApproveDebt,
   useCreateAccountingForOrder,
 } from "@/hooks/use-accounting";
+import { useCustomerAddresses } from "@/hooks/use-customer";
 import { useCreateDebtNotification } from "@/hooks/use-debt-notification";
 import { useCreateInvoice, useInvoicesByOrder } from "@/hooks/use-invoice";
 import { useCashReceipts, useCashFunds } from "@/hooks/use-cash";
@@ -259,6 +260,12 @@ export default function AccountingOrderDetail() {
   const hasCashReceipt =
     cashReceiptsData?.items?.some((receipt) => receipt.orderId === order?.id) ||
     false;
+
+  // Fetch customer addresses for the address book selection
+  const { data: customerAddresses } = useCustomerAddresses(
+    order?.customerId || order?.customer?.id || null,
+    !!(order?.customerId || order?.customer?.id)
+  );
 
   const { data: paymentMethodsData } = usePaymentMethods({
     pageNumber: 1,
@@ -2068,13 +2075,8 @@ export default function AccountingOrderDetail() {
               {/* Customer Info */}
               <Card>
                 <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <User className="h-4 w-4 text-primary" />
-                      Thông tin khách hàng
-                    </CardTitle>
-                    <div className="flex items-center gap-2">
-                      <CustomerTypeBadge type={customerType} />
+                  <div className="flex flex-col gap-2">
+                    <div className="flex justify-end">
                       {editingCard === "customerInfo" ? (
                         <div className="flex items-center gap-2">
                           <Button
@@ -2123,6 +2125,10 @@ export default function AccountingOrderDetail() {
                         </Button>
                       )}
                     </div>
+                    <CardTitle className="text-base flex items-center gap-2 text-foreground font-semibold leading-none">
+                      <User className="h-4 w-4 text-primary shrink-0" />
+                      <span>Thông tin khách hàng</span>
+                    </CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -2197,33 +2203,70 @@ export default function AccountingOrderDetail() {
                           placeholder="Nhập mã số thuế"
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label>Địa chỉ *</Label>
-                        <Textarea
-                          value={cardEditValues.customerAddress || ""}
-                          onChange={(e) =>
-                            setCardEditValues({
-                              ...cardEditValues,
-                              customerAddress: e.target.value,
-                            })
-                          }
-                          placeholder="Nhập địa chỉ"
-                          rows={3}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Địa chỉ giao hàng</Label>
-                        <Textarea
-                          value={(cardEditValues.deliveryAddress as string) || ""}
-                          onChange={(e) =>
-                            setCardEditValues({
-                              ...cardEditValues,
-                              deliveryAddress: e.target.value,
-                            })
-                          }
-                          placeholder="Nhập địa chỉ giao hàng"
-                          rows={3}
-                        />
+                      <div className="space-y-3 p-3 bg-muted/40 border border-border rounded-lg">
+                        {customerAddresses && customerAddresses.length > 0 && (
+                          <div className="space-y-1">
+                            <Select
+                              onValueChange={(val) => {
+                                const addr = customerAddresses.find((a) => a.id.toString() === val);
+                                if (addr) {
+                                  setCardEditValues({
+                                    ...cardEditValues,
+                                    customerAddress: addr.address || cardEditValues.customerAddress || "",
+                                    deliveryAddress: addr.address || cardEditValues.deliveryAddress || "",
+                                    customerName: addr.recipientName || cardEditValues.customerName || "",
+                                    customerPhone: addr.recipientPhone || cardEditValues.customerPhone || "",
+                                  });
+                                  toast.success(`Đã chọn địa chỉ: ${addr.label || "Địa chỉ"}`);
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="h-9 w-full bg-background text-xs border-border/80">
+                                <SelectValue placeholder="Chọn từ sổ địa chỉ..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {customerAddresses.map((addr) => (
+                                  <SelectItem key={addr.id} value={addr.id.toString()} className="text-xs">
+                                    <span className="font-semibold">{addr.label || "Địa chỉ"}:</span>{" "}
+                                    <span className="text-muted-foreground truncate max-w-[200px] inline-block vertical-align-middle">
+                                      {addr.address}
+                                    </span>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+
+                        <div className="space-y-2">
+                          <Label>Địa chỉ *</Label>
+                          <Textarea
+                            value={cardEditValues.customerAddress || ""}
+                            onChange={(e) =>
+                              setCardEditValues({
+                                ...cardEditValues,
+                                customerAddress: e.target.value,
+                              })
+                            }
+                            placeholder="Nhập địa chỉ"
+                            rows={3}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Địa chỉ giao hàng</Label>
+                          <Textarea
+                            value={(cardEditValues.deliveryAddress as string) || ""}
+                            onChange={(e) =>
+                              setCardEditValues({
+                                ...cardEditValues,
+                                deliveryAddress: e.target.value,
+                              })
+                            }
+                            placeholder="Nhập địa chỉ giao hàng"
+                            rows={3}
+                          />
+                        </div>
                       </div>
                     </div>
                   ) : (
@@ -2233,9 +2276,12 @@ export default function AccountingOrderDetail() {
                         <div className="flex items-start gap-3">
                           <Building2 className="h-4 w-4 text-muted-foreground mt-0.5" />
                           <div>
-                            <p className="text-sm text-muted-foreground">
-                              Công ty
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className="text-sm text-muted-foreground">
+                                Công ty
+                              </p>
+                              <CustomerTypeBadge type={customerType} />
+                            </div>
                             <p className="font-medium">
                               {order.customerCompanyName}
                             </p>
@@ -2245,9 +2291,14 @@ export default function AccountingOrderDetail() {
                       <div className="flex items-start gap-3">
                         <User className="h-4 w-4 text-muted-foreground mt-0.5" />
                         <div>
-                          <p className="text-sm text-muted-foreground">
-                            Liên hệ
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm text-muted-foreground">
+                              Liên hệ
+                            </p>
+                            {!order.customerCompanyName && (
+                              <CustomerTypeBadge type={customerType} />
+                            )}
+                          </div>
                           <p className="font-medium">
                             {order.customerName || "—"}
                           </p>

@@ -90,6 +90,7 @@ interface DetailDesignsListCardProps {
   isRejecting?: boolean;
   onFindDie?: (design: any, dimensions: string) => void;
   highlightSearchTerm?: string;
+  isProofer?: boolean;
 }
 
 export function DetailDesignsListCard({
@@ -113,6 +114,7 @@ export function DetailDesignsListCard({
   isRejecting,
   onFindDie,
   highlightSearchTerm = "",
+  isProofer = true,
 }: DetailDesignsListCardProps) {
   if (!order) return null;
 
@@ -145,7 +147,7 @@ export function DetailDesignsListCard({
             <Layers className="h-4 w-4" />
             Danh sách mã hàng ({orderDesigns?.length ?? 0})
           </CardTitle>
-          {order && order.status !== "completed" && (
+          {order && order.status !== "completed" && isProofer && (
             <Button
               variant="outline"
               size="sm"
@@ -534,7 +536,7 @@ export function DetailDesignsListCard({
                               <span className="truncate">Tìm khuôn</span>
                             </Button>
                           )}
-                          {order && order.status !== "completed" && pod.id && (
+                          {order && order.status !== "completed" && pod.id && isProofer && (
                             <Button
                               variant="outline"
                               size="sm"
@@ -577,6 +579,7 @@ export function DetailDesignsListCard({
                           {order &&
                             order.status !== "completed" &&
                             pod.id &&
+                            isProofer &&
                             onReject && (
                               <Button
                                 variant="outline"
@@ -597,7 +600,7 @@ export function DetailDesignsListCard({
                                 <span className="truncate">Hoàn hàng</span>
                               </Button>
                             )}
-                          {order && order.status !== "completed" && pod.id && (
+                          {order && order.status !== "completed" && pod.id && isProofer && (
                             <Button
                               variant="outline"
                               size="sm"

@@ -18,6 +18,7 @@ import type {
   ReadyDesignResponse,
   ReadyDesignResponsePaginate,
   ReadyDesignListParams,
+  UpdateReadyDesignRequest,
 } from "@/Schema";
 import { createCrudHooks } from "./use-base";
 import { API_SUFFIX } from "@/apis";
@@ -508,6 +509,58 @@ export const useReadyDesigns = (params?: ReadyDesignListParams) => {
       );
       return res.data;
     },
-    staleTime: 5 * 60 * 1000,
   });
+};
+
+// PUT /api/ready-designs/{id}
+export const useUpdateReadyDesign = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    ReadyDesignResponse,
+    [{ id: number; data: UpdateReadyDesignRequest }]
+  >(async ({ id, data }) => {
+    const res = await apiRequest.put<ReadyDesignResponse>(
+      API_SUFFIX.READY_DESIGNS_BY_ID(id),
+      data
+    );
+    return res.data;
+  });
+
+  const mutate = async (payload: { id: number; data: UpdateReadyDesignRequest }) => {
+    try {
+      const result = await execute(payload);
+
+      // Invalidate ready-designs list to trigger refetch
+      queryClient.invalidateQueries({
+        queryKey: ["ready-designs"],
+      });
+
+      toast.success("Thành công", {
+        description: "Đã cập nhật thiết kế trong kho sẵn sàng",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể cập nhật thiết kế",
+      });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
 };

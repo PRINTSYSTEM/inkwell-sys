@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-06-16T10:50:12.511Z */
+/* Generated at: 2026-06-17T19:06:44.647Z */
 
 import { z } from "zod";
 import { IdSchema, PagedParamsSchema } from "./Common";
@@ -437,6 +437,32 @@ export const DebtReportsCustomerReconciliationExportParamsSchema = z.object({
 }).passthrough();
 export type DebtReportsCustomerReconciliationExportParams = z.infer<typeof DebtReportsCustomerReconciliationExportParamsSchema>;
 
+// ==== DefectRecordByProductionOrderParams (GET /api/defect-records/by-production-order/:productionOrderId) ====
+export const DefectRecordByProductionOrderParamsSchema = PagedParamsSchema.extend({
+});
+export type DefectRecordByProductionOrderParams = z.infer<typeof DefectRecordByProductionOrderParamsSchema>;
+
+// ==== DefectRecordListParams (GET /api/defect-records) ====
+export const DefectRecordListParamsSchema = PagedParamsSchema.extend({
+  assignedToUserId: z.number().int().nullable().optional(),
+  defectSource: z.string().nullable().optional(),
+  productionOrderId: z.number().int().nullable().optional(),
+  designId: z.number().int().nullable().optional(),
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
+});
+export type DefectRecordListParams = z.infer<typeof DefectRecordListParamsSchema>;
+
+// ==== DefectRecordSummaryByUserParams (GET /api/defect-records/summary-by-user) ====
+export const DefectRecordSummaryByUserParamsSchema = z.object({
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+  defectSource: z.string().nullable().optional(),
+}).passthrough();
+export type DefectRecordSummaryByUserParams = z.infer<typeof DefectRecordSummaryByUserParamsSchema>;
+
 // ==== DeliveryNoteAvailableOrderDetailsParams (GET /api/delivery-notes/available-order-details) ====
 export const DeliveryNoteAvailableOrderDetailsParamsSchema = z.object({
   customerId: z.number().int().nullable().optional(),
@@ -448,6 +474,7 @@ export const DeliveryNoteAvailableOrdersListParamsSchema = PagedParamsSchema.ext
   searchTerm: z.string().nullable().optional(),
   customerName: z.string().nullable().optional(),
   productName: z.string().nullable().optional(),
+  proofingOrderCode: z.string().nullable().optional(),
 });
 export type DeliveryNoteAvailableOrdersListParams = z.infer<typeof DeliveryNoteAvailableOrdersListParamsSchema>;
 
@@ -1076,9 +1103,6 @@ export type PurchaseReportVendorStatisticsParams = z.infer<typeof PurchaseReport
 export const ReadyDesignListParamsSchema = PagedParamsSchema.extend({
   customerId: z.number().int().nullable().optional(),
   search: z.string().nullable().optional(),
-  designType: z.string().nullable().optional(),
-  materialType: z.string().nullable().optional(),
-  dimensions: z.string().nullable().optional(),
 });
 export type ReadyDesignListParams = z.infer<typeof ReadyDesignListParamsSchema>;
 

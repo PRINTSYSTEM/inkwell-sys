@@ -83,8 +83,9 @@ import {
   proofingKeys,
 } from "@/hooks/use-proofing-order";
 import { useProductionOrders } from "@/hooks/use-production";
-import { useAvailableOrderDetailsForProofing } from "@/hooks";
+import { useAvailableOrderDetailsForProofing, useAuth } from "@/hooks";
 import { useProofingSelection } from "@/hooks/useProofingSelection";
+import { ROLE } from "@/constants";
 import { useDesignTypeList } from "@/hooks/use-design-type";
 import { DesignTable } from "@/components/proofing/DesignTable";
 import {
@@ -342,6 +343,9 @@ export default function ProofingOrderDetailPage() {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const highlightSearchTerm = searchParams.get("search") || "";
+
+  const { user } = useAuth();
+  const isProofer = user?.role === ROLE.ADMIN || user?.role === ROLE.MANAGER || user?.role === ROLE.PROOFER;
 
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isUpdateFileDialogOpen, setIsUpdateFileDialogOpen] = useState(false);
@@ -1997,6 +2001,7 @@ export default function ProofingOrderDetailPage() {
         onStatusChangeClick={handleStatusChangeClick}
         onOldStatusChangeClick={handleOldStatusChangeClick}
         onCancelClick={handleCancelProofingOrder}
+        isProofer={isProofer}
       />
 
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
@@ -2056,7 +2061,7 @@ export default function ProofingOrderDetailPage() {
                     <DesignTable
                       designs={paginatedDesigns}
                       selectedIds={selectedIds}
-                      onToggle={(design) => {
+                      onToggle={isProofer ? (design) => {
                         toggleSelection(design);
                         // Auto-filter by design type if selecting for the first time
                         if (
@@ -2065,9 +2070,9 @@ export default function ProofingOrderDetailPage() {
                         ) {
                           setSelectedDesignTypes([design.designTypeId]);
                         }
-                      }}
-                      canSelect={canSelect}
-                      onReject={handleOpenRejectDialog}
+                      } : undefined}
+                      canSelect={isProofer ? canSelect : () => false}
+                      onReject={isProofer ? handleOpenRejectDialog : undefined}
                       onFindDie={handleFindDie}
                     />
                   </div>
@@ -2133,6 +2138,7 @@ export default function ProofingOrderDetailPage() {
                 setNotes={setNotes}
                 handleSubmitDesigns={handleSubmitDesigns}
                 isAddingDesigns={isAddingDesigns}
+                isProofer={isProofer}
               />
             </div>
           </div>
@@ -2163,6 +2169,7 @@ export default function ProofingOrderDetailPage() {
                 setImageViewerOpen={setImageViewerOpen}
                 setViewingImageUrl={setViewingImageUrl}
                 onDeleteImage={handleDeleteImage}
+                isProofer={isProofer}
               />
 
               <DetailDesignsListCard
@@ -2190,6 +2197,7 @@ export default function ProofingOrderDetailPage() {
                 isRejecting={isRejecting}
                 onFindDie={handleFindDie}
                 highlightSearchTerm={highlightSearchTerm}
+                isProofer={isProofer}
               />
 
               <DetailPlateExportCard
@@ -2198,6 +2206,7 @@ export default function ProofingOrderDetailPage() {
                 setEditingPlateExport={setEditingPlateExport}
                 handleHandToProduction={handleConfirmHandToProduction}
                 isHandingToProduction={isHandingToProduction}
+                isProofer={isProofer}
               />
 
               {hasDieCutDesigns ? (
@@ -2216,6 +2225,7 @@ export default function ProofingOrderDetailPage() {
                   setIsDieListDialogOpen={setIsDieListDialogOpen}
                   setImageViewerOpen={setImageViewerOpen}
                   setViewingImageUrl={setViewingImageUrl}
+                  isProofer={isProofer}
                 />
               ) : (
                 <div /> /* Empty div to maintain grid if no die cut designs */

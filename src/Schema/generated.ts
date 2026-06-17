@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-06-16T10:50:12.437Z */
+/* Generated at: 2026-06-17T19:06:44.587Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -75,6 +75,7 @@ export const CreateCashReceiptRequestSchema = schemas.CreateCashReceiptRequest;
 export const CreateCustomerAddressRequestSchema = schemas.CreateCustomerAddressRequest;
 export const CreateCustomerRequestSchema = schemas.CreateCustomerRequest;
 export const CreateDebtNotificationRequestSchema = schemas.CreateDebtNotificationRequest;
+export const CreateDefectRecordRequestSchema = schemas.CreateDefectRecordRequest;
 export const CreateDeliveryNoteRequestSchema = schemas.CreateDeliveryNoteRequest;
 export const CreateDesignRequestSchema = schemas.CreateDesignRequest;
 export const CreateDesignStandaloneRequestSchema = schemas.CreateDesignStandaloneRequest;
@@ -130,6 +131,10 @@ export const DebtNotificationResponseIPaginateSchema = schemas.DebtNotificationR
 export const DebtReconciliationAPRequestSchema = schemas.DebtReconciliationAPRequest;
 export const DebtReconciliationARRequestSchema = schemas.DebtReconciliationARRequest;
 export const DebtReconciliationResponseSchema = schemas.DebtReconciliationResponse;
+export const DefectBySourceBreakdownSchema = schemas.DefectBySourceBreakdown;
+export const DefectRecordResponseSchema = schemas.DefectRecordResponse;
+export const DefectRecordResponsePaginateSchema = schemas.DefectRecordResponsePaginate;
+export const DefectRecordSummaryByUserResponseSchema = schemas.DefectRecordSummaryByUserResponse;
 export const DeliveryLineRequestSchema = schemas.DeliveryLineRequest;
 export const DeliveryNoteLineResponseSchema = schemas.DeliveryNoteLineResponse;
 export const DeliveryNoteOrderResponseSchema = schemas.DeliveryNoteOrderResponse;
@@ -278,6 +283,7 @@ export const UpdateCashPaymentRequestSchema = schemas.UpdateCashPaymentRequest;
 export const UpdateCashReceiptRequestSchema = schemas.UpdateCashReceiptRequest;
 export const UpdateCustomerAddressRequestSchema = schemas.UpdateCustomerAddressRequest;
 export const UpdateCustomerRequestSchema = schemas.UpdateCustomerRequest;
+export const UpdateDefectRecordRequestSchema = schemas.UpdateDefectRecordRequest;
 export const UpdateDeliveryLineResultRequestSchema = schemas.UpdateDeliveryLineResultRequest;
 export const UpdateDeliveryStatusRequestSchema = schemas.UpdateDeliveryStatusRequest;
 export const UpdateDesignRequestSchema = schemas.UpdateDesignRequest;
@@ -300,6 +306,7 @@ export const UpdateProductionOrderItemRequestSchema = schemas.UpdateProductionOr
 export const UpdateProductionStepRequestSchema = schemas.UpdateProductionStepRequest;
 export const UpdateProofingDesignItemSchema = schemas.UpdateProofingDesignItem;
 export const UpdateProofingOrderRequestSchema = schemas.UpdateProofingOrderRequest;
+export const UpdateReadyDesignRequestSchema = schemas.UpdateReadyDesignRequest;
 export const UpdateSharedAddressRequestSchema = schemas.UpdateSharedAddressRequest;
 export const UpdateStockInRequestSchema = schemas.UpdateStockInRequest;
 export const UpdateStockOutRequestSchema = schemas.UpdateStockOutRequest;

@@ -28,6 +28,7 @@ import {
   ReprintDesignRequestSchema as GenReprintDesignRequestSchema,
   ReadyDesignResponseSchema as GenReadyDesignResponseSchema,
   ReadyDesignResponsePaginateSchema as GenReadyDesignResponsePaginateSchema,
+  UpdateReadyDesignRequestSchema as GenUpdateReadyDesignRequestSchema,
 } from "./generated";
 
 // ===== DesignTimelineEntryResponse =====
@@ -164,4 +165,11 @@ export const ReadyDesignResponsePaginateSchema =
   GenReadyDesignResponsePaginateSchema.passthrough();
 export type ReadyDesignResponsePaginate = z.infer<
   typeof ReadyDesignResponsePaginateSchema
+>;
+
+// ===== UpdateReadyDesignRequest =====
+export const UpdateReadyDesignRequestSchema =
+  GenUpdateReadyDesignRequestSchema.passthrough();
+export type UpdateReadyDesignRequest = z.infer<
+  typeof UpdateReadyDesignRequestSchema
 >;

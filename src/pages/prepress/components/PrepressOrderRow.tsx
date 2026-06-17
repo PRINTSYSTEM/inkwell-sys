@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { ChevronDown, FileImage, Copy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,21 @@ export function PrepressOrderRow({
   const orderCodeMatches =
     shouldShowExpand && order.code?.toLowerCase().includes(searchTermLower);
 
+  const isUrgent = useMemo(() => {
+    if (!order.deliveryDate) return false;
+    try {
+      const deliveryDate = new Date(order.deliveryDate);
+      const now = new Date();
+      const d1 = new Date(deliveryDate.getFullYear(), deliveryDate.getMonth(), deliveryDate.getDate());
+      const d2 = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const diffTime = d1.getTime() - d2.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays <= 2;
+    } catch (e) {
+      return false;
+    }
+  }, [order.deliveryDate]);
+
   const highlightText = (text: string, searchTerm: string) => {
     if (!searchTerm || !text) return text;
     const regex = new RegExp(
@@ -67,16 +83,26 @@ export function PrepressOrderRow({
 
   const tooltipContent = (
     <div className="w-[380px] space-y-4 p-1 max-h-[80vh] overflow-y-auto custom-scrollbar">
-      <div className="border-b pb-2 sticky top-0 bg-popover z-10">
+      <div className="border-b pb-2 sticky top-0 bg-popover z-10 space-y-1.5">
         <h4 className="font-bold text-base text-foreground leading-tight">
-          {order.code}
+          Mã bài: {order.code}
         </h4>
-        <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-tighter">
-          Ngày tạo:{" "}
-          {order.createdAt
-            ? new Date(order.createdAt).toLocaleDateString("vi-VN")
-            : "—"}
-        </p>
+        <div className="text-[11px] text-muted-foreground space-y-0.5 font-medium">
+          <div>
+            <span className="font-semibold text-foreground">Người tạo lệnh:</span>{" "}
+            {order.createdBy?.fullName || order.createdBy?.username || "—"}
+          </div>
+          <div>
+            <span className="font-semibold text-foreground">Người tạo đơn hàng:</span>{" "}
+            {order.order?.creator?.fullName || order.order?.creator?.username || order.creator?.fullName || order.creator?.username || "—"}
+          </div>
+          {order.notes && (
+            <div>
+              <span className="font-semibold text-foreground">Ghi chú lệnh:</span>{" "}
+              {order.notes}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="space-y-6">
@@ -85,7 +111,7 @@ export function PrepressOrderRow({
           return (
             <div
               key={pod.id || idx}
-              className="space-y-3 pb-4 border-b last:border-0 border-dashed"
+              className="space-y-2 pb-4 border-b last:border-0 border-dashed"
             >
               <div className="w-full">
                 {d?.designImageUrl ? (
@@ -100,97 +126,67 @@ export function PrepressOrderRow({
                   </div>
                 )}
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                  Mã hàng {idx + 1}: {d?.code || "—"}
+                  Thiết kế {idx + 1}: {d?.designName || d?.code || "—"}
                 </p>
-                <div className="bg-muted/30 rounded-md p-2.5 space-y-2 border">
-                  <div className="flex justify-between text-xs items-center">
-                    <span className="text-muted-foreground font-medium">
-                      Mã hàng:
-                    </span>
-                    <span className="font-mono font-bold bg-muted px-1.5 py-0.5 rounded text-primary">
-                      {d?.code || "—"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-xs">
+                <div className="bg-muted/30 rounded-md p-2.5 space-y-1.5 border text-xs">
+                  <div className="flex justify-between items-center">
                     <span className="text-muted-foreground font-medium">
                       Đơn hàng:
                     </span>
-                    <span className="font-semibold">{d?.orderCode || "—"}</span>
+                    <span className="font-mono font-semibold text-slate-700 dark:text-slate-300">
+                      {d?.latestOrderCode || d?.orderCode || "—"}
+                    </span>
                   </div>
-                  <div className="flex justify-between text-xs">
+                  <div className="flex justify-between items-center">
                     <span className="text-muted-foreground font-medium">
-                      Chất liệu:
+                      Người tạo thiết kế:
                     </span>
-                    <span className="font-medium">
-                      {d?.materialType?.name || "—"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground font-medium">
-                      Quy cách:
-                    </span>
-                    <span className="font-medium text-right">
-                      {(() => {
-                        const specs = d?.specification || (d as any)?.specifications;
-                        if (Array.isArray(specs) && specs.length > 0) return specs.join(", ");
-                        if (typeof specs === "string" && specs.trim().length > 0) return specs;
-                        return d?.processClassification
-                          ? processClassificationLabels[d.processClassification] ||
-                            d.processClassification
-                          : d?.length != null
-                            ? `${d.length}x${d.height}mm`
-                            : "—";
-                      })()}
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">
+                      {d?.designer?.fullName || d?.designer?.username || "—"}
                     </span>
                   </div>
-                  <div className="flex justify-between text-xs pt-1 border-t border-muted-foreground/10">
+                  <div className="flex justify-between items-center">
                     <span className="text-muted-foreground font-medium">
                       Số lượng bình:
                     </span>
-                    <span className="font-bold text-blue-600">
+                    <span className="font-bold text-blue-600 dark:text-blue-400">
                       {(pod.quantity || 0).toLocaleString("vi-VN")}
                     </span>
                   </div>
+                  {(d?.notes || d?.latestRequirements) && (
+                    <div className="pt-1.5 border-t border-muted-foreground/10 space-y-1">
+                      {d?.notes && (
+                        <div className="text-[11px] text-slate-600 dark:text-slate-400">
+                          <span className="font-semibold text-slate-700 dark:text-slate-300">Ghi chú thiết kế: </span>
+                          <span className="italic">{d.notes}</span>
+                        </div>
+                      )}
+                      {d?.latestRequirements && (
+                        <div className="text-[11px] text-slate-600 dark:text-slate-400">
+                          <span className="font-semibold text-slate-700 dark:text-slate-300">Yêu cầu đơn hàng: </span>
+                          <span className="italic">{d.latestRequirements}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           );
         })}
       </div>
-
-      <div className="space-y-2 pt-2 sticky bottom-0 bg-popover border-t">
-        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
-          Trạng thái tổng quát
-        </p>
-        <div className="flex flex-wrap gap-1.5 pb-1">
-          <StatusBadge
-            status={order.status || ""}
-            label={proofingStatusLabels[order.status || ""] || "—"}
-            className="text-[10px] px-2 py-0 h-5 font-bold"
-          />
-          <Badge
-            variant="outline"
-            className="text-[10px] px-2 py-0 h-5 whitespace-nowrap bg-background font-bold border-primary/20 text-primary"
-          >
-            {designs.length} mã hàng
-          </Badge>
-          {((order.plateOutputCount ?? 0) > 0) && (
-            <Badge className="bg-green-500/10 text-green-600 border-green-200 text-[10px] px-2 py-0 h-5 font-bold">
-              Đã xuất kẽm
-            </Badge>
-          )}
-        </div>
-      </div>
     </div>
   );
 
   return (
     <TableRow
-      className="h-10 cursor-pointer group hover:bg-muted/50 transition-colors"
+      className={cn(
+        "h-10 cursor-pointer group hover:bg-muted/50 transition-colors",
+        isUrgent && "bg-rose-50/60 hover:bg-rose-100/60 border-l-4 border-l-rose-500 dark:bg-rose-950/20 dark:hover:bg-rose-900/20 dark:border-l-rose-600"
+      )}
       onClick={() => onNavigate(order.id)}
     >
       {shouldShowExpand && (
@@ -362,10 +358,21 @@ export function PrepressOrderRow({
         )}
       </TableCell>
 
-      <TableCell className="py-3 font-medium align-top whitespace-nowrap text-muted-foreground text-[11px]">
-        {order.createdAt
-          ? new Date(order.createdAt).toLocaleDateString("vi-VN")
-          : "—"}
+      <TableCell className="py-3 font-medium align-top whitespace-nowrap text-[11px]">
+        <div className="flex flex-col gap-1 text-muted-foreground">
+          <div>
+            <span className="font-semibold text-slate-500">Đặt: </span>
+            {order.createdAt
+              ? new Date(order.createdAt).toLocaleDateString("vi-VN")
+              : "—"}
+          </div>
+          <div className={cn(isUrgent && "text-red-600 font-bold dark:text-red-400")}>
+            <span className={cn("font-semibold text-slate-500", isUrgent && "text-red-600 dark:text-red-400")}>Giao: </span>
+            {order.deliveryDate
+              ? new Date(order.deliveryDate).toLocaleDateString("vi-VN")
+              : "—"}
+          </div>
+        </div>
       </TableCell>
     </TableRow>
   );

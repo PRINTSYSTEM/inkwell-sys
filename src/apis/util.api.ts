@@ -141,6 +141,7 @@ export const API_SUFFIX = {
     `/designs/by-customer/${customerId}`,
   DESIGNS_SALE: "/designs/sale",
   READY_DESIGNS: "/ready-designs",
+  READY_DESIGNS_BY_ID: (id: number) => `/ready-designs/${id}`,
 
   DESIGN_TIMELINE: (id: number) => `/designs/${id}/timeline`,
   DESIGN_UPLOAD_FILE: (id: number) => `/designs/${id}/upload-design-file`,

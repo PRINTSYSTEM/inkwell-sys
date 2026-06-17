@@ -197,7 +197,15 @@ export const MENU_ITEMS: MenuItem[] = [
     title: "Bình bài",
     icon: Layers,
     path: ROUTE_PATHS.PROOFING.ROOT,
-    allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PROOFER],
+    allowedRoles: [
+      ROLE.ADMIN,
+      ROLE.MANAGER,
+      ROLE.PROOFER,
+      ROLE.DESIGN,
+      ROLE.DESIGN_LEAD,
+      ROLE.ACCOUNTING,
+      ROLE.ACCOUNTING_LEAD,
+    ],
   },
   {
     id: "production",

@@ -665,28 +665,108 @@ export default function DeliveryNoteListPage() {
     return [] as OrderForDeliveryResponse[];
   }, [allOrders]);
 
-  // Client-side filtering and pagination for available orders
-  const filteredAvailableOrders = useMemo(() => {
+  // Group available orders by prepress code (Mã bài)
+  const groupedPrepressOrders = useMemo(() => {
     if (!Array.isArray(availableOrdersRaw)) return [];
-    let filtered = [...availableOrdersRaw];
-    
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      filtered = filtered.filter(order => 
-        String(order.code || "").toLowerCase().includes(q) ||
-        String(order.customerName || "").toLowerCase().includes(q)
-      );
-    }
-    
-    return filtered;
-  }, [availableOrdersRaw, searchQuery]);
 
-  const ordersList = useMemo(() => {
+    const groupsMap = new Map<string, any[]>();
+
+    availableOrdersRaw.forEach((order) => {
+      if (!order.details) return;
+      order.details.forEach((detail) => {
+        const codes = detail.proofingOrderCodes || [];
+        if (codes.length === 0) {
+          const key = "no_proofing_code";
+          if (!groupsMap.has(key)) {
+            groupsMap.set(key, []);
+          }
+          groupsMap.get(key)!.push({
+            ...detail,
+            orderId: order.orderId,
+            orderCode: order.orderCode,
+            customerId: order.customerId,
+            customerName: order.customerName,
+            deliveryAddress: order.deliveryAddress,
+            recipientAddress: order.recipientAddress,
+            createdAt: order.createdAt,
+          });
+        } else {
+          codes.forEach((code) => {
+            const key = code.trim().toUpperCase();
+            if (!groupsMap.has(key)) {
+              groupsMap.set(key, []);
+            }
+            groupsMap.get(key)!.push({
+              ...detail,
+              orderId: order.orderId,
+              orderCode: order.orderCode,
+              customerId: order.customerId,
+              customerName: order.customerName,
+              deliveryAddress: order.deliveryAddress,
+              recipientAddress: order.recipientAddress,
+              createdAt: order.createdAt,
+            });
+          });
+        }
+      });
+    });
+
+    const groups: {
+      proofingOrderCode: string;
+      displayName: string;
+      details: any[];
+    }[] = [];
+
+    groupsMap.forEach((details, key) => {
+      groups.push({
+        proofingOrderCode: key,
+        displayName: key === "no_proofing_code" ? "Chưa chia bài (Khác)" : `Bài ${key}`,
+        details,
+      });
+    });
+
+    groups.sort((a, b) => {
+      if (a.proofingOrderCode === "no_proofing_code") return 1;
+      if (b.proofingOrderCode === "no_proofing_code") return -1;
+      return b.proofingOrderCode.localeCompare(a.proofingOrderCode);
+    });
+
+    return groups;
+  }, [availableOrdersRaw]);
+
+  const filteredGroupedPrepressOrders = useMemo(() => {
+    if (!searchQuery.trim()) return groupedPrepressOrders;
+
+    const q = searchQuery.trim().toLowerCase();
+
+    return groupedPrepressOrders
+      .map((group) => {
+        const matchedDetails = group.details.filter((detail) => {
+          return (
+            String(group.proofingOrderCode).toLowerCase().includes(q) ||
+            String(detail.designCode || "").toLowerCase().includes(q) ||
+            String(detail.designName || "").toLowerCase().includes(q) ||
+            String(detail.customerName || "").toLowerCase().includes(q) ||
+            String(detail.orderCode || "").toLowerCase().includes(q)
+          );
+        });
+
+        const isGroupCodeMatched = String(group.proofingOrderCode).toLowerCase().includes(q);
+
+        return {
+          ...group,
+          details: isGroupCodeMatched ? group.details : matchedDetails,
+        };
+      })
+      .filter((group) => group.details.length > 0);
+  }, [groupedPrepressOrders, searchQuery]);
+
+  const prepressOrdersList = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
-    return filteredAvailableOrders.slice(start, start + itemsPerPage);
-  }, [filteredAvailableOrders, currentPage]);
+    return filteredGroupedPrepressOrders.slice(start, start + itemsPerPage);
+  }, [filteredGroupedPrepressOrders, currentPage]);
 
-  const totalPages = Math.ceil(filteredAvailableOrders.length / itemsPerPage);
+  const prepressTotalPages = Math.ceil(filteredGroupedPrepressOrders.length / itemsPerPage);
 
   // Derive selected orders from the entire pool of available orders
   const selectedOrders = useMemo(() => {
@@ -1265,8 +1345,8 @@ export default function DeliveryNoteListPage() {
             ordersError={ordersError}
             ordersErrorObj={ordersErrorObj}
             refetchOrders={refetchOrders}
-            ordersList={ordersList}
-            totalPages={totalPages}
+            ordersList={prepressOrdersList}
+            totalPages={prepressTotalPages}
             currentPage={currentPage}
             setCurrentPage={setCurrentPage}
             selectedOrderDetailIds={selectedOrderDetailIds}
@@ -1301,6 +1381,8 @@ export default function DeliveryNoteListPage() {
             bulkLoading={bulkLoading}
             handleBulkStartShipping={handleBulkStartShipping}
             updatingIds={updatingIds}
+            onImageClick={handleImageClick}
+            allNotesForStats={allNotesForStats}
           />
         </TabsContent>
       </Tabs>
@@ -1370,7 +1452,7 @@ interface OrdersViewProps {
   ordersError: boolean;
   ordersErrorObj: unknown;
   refetchOrders: () => void;
-  ordersList: Array<OrderForDeliveryResponse>;
+  ordersList: Array<any>;
   totalPages: number;
   currentPage: number;
   setCurrentPage: (page: number) => void;
@@ -1402,23 +1484,22 @@ function OrdersView({
   onImageClick,
   selectedCustomerId,
 }: OrdersViewProps) {
-  const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set());
+  const [expandedPrepressOrders, setExpandedPrepressOrders] = useState<Set<string>>(new Set());
 
-  // Auto-expand all orders when the list loads or changes
+  // Auto-expand all prepress orders when the list loads or changes
   useEffect(() => {
     if (ordersList.length > 0) {
-      setExpandedOrders(new Set(ordersList.map((o) => o.orderId).filter((id): id is number => id != null)));
+      setExpandedPrepressOrders(new Set(ordersList.map((o) => o.proofingOrderCode)));
     }
   }, [ordersList]);
-
-  const toggleOrder = (orderId: number) => {
-    const next = new Set(expandedOrders);
-    if (next.has(orderId)) {
-      next.delete(orderId);
+  const toggleOrder = (code: string) => {
+    const next = new Set(expandedPrepressOrders);
+    if (next.has(code)) {
+      next.delete(code);
     } else {
-      next.add(orderId);
+      next.add(code);
     }
-    setExpandedOrders(next);
+    setExpandedPrepressOrders(next);
   };
 
   const selectedOrdersCount = useMemo(() => {
@@ -1479,36 +1560,45 @@ function OrdersView({
             </div>
           </Card>
         ) : (
-          ordersList.map((order) => {
-            if (order.orderId == null) return null;
-            const isExpanded = expandedOrders.has(order.orderId);
-            
-            const detailIds = (order.details || []).map((d) => d.orderDetailId).filter((id): id is number => id != null);
-            const selectedCount = detailIds.filter((id) => selectedOrderDetailIds.has(id)).length;
-            const isAllSelected = detailIds.length > 0 && selectedCount === detailIds.length;
-            const isSomeSelected = selectedCount > 0 && selectedCount < detailIds.length;
+          ordersList.map((group) => {
+            if (!group.proofingOrderCode) return null;
+            const isExpanded = expandedPrepressOrders.has(group.proofingOrderCode);
 
-            const totalOrderQty = (order.details || []).reduce((sum, d) => sum + (d.remainingToDeliver || d.orderedQty || 0), 0);
-            const isDifferentCustomer = selectedCustomerId !== null && order.customerId !== selectedCustomerId;
+            // Determine target customer and detail IDs that belong to the target customer
+            const targetCustomerId = selectedCustomerId !== null
+              ? selectedCustomerId
+              : (group.details[0]?.customerId ?? null);
+
+            const targetCustomerDetailIds = group.details
+              .filter((d: any) => d.customerId === targetCustomerId)
+              .map((d: any) => d.orderDetailId)
+              .filter((id: any): id is number => id != null);
+
+            const selectedCount = targetCustomerDetailIds.filter((id: number) => selectedOrderDetailIds.has(id)).length;
+            const isAllSelected = targetCustomerDetailIds.length > 0 && selectedCount === targetCustomerDetailIds.length;
+            const isHeaderCheckboxDisabled = selectedCustomerId !== null && targetCustomerDetailIds.length === 0;
+
+            const uniqueCustomerNames = Array.from(new Set(group.details.map((d: any) => d.customerName).filter(Boolean)));
+            const uniqueAddresses = Array.from(new Set(group.details.map((d: any) => d.deliveryAddress).filter(Boolean)));
 
             return (
               <div
-                key={order.orderId}
+                key={group.proofingOrderCode}
                 className={`bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl overflow-hidden shadow-sm transition-all duration-200 ${
-                  isDifferentCustomer ? "opacity-60" : ""
+                  isHeaderCheckboxDisabled ? "opacity-60" : ""
                 }`}
               >
                 {/* Card Header */}
                 <div
-                  onClick={() => toggleOrder(order.orderId!)}
+                  onClick={() => toggleOrder(group.proofingOrderCode)}
                   className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-stone-50/40 dark:hover:bg-stone-900/60"
                 >
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <div onClick={(e) => e.stopPropagation()} className="flex items-center">
                       <Checkbox
                         checked={isAllSelected}
-                        onCheckedChange={() => handleToggleOrderDetail(detailIds)}
-                        disabled={isDifferentCustomer}
+                        onCheckedChange={() => handleToggleOrderDetail(targetCustomerDetailIds)}
+                        disabled={isHeaderCheckboxDisabled}
                         className="rounded"
                       />
                     </div>
@@ -1522,54 +1612,51 @@ function OrdersView({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-bold text-stone-900 dark:text-stone-50 font-mono text-sm">
-                          {order.orderCode}
+                          {group.displayName}
                         </span>
-                        <Badge variant="outline" className={`h-5 text-[10px] font-bold px-2 ${getStatusColorClass(order.status)}`}>
-                          {orderStatusLabels[order.status || ""] || order.status}
+                        <Badge variant="secondary" className="h-5 text-[10px] font-bold px-2">
+                          {group.details.length} thiết kế
                         </Badge>
-                        <span className="text-[11px] text-stone-400">
-                          {formatDate(order.createdAt)}
-                        </span>
                       </div>
                       <div className="flex items-center gap-1 text-xs text-stone-500 mt-1">
                         <User className="h-3.5 w-3.5 text-stone-400 shrink-0" />
                         <span className="text-stone-400 mr-1 shrink-0">Khách hàng :</span>
-                        <span className="truncate font-semibold text-stone-850 dark:text-stone-200">{order.customerName}</span>
+                        <span className="truncate font-semibold text-stone-850 dark:text-stone-200">
+                          {uniqueCustomerNames.join(", ") || "—"}
+                        </span>
                       </div>
-                      {order.deliveryAddress && (
+                      {uniqueAddresses.length > 0 && (
                         <div className="flex items-center gap-1 text-xs text-stone-500 mt-1">
                           <MapPin className="h-3.5 w-3.5 text-stone-400 shrink-0" />
                           <span className="text-stone-400 mr-1 shrink-0">Địa chỉ giao hàng :</span>
-                          <span className="truncate text-stone-700 dark:text-stone-300" title={order.deliveryAddress}>{order.deliveryAddress}</span>
+                          <span className="truncate text-stone-700 dark:text-stone-300" title={uniqueAddresses.join("; ")}>
+                            {uniqueAddresses.join("; ")}
+                          </span>
                         </div>
                       )}
                     </div>
                   </div>
 
                   <div className="flex items-center gap-4 shrink-0">
-                    <div className="text-right">
-
-
-                    </div>
                     <div onClick={(e) => e.stopPropagation()}>
                       <Button
                         size="sm"
                         variant="outline"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleToggleOrderDetail(detailIds);
+                          handleToggleOrderDetail(targetCustomerDetailIds);
                         }}
-                        disabled={isDifferentCustomer}
+                        disabled={isHeaderCheckboxDisabled}
                         className="text-xs font-semibold h-8 border-stone-200 dark:border-stone-850 hover:bg-stone-50 text-stone-700 dark:text-stone-300"
                       >
-                        Chọn tất cả sản phẩm
+                        Chọn sản phẩm trong bài
                       </Button>
                     </div>
                   </div>
                 </div>
 
                 {/* Card Collapsible Content */}
-                {isExpanded && order.details && order.details.length > 0 && (
+                {isExpanded && group.details && group.details.length > 0 && (
                   <div className="border-t border-stone-100 dark:border-stone-850 bg-stone-50/10 dark:bg-stone-900/30 overflow-auto">
                     <Table>
                       <TableHeader className="bg-stone-50/30 dark:bg-stone-900/50 border-b border-stone-200 dark:border-stone-800">
@@ -1578,27 +1665,28 @@ function OrdersView({
                           <TableHead className="w-12">Hình</TableHead>
                           <TableHead className="w-[120px] font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Mã thiết kế</TableHead>
                           <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Tên sản phẩm</TableHead>
-                          <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-40">Mã bài</TableHead>
+                          <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-40">Đơn hàng</TableHead>
                           <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-24">Số lượng</TableHead>
                           <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider pr-4 w-32">Thành tiền</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {order.details.map((detail) => {
+                        {group.details.map((detail: any) => {
                           if (detail.orderDetailId == null) return null;
+                          const isDetailDifferentCustomer = selectedCustomerId !== null && detail.customerId !== selectedCustomerId;
                           const isChecked = selectedOrderDetailIds.has(detail.orderDetailId);
                           return (
                             <TableRow
                               key={detail.orderDetailId}
                               onClick={() => {
-                                if (isDifferentCustomer) {
+                                if (isDetailDifferentCustomer) {
                                   toast.error("Phiếu giao hàng phải được tạo cho cùng 1 khách hàng. Không thể chọn sản phẩm của khách hàng khác!");
                                   return;
                                 }
                                 handleToggleOrderDetail(detail.orderDetailId!);
                               }}
                               className={`cursor-pointer border-stone-100 dark:border-stone-850 transition-colors ${
-                                isDifferentCustomer ? "cursor-not-allowed" : ""
+                                isDetailDifferentCustomer ? "cursor-not-allowed" : ""
                               } ${
                                 isChecked
                                   ? "bg-primary/[0.03] dark:bg-primary/[0.02] hover:bg-primary/[0.05] dark:hover:bg-primary/[0.03]"
@@ -1609,7 +1697,7 @@ function OrdersView({
                                 <Checkbox
                                   checked={isChecked}
                                   onCheckedChange={() => handleToggleOrderDetail(detail.orderDetailId!)}
-                                  disabled={isDifferentCustomer}
+                                  disabled={isDetailDifferentCustomer}
                                   className="rounded"
                                 />
                               </TableCell>
@@ -1636,16 +1724,11 @@ function OrdersView({
                               <TableCell className="text-[11px] text-stone-500 font-medium truncate max-w-[200px] md:max-w-[300px]">
                                 {detail.designName}
                               </TableCell>
-                              <TableCell className="text-right font-extrabold text-amber-600 dark:text-amber-400 text-xs tabular-nums w-40">
-                                {detail.proofingOrderCodes && detail.proofingOrderCodes.length > 0 ? (
-                                  <div className="flex flex-col items-end gap-1">
-                                    {detail.proofingOrderCodes.map((code) => (
-                                      <ProofingCodeWithProductions key={code} code={code} />
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <span className="text-stone-400 font-normal">—</span>
-                                )}
+                              <TableCell className="text-right text-xs font-semibold text-stone-600 dark:text-stone-400 w-40">
+                                <div className="flex flex-col items-end">
+                                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{detail.orderCode}</span>
+                                  <span className="text-[10px] text-muted-foreground">{detail.customerName}</span>
+                                </div>
                               </TableCell>
                               <TableCell className="text-right text-xs font-bold text-stone-800 dark:text-stone-200 tabular-nums w-24">
                                 {new Intl.NumberFormat('vi-VN').format(getRemainingQty(detail) ?? 0)}
@@ -1757,6 +1840,8 @@ interface DeliveryNotesViewProps {
   bulkLoading: boolean;
   handleBulkStartShipping: () => void;
   updatingIds: Set<number>;
+  onImageClick: (url: string, e: React.MouseEvent) => void;
+  allNotesForStats: unknown;
 }
 
 function DeliveryNotesView({
@@ -1780,7 +1865,10 @@ function DeliveryNotesView({
   bulkLoading,
   handleBulkStartShipping,
   updatingIds,
+  onImageClick,
+  allNotesForStats,
 }: DeliveryNotesViewProps) {
+  const [expandedNoteIds, setExpandedNoteIds] = useState<Set<number>>(new Set());
   const itemsPerPage = 10;
   const deliveryNotesDataTyped = deliveryNotesData as
     | {
@@ -1804,31 +1892,97 @@ function DeliveryNotesView({
       }
     | undefined;
 
-    // Sort delivery notes so items needing action float to top:
-    // 1) status === 'pending' (chờ giao hàng)
-    // 2) notes with no delivered lines (chưa giao)
-    // 3) others
-    const sortedDeliveryNotes = useMemo(() => {
-      const items = (deliveryNotesDataTyped?.items || []).slice();
-      const priority = (note: any) => {
-        if (!note) return 3;
-        if (String(note.status) === "pending") return 0;
-        const lines = note.lines || [];
-        const hasDelivered = lines.some((l: any) => l && l.status === "delivered");
-        if (!hasDelivered) return 1;
-        return 2;
-      };
+  // Local search fallback when backend doesn't support searching prepress code (Mã bài)
+  const { searchedNotes, isLocalSearch } = useMemo(() => {
+    const items = deliveryNotesDataTyped?.items || [];
+    const q = deliveryNoteSearchQuery.trim().toLowerCase();
+    if (!q) {
+      return { searchedNotes: items, isLocalSearch: false };
+    }
+    // If backend found items, trust them
+    if (items.length > 0) {
+      return { searchedNotes: items, isLocalSearch: false };
+    }
 
-      items.sort((a: any, b: any) => {
-        const pa = priority(a);
-        const pb = priority(b);
-        if (pa !== pb) return pa - pb;
-        const da = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const db = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return db - da; // newer first
+    // Backend matched 0 results, fall back to searching locally on allNotesForStats (up to 200 items)
+    const allItems = (allNotesForStats as any)?.items || [];
+    const filtered = allItems.filter((note: any) => {
+      // 1. Status Filter
+      if (deliveryNoteStatusFilter !== "all") {
+        const status = getDisplayStatus(note);
+        if (status !== deliveryNoteStatusFilter) return false;
+      }
+
+      // 2. Search query match
+      if (String(note.code || "").toLowerCase().includes(q)) return true;
+      if (String(note.recipientName || "").toLowerCase().includes(q)) return true;
+      if (String(note.recipientPhone || "").toLowerCase().includes(q)) return true;
+      if (note.orders?.some((o: any) => 
+        String(o.orderCode || "").toLowerCase().includes(q) ||
+        String(o.customerName || "").toLowerCase().includes(q)
+      )) return true;
+
+      return note.lines?.some((line: any) => {
+        if (String(line.designCode || "").toLowerCase().includes(q)) return true;
+        if (String(line.designName || "").toLowerCase().includes(q)) return true;
+        return line.proofingOrderCodes?.some((code: string) => 
+          String(code || "").toLowerCase().includes(q)
+        );
       });
-      return items;
-    }, [deliveryNotesDataTyped]);
+    });
+
+    return { searchedNotes: filtered, isLocalSearch: true };
+  }, [deliveryNotesDataTyped, allNotesForStats, deliveryNoteSearchQuery, deliveryNoteStatusFilter]);
+
+  // Sort delivery notes so items needing action float to top:
+  // 1) status === 'pending' (chờ giao hàng)
+  // 2) notes with no delivered lines (chưa giao)
+  // 3) others
+  const sortedDeliveryNotes = useMemo(() => {
+    const items = searchedNotes.slice();
+    const priority = (note: any) => {
+      if (!note) return 3;
+      if (String(note.status) === "pending") return 0;
+      const lines = note.lines || [];
+      const hasDelivered = lines.some((l: any) => l && l.status === "delivered");
+      if (!hasDelivered) return 1;
+      return 2;
+    };
+
+    items.sort((a: any, b: any) => {
+      const pa = priority(a);
+      const pb = priority(b);
+      if (pa !== pb) return pa - pb;
+      const da = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const db = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return db - da; // newer first
+    });
+    return items;
+  }, [searchedNotes]);
+
+  useEffect(() => {
+    if (deliveryNoteSearchQuery.trim()) {
+      const ids = searchedNotes
+        .map((n) => n.id)
+        .filter((id): id is number => typeof id === "number");
+      setExpandedNoteIds(new Set(ids));
+    } else {
+      setExpandedNoteIds(new Set());
+    }
+  }, [deliveryNoteSearchQuery, searchedNotes]);
+
+  const toggleNoteExpansion = (noteId: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedNoteIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(noteId)) {
+        next.delete(noteId);
+      } else {
+        next.add(noteId);
+      }
+      return next;
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -1927,11 +2081,15 @@ function DeliveryNotesView({
         <div>
           Hiển thị{" "}
           <span className="font-bold text-stone-850 dark:text-stone-200">
-            {deliveryNotesDataTyped?.items && deliveryNotesDataTyped.items.length > 0 
-              ? `${(deliveryNotePage - 1) * itemsPerPage + 1}–${Math.min(deliveryNotePage * itemsPerPage, deliveryNotesDataTyped.total || 0)}` 
-              : "0"}
+            {isLocalSearch ? (
+              searchedNotes.length > 0 ? `1–${searchedNotes.length}` : "0"
+            ) : (
+              deliveryNotesDataTyped?.items && deliveryNotesDataTyped.items.length > 0 
+                ? `${(deliveryNotePage - 1) * itemsPerPage + 1}–${Math.min(deliveryNotePage * itemsPerPage, deliveryNotesDataTyped.total || 0)}` 
+                : "0"
+            )}
           </span>{" "}
-          / <span className="font-bold text-stone-850 dark:text-stone-200">{deliveryNotesDataTyped?.total || 0}</span> phiếu
+          / <span className="font-bold text-stone-850 dark:text-stone-200">{isLocalSearch ? searchedNotes.length : (deliveryNotesDataTyped?.total || 0)}</span> phiếu
         </div>
         <div className="flex items-center gap-1">
           <span>Sắp xếp:</span>
@@ -1986,18 +2144,18 @@ function DeliveryNotesView({
               {deliveryNotesLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow
-                    key={i}
-                    className="border-stone-100 dark:border-stone-850"
-                  >
-                    {Array.from({ length: 7 }).map((_, j) => (
-                      <TableCell key={j} className={j === 0 ? "pl-6" : j === 6 ? "pr-6" : ""}>
-                        <Skeleton className="h-9 w-full rounded-md" />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : !deliveryNotesDataTyped?.items ||
-                sortedDeliveryNotes.length === 0 ? (
+                      key={i}
+                      className="border-stone-100 dark:border-stone-850"
+                    >
+                      {Array.from({ length: 7 }).map((_, j) => (
+                        <TableCell key={j} className={j === 0 ? "pl-6" : j === 6 ? "pr-6" : ""}>
+                          <Skeleton className="h-9 w-full rounded-md" />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : !searchedNotes ||
+                  sortedDeliveryNotes.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={7}
@@ -2022,115 +2180,209 @@ function DeliveryNotesView({
                   const isSelected = selectedNoteIds.has(deliveryNote.id as number);
 
                   const customers =
-                    deliveryNote.orders
-                      ?.map((order) => order.customerName)
-                      .filter((name): name is string => !!name) || [];
-                  const uniqueCustomers = Array.from(new Set(customers));
+                    ((deliveryNote as any).orders || [])
+                      .map((order: any) => order.customerName as string)
+                      .filter(Boolean);
+                  const uniqueCustomers = Array.from(new Set(customers)) as string[];
+
+                  const isExpanded = expandedNoteIds.has(deliveryNote.id as number);
 
                   return (
-                    <TableRow
-                      key={deliveryNote.id}
-                      className={`cursor-pointer transition-all duration-150 border-stone-100 dark:border-stone-850 hover:bg-stone-50/50 dark:hover:bg-stone-900/50 ${
-                        updatingIds.has(deliveryNote.id as number) ? "opacity-70" : ""
-                      }`}
-                      onClick={() => handleViewDeliveryNote(deliveryNote.id)}
-                    >
-                      <TableCell className="pl-6 w-12" onClick={(e) => {
-                        if (isSelectable) {
-                          e.stopPropagation();
-                          handleToggleSelectNote(deliveryNote.id);
-                        }
-                      }}>
-                        <div className="flex items-center justify-center w-6 h-6">
-                          {isSelectable ? (
-                            <div className="relative group/check">
-                              <div className={isSelected ? "block" : "hidden group-hover/check:block"}>
-                                <Checkbox
-                                  checked={isSelected}
-                                  onCheckedChange={() => handleToggleSelectNote(deliveryNote.id)}
-                                  onClick={(e) => e.stopPropagation()}
-                                />
+                    <React.Fragment key={deliveryNote.id}>
+                      <TableRow
+                        className={`cursor-pointer transition-all duration-150 border-stone-100 dark:border-stone-850 hover:bg-stone-50/50 dark:hover:bg-stone-900/50 ${
+                          updatingIds.has(deliveryNote.id as number) ? "opacity-70" : ""
+                        } ${isExpanded ? "bg-stone-50/40 dark:bg-stone-900/60" : ""}`}
+                        onClick={(e) => {
+                          if (deliveryNote.id) {
+                            toggleNoteExpansion(deliveryNote.id, e);
+                          }
+                        }}
+                      >
+                        <TableCell className="pl-6 w-12" onClick={(e) => {
+                          if (isSelectable) {
+                            e.stopPropagation();
+                            handleToggleSelectNote(deliveryNote.id);
+                          }
+                        }}>
+                          <div className="flex items-center justify-center w-6 h-6">
+                            {isSelectable ? (
+                              <div className="relative group/check">
+                                <div className={isSelected ? "block" : "hidden group-hover/check:block"}>
+                                  <Checkbox
+                                    checked={isSelected}
+                                    onCheckedChange={() => handleToggleSelectNote(deliveryNote.id)}
+                                    onClick={(e) => e.stopPropagation()}
+                                  />
+                                </div>
+                                <div className={isSelected ? "hidden" : "block group-hover/check:hidden"}>
+                                  <div className="w-5 h-5 rounded-full bg-green-50 border border-green-200 dark:bg-green-950/20 dark:border-green-900/50 flex items-center justify-center">
+                                    <Check className="h-3 w-3 text-green-600 dark:text-green-400" />
+                                  </div>
+                                </div>
                               </div>
-                              <div className={isSelected ? "hidden" : "block group-hover/check:hidden"}>
+                            ) : (
+                              ["failed", "failed_reschedule", "cancelled", "returned"].includes(status || "") ? (
+                                <div className="w-5 h-5 rounded-full bg-red-50 border border-red-200 dark:bg-red-950/20 dark:border-red-900/50 flex items-center justify-center">
+                                  <X className="h-3 w-3 text-red-600 dark:text-red-400" />
+                                </div>
+                              ) : (
                                 <div className="w-5 h-5 rounded-full bg-green-50 border border-green-200 dark:bg-green-950/20 dark:border-green-900/50 flex items-center justify-center">
                                   <Check className="h-3 w-3 text-green-600 dark:text-green-400" />
                                 </div>
-                              </div>
+                              )
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className="text-stone-400 hover:text-stone-600 shrink-0">
+                              {isExpanded ? (
+                                <ChevronDown className="h-4 w-4 text-primary" />
+                              ) : (
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                              )}
                             </div>
+                            <div className="font-bold font-mono text-sm text-stone-900 dark:text-stone-50">
+                              {deliveryNote.code || `#${deliveryNote.id}`}
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="flex items-center gap-1.5 text-sm text-stone-600 dark:text-stone-300">
+                            <Package className="h-4 w-4 text-stone-400" />
+                            x{deliveryNote.lines?.length ?? 0} mã hàng
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className="flex items-center gap-1.5 text-sm text-stone-700 dark:text-stone-300 font-medium">
+                            <User className="h-4 w-4 text-stone-400" />
+                            {uniqueCustomers[0] || "—"}
+                            {uniqueCustomers.length > 1 && (
+                              <span className="text-xs text-stone-400 font-normal">
+                                (+{uniqueCustomers.length - 1} khách khác)
+                              </span>
+                            )}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {updatingIds.has(deliveryNote.id as number) ? (
+                            <Loader2 className="h-5 w-5 animate-spin text-primary mx-auto" />
                           ) : (
-                            ["failed", "failed_reschedule", "cancelled", "returned"].includes(status || "") ? (
-                              <div className="w-5 h-5 rounded-full bg-red-50 border border-red-200 dark:bg-red-950/20 dark:border-red-900/50 flex items-center justify-center">
-                                <X className="h-3 w-3 text-red-600 dark:text-red-400" />
-                              </div>
-                            ) : (
-                              <div className="w-5 h-5 rounded-full bg-green-50 border border-green-200 dark:bg-green-950/20 dark:border-green-900/50 flex items-center justify-center">
-                                <Check className="h-3 w-3 text-green-600 dark:text-green-400" />
-                              </div>
-                            )
+                            <StatusBadge
+                              status={status || null}
+                              label={getDeliveryNoteStatusLabel(status)}
+                            />
                           )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-bold font-mono text-sm text-stone-900 dark:text-stone-50">
-                          {deliveryNote.code || `#${deliveryNote.id}`}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="flex items-center gap-1.5 text-sm text-stone-600 dark:text-stone-300">
-                          <Package className="h-4 w-4 text-stone-400" />
-                          x{deliveryNote.lines?.length ?? 0} mã hàng
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <span className="flex items-center gap-1.5 text-sm text-stone-700 dark:text-stone-300 font-medium">
-                          <User className="h-4 w-4 text-stone-400" />
-                          {uniqueCustomers[0] || "—"}
-                          {uniqueCustomers.length > 1 && (
-                            <span className="text-xs text-stone-400 font-normal">
-                              (+{uniqueCustomers.length - 1} khách khác)
-                            </span>
-                          )}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {updatingIds.has(deliveryNote.id as number) ? (
-                          <Loader2 className="h-5 w-5 animate-spin text-primary mx-auto" />
-                        ) : (
-                          <StatusBadge
-                            status={status || null}
-                            label={getDeliveryNoteStatusLabel(status)}
-                          />
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <span className="inline-flex items-center gap-1.5 text-sm text-stone-600 dark:text-stone-300">
-                          <Calendar className="h-3.5 w-3.5 text-stone-400" />
-                          {formatDate(deliveryNote.createdAt)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right pr-6 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-3">
-                          {deliveryNote.status === "failed" && (
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <span className="inline-flex items-center gap-1.5 text-sm text-stone-600 dark:text-stone-300">
+                            <Calendar className="h-3.5 w-3.5 text-stone-400" />
+                            {formatDate(deliveryNote.createdAt)}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right pr-6 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-3">
+                            {deliveryNote.status === "failed" && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 text-xs gap-1 border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-bold rounded-lg"
+                                onClick={() => handleOpenRecreate(deliveryNote.id!)}
+                              >
+                                <RefreshCw className="h-3 w-3" />
+                                Giao lại
+                              </Button>
+                            )}
                             <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-8 text-xs gap-1 border-primary/20 bg-primary/5 hover:bg-primary/10 text-primary font-bold rounded-lg"
-                              onClick={() => handleOpenRecreate(deliveryNote.id!)}
+                              variant="link"
+                              className="text-xs font-bold text-primary p-0 hover:no-underline"
+                              onClick={() => handleViewDeliveryNote(deliveryNote.id)}
                             >
-                              <RefreshCw className="h-3 w-3" />
-                              Giao lại
+                              Chi tiết &gt;
                             </Button>
-                          )}
-                          <Button
-                            variant="link"
-                            className="text-xs font-bold text-primary p-0 hover:no-underline"
-                            onClick={() => handleViewDeliveryNote(deliveryNote.id)}
-                          >
-                            Chi tiết &gt;
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                      {isExpanded && (
+                        <TableRow className="bg-stone-50/10 dark:bg-stone-900/30 border-t-0 hover:bg-transparent">
+                          <TableCell colSpan={7} className="p-0">
+                            <div className="px-6 py-4 border-t border-b border-stone-150 dark:border-stone-800 bg-stone-50/20 dark:bg-stone-900/40 overflow-auto">
+                              <Table>
+                                <TableHeader className="bg-stone-100/30 dark:bg-stone-850/30 border-b border-stone-200 dark:border-stone-800">
+                                  <TableRow className="hover:bg-transparent border-stone-200 dark:border-stone-800">
+                                    <TableHead className="w-12 pl-4">Hình</TableHead>
+                                    <TableHead className="w-[120px] font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Mã thiết kế</TableHead>
+                                    <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Tên sản phẩm</TableHead>
+                                    <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Mã bài</TableHead>
+                                    <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-40">Đơn hàng</TableHead>
+                                    <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-24">SL giao</TableHead>
+                                    <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider pr-4 w-32">Thành tiền</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {deliveryNote.lines && deliveryNote.lines.length > 0 ? (
+                                    deliveryNote.lines.map((line: any, idx: number) => (
+                                      <TableRow
+                                        key={line.id || idx}
+                                        className="border-stone-100 dark:border-stone-850 hover:bg-stone-50/30 dark:hover:bg-stone-950/20"
+                                      >
+                                        <TableCell className="pl-4 w-12" onClick={(e) => e.stopPropagation()}>
+                                          <div className="h-8 w-8 rounded-lg bg-stone-100 dark:bg-stone-800 border flex items-center justify-center overflow-hidden relative">
+                                            {line.designImageUrl ? (
+                                              <img
+                                                src={line.designImageUrl}
+                                                alt={line.designCode || "Thiết kế"}
+                                                className="h-full w-full object-cover cursor-zoom-in"
+                                                onClick={(e) => onImageClick(line.designImageUrl!, e)}
+                                              />
+                                            ) : (
+                                              <ImageIcon className="h-4 w-4 text-stone-400" />
+                                            )}
+                                          </div>
+                                        </TableCell>
+                                        <TableCell className="w-[120px] font-mono font-black text-[11px] uppercase text-stone-800 dark:text-stone-200">
+                                          {line.designCode}
+                                        </TableCell>
+                                        <TableCell className="text-[11px] text-stone-500 font-medium truncate max-w-[200px] md:max-w-[300px]">
+                                          {line.designName}
+                                        </TableCell>
+                                        <TableCell className="text-[11px] font-medium text-stone-700 dark:text-stone-300">
+                                          {line.proofingOrderCodes && line.proofingOrderCodes.length > 0 ? (
+                                            <div className="flex flex-wrap gap-1">
+                                              {line.proofingOrderCodes.map((code: string) => (
+                                                <ProofingCodeWithProductions key={code} code={code} />
+                                              ))}
+                                            </div>
+                                          ) : (
+                                            <span className="text-muted-foreground">—</span>
+                                          )}
+                                        </TableCell>
+                                        <TableCell className="text-right text-xs font-semibold text-stone-600 dark:text-stone-400 w-40">
+                                          <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{line.orderCode}</span>
+                                        </TableCell>
+                                        <TableCell className="text-right text-xs font-bold text-stone-850 dark:text-stone-200 tabular-nums w-24">
+                                          {new Intl.NumberFormat('vi-VN').format(line.deliveryQty ?? 0)}
+                                        </TableCell>
+                                        <TableCell className="text-right font-extrabold text-stone-800 dark:text-stone-200 text-xs pr-4 w-32 tabular-nums">
+                                          {formatCurrency(line.lineAmount ?? 0)}
+                                        </TableCell>
+                                      </TableRow>
+                                    ))
+                                  ) : (
+                                    <TableRow>
+                                      <TableCell colSpan={7} className="text-center py-4 text-stone-400 text-xs italic">
+                                        Không có chi tiết sản phẩm nào
+                                      </TableCell>
+                                    </TableRow>
+                                  )}
+                                </TableBody>
+                              </Table>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </React.Fragment>
                   );
                 })
               )}
@@ -2141,6 +2393,7 @@ function DeliveryNotesView({
 
       {/* Pagination */}
       {!deliveryNotesLoading &&
+        !isLocalSearch &&
         deliveryNotesDataTyped?.items &&
         deliveryNotesDataTyped.items.length > 0 && (
           <>

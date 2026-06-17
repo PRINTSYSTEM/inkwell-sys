@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { Check, ChevronsUpDown, Loader2, Package, Search, Plus, Trash2, Calendar, FileText, User, Image as ImageIcon, X } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, Package, Search, Plus, Trash2, Calendar, FileText, User, Image as ImageIcon, X, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import { apiRequest, API_SUFFIX } from "@/apis";
@@ -59,6 +59,7 @@ import {
   useCreateCustomerAddress,
   useCreateOrderFromReadyDesigns,
   useDesign,
+  useUpdateReadyDesign,
 } from "@/hooks";
 import type { ReadyDesignResponse } from "@/Schema";
 
@@ -240,13 +241,21 @@ export default function ReadyDesignListPage() {
   const totalCount = readyDesignsData?.total || 0;
   const totalPages = Math.ceil(totalCount / itemsPerPage) || 1;
 
+  const sortedDesigns = useMemo(() => {
+    if (!designs) return [];
+    return [...designs].sort((a, b) => {
+      const uA = a.isUrgent ? 1 : 0;
+      const uB = b.isUrgent ? 1 : 0;
+      return uB - uA; // Urgent first
+    });
+  }, [designs]);
 
   // Fetch customer addresses for the selected design's customer
   const targetCustomerIdForAddresses = useMemo(() => {
     if (selectedIds.length === 0) return null;
-    const firstSelected = designs.find((d) => d.id === selectedIds[0]);
+    const firstSelected = sortedDesigns.find((d) => d.id === selectedIds[0]);
     return firstSelected?.customerId || null;
-  }, [selectedIds, designs]);
+  }, [selectedIds, sortedDesigns]);
 
   const { data: addresses = [], isLoading: loadingAddresses } = useCustomerAddresses(
     targetCustomerIdForAddresses,
@@ -286,13 +295,18 @@ export default function ReadyDesignListPage() {
     setSelectedIds([]);
   }, [currentPage, selectedCustomer]);
 
+  // Refetch designs every time the page is entered/mounted
+  useEffect(() => {
+    refetchDesigns();
+  }, [refetchDesigns]);
+
   // Determine if a row should be disabled for selection
   // Rules: Only allow selecting designs from the SAME customer
   const currentCustomerId = useMemo(() => {
     if (selectedIds.length === 0) return null;
-    const firstSelected = designs.find((d) => d.id === selectedIds[0]);
+    const firstSelected = sortedDesigns.find((d) => d.id === selectedIds[0]);
     return firstSelected?.customerId || null;
-  }, [selectedIds, designs]);
+  }, [selectedIds, sortedDesigns]);
 
   const isRowSelectionDisabled = (design: ReadyDesignResponse) => {
     if (currentCustomerId === null) return false;
@@ -321,11 +335,11 @@ export default function ReadyDesignListPage() {
     }
 
     // Select all items belonging to the same customer as the first item
-    if (designs.length === 0) return;
+    if (sortedDesigns.length === 0) return;
 
     // Use the first item's customerId as the rule
-    const targetCustId = designs[0].customerId;
-    const validIdsOnPage = designs
+    const targetCustId = sortedDesigns[0].customerId;
+    const validIdsOnPage = sortedDesigns
       .filter((d) => d.customerId === targetCustId && d.id !== undefined)
       .map((d) => d.id as number);
 
@@ -333,26 +347,53 @@ export default function ReadyDesignListPage() {
   };
 
   const isAllSelected = useMemo(() => {
-    if (designs.length === 0) return false;
-    const targetCustId = currentCustomerId || designs[0].customerId;
-    const validPageIds = designs
+    if (sortedDesigns.length === 0) return false;
+    const targetCustId = currentCustomerId || sortedDesigns[0].customerId;
+    const validPageIds = sortedDesigns
       .filter((d) => d.customerId === targetCustId && d.id !== undefined)
       .map((d) => d.id as number);
     
     return validPageIds.length > 0 && validPageIds.every((id) => selectedIds.includes(id));
-  }, [designs, selectedIds, currentCustomerId]);
+  }, [sortedDesigns, selectedIds, currentCustomerId]);
 
   const selectedDesignsDetails = useMemo(() => {
-    return designs.filter((d) => d.id !== undefined && selectedIds.includes(d.id));
-  }, [designs, selectedIds]);
+    return sortedDesigns.filter((d) => d.id !== undefined && selectedIds.includes(d.id));
+  }, [sortedDesigns, selectedIds]);
+
+  // Update Ready Design Mutation (for isUrgent flag)
+  const { mutate: updateReadyDesign } = useUpdateReadyDesign();
+  const [updatingUrgentId, setUpdatingUrgentId] = useState<number | null>(null);
+
+  const handleToggleUrgent = async (design: ReadyDesignResponse) => {
+    if (!design.id) return;
+    setUpdatingUrgentId(design.id);
+    try {
+      await updateReadyDesign({
+        id: design.id,
+        data: {
+          isUrgent: !design.isUrgent,
+        },
+      });
+    } catch (err) {
+      // Error handled by mutation hook
+    } finally {
+      setUpdatingUrgentId(null);
+    }
+  };
 
   const handleOpenOrderDialog = () => {
     if (selectedIds.length === 0) {
       toast.error("Vui lòng chọn ít nhất một thiết kế");
       return;
     }
-    // Set default values
-    setDeliveryDate("");
+    // Set default values (Default to 1 week in the future)
+    const nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    const yyyy = nextWeek.getFullYear();
+    const mm = String(nextWeek.getMonth() + 1).padStart(2, '0');
+    const dd = String(nextWeek.getDate()).padStart(2, '0');
+    const defaultDateString = `${yyyy}-${mm}-${dd}`;
+    setDeliveryDate(defaultDateString);
     setSelectedAddressId("");
     setNotes("");
     setIsAddingNewAddress(false);
@@ -421,14 +462,27 @@ export default function ReadyDesignListPage() {
           </p>
         </div>
 
-        {selectedIds.length > 0 && (
+        <div className="flex items-center gap-2">
           <Button
-            onClick={handleOpenOrderDialog}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg hover:shadow-primary/20 animate-in fade-in duration-300"
+            variant="outline"
+            size="icon"
+            onClick={() => refetchDesigns()}
+            disabled={loadingDesigns}
+            className="h-9 w-9 border-stone-200 dark:border-zinc-850 rounded-lg animate-none shrink-0 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            title="Làm mới dữ liệu"
           >
-            Lên đơn hàng ({selectedIds.length})
+            <RefreshCw className={`h-4 w-4 ${loadingDesigns ? "animate-spin" : ""}`} />
           </Button>
-        )}
+
+          {selectedIds.length > 0 && (
+            <Button
+              onClick={handleOpenOrderDialog}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-lg hover:shadow-primary/20 animate-in fade-in duration-300"
+            >
+              Lên đơn hàng ({selectedIds.length})
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Filters */}
@@ -590,13 +644,7 @@ export default function ReadyDesignListPage() {
             <table className="w-full caption-bottom text-sm">
               <TableHeader className="sticky top-0 bg-background z-10 border-b">
                 <TableRow>
-                  <TableHead className="w-[50px] text-center">
-                    <Checkbox
-                      checked={isAllSelected}
-                      onCheckedChange={handleSelectAll}
-                      disabled={designs.length === 0}
-                    />
-                  </TableHead>
+                  <TableHead className="w-[50px] text-center" />
                   <TableHead className="h-9 text-sm font-bold w-[75px] text-center">Hình ảnh</TableHead>
                   <TableHead className="h-9 text-sm font-bold">Mã thiết kế</TableHead>
                   <TableHead className="h-9 text-sm font-bold">Tên thiết kế</TableHead>
@@ -604,24 +652,32 @@ export default function ReadyDesignListPage() {
                   <TableHead className="h-9 text-sm font-bold">Số lượng sẵn sàng</TableHead>
                   <TableHead className="h-9 text-sm font-bold">Kích thước</TableHead>
                   <TableHead className="h-9 text-sm font-bold">Chất liệu</TableHead>
+                  <TableHead className="h-9 text-sm font-bold">Ghi chú</TableHead>
+                  <TableHead className="h-9 text-sm font-bold text-center w-[120px]">Giao gấp</TableHead>
                   <TableHead className="h-9 text-sm font-bold">Ngày cập nhật</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loadingDesigns ? (
-                  <TableSkeleton cols={9} rows={8} rowHeight="h-12" />
-                ) : designs.length > 0 ? (
-                  designs.map((design) => {
+                  <TableSkeleton cols={11} rows={8} rowHeight="h-12" />
+                ) : sortedDesigns.length > 0 ? (
+                  sortedDesigns.map((design) => {
                     const isSelected = selectedIds.includes(design.id!);
                     const isDisabled = isRowSelectionDisabled(design);
                     return (
                       <TableRow
                         key={design.id}
-                        className={`hover:bg-muted/50 h-12 transition-colors ${
-                          isSelected ? "bg-primary/5 hover:bg-primary/10" : ""
+                        className={`h-12 transition-all duration-150 relative ${
+                          design.isUrgent 
+                            ? isSelected 
+                              ? "bg-red-100/60 hover:bg-red-200/60 dark:bg-red-900/30 dark:hover:bg-red-800/30 text-red-755 dark:text-red-355" 
+                              : "bg-red-50/50 hover:bg-red-100/50 dark:bg-red-950/20 dark:hover:bg-red-900/20 text-red-700 dark:text-red-300"
+                            : isSelected 
+                              ? "bg-primary/5 hover:bg-primary/10" 
+                              : "hover:bg-muted/50"
                         } ${isDisabled ? "opacity-45" : ""}`}
                       >
-                        <TableCell className="text-center py-2">
+                        <TableCell className={`text-center py-2 ${design.isUrgent ? "border-l-4 border-l-red-500 dark:border-l-red-650" : ""}`}>
                           <Checkbox
                             checked={isSelected}
                             onCheckedChange={() => handleSelectRow(design.id!, design)}
@@ -634,22 +690,39 @@ export default function ReadyDesignListPage() {
                         <TableCell className="py-2 font-mono font-semibold text-sm">
                           {design.designCode}
                         </TableCell>
-                        <TableCell className="py-2 text-sm font-semibold truncate max-w-[200px]" title={design.designName || ""}>
+                        <TableCell className="py-2 text-sm font-semibold break-words max-w-[240px]" title={design.designName || ""}>
                           {design.designName}
                         </TableCell>
-                        <TableCell className="py-2 text-sm font-medium">
+                        <TableCell className="py-2 text-sm font-medium break-words max-w-[200px]">
                           {design.customerName}
                         </TableCell>
-                        <TableCell className="py-2 text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                        <TableCell className={`py-2 text-sm font-bold ${design.isUrgent ? "text-red-700 dark:text-red-300" : "text-indigo-600 dark:text-indigo-400"}`}>
                           {design.quantity?.toLocaleString("vi-VN")}
                         </TableCell>
-                        <TableCell className="py-2 font-mono text-xs text-muted-foreground">
+                        <TableCell className={`py-2 font-mono text-xs ${design.isUrgent ? "text-red-600/80 dark:text-red-400/80" : "text-muted-foreground"}`}>
                           {design.dimensions || "—"}
                         </TableCell>
-                        <TableCell className="py-2 text-xs font-medium text-muted-foreground truncate max-w-[150px]" title={design.materialTypeName || ""}>
+                        <TableCell className={`py-2 text-xs font-medium truncate max-w-[150px] ${design.isUrgent ? "text-red-600/80 dark:text-red-400/80" : "text-muted-foreground"}`} title={design.materialTypeName || ""}>
                           {design.materialTypeName}
                         </TableCell>
-                        <TableCell className="py-2 text-xs text-muted-foreground">
+                        <TableCell className={`py-2 text-xs break-words max-w-[280px] ${design.isUrgent ? "text-red-600/80 dark:text-red-400/80" : "text-muted-foreground"}`} title={design.notes || ""}>
+                          {design.notes || "—"}
+                        </TableCell>
+                        <TableCell className="py-2 text-center" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-center min-h-[32px]">
+                            {updatingUrgentId === design.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin text-red-550 dark:text-red-400" />
+                            ) : (
+                              <Checkbox
+                                id={`urgent-${design.id}`}
+                                checked={design.isUrgent || false}
+                                onCheckedChange={() => handleToggleUrgent(design)}
+                                className="h-5 w-5 border-red-500/70 data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600 data-[state=checked]:text-white transition-all rounded shadow-sm cursor-pointer"
+                              />
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className={`py-2 text-xs ${design.isUrgent ? "text-red-650/80 dark:text-red-350/80" : "text-muted-foreground"}`}>
                           {design.updatedAt
                             ? new Date(design.updatedAt).toLocaleDateString("vi-VN")
                             : "—"}
@@ -659,7 +732,7 @@ export default function ReadyDesignListPage() {
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-12">
+                    <TableCell colSpan={11} className="text-center py-12">
                       <div className="flex flex-col items-center justify-center text-muted-foreground">
                         <Package className="h-10 w-10 mb-2 opacity-50" />
                         <p className="text-sm">Không có thiết kế nào sẵn sàng trong kho</p>
@@ -729,12 +802,51 @@ export default function ReadyDesignListPage() {
             {/* Selected designs summary */}
             <div className="space-y-2">
               <Label className="font-semibold text-foreground">Các thiết kế đã chọn ({selectedDesignsDetails.length})</Label>
-              <div className="bg-muted/40 border rounded-lg p-2.5 space-y-1.5 max-h-[140px] overflow-y-auto">
+              <div className="bg-muted/40 border rounded-lg p-2.5 space-y-2.5 max-h-[200px] overflow-y-auto">
                 {selectedDesignsDetails.map((item) => (
-                  <div key={item.id} className="flex justify-between items-center text-xs border-b border-border/40 pb-1.5 last:border-0 last:pb-0">
-                    <span className="font-mono font-bold text-muted-foreground">{item.designCode}</span>
-                    <span className="font-medium truncate max-w-[200px]">{item.designName}</span>
-                    <span className="font-semibold text-indigo-600 dark:text-indigo-400">SL: {item.quantity?.toLocaleString("vi-VN")}</span>
+                  <div key={item.id} className="flex flex-col text-xs border-b border-border/40 pb-2.5 last:border-0 last:pb-0 last:border-b-0 gap-1.5">
+                    {/* Top row: Code and Quantity */}
+                    <div className="flex justify-between items-center">
+                      <span className="font-mono font-bold text-muted-foreground">{item.designCode}</span>
+                      <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+                        SL: {item.quantity?.toLocaleString("vi-VN")}
+                      </span>
+                    </div>
+                    {/* Bottom row: Name and Urgent Checkbox */}
+                    <div className="flex justify-between items-start gap-3">
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="font-medium break-words text-foreground/80" title={item.designName || ""}>
+                          {item.designName}
+                        </span>
+                        {item.notes && (
+                          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold break-words mt-0.5" title={item.notes}>
+                            Ghi chú: {item.notes}
+                          </span>
+                        )}
+                      </div>
+                      
+                      <div className="flex items-center gap-1.5 shrink-0 select-none bg-red-50/50 dark:bg-red-950/10 border border-red-200/40 dark:border-red-900/30 px-2 py-0.5 rounded-md">
+                        {updatingUrgentId === item.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-red-550 dark:text-red-400" />
+                        ) : (
+                          <Checkbox
+                            id={`dialog-urgent-${item.id}`}
+                            checked={item.isUrgent || false}
+                            onCheckedChange={() => handleToggleUrgent(item)}
+                            className="h-4 w-4 border-red-500/70 data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600 rounded cursor-pointer"
+                          />
+                        )}
+                        <label 
+                          htmlFor={`dialog-urgent-${item.id}`}
+                          className="text-[11px] font-semibold text-red-700 dark:text-red-300 cursor-pointer flex items-center gap-1"
+                        >
+                          Giao gấp
+                          {item.isUrgent && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-ping" />
+                          )}
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>

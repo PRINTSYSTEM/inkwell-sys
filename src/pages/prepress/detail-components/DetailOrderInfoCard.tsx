@@ -57,6 +57,7 @@ interface DetailOrderInfoCardProps {
   setImageViewerOpen: (val: boolean) => void;
   setViewingImageUrl: (val: string | null) => void;
   onDeleteImage?: (imageId: number) => void;
+  isProofer?: boolean;
 }
 
 export function DetailOrderInfoCard({
@@ -83,6 +84,7 @@ export function DetailOrderInfoCard({
   setImageViewerOpen,
   setViewingImageUrl,
   onDeleteImage,
+  isProofer = true,
 }: DetailOrderInfoCardProps) {
   if (!order) return null;
 
@@ -128,7 +130,7 @@ export function DetailOrderInfoCard({
           <FileText className="h-3.5 w-3.5 shrink-0" />
           Thông tin bình bài
         </CardTitle>
-        {order.status !== "completed" && editingField !== "all" && (
+        {order.status !== "completed" && editingField !== "all" && isProofer && (
           <Button
             variant="ghost"
             size="icon"
@@ -190,7 +192,7 @@ export function DetailOrderInfoCard({
                     </div>
 
                     {/* Delete Icon (Top-Right, Hoverable) */}
-                    {order.status !== "completed" && onDeleteImage && (
+                    {order.status !== "completed" && onDeleteImage && isProofer && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -224,6 +226,7 @@ export function DetailOrderInfoCard({
               onClick={() =>
                 order.status !== "completed" &&
                 editingField !== "all" &&
+                isProofer &&
                 handleStartEditField("totalQuantity")
               }
             >
@@ -289,6 +292,7 @@ export function DetailOrderInfoCard({
               onClick={() =>
                 order.status !== "completed" &&
                 editingField !== "all" &&
+                isProofer &&
                 handleStartEditField("paperSize")
               }
             >
@@ -351,7 +355,7 @@ export function DetailOrderInfoCard({
                         order.customPaperSize ||
                         "Chưa chọn"} cm
                     </p>
-                    {order.status !== "completed" && (
+                    {order.status !== "completed" && isProofer && (
                       <Edit className="h-2.5 w-2.5 text-muted-foreground opacity-0 group-hover:opacity-100" />
                     )}
                   </>
@@ -479,7 +483,7 @@ export function DetailOrderInfoCard({
               <span className="text-[9px] font-bold uppercase tracking-widest text-amber-800/60 font-sans">
                 Ghi chú
               </span>
-              {order.status !== "completed" && editingField !== "notes" && editingField !== "all" && (
+              {order.status !== "completed" && editingField !== "notes" && editingField !== "all" && isProofer && (
                 <button
                   onClick={() => handleStartEditField("notes")}
                   className="text-amber-800/40 hover:text-amber-800 transition-colors"
@@ -564,7 +568,7 @@ export function DetailOrderInfoCard({
                 Tải hình ảnh bình bài
               </Button>
             ) : (
-              order.status !== "completed" && (
+              order.status !== "completed" && isProofer && (
                 <Button
                   variant="outline"
                   size="sm"

@@ -123,6 +123,7 @@ export const DeliveryNoteLineResponseSchema =
     customerAddress: CustomerAddressSchema.nullable().optional(),
     note: z.string().nullable().optional(),
     designImageUrl: z.string().nullable().optional(),
+    proofingOrderCodes: z.array(z.string()).nullable().optional(),
   }).passthrough();
 export type DeliveryNoteLineResponse = z.infer<
   typeof DeliveryNoteLineResponseSchema

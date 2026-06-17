@@ -38,6 +38,7 @@ interface DetailDieExportCardProps {
   setIsDieListDialogOpen: (val: boolean) => void;
   setImageViewerOpen: (val: boolean) => void;
   setViewingImageUrl: (val: string | null) => void;
+  isProofer?: boolean;
 }
 
 export function DetailDieExportCard({
@@ -51,6 +52,7 @@ export function DetailDieExportCard({
   setIsDieListDialogOpen,
   setImageViewerOpen,
   setViewingImageUrl,
+  isProofer = true,
 }: DetailDieExportCardProps) {
   const [showDebug, setShowDebug] = useState(false);
   if (!order) return null;
@@ -93,7 +95,7 @@ export function DetailDieExportCard({
                   Bài này có bế, cần xuất khuôn
                 </p>
               </div>
-              {order.status !== "completed" && (
+              {order.status !== "completed" && isProofer && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -127,7 +129,7 @@ export function DetailDieExportCard({
                       </p>
                     </div>
 
-                    {order.status !== "completed" && (
+                    {order.status !== "completed" && isProofer && (
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Button
                           variant="ghost"
@@ -230,19 +232,21 @@ export function DetailDieExportCard({
                     </div>
                   )}
 
-                  <div className="flex flex-wrap items-center justify-center gap-2 pt-2 mt-2 border-t border-muted-foreground/10">
-                    {order.status !== "completed" && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 gap-1.5 text-amber-600 bg-amber-50 hover:bg-amber-100/50 text-[11px] px-3 font-semibold rounded-md border border-amber-200 flex-1"
-                        onClick={() => handleOpenReplaceDieDialog(dieExport)}
-                      >
-                        <RefreshCcw className="h-3 w-3" />
-                        Xuất lại
-                      </Button>
-                    )}
-                  </div>
+                  {isProofer && (
+                    <div className="flex flex-wrap items-center justify-center gap-2 pt-2 mt-2 border-t border-muted-foreground/10">
+                      {order.status !== "completed" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 gap-1.5 text-amber-600 bg-amber-50 hover:bg-amber-100/50 text-[11px] px-3 font-semibold rounded-md border border-amber-200 flex-1"
+                          onClick={() => handleOpenReplaceDieDialog(dieExport)}
+                        >
+                          <RefreshCcw className="h-3 w-3" />
+                          Xuất lại
+                        </Button>
+                      )}
+                    </div>
+                  )}
 
                   {index < dieExports.length - 1 && (
                     <div className="h-px bg-muted-foreground/10 my-4" />
@@ -251,19 +255,21 @@ export function DetailDieExportCard({
               ))}
 
               {/* Centered Action Buttons at bottom */}
-              <div className="flex items-center justify-center gap-2 pt-3 border-t border-muted-foreground/5 mt-auto flex-wrap">
-                {order.status !== "completed" && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 gap-1.5 text-[11px] font-semibold px-3 flex-1 border-primary/20 hover:bg-primary/5 text-primary rounded-md whitespace-nowrap"
-                    onClick={() => setIsDieExportDialogOpen(true)}
-                  >
-                    <Plus className="h-3 w-3" />
-                    Thêm khuôn
-                  </Button>
-                )}
-              </div>
+              {isProofer && (
+                <div className="flex items-center justify-center gap-2 pt-3 border-t border-muted-foreground/5 mt-auto flex-wrap">
+                  {order.status !== "completed" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 gap-1.5 text-[11px] font-semibold px-3 flex-1 border-primary/20 hover:bg-primary/5 text-primary rounded-md whitespace-nowrap"
+                      onClick={() => setIsDieExportDialogOpen(true)}
+                    >
+                      <Plus className="h-3 w-3" />
+                      Thêm khuôn
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </CardContent>

@@ -101,7 +101,9 @@ import { DieListDialog } from "@/components/dies/DieListDialog";
 import { InventoryViewDialog } from "@/components/inventory/InventoryViewDialog";
 
 import type { DesignItem } from "@/types/proofing";
-import { useMaterialTypeList } from "@/hooks";
+import { useMaterialTypeList, useAuth } from "@/hooks";
+import { ROLE } from "@/constants";
+import type { UserRole } from "@/Schema";
 
 type ProofingOrder =
   import("@/Schema/proofing-order.schema").ProofingOrderResponse;
@@ -118,6 +120,9 @@ function useHasActiveProofingFilters(args: {
 
 export default function PrepressList() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const role = user?.role as UserRole | undefined;
+  const isProofer = role === ROLE.ADMIN || role === ROLE.MANAGER || role === ROLE.PROOFER;
 
   // ===== Mode: Orders list (default) vs Waiting designs (when filters active) =====
   const [selectedDesignTypes, setSelectedDesignTypes] = useState<number[]>([]);
@@ -659,33 +664,35 @@ export default function PrepressList() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2">
-                {isConfiguring ? (
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    className="gap-2"
-                    onClick={handleCancelCreateOrder}
-                  >
-                    <X className="h-4 w-4" />
-                    Hủy Tạo lệnh
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    className="gap-2"
-                    disabled={isCreating}
-                    onClick={() => {
-                      setIsConfiguring(true);
-                      setProofingSheetQuantity(0);
-                      setPaperSizeId("custom");
-                      setCustomPaperSize("");
-                      setConfigNotes("");
-                    }}
-                  >
-                    <Plus className="h-4 w-4" />
-                    Tạo lệnh mới
-                  </Button>
+               <div className="flex items-center gap-2">
+                {isProofer && (
+                  isConfiguring ? (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="gap-2"
+                      onClick={handleCancelCreateOrder}
+                    >
+                      <X className="h-4 w-4" />
+                      Hủy Tạo lệnh
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      className="gap-2"
+                      disabled={isCreating}
+                      onClick={() => {
+                        setIsConfiguring(true);
+                        setProofingSheetQuantity(0);
+                        setPaperSizeId("custom");
+                        setCustomPaperSize("");
+                        setConfigNotes("");
+                      }}
+                    >
+                      <Plus className="h-4 w-4" />
+                      Tạo lệnh mới
+                    </Button>
+                  )
                 )}
               </div>
             </div>
@@ -788,10 +795,10 @@ export default function PrepressList() {
                         onNavigate={(id) => navigate(`/proofing/${id}${debouncedDesignCode.trim() ? `?search=${encodeURIComponent(debouncedDesignCode.trim())}` : ""}`)}
                         ordersTableRef={ordersTableRef}
                         // Actions for shared DesignTable
-                        onReject={openRejectDialog}
+                        onReject={isProofer ? openRejectDialog : undefined}
                         isRejecting={isRejecting}
                         onFindDie={handleFindDie}
-                        isSelectionEnabled={isConfiguring}
+                        isSelectionEnabled={isProofer && isConfiguring}
                         // Designs Pagination props
                         designsPage={designsPage}
                         setDesignsPage={setDesignsPage}

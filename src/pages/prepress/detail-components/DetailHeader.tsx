@@ -19,7 +19,7 @@ interface DetailHeaderProps {
   onStatusChangeClick: () => void;
   onOldStatusChangeClick: () => void;
   onUploadClick: () => void;
-  onCancelClick?: () => void; // Added onCancelClick
+  onCancelClick?: () => void;
   canMarkCompleted: boolean;
   completionMissingItems: string[];
   nextStatusInfo: {
@@ -27,6 +27,7 @@ interface DetailHeaderProps {
     buttonLabel: string;
     confirmMessage: string;
   } | null;
+  isProofer?: boolean;
 }
 
 export function DetailHeader({
@@ -38,10 +39,11 @@ export function DetailHeader({
   onStatusChangeClick,
   onOldStatusChangeClick,
   onUploadClick,
-  onCancelClick, // Added onCancelClick
+  onCancelClick,
   canMarkCompleted,
   completionMissingItems,
   nextStatusInfo,
+  isProofer = true,
 }: DetailHeaderProps) {
   if (!order) return null;
 
@@ -84,7 +86,7 @@ export function DetailHeader({
                   proofingStatusLabels[order.status ?? ""] ?? order.status ?? ""
                 }
               />
-              {nextStatusInfo && (
+              {nextStatusInfo && isProofer && (
                 <TooltipProvider>
                   <div className="flex items-center gap-2">
                     <Tooltip>
@@ -137,18 +139,20 @@ export function DetailHeader({
               )}
 
               {/* Always visible "Hủy hình bài" button */}
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-1.5 h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20"
-                onClick={() => {
-                  if (onCancelClick) onCancelClick();
-                }}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                Hủy hình bài
-              </Button>
-              {order.status === "waiting_for_file" && (
+              {isProofer && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20"
+                  onClick={() => {
+                    if (onCancelClick) onCancelClick();
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Hủy hình bài
+                </Button>
+              )}
+              {isProofer && order.status === "waiting_for_file" && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -165,7 +169,7 @@ export function DetailHeader({
                   Chuyển trạng thái
                 </Button>
               )}
-              {order.status !== "completed" && (
+              {isProofer && order.status !== "completed" && (
                 <Button
                   size="sm"
                   className="gap-1.5 h-8 text-xs"
