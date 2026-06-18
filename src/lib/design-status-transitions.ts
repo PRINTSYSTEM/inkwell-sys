@@ -16,7 +16,8 @@ export type DesignStatus =
   | "editing"
   | "waiting_for_customer_approval"
   | "confirmed_for_printing"
-  | "returned";
+  | "returned"
+  | "cancelled";
 
 /**
  * Defines valid next statuses for each current status
@@ -28,6 +29,7 @@ const statusTransitions: Record<DesignStatus, DesignStatus[]> = {
   editing: ["waiting_for_customer_approval"],
   confirmed_for_printing: ["waiting_for_customer_approval"], // Can revert to waiting for customer approval
   returned: ["editing"], // Returned designs can only go to editing
+  cancelled: [], // Terminal status
 };
 
 /**
@@ -66,7 +68,7 @@ export function getTransitionErrorMessage(
   const attemptedLabel = designStatusLabels[attemptedStatus] || attemptedStatus;
 
   // Special case for final status
-  if (currentStatus === "confirmed_for_printing") {
+  if (currentStatus === "confirmed_for_printing" || currentStatus === "cancelled") {
     return `Không thể thay đổi trạng thái từ "${currentLabel}" vì đây là trạng thái cuối cùng.`;
   }
 
@@ -94,5 +96,5 @@ export function isInitialStatus(status: DesignStatus): boolean {
  * Check if a status is final (no further transitions)
  */
 export function isFinalStatus(status: DesignStatus): boolean {
-  return status === "confirmed_for_printing";
+  return status === "confirmed_for_printing" || status === "cancelled";
 }

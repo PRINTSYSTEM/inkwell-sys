@@ -42,10 +42,14 @@ import {
   Plus,
   Search,
   Copy,
+  Hash,
+  User,
+  Ruler,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useDebounce } from "use-debounce";
 import { useRecordDieExportWithFile } from "@/hooks/use-proofing-order";
 import { useActiveDieVendors, useCreateVendor } from "@/hooks/use-vendor";
 import {
@@ -53,11 +57,10 @@ import {
   useSearchDies,
   useAssignDieToProofingOrder,
   useDiesByProofingOrder,
-  useDies,
   useRemoveDieFromProofingOrder,
 } from "@/hooks/use-die";
 import type { ProofingOrderResponse } from "@/Schema/proofing-order.schema";
-import type { DieResponse } from "@/Schema";
+import type { DieResponse, DieListParams } from "@/Schema";
 import { getErrorMessage } from "@/services/BaseService";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import {
@@ -113,11 +116,19 @@ export function DieExportDialog({
   // For selecting existing dies
   const [selectedDieIds, setSelectedDieIds] = useState<number[]>([]);
   const [isBrowsingDie, setIsBrowsingDie] = useState(false);
-  const [dieSearchTerm, setDieSearchTerm] = useState<string>("");
+  const [designCode, setDesignCode] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [size, setSize] = useState("");
+  const [proofingOrderCode, setProofingOrderCode] = useState("");
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   const [copiedProofingOrderCode, setCopiedProofingOrderCode] = useState<
     string | null
   >(null);
+
+  const [debouncedDesignCode] = useDebounce(designCode, 300);
+  const [debouncedCustomerName] = useDebounce(customerName, 300);
+  const [debouncedSize] = useDebounce(size, 300);
+  const [debouncedProofingOrderCode] = useDebounce(proofingOrderCode, 300);
 
   // For creating new die
   const [dieName, setDieName] = useState<string>("");
@@ -142,39 +153,35 @@ export function DieExportDialog({
   const { mutate: removeDie, isPending: removingDie } =
     useRemoveDieFromProofingOrder();
 
-  // Get dies - use search when there's a search term, otherwise use list
-  const searchParams =
-    open && dieSearchTerm.trim()
-      ? {
-          dieName: dieSearchTerm.trim() || "",
-          isUsable: true,
-          pageSize: 100,
-        }
-      : undefined;
+  // Search dies with design code, size, customer name, and proofing order code
+  const searchParams = useMemo((): DieListParams | undefined => {
+    if (!open || dieAction !== "select") return undefined;
 
-  const listParams =
-    open && !dieSearchTerm.trim()
-      ? {
-          isUsable: true,
-          pageSize: 100,
-        }
-      : undefined;
+    return {
+      q: debouncedDesignCode.trim() || "",
+      size: debouncedSize.trim() || "",
+      customerName: debouncedCustomerName.trim() || "",
+      proofingOrderCode: debouncedProofingOrderCode.trim() || "",
+      isUsable: true,
+      pageSize: 100,
+      pageNumber: 1,
+    };
+  }, [
+    open,
+    dieAction,
+    debouncedDesignCode,
+    debouncedSize,
+    debouncedCustomerName,
+    debouncedProofingOrderCode,
+  ]);
 
   const {
     data: searchDiesData,
-    isLoading: loadingSearchDies,
+    isLoading: isLoadingDies,
     isError: searchError,
   } = useSearchDies(searchParams);
-  const {
-    data: diesData,
-    isLoading: loadingDies,
-    isError: listError,
-  } = useDies(listParams);
 
-  const searchDies = searchDiesData?.items || [];
-  const listDies = diesData?.items || [];
-  const allDies = dieSearchTerm.trim() ? searchDies : listDies;
-  const isLoadingDies = dieSearchTerm.trim() ? loadingSearchDies : loadingDies;
+  const allDies = searchDiesData?.items || [];
 
   // Fetch dies already assigned to this proofing order
   const { data: assignedDies } = useDiesByProofingOrder(proofingOrderId, open);
@@ -401,7 +408,10 @@ export function DieExportDialog({
       setNewDieNote("");
       setDieAction("select");
       setSelectedDieIds([]);
-      setDieSearchTerm("");
+      setDesignCode("");
+      setCustomerName("");
+      setSize("");
+      setProofingOrderCode("");
       setDieName("");
       setDieSize("");
       setDieLength(undefined);
@@ -897,15 +907,127 @@ export function DieExportDialog({
             <div className="flex-1 flex flex-col overflow-hidden px-4 py-3 gap-3">
               {dieAction === "select" ? (
                 <>
-                  {/* Search dies */}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Tìm khuôn theo mã, kích thước, tên, vị trí..."
-                      value={dieSearchTerm}
-                      onChange={(e) => setDieSearchTerm(e.target.value)}
-                      className="pl-9 text-sm"
-                    />
+                  {/* Search Section */}
+                  <div className="shrink-0 space-y-3 pb-3 border-b">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Design Code Search */}
+                      <div className="space-y-1">
+                        <Label
+                          htmlFor="design-code-search"
+                          className="text-xs font-medium"
+                        >
+                          Mã hàng
+                        </Label>
+                        <div className="relative">
+                          <Hash className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input
+                            id="design-code-search"
+                            placeholder="Nhập mã hàng..."
+                            value={designCode}
+                            onChange={(e) => setDesignCode(e.target.value)}
+                            className="pl-8 h-8 text-xs transition-all duration-200"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Proofing Order Code Search */}
+                      <div className="space-y-1">
+                        <Label
+                          htmlFor="proofing-order-code-search"
+                          className="text-xs font-medium"
+                        >
+                          Mã bình bài
+                        </Label>
+                        <div className="relative">
+                          <Hash className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input
+                            id="proofing-order-code-search"
+                            placeholder="Nhập mã bình bài..."
+                            value={proofingOrderCode}
+                            onChange={(e) => setProofingOrderCode(e.target.value)}
+                            className="pl-8 h-8 text-xs transition-all duration-200"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Size Search */}
+                      <div className="space-y-1">
+                        <Label htmlFor="size-search" className="text-xs font-medium">
+                          Kích thước
+                        </Label>
+                        <div className="relative">
+                          <Ruler className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input
+                            id="size-search"
+                            placeholder="Nhập kích thước..."
+                            value={size}
+                            onChange={(e) => setSize(e.target.value)}
+                            className="pl-8 h-8 text-xs transition-all duration-200"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Customer Name Search */}
+                      <div className="space-y-1">
+                        <Label
+                          htmlFor="customer-name-search"
+                          className="text-xs font-medium"
+                        >
+                          Tên khách hàng
+                        </Label>
+                        <div className="relative">
+                          <User className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                          <Input
+                            id="customer-name-search"
+                            placeholder="Nhập tên khách hàng..."
+                            value={customerName}
+                            onChange={(e) => setCustomerName(e.target.value)}
+                            className="pl-8 h-8 text-xs transition-all duration-200"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Search Actions */}
+                    {(designCode.trim() || customerName.trim() || size.trim() || proofingOrderCode.trim()) && (
+                      <div className="flex items-center justify-between pt-1">
+                        <p className="text-[11px] text-muted-foreground">
+                          {isLoadingDies ? (
+                            <span className="flex items-center gap-1.5">
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                              Đang tìm kiếm...
+                            </span>
+                          ) : searchError ? (
+                            <span className="text-destructive">
+                              Đã xảy ra lỗi khi tìm kiếm
+                            </span>
+                          ) : availableDies.length > 0 ? (
+                            <>
+                              Tìm thấy{" "}
+                              <span className="font-semibold text-foreground">
+                                {availableDies.length}
+                              </span>{" "}
+                              khuôn bế phù hợp
+                            </>
+                          ) : (
+                            "Không tìm thấy khuôn bế nào"
+                          )}
+                        </p>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setDesignCode("");
+                            setCustomerName("");
+                            setSize("");
+                            setProofingOrderCode("");
+                          }}
+                          className="h-6 px-2 text-[10px] hover:bg-muted"
+                        >
+                          Xóa bộ lọc
+                        </Button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Die table */}
@@ -917,7 +1039,7 @@ export function DieExportDialog({
                     ) : availableDies.length === 0 ? (
                       <div className="flex h-full items-center justify-center">
                         <div className="text-center text-sm text-muted-foreground border rounded-lg px-4 py-6 max-w-xs">
-                          {dieSearchTerm.trim()
+                          {(designCode.trim() || customerName.trim() || size.trim() || proofingOrderCode.trim())
                             ? "Không tìm thấy khuôn bế phù hợp. Thử từ khóa khác hoặc tạo khuôn mới."
                             : "Không có khuôn bế có sẵn. Vui lòng tạo khuôn mới."}
                         </div>

@@ -7223,6 +7223,20 @@ const endpoints = makeApi([
     response: DesignResponse,
   },
   {
+    method: "put",
+    path: "/api/designs/:id/cancel",
+    alias: "putApidesignsIdcancel",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: DesignResponse,
+  },
+  {
     method: "post",
     path: "/api/designs/:id/generate-excel",
     alias: "postApidesignsIdgenerateExcel",
@@ -11468,6 +11482,20 @@ const endpoints = makeApi([
       },
     ],
     response: ReadyDesignResponse,
+  },
+  {
+    method: "delete",
+    path: "/api/ready-designs/:id",
+    alias: "deleteApireadyDesignsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
   },
   {
     method: "get",
