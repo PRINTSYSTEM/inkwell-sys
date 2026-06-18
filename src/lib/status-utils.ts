@@ -354,6 +354,11 @@ export const designStatusConfig: Record<
     color: "bg-red-200 text-red-900 border-red-400 border-2",
     bgColor: "bg-red-50",
   },
+  cancelled: {
+    label: ENTITY_CONFIG.designStatuses.values.cancelled,
+    color: "bg-rose-200 text-rose-900 border-rose-400 border-2 dark:bg-rose-950/20 dark:text-rose-400 dark:border-rose-900/50",
+    bgColor: "bg-rose-50",
+  },
 };
 
 // ===== VARIANT CŨ (CHO CÁC CHỖ ĐÃ DÙNG) =====

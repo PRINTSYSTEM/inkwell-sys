@@ -149,6 +149,7 @@ export const API_SUFFIX = {
   DESIGN_GENERATE_EXCEL: (id: number) => `/designs/${id}/generate-excel`,
   DESIGN_REVERT_TO_WAITING: (id: number) => `/designs/${id}/revert-to-waiting`,
   DESIGN_REPRINT: (id: number) => `/designs/${id}/reprint`,
+  DESIGN_CANCEL: (id: number) => `/designs/${id}/cancel`,
 
   DESIGN_EMPLOYEES_FIXED_QUERY: () =>
     `/users?pageNumber=1&pageSize=10&role=design`,

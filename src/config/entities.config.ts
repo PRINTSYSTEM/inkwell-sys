@@ -52,6 +52,7 @@ export const ENTITY_CONFIG = {
       waiting_for_customer_approval: "Chờ khách duyệt",
       confirmed_for_printing: "Đã chốt in",
       returned: "Bị trả về",
+      cancelled: "Đã hủy",
     },
   },
   proofingOrderStatuses: {

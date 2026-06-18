@@ -38,6 +38,7 @@ import {
   useAddDesignTimelineEntry,
   useUpdateDesign,
   useReprintDesign,
+  useCancelDesign,
 } from "@/hooks/use-design";
 import { useMaterialsByDesignType } from "@/hooks/use-material-type";
 import { ErrorBoundary, ErrorDisplay } from "@/components/ui/error-components";
@@ -72,6 +73,7 @@ import {
   Workflow,
   UploadCloud,
   Image as ImageIcon,
+  XCircle,
 } from "lucide-react";
 
 import {
@@ -246,6 +248,7 @@ export default function DesignDetailPage() {
 
   // ==== LOCAL UI STATE ====
   const [reprintDialogOpen, setReprintDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [reprintQuantity, setReprintQuantity] = useState(1000);
   const [reprintNotes, setReprintNotes] = useState("");
   const [viewingImage, setViewingImage] = useState<{
@@ -284,6 +287,7 @@ export default function DesignDetailPage() {
   const { mutate: uploadImage } = useUploadDesignImage();
   const { mutate: addTimeline } = useAddDesignTimelineEntry();
   const reprintDesignMutation = useReprintDesign();
+  const cancelDesign = useCancelDesign();
 
   const { data: materialsByDesignType = [], isLoading: materialsLoading } =
     useMaterialsByDesignType(
@@ -635,6 +639,16 @@ export default function DesignDetailPage() {
     }
   };
 
+  const handleCancelSubmit = async () => {
+    try {
+      await cancelDesign.mutate(designId);
+      setCancelDialogOpen(false);
+      refetchDesign();
+    } catch {
+      // Handled in mutation hook toast
+    }
+  };
+
   const canEditDesign =
     (user?.role === ROLE.DESIGN ||
       user?.role === ROLE.DESIGN_LEAD ||
@@ -905,11 +919,23 @@ export default function DesignDetailPage() {
                 {/* Status transition helper */}
                 {canChangeStatus && (
                   <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-                    <CardHeader className="pb-3 pt-4 px-4">
+                    <CardHeader className="pb-3 pt-4 px-4 flex flex-row items-center justify-between space-y-0">
                       <CardTitle className="flex items-center gap-2 text-base font-bold">
                         <Workflow className="h-4 w-4 text-primary" />
-                        Chuyển trạng thái
+                        <span>Chuyển trạng thái</span>
                       </CardTitle>
+                      {canUpdateStatus && currentStatus !== "cancelled" && (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          className="gap-1 h-7 text-xs px-2"
+                          onClick={() => setCancelDialogOpen(true)}
+                          disabled={cancelDesign.loading || updatingStatus}
+                        >
+                          <XCircle className="h-3.5 w-3.5" />
+                          <span>Hủy thiết kế</span>
+                        </Button>
+                      )}
                     </CardHeader>
                     <CardContent className="space-y-3 px-4 pb-4">
                       <div className="grid grid-cols-3 gap-2">
@@ -1947,6 +1973,37 @@ export default function DesignDetailPage() {
                 className="font-semibold"
               >
                 {reprintDesignMutation.loading ? "Đang xử lý..." : "Xác nhận tái bản"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Cancel Design Dialog */}
+        <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+          <DialogContent className="max-w-md bg-background border border-border shadow-2xl rounded-2xl p-6">
+            <DialogHeader className="pb-3 border-b border-border/40">
+              <DialogTitle className="text-lg font-bold text-destructive">
+                Hủy thiết kế
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground mt-1">
+                Bạn có chắc chắn muốn hủy thiết kế này? Hành động này không thể hoàn tác và sẽ cập nhật trạng thái thiết kế thành đã hủy.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="pt-3 border-t border-border/40 gap-2 shrink-0">
+              <Button
+                variant="outline"
+                onClick={() => setCancelDialogOpen(false)}
+                disabled={cancelDesign.loading}
+              >
+                Hủy bỏ
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleCancelSubmit}
+                disabled={cancelDesign.loading}
+                className="font-semibold"
+              >
+                {cancelDesign.loading ? "Đang xử lý..." : "Xác nhận hủy"}
               </Button>
             </DialogFooter>
           </DialogContent>

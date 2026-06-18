@@ -564,3 +564,61 @@ export const useUpdateReadyDesign = () => {
     reset,
   };
 };
+
+// PUT /api/designs/{id}/cancel
+export const useCancelDesign = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    DesignResponse,
+    [number]
+  >(async (id: number) => {
+    const res = await apiRequest.put<DesignResponse>(
+      API_SUFFIX.DESIGN_CANCEL(id)
+    );
+    return res.data;
+  });
+
+  const mutate = async (id: number) => {
+    try {
+      const result = await execute(id);
+
+      // Invalidate design detail query
+      queryClient.invalidateQueries({
+        queryKey: designKeys.detail(id),
+      });
+
+      // Invalidate general list queries for designs
+      queryClient.invalidateQueries({
+        queryKey: designKeys.all,
+      });
+
+      toast.success("Thành công", {
+        description: "Đã hủy thiết kế thành công",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể hủy thiết kế",
+      });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
+};
+
