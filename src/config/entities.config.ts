@@ -349,10 +349,10 @@ export const ENTITY_CONFIG = {
     entityType: "Die",
     description: "Trạng thái khuôn bế",
     values: {
-      new: "Mới tạo (chờ SX)",
-      ready: "Sẵn sàng (trong kho)",
+      new: "Còn sử dụng",
+      ready: "Còn sử dụng",
       in_production: "Đang sử dụng",
-      broken: "Hỏng",
+      broken: "Đã hủy",
       disposed: "Đã hủy",
     },
   },

@@ -242,7 +242,7 @@ export function DetailDieExportCard({
                           onClick={() => handleOpenReplaceDieDialog(dieExport)}
                         >
                           <RefreshCcw className="h-3 w-3" />
-                          Xuất lại
+                          Xuất lại khuôn
                         </Button>
                       )}
                     </div>

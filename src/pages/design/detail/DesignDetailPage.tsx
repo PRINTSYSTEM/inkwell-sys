@@ -1322,7 +1322,7 @@ export default function DesignDetailPage() {
                         <Card className="flex-1 border-slate-200 dark:border-slate-800">
                           <CardContent className="p-2.5">
                             <p className="text-xs text-muted-foreground uppercase mb-1 font-bold">
-                              Số mặt in
+                              {d.designType?.name?.toLowerCase().includes("decal") ? "Loại sản phẩm" : "Số mặt in"}
                             </p>
                             {isEditing && canEditDesign ? (
                               <div className="flex flex-wrap gap-2 mt-1">

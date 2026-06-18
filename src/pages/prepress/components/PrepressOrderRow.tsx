@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { ChevronDown, FileImage, Copy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -81,6 +81,22 @@ export function PrepressOrderRow({
     );
   };
 
+  // Consolidate creator name from possible fields (prefer order.createdBy)
+  const creatorFullName =
+    order.createdBy?.fullName ||
+    order.createdBy?.username ||
+    order.order?.creator?.fullName ||
+    order.order?.creator?.username ||
+    order.creator?.fullName ||
+    order.creator?.username ||
+    order.order?.createdBy?.fullName ||
+    order.order?.createdBy?.username ||
+    order.proofingOrderDesigns?.[0]?.createdBy?.fullName ||
+    order.proofingOrderDesigns?.[0]?.createdBy?.username ||
+    order.items?.[0]?.createdBy?.fullName ||
+    order.items?.[0]?.createdBy?.username ||
+    "—";
+
   const tooltipContent = (
     <div className="w-[380px] space-y-4 p-1 max-h-[80vh] overflow-y-auto custom-scrollbar">
       <div className="border-b pb-2 sticky top-0 bg-popover z-10 space-y-1.5">
@@ -94,7 +110,7 @@ export function PrepressOrderRow({
           </div>
           <div>
             <span className="font-semibold text-foreground">Người tạo đơn hàng:</span>{" "}
-            {order.order?.creator?.fullName || order.order?.creator?.username || order.creator?.fullName || order.creator?.username || "—"}
+            {creatorFullName}
           </div>
           {order.notes && (
             <div>
@@ -142,7 +158,7 @@ export function PrepressOrderRow({
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-muted-foreground font-medium">
-                      Người tạo thiết kế:
+                      Người thiết kế:
                     </span>
                     <span className="font-semibold text-slate-700 dark:text-slate-300">
                       {d?.designer?.fullName || d?.designer?.username || "—"}
@@ -353,7 +369,7 @@ export function PrepressOrderRow({
           />
         ) : (
           <span className="text-[10px] font-medium text-muted-foreground italic">
-            Không có bế
+            Không có xuất khuôn
           </span>
         )}
       </TableCell>
@@ -361,15 +377,9 @@ export function PrepressOrderRow({
       <TableCell className="py-3 font-medium align-top whitespace-nowrap text-[11px]">
         <div className="flex flex-col gap-1 text-muted-foreground">
           <div>
-            <span className="font-semibold text-slate-500">Đặt: </span>
-            {order.createdAt
-              ? new Date(order.createdAt).toLocaleDateString("vi-VN")
-              : "—"}
-          </div>
-          <div className={cn(isUrgent && "text-red-600 font-bold dark:text-red-400")}>
-            <span className={cn("font-semibold text-slate-500", isUrgent && "text-red-600 dark:text-red-400")}>Giao: </span>
-            {order.deliveryDate
-              ? new Date(order.deliveryDate).toLocaleDateString("vi-VN")
+            <span className="font-semibold text-slate-500">Ngày bình bài: </span>
+            {order.updatedAt
+              ? new Date(order.updatedAt).toLocaleDateString("vi-VN")
               : "—"}
           </div>
         </div>

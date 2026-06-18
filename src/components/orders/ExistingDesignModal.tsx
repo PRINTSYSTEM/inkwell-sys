@@ -317,7 +317,7 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
                     <FileText className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                     <div className="min-w-0 flex-1">
                       <p className="text-xs text-muted-foreground mb-0.5">
-                        Số mặt in
+                        {design?.designType?.name?.toLowerCase().includes("decal") ? "Loại sản phẩm" : "Số mặt in"}
                       </p>
                       <p className="text-sm font-medium">
                         {ENTITY_CONFIG.sidesClassification?.values?.[

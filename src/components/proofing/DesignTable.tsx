@@ -32,6 +32,7 @@ interface DesignTableProps {
   onFindDie?: (design: DesignItem, dimensions: string) => void;
   isSelectionEnabled?: boolean;
   searchTerm?: string;
+  isCreatingOrder?: boolean;
 }
 
 export function DesignTable({
@@ -44,6 +45,7 @@ export function DesignTable({
   onFindDie,
   isSelectionEnabled = true,
   searchTerm = "",
+  isCreatingOrder = false,
 }: DesignTableProps) {
   const [viewingImage, setViewingImage] = useState<{
     url: string;
@@ -93,7 +95,7 @@ export function DesignTable({
                 Kích thước
               </TableHead>
               <TableHead className="h-10 text-sm font-bold">SL đặt</TableHead>
-              <TableHead className="h-10 text-sm font-bold">
+              <TableHead className={`h-10 text-sm font-bold ${isCreatingOrder ? 'w-28 max-w-[120px] overflow-hidden' : ''}`}>
                 Chất liệu
               </TableHead>
               <TableHead className="h-10 text-sm font-bold">Số mặt</TableHead>
@@ -296,8 +298,11 @@ export function DesignTable({
                         </div>
                       )}
                     </TableCell>
-                    <TableCell className="py-3 max-w-[200px]">
-                      <div title={design.name} className="truncate">
+                    <TableCell className={`py-3 ${isCreatingOrder ? 'max-w-[120px]' : 'max-w-[200px]'}`}>
+                      <div
+                        title={design.name}
+                        className={isCreatingOrder ? 'whitespace-normal break-words text-sm' : 'truncate'}
+                      >
                         {design.materialTypeName}
                       </div>
                     </TableCell>
@@ -378,7 +383,7 @@ export function DesignTable({
                       )}
                     >
                       <div className="flex items-center justify-end gap-2">
-                        {onReject && (
+                        {onReject && !isCreatingOrder && (
                           <Button
                             variant="outline"
                             size="sm"

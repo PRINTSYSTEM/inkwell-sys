@@ -232,6 +232,9 @@ export function DetailOrderInfoCard({
             >
               <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">
                 Số giấy in
+                {!(editingField === "totalQuantity" || editingField === "all") && !order.totalQuantity && (
+                  <span title="Chưa chọn số giấy" className="ml-2 inline-flex items-center justify-center w-4 h-4 bg-red-600 text-white text-[10px] font-bold rounded-full">!</span>
+                )}
               </Label>
               <div className="flex items-center gap-1">
                 {(editingField === "totalQuantity" || editingField === "all") ? (
@@ -275,7 +278,7 @@ export function DetailOrderInfoCard({
 
             <div className="flex items-center justify-between">
               <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">
-                SL hàng
+                Số lượng mã hàng
               </Label>
               <p className="font-bold text-[12px]">
                 {order.proofingOrderDesigns?.length ?? 0}
@@ -298,6 +301,9 @@ export function DetailOrderInfoCard({
             >
               <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">
                 Khổ giấy
+                {!(editingField === "paperSize" || editingField === "all") && !(order.paperSize?.name || inlinePaperSizeId) && (
+                  <span title="Chưa chọn khổ giấy" className="ml-2 inline-flex items-center justify-center w-4 h-4 bg-red-600 text-white text-[10px] font-bold rounded-full">!</span>
+                )}
               </Label>
               <div className="flex items-center gap-1">
                 {(editingField === "paperSize" || editingField === "all") ? (
@@ -459,7 +465,7 @@ export function DetailOrderInfoCard({
           <div className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
               <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">
-                Designer
+                Thiết kế
               </Label>
               <p className="font-bold text-[12px] truncate">
                 {designerDisplay}

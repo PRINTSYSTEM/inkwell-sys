@@ -654,7 +654,7 @@ export default function ReadyDesignListPage() {
                   <TableHead className="h-9 text-sm font-bold">Chất liệu</TableHead>
                   <TableHead className="h-9 text-sm font-bold">Ghi chú</TableHead>
                   <TableHead className="h-9 text-sm font-bold text-center w-[120px]">Giao gấp</TableHead>
-                  <TableHead className="h-9 text-sm font-bold">Ngày cập nhật</TableHead>
+                  <TableHead className="h-9 text-sm font-bold">Ngày đặt hàng</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -803,52 +803,64 @@ export default function ReadyDesignListPage() {
             <div className="space-y-2">
               <Label className="font-semibold text-foreground">Các thiết kế đã chọn ({selectedDesignsDetails.length})</Label>
               <div className="bg-muted/40 border rounded-lg p-2.5 space-y-2.5 max-h-[200px] overflow-y-auto">
-                {selectedDesignsDetails.map((item) => (
-                  <div key={item.id} className="flex flex-col text-xs border-b border-border/40 pb-2.5 last:border-0 last:pb-0 last:border-b-0 gap-1.5">
-                    {/* Top row: Code and Quantity */}
-                    <div className="flex justify-between items-center">
-                      <span className="font-mono font-bold text-muted-foreground">{item.designCode}</span>
-                      <span className="font-semibold text-indigo-600 dark:text-indigo-400">
-                        SL: {item.quantity?.toLocaleString("vi-VN")}
-                      </span>
-                    </div>
-                    {/* Bottom row: Name and Urgent Checkbox */}
-                    <div className="flex justify-between items-start gap-3">
-                      <div className="flex flex-col min-w-0 flex-1">
-                        <span className="font-medium break-words text-foreground/80" title={item.designName || ""}>
-                          {item.designName}
-                        </span>
-                        {item.notes && (
-                          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold break-words mt-0.5" title={item.notes}>
-                            Ghi chú: {item.notes}
-                          </span>
-                        )}
+                {selectedDesignsDetails.map((item, idx) => {
+                  const isLast = idx === selectedDesignsDetails.length - 1;
+                  return (
+                    <>
+                      <div
+                        key={item.id}
+                        className={`flex flex-col text-xs pb-2.5 gap-1.5 rounded-md transition-colors overflow-hidden ${
+                          item.isUrgent
+                            ? "bg-red-50/60 dark:bg-red-900/20 border border-red-200/40"
+                            : "bg-white border border-border/40"
+                        }`}
+                      >
+                        {/* Top row: Code and Quantity (with small center pill separator) */}
+                        <div className="flex items-center justify-between px-2 py-1">
+                          <span className="font-mono font-bold text-muted-foreground">{item.designCode}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] w-1 h-1 rounded-full bg-border/30 mr-1" />
+                            <span className="font-semibold text-indigo-600 dark:text-indigo-400">SL: {item.quantity?.toLocaleString("vi-VN")}</span>
+                          </div>
+                        </div>
+                        {/* Bottom row: Name and Urgent label (no checkbox) */}
+                        <div className="flex justify-between items-start gap-3 px-2 pb-2">
+                          <div className="flex flex-col min-w-0 flex-1">
+                            <span className="font-medium break-words text-foreground/80" title={item.designName || ""}>
+                              {item.designName}
+                            </span>
+                            {item.notes && (
+                              <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold break-words mt-0.5" title={item.notes}>
+                                Ghi chú: {item.notes}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1.5 shrink-0 select-none px-2 py-0.5 rounded-md cursor-pointer"
+                               onClick={() => handleToggleUrgent(item)}>
+                            {updatingUrgentId === item.id ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin text-red-550 dark:text-red-400" />
+                            ) : (
+                              <>
+                                <span className={`text-[11px] font-semibold ${item.isUrgent ? 'text-red-700 animate-pulse' : 'text-red-700/80 dark:text-red-300'}`}>
+                                  Giao gấp
+                                </span>
+                                {item.isUrgent && (
+                                  <span className="w-2 h-2 rounded-full bg-red-600 animate-ping" />
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      
-                      <div className="flex items-center gap-1.5 shrink-0 select-none bg-red-50/50 dark:bg-red-950/10 border border-red-200/40 dark:border-red-900/30 px-2 py-0.5 rounded-md">
-                        {updatingUrgentId === item.id ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin text-red-550 dark:text-red-400" />
-                        ) : (
-                          <Checkbox
-                            id={`dialog-urgent-${item.id}`}
-                            checked={item.isUrgent || false}
-                            onCheckedChange={() => handleToggleUrgent(item)}
-                            className="h-4 w-4 border-red-500/70 data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600 rounded cursor-pointer"
-                          />
-                        )}
-                        <label 
-                          htmlFor={`dialog-urgent-${item.id}`}
-                          className="text-[11px] font-semibold text-red-700 dark:text-red-300 cursor-pointer flex items-center gap-1"
-                        >
-                          Giao gấp
-                          {item.isUrgent && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-ping" />
-                          )}
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                      {!isLast && (
+                        <div className="flex justify-center py-1">
+                          <span className="w-2.5 h-0.5 rounded-full bg-border/30" />
+                        </div>
+                      )}
+                    </>
+                  );
+                })}
               </div>
             </div>
 

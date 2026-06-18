@@ -94,6 +94,7 @@ interface PrepressOrdersHeaderProps {
   expandedOrderIds?: Set<number>;
   isSelectionEnabled?: boolean;
   shouldShowExpand?: boolean;
+  isConfiguring?: boolean;
 }
 
 export function PrepressOrdersHeader({
@@ -156,6 +157,7 @@ export function PrepressOrdersHeader({
   shouldShowExpand = false,
   expandedOrderIds = new Set(),
   isSelectionEnabled = true,
+  isConfiguring = false,
 }: PrepressOrdersHeaderProps) {
   const [materialTypeSearchOpen, setMaterialTypeSearchOpen] = useState(false);
 
@@ -195,8 +197,8 @@ export function PrepressOrdersHeader({
               {selectedMaterialTypeId
                 ? materialTypeOptionsForOrders.find(
                     (mt) => mt.id === selectedMaterialTypeId,
-                  )?.name || "Loại chất liệu"
-                : "Loại chất liệu"}
+                  )?.name || "Loại chất liệu  của bình bài"
+                : "Loại chất liệu  của bình bài"}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
@@ -307,6 +309,7 @@ export function PrepressOrdersHeader({
                 isRejecting={isRejecting}
                 onFindDie={onFindDie}
                 isSelectionEnabled={isSelectionEnabled}
+                isCreatingOrder={isConfiguring}
                 searchTerm={designCode}
               />
               {/* Designs Pagination */}

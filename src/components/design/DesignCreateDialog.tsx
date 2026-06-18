@@ -556,7 +556,9 @@ export default function DesignCreateDialog({
 
             {/* Sides classification */}
             <div className="space-y-2">
-              <Label className="font-semibold text-foreground">Số mặt in</Label>
+              <Label className="font-semibold text-foreground">
+                {isDecal && !isDecalCuon ? "Loại sản phẩm" : "Số mặt in"}
+              </Label>
               {shouldShowSidesClassification && ((isTheTreo && isNhan) || (isDecal && !isDecalCuon)) ? (
                 <div className="flex gap-1.5">
                   {Object.entries(ENTITY_CONFIG.sidesClassification.values).map(([key, label]) => {

@@ -1075,7 +1075,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                     (isNhan && !isTheTreo)) && (
                     <div className="space-y-3">
                       <Label className="text-sm font-medium">
-                        Số mặt in
+                        {(isDecal && !isDecalCuon) ? "Loại sản phẩm" : "Số mặt in"}
                         {(shouldShowSidesClassification ||
                           isTui ||
                           isTuiXepHong ||

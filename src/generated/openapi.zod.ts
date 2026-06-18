@@ -2802,6 +2802,8 @@ const ProofingOrderDesignResponse = z
     proofingOrderId: z.number().int(),
     designId: z.number().int(),
     design: DesignResponse,
+    createdById: z.number().int().nullable(),
+    createdBy: UserInfo,
     quantity: z.number().int(),
     createdAt: z.string().datetime({ offset: true }),
     specification: z.array(z.string()).nullable(),
@@ -2897,6 +2899,8 @@ const ProofingOrderDesignListResponse = z
     proofingOrderId: z.number().int(),
     designId: z.number().int(),
     design: DesignSimpleResponse,
+    createdById: z.number().int().nullable(),
+    createdBy: UserInfo,
     quantity: z.number().int(),
   })
   .partial();

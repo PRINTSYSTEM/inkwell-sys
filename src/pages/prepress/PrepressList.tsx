@@ -376,6 +376,45 @@ export default function PrepressList() {
 
   const materialTypeOptions = availableDesignsData?.materialTypeOptions ?? [];
 
+  // Handlers that keep design/material filters in sync:
+  const handleDesignTypeChange = (ids: number[]) => {
+    // When user actively picks a design type, reset material selection so
+    // material options will be reloaded for that design type.
+    setSelectedDesignTypes(ids);
+    setSelectedMaterialTypes([]);
+    setIncompleteOrdersPage(1);
+    setCompletedOrdersPage(1);
+  };
+
+  const handleMaterialTypeChange = (ids: number[]) => {
+    setSelectedMaterialTypes(ids);
+    setIncompleteOrdersPage(1);
+    setCompletedOrdersPage(1);
+
+    // If user selected exactly one material and no design type is selected,
+    // pick a corresponding design type that uses that material (if available).
+    if (ids.length === 1 && (!selectedDesignTypes || selectedDesignTypes.length === 0)) {
+      const mtId = ids[0];
+      const designs = availableDesignsData?.designs ?? [];
+      const matchedDesignTypeIds = Array.from(
+        new Set(
+          designs
+            .filter((d: any) => d.materialTypeId === mtId)
+            .map((d: any) => d.designTypeId),
+        ),
+      ).filter((v) => typeof v === "number" && !Number.isNaN(v));
+
+      if (matchedDesignTypeIds.length > 0) {
+        // Pick the first matching design type as the 'corresponding' one.
+        setSelectedDesignTypes([matchedDesignTypeIds[0]]);
+      }
+    }
+    // If material cleared, also clear design type selection
+    if (ids.length === 0) {
+      setSelectedDesignTypes([]);
+    }
+  };
+
   // ===== Actions =====
   const { mutateAsync: createProofingOrder, isPending: isCreating } =
     useCreateProofingOrder();
@@ -748,11 +787,11 @@ export default function PrepressList() {
                           if (ids.length === 0) {
                             handleClearFilters();
                           } else {
-                            setSelectedDesignTypes(ids);
+                            handleDesignTypeChange(ids);
                             setViewMode("designs");
                           }
                         }}
-                        onMaterialTypeChange={setSelectedMaterialTypes}
+                        onMaterialTypeChange={handleMaterialTypeChange}
                         onClearFilters={handleClearFilters}
                         designs={availableDesignsData?.designs || []}
                         selectedIds={selectedIds}
@@ -799,6 +838,7 @@ export default function PrepressList() {
                         isRejecting={isRejecting}
                         onFindDie={handleFindDie}
                         isSelectionEnabled={isProofer && isConfiguring}
+                          isConfiguring={isConfiguring}
                         // Designs Pagination props
                         designsPage={designsPage}
                         setDesignsPage={setDesignsPage}

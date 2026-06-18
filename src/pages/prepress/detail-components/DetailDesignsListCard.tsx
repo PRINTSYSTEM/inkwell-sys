@@ -173,7 +173,7 @@ export function DetailDesignsListCard({
                 </TableHead>
                 <TableHead className="h-9 px-2 text-[10px]">SL</TableHead>
                 <TableHead className="h-9 px-2 text-[10px]">
-                  Số mặt in
+                  {orderDesigns?.[0]?.design?.designType?.name?.toLowerCase().includes("decal") ? "Loại sản phẩm" : "Số mặt in"}
                 </TableHead>
                 <TableHead className="h-9 px-2 text-[10px]">
                   Quy cách đầy đủ
