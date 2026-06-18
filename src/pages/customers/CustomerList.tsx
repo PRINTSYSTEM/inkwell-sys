@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { apiRequest, API_SUFFIX } from "@/apis";
 import { Input } from "@/components/ui/input";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import {
@@ -11,6 +12,7 @@ import {
   Trash2,
   DollarSign,
   TrendingUp,
+  AlertTriangle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useCustomers, useExportDebtComparison, useDeleteCustomer } from "@/hooks/use-customer";
@@ -132,6 +134,7 @@ function SharedAddressesTab({
               }}
             />
           </div>
+          {/* Header actions for shared addresses handled in parent */}
         </div>
       </CardHeader>
       <CardContent className="p-4 pt-0 flex-1 flex flex-col min-h-0 overflow-hidden">
@@ -293,6 +296,8 @@ function SharedAddressesTab({
           </form>
         </DialogContent>
       </Dialog>
+
+      
     </Card>
   );
 }
@@ -382,6 +387,50 @@ export default function Customers() {
   };
 
   const navigate = useNavigate();
+
+  // Merge customers dialog
+  const [mergeDialogOpen, setMergeDialogOpen] = useState(false);
+  const [mergeFromId, setMergeFromId] = useState<number | null>(null);
+  const [mergeToId, setMergeToId] = useState<number | null>(null);
+  const [merging, setMerging] = useState(false);
+
+  const handleOpenMergeDialog = () => {
+    setMergeFromId(null);
+    setMergeToId(null);
+    setMergeDialogOpen(true);
+  };
+
+  const handleMerge = async () => {
+    if (!mergeFromId || !mergeToId) {
+      toast.error("Vui lòng nhập cả ID nguồn và ID đích");
+      return;
+    }
+    if (mergeFromId === mergeToId) {
+      toast.error("ID nguồn và ID đích phải khác nhau");
+      return;
+    }
+
+    const ok = window.confirm(
+      "Bạn sắp gộp hai khách hàng. Đây là hành động rủi ro — chỉ dành cho đội hỗ trợ. Tiếp tục?"
+    );
+    if (!ok) return;
+
+    try {
+      setMerging(true);
+      await apiRequest.post(`${API_SUFFIX.CUSTOMERS}/merge`, {
+        fromCustomerId: mergeFromId,
+        toCustomerId: mergeToId,
+      });
+      toast.success("Gộp khách hàng thành công");
+      setMergeDialogOpen(false);
+      // refetch list by resetting page or calling refetch — using resetPage
+      resetPage();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Lỗi khi gộp khách hàng");
+    } finally {
+      setMerging(false);
+    }
+  };
 
   // Pagination calculations
   const totalPages = Math.ceil(totalCount / itemsPerPage) || 1;
@@ -478,10 +527,16 @@ export default function Customers() {
         </div>
         <div className="flex items-center gap-2">
           {activeTab === "customers" ? (
-            <Button onClick={handleCreateCustomer} size="sm" className="gap-2">
-              <Plus className="h-4 w-4" />
-              Thêm khách hàng
-            </Button>
+            <>
+              <Button size="sm" variant="destructive" onClick={handleOpenMergeDialog} className="h-9 flex items-center gap-2" title="Dành cho đội hỗ trợ">
+                <AlertTriangle className="h-4 w-4" />
+                <span>Gom khách hàng</span>
+              </Button>
+              <Button onClick={handleCreateCustomer} size="sm" className="gap-2">
+                <Plus className="h-4 w-4" />
+                Thêm khách hàng
+              </Button>
+            </>
           ) : (
             <Button onClick={() => { setAddressEditing(null); setAddressDialogOpen(true); }} size="sm" className="gap-2">
               <Plus className="h-4 w-4" />
@@ -490,6 +545,34 @@ export default function Customers() {
           )}
         </div>
       </div>
+      {/* Merge dialog (for support) */}
+      <Dialog open={mergeDialogOpen} onOpenChange={setMergeDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Gom khách hàng (Hỗ trợ)</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="text-sm text-muted-foreground">
+              Hãy nhập ID của khách hàng nguồn (sẽ bị gộp vào) và ID của khách hàng đích.
+              Chỉ dùng cho đội hỗ trợ. Hành động này không thể hoàn tác.
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label>ID nguồn</Label>
+                <Input type="number" value={mergeFromId ?? ""} onChange={(e) => setMergeFromId(Number(e.target.value) || null)} />
+              </div>
+              <div>
+                <Label>ID đích</Label>
+                <Input type="number" value={mergeToId ?? ""} onChange={(e) => setMergeToId(Number(e.target.value) || null)} />
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="pt-3">
+            <Button variant="outline" onClick={() => setMergeDialogOpen(false)}>Hủy</Button>
+            <Button onClick={handleMerge} disabled={merging}>{merging ? "Đang gộp..." : "Gom khách"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Tabs
         value={activeTab}

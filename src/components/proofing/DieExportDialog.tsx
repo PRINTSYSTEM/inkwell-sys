@@ -86,6 +86,8 @@ interface DieExportDialogProps {
   onSuccess?: () => void;
   mode?: "export" | "replace" | "add";
   replacingDieId?: number;
+  initialSelectedDieIds?: number[];
+  initialSize?: string;
 }
 
 export function DieExportDialog({
@@ -96,6 +98,8 @@ export function DieExportDialog({
   onSuccess,
   mode = "export",
   replacingDieId,
+  initialSelectedDieIds,
+  initialSize,
 }: DieExportDialogProps) {
   const [dieCount, setDieCount] = useState<number>(1);
   const [vendorId, setVendorId] = useState<number | null>(null);
@@ -407,10 +411,20 @@ export function DieExportDialog({
       setDieNotes({});
       setNewDieNote("");
       setDieAction("select");
-      setSelectedDieIds([]);
+      // Initialize selected dies from prop if provided
+      if (initialSelectedDieIds && initialSelectedDieIds.length > 0) {
+        setSelectedDieIds(initialSelectedDieIds);
+      } else {
+        setSelectedDieIds([]);
+      }
       setDesignCode("");
       setCustomerName("");
-      setSize("");
+      // Initialize size filter if provided
+      if (initialSize) {
+        setSize(initialSize);
+      } else {
+        setSize("");
+      }
       setProofingOrderCode("");
       setDieName("");
       setDieSize("");
@@ -421,7 +435,7 @@ export function DieExportDialog({
       setDieImagePreview(null);
       setIsReusable(true);
     }
-  }, [open]);
+  }, [open, initialSelectedDieIds, initialSize]);
 
   // Cleanup image preview URLs
   useEffect(() => {

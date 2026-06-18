@@ -118,6 +118,8 @@ export function DetailDesignsListCard({
 }: DetailDesignsListCardProps) {
   if (!order) return null;
 
+  const isDieExported = (order?.dieExports?.length ?? 0) > 0 || (order?.proofingOrderDies?.length ?? 0) > 0;
+
   const highlightText = (text: string, search: string) => {
     if (!search || !text) return text;
     const regex = new RegExp(

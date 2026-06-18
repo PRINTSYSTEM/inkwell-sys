@@ -242,6 +242,9 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
     isRejecting,
   } = props;
 
+  const [dieExportInitialSelectedIds, setDieExportInitialSelectedIds] =
+    useState<number[] | undefined>(undefined);
+
   // Helper functions for file classification
   const isImageFile = (file: File): boolean => {
     return file.type.startsWith("image/");
@@ -506,10 +509,15 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
       {/* Die Export Dialog */}
       <DieExportDialog
         open={isDieExportDialogOpen}
-        onOpenChange={setIsDieExportDialogOpen}
+        onOpenChange={(open) => {
+          setIsDieExportDialogOpen(open);
+          if (!open) setDieExportInitialSelectedIds(undefined);
+        }}
         proofingOrderId={order.id}
         proofingOrder={order}
         onSuccess={handleDieExportSuccess}
+        initialSelectedDieIds={dieExportInitialSelectedIds}
+        initialSize={dieListInitialSize}
       />
 
       {/* Die Dialog (for editing die info) */}
@@ -778,6 +786,12 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
         open={isDieListDialogOpen}
         onOpenChange={setIsDieListDialogOpen}
         initialSize={dieListInitialSize}
+        onUseDie={(die) => {
+          // Preselect the die in the export dialog and open it
+          setDieExportInitialSelectedIds(die.id ? [die.id] : undefined);
+          setIsDieListDialogOpen(false);
+          setIsDieExportDialogOpen(true);
+        }}
       />
 
       {/* Related Dies Dialog */}

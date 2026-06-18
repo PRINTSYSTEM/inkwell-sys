@@ -40,9 +40,10 @@ interface DieListDialogProps {
   onOpenChange: (open: boolean) => void;
   initialDesignCode?: string;
   initialSize?: string;
+  onUseDie?: (die: DieResponse) => void;
 }
 
-export function DieListDialog({ open, onOpenChange, initialDesignCode, initialSize }: DieListDialogProps) {
+export function DieListDialog({ open, onOpenChange, initialDesignCode, initialSize, onUseDie }: DieListDialogProps) {
   const navigate = useNavigate();
   const [designCode, setDesignCode] = useState("");
   const [customerName, setCustomerName] = useState("");
@@ -362,6 +363,25 @@ export function DieListDialog({ open, onOpenChange, initialDesignCode, initialSi
               </p>
             </div>
           )}
+          <div className="mt-3 flex gap-2">
+            {die.isUsable && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenChange(false);
+                  setTimeout(() => {
+                    onUseDie?.(die);
+                  }, 120);
+                }}
+                className="h-7 px-2 text-xs"
+                title="Sử dụng khuôn"
+              >
+                Sử dụng khuôn
+              </Button>
+            )}
+          </div>
         </div>
       </div>
     </div>
