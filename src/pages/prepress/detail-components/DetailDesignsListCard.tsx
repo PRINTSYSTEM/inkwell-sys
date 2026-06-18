@@ -139,6 +139,13 @@ export function DetailDesignsListCard({
     );
   };
 
+  const hasDieCutDesigns = React.useMemo(() => {
+    if (!orderDesigns || orderDesigns.length === 0) return false;
+    return orderDesigns.some(
+      (pod) => pod.design?.processClassification === "die_cut",
+    );
+  }, [orderDesigns]);
+
   return (
     <Card className="relative">
       <CardHeader className="pb-3 px-6">
@@ -516,7 +523,7 @@ export function DetailDesignsListCard({
                       </TableCell>
                       <TableCell className="px-6 py-2 text-right">
                         <div className="flex flex-col gap-1 items-stretch w-28 ml-auto py-1">
-                          {pod.design?.id && (
+                          {hasDieCutDesigns && pod.design?.id && pod.design?.processClassification === "die_cut" && (
                             <Button
                               variant="outline"
                               size="sm"

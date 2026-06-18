@@ -2585,6 +2585,37 @@
         }
       }
     },
+    "/api/customers/merge": {
+      "post": {
+        "tags": [
+          "Customer"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MergeCustomerRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MergeCustomerRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/MergeCustomerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/customers/{id}/addresses": {
       "post": {
         "tags": [
@@ -29373,6 +29404,24 @@
         },
         "additionalProperties": false
       },
+      "MergeCustomerRequest": {
+        "required": [
+          "fromCustomerId",
+          "toCustomerId"
+        ],
+        "type": "object",
+        "properties": {
+          "fromCustomerId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "toCustomerId": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false
+      },
       "OrderDetailAvailableResponse": {
         "type": "object",
         "properties": {
@@ -29687,6 +29736,10 @@
             "format": "int32"
           },
           "customerName": {
+            "type": "string",
+            "nullable": true
+          },
+          "deliveryAddress": {
             "type": "string",
             "nullable": true
           },

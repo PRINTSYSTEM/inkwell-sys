@@ -60,6 +60,7 @@ import {
   useCreateOrderFromReadyDesigns,
   useDesign,
   useUpdateReadyDesign,
+  useDeleteReadyDesign,
 } from "@/hooks";
 import type { ReadyDesignResponse } from "@/Schema";
 
@@ -129,9 +130,8 @@ export default function ReadyDesignListPage() {
   const [dimensionsFilter, setDimensionsFilter] = useState("");
   const [debouncedDimensions] = useDebounce(dimensionsFilter, 300);
 
-  // Pagination states
+  // Pagination/Filter reset state
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
 
   // Selected designs
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -224,22 +224,21 @@ export default function ReadyDesignListPage() {
   // Fetch ready designs
   const readyDesignsParams = useMemo(() => {
     return {
-      pageNumber: currentPage,
-      pageSize: itemsPerPage,
+      pageNumber: 1,
+      pageSize: 10000,
       customerId: selectedCustomer?.id || undefined,
       search: debouncedSearchQuery.trim() || undefined,
       designType: selectedTypeName || undefined,
       materialType: materialFilter || undefined,
       dimensions: debouncedDimensions.trim() || undefined,
     };
-  }, [currentPage, selectedCustomer, debouncedSearchQuery, selectedTypeName, materialFilter, debouncedDimensions]);
+  }, [selectedCustomer, debouncedSearchQuery, selectedTypeName, materialFilter, debouncedDimensions]);
 
   const { data: readyDesignsData, isLoading: loadingDesigns, refetch: refetchDesigns } = useReadyDesigns(
     readyDesignsParams
   );
   const designs = readyDesignsData?.items || [];
   const totalCount = readyDesignsData?.total || 0;
-  const totalPages = Math.ceil(totalCount / itemsPerPage) || 1;
 
   const sortedDesigns = useMemo(() => {
     if (!designs) return [];
@@ -362,7 +361,9 @@ export default function ReadyDesignListPage() {
 
   // Update Ready Design Mutation (for isUrgent flag)
   const { mutate: updateReadyDesign } = useUpdateReadyDesign();
+  const { mutate: deleteReadyDesign } = useDeleteReadyDesign();
   const [updatingUrgentId, setUpdatingUrgentId] = useState<number | null>(null);
+  const [designToDelete, setDesignToDelete] = useState<ReadyDesignResponse | null>(null);
 
   const handleToggleUrgent = async (design: ReadyDesignResponse) => {
     if (!design.id) return;
@@ -655,11 +656,12 @@ export default function ReadyDesignListPage() {
                   <TableHead className="h-9 text-sm font-bold">Ghi chú</TableHead>
                   <TableHead className="h-9 text-sm font-bold text-center w-[120px]">Giao gấp</TableHead>
                   <TableHead className="h-9 text-sm font-bold">Ngày cập nhật</TableHead>
+                  <TableHead className="h-9 text-sm font-bold text-right pr-6 w-[80px]">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loadingDesigns ? (
-                  <TableSkeleton cols={11} rows={8} rowHeight="h-12" />
+                  <TableSkeleton cols={12} rows={8} rowHeight="h-12" />
                 ) : sortedDesigns.length > 0 ? (
                   sortedDesigns.map((design) => {
                     const isSelected = selectedIds.includes(design.id!);
@@ -727,12 +729,22 @@ export default function ReadyDesignListPage() {
                             ? new Date(design.updatedAt).toLocaleDateString("vi-VN")
                             : "—"}
                         </TableCell>
+                        <TableCell className="py-2 text-right pr-6" onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive rounded-lg"
+                            onClick={() => setDesignToDelete(design)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     );
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center py-12">
+                    <TableCell colSpan={12} className="text-center py-12">
                       <div className="flex flex-col items-center justify-center text-muted-foreground">
                         <Package className="h-10 w-10 mb-2 opacity-50" />
                         <p className="text-sm">Không có thiết kế nào sẵn sàng trong kho</p>
@@ -744,42 +756,11 @@ export default function ReadyDesignListPage() {
             </table>
           </div>
 
-          {/* Pagination Controls */}
+          {/* Total Count */}
           {totalCount > 0 && (
             <div className="flex items-center justify-between px-3 py-2 border-t shrink-0 bg-background">
               <div className="text-xs text-muted-foreground">
-                Hiển thị{" "}
-                <span className="font-medium text-foreground">
-                  {(currentPage - 1) * itemsPerPage + 1}
-                </span>{" "}
-                -{" "}
-                <span className="font-medium text-foreground">
-                  {Math.min(currentPage * itemsPerPage, totalCount)}
-                </span>{" "}
-                trong tổng số <span className="font-medium text-foreground">{totalCount}</span> dòng
-              </div>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 px-2"
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1 || loadingDesigns}
-                >
-                  Trang trước
-                </Button>
-                <div className="text-xs font-medium">
-                  Trang {currentPage} / {totalPages}
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 px-2"
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages || loadingDesigns}
-                >
-                  Trang sau
-                </Button>
+                Tổng số thiết kế sẵn sàng: <span className="font-semibold text-foreground">{totalCount}</span>
               </div>
             </div>
           )}
@@ -1065,6 +1046,40 @@ export default function ReadyDesignListPage() {
               ) : (
                 "Xác nhận tạo đơn"
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!designToDelete} onOpenChange={(open) => !open && setDesignToDelete(null)}>
+        <DialogContent className="max-w-md bg-background border border-border shadow-2xl rounded-2xl p-6">
+          <DialogHeader className="pb-3 border-b border-border/40">
+            <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-destructive" />
+              Xác nhận xóa thiết kế
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground mt-1">
+              Bạn có chắc chắn muốn xóa thiết kế <span className="font-bold text-foreground">{designToDelete?.designCode}</span> ({designToDelete?.designName}) khỏi kho thiết kế sẵn sàng không?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="pt-3 border-t border-border/40 gap-2 shrink-0">
+            <Button
+              variant="outline"
+              onClick={() => setDesignToDelete(null)}
+            >
+              Hủy bỏ
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                if (designToDelete?.id) {
+                  await deleteReadyDesign(designToDelete.id);
+                  setDesignToDelete(null);
+                }
+              }}
+            >
+              Xác nhận xóa
             </Button>
           </DialogFooter>
         </DialogContent>

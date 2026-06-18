@@ -343,7 +343,14 @@ export function DesignTable({
                       )}
                     </TableCell>
                     <TableCell className="py-3 max-w-[200px]">
-                      <div title={design.name} className="truncate">
+                      <div
+                        title={design.materialTypeName}
+                        className={cn(
+                          isSelectionEnabled
+                            ? "line-clamp-2 whitespace-normal break-words"
+                            : "truncate"
+                        )}
+                      >
                         {design.materialTypeName}
                       </div>
                     </TableCell>

@@ -1666,6 +1666,12 @@ export default function ProofingOrderDetailPage() {
   const handleOldStatusChangeClick = () => {
     // Chỉ cho phép khi status là waiting_for_file (logic cũ)
     if (order?.status === "waiting_for_file") {
+      if (!order.proofingFileUrl) {
+        toast.error("Chưa thể chuyển trạng thái", {
+          description: "Vui lòng tải lên file bình bài trước khi chuyển trạng thái.",
+        });
+        return;
+      }
       setIsConfirmStatusDialogOpen(true);
     }
   };
@@ -1749,6 +1755,22 @@ export default function ProofingOrderDetailPage() {
         nextStatusInfo.nextStatus === "completed" &&
         order?.status === "not_completed"
       ) {
+        if (!canMarkCompleted) {
+          toast.error("Chưa thể hoàn thành vì còn thiếu thông tin:", {
+            description: (
+              <div className="mt-2 text-stone-850 dark:text-stone-200">
+                <p className="font-semibold text-xs text-red-650 dark:text-red-400 mb-1">Vui lòng kiểm tra và hoàn thành các mục sau:</p>
+                <ul className="list-disc pl-4 space-y-1 text-xs">
+                  {completionMissingItems.map((item) => (
+                    <li key={item} className="text-red-600 dark:text-red-400">{item}</li>
+                  ))}
+                </ul>
+              </div>
+            ),
+            duration: 8000,
+          });
+          return;
+        }
         handleConfirmHandToProduction();
       } else {
         setPendingStatus(nextStatusInfo.nextStatus);

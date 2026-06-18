@@ -1449,7 +1449,7 @@ export default function DeliveryNoteListPage() {
             handleBulkStartShipping={handleBulkStartShipping}
             updatingIds={updatingIds}
             onImageClick={handleImageClick}
-            allNotesForStats={allNotesForStats}
+            allNotesForStats={allNotesData}
           />
         </TabsContent>
       </Tabs>
@@ -1732,6 +1732,7 @@ function OrdersView({
                           <TableHead className="w-12">Hình</TableHead>
                           <TableHead className="w-[120px] font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Mã thiết kế</TableHead>
                           <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Tên sản phẩm</TableHead>
+                          <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Địa chỉ giao</TableHead>
                           <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-40">Đơn hàng</TableHead>
                           <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-24">Số lượng</TableHead>
                           <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider pr-4 w-32">Thành tiền</TableHead>
@@ -1769,7 +1770,7 @@ function OrdersView({
                                 />
                               </TableCell>
                               <TableCell className="w-12">
-                                <div className="h-8 w-8 rounded-lg bg-stone-100 dark:bg-stone-800 border flex items-center justify-center overflow-hidden relative">
+                                <div className="h-8 w-8 rounded-lg bg-stone-100 dark:bg-stone-850 border flex items-center justify-center overflow-hidden relative">
                                   {detail.designImageUrl ? (
                                     <img
                                       src={detail.designImageUrl}
@@ -1788,8 +1789,11 @@ function OrdersView({
                               <TableCell className="w-[120px] font-mono font-black text-[11px] uppercase text-stone-800 dark:text-stone-200">
                                 {detail.designCode}
                               </TableCell>
-                              <TableCell className="text-[11px] text-stone-500 font-medium truncate max-w-[200px] md:max-w-[300px]">
+                              <TableCell className="text-[11px] text-stone-500 font-medium truncate max-w-[150px] md:max-w-[200px]" title={detail.designName}>
                                 {detail.designName}
+                              </TableCell>
+                              <TableCell className="text-[11px] text-stone-500 font-medium truncate max-w-[150px] md:max-w-[200px]" title={detail.deliveryAddress || ""}>
+                                {detail.deliveryAddress || "—"}
                               </TableCell>
                               <TableCell className="text-right text-xs font-semibold text-stone-600 dark:text-stone-400 w-40">
                                 <div className="flex flex-col items-end">
@@ -2051,8 +2055,6 @@ function DeliveryNotesView({
     });
   };
 
-  const [expandedNoteIds, setExpandedNoteIds] = useState<Set<number>>(new Set());
-
   const toggleNote = (noteId: number) => {
     const next = new Set(expandedNoteIds);
     if (next.has(noteId)) {
@@ -2063,17 +2065,7 @@ function DeliveryNotesView({
     setExpandedNoteIds(next);
   };
 
-  // Auto-expand all found delivery notes only when searching is active
-  useEffect(() => {
-    if (debouncedSearchQuery.trim() !== "") {
-      const visibleIds = sortedDeliveryNotes
-        .map((n) => n.id)
-        .filter((id): id is number => id != null);
-      setExpandedNoteIds(new Set(visibleIds));
-    } else {
-      setExpandedNoteIds(new Set());
-    }
-  }, [debouncedSearchQuery, sortedDeliveryNotes]);
+
 
   return (
     <div className="space-y-6">
@@ -2405,6 +2397,7 @@ function DeliveryNotesView({
                                     <TableHead className="w-12 pl-4">Hình</TableHead>
                                     <TableHead className="w-[120px] font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Mã thiết kế</TableHead>
                                     <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Tên sản phẩm</TableHead>
+                                    <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Địa chỉ giao</TableHead>
                                     <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Mã bài</TableHead>
                                     <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-40">Đơn hàng</TableHead>
                                     <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-24">SL giao</TableHead>
@@ -2435,8 +2428,24 @@ function DeliveryNotesView({
                                         <TableCell className="w-[120px] font-mono font-black text-[11px] uppercase text-stone-800 dark:text-stone-200">
                                           {line.designCode}
                                         </TableCell>
-                                        <TableCell className="text-[11px] text-stone-500 font-medium truncate max-w-[200px] md:max-w-[300px]">
+                                        <TableCell className="text-[11px] text-stone-500 font-medium truncate max-w-[150px] md:max-w-[200px]" title={line.designName}>
                                           {line.designName}
+                                        </TableCell>
+                                        <TableCell
+                                          className="text-[11px] text-stone-500 font-medium truncate max-w-[150px] md:max-w-[200px]"
+                                          title={
+                                            line.customerAddress
+                                              ? [
+                                                  line.customerAddress.recipientName,
+                                                  line.customerAddress.recipientPhone,
+                                                  line.customerAddress.address,
+                                                ]
+                                                  .filter(Boolean)
+                                                  .join(" - ")
+                                              : ""
+                                          }
+                                        >
+                                          {line.customerAddress?.address || "—"}
                                         </TableCell>
                                         <TableCell className="text-[11px] font-medium text-stone-700 dark:text-stone-300">
                                           {line.proofingOrderCodes && line.proofingOrderCodes.length > 0 ? (
@@ -2462,7 +2471,7 @@ function DeliveryNotesView({
                                     ))
                                   ) : (
                                     <TableRow>
-                                      <TableCell colSpan={7} className="text-center py-4 text-stone-400 text-xs italic">
+                                      <TableCell colSpan={8} className="text-center py-4 text-stone-400 text-xs italic">
                                         Không có chi tiết sản phẩm nào
                                       </TableCell>
                                     </TableRow>

@@ -359,19 +359,19 @@ export function PrepressOrderRow({
       </TableCell>
 
       <TableCell className="py-3 font-medium align-top whitespace-nowrap text-[11px]">
-        <div className="flex flex-col gap-1 text-muted-foreground">
-          <div>
-            <span className="font-semibold text-slate-500">Đặt: </span>
-            {order.createdAt
-              ? new Date(order.createdAt).toLocaleDateString("vi-VN")
-              : "—"}
-          </div>
-          <div className={cn(isUrgent && "text-red-600 font-bold dark:text-red-400")}>
-            <span className={cn("font-semibold text-slate-500", isUrgent && "text-red-600 dark:text-red-400")}>Giao: </span>
-            {order.deliveryDate
-              ? new Date(order.deliveryDate).toLocaleDateString("vi-VN")
-              : "—"}
-          </div>
+        <div className="flex flex-col gap-1 text-slate-700 dark:text-slate-300">
+          {order.status === "completed" ? (
+            <div>
+              <span className="font-semibold text-slate-500">Hoàn thành: </span>
+              {order.completedAt
+                ? new Date(order.completedAt).toLocaleDateString("vi-VN")
+                : order.updatedAt
+                  ? new Date(order.updatedAt).toLocaleDateString("vi-VN")
+                  : "—"}
+            </div>
+          ) : (
+            <span className="text-muted-foreground italic">Chưa hoàn thành</span>
+          )}
         </div>
       </TableCell>
     </TableRow>
