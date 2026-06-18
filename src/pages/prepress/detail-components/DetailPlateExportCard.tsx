@@ -53,7 +53,7 @@ export function DetailPlateExportCard({
                 Chưa có thông tin xuất kẽm
               </p>
               <p className="text-[11px] text-muted-foreground/60">
-                Ghi nhận thông tin để tiếp tục
+                Ghi nhận thông tin để tiếp tục 
               </p>
             </div>
             {order.status !== "completed" && isProofer && (
@@ -63,7 +63,7 @@ export function DetailPlateExportCard({
                 onClick={() => setIsPlateExportDialogOpen(true)}
                 className="h-8 px-4 text-xs font-bold rounded-md"
               >
-                Ghi nhận ngay
+                Xuất kẽm
               </Button>
             )}
           </div>

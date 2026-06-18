@@ -102,7 +102,7 @@ export function DetailDieExportCard({
                   onClick={() => setIsDieExportDialogOpen(true)}
                   className="h-8 px-4 text-xs font-bold rounded-md"
                 >
-                  Ghi nhận ngay
+                  Xuất khuôn
                 </Button>
               )}
             </div>
