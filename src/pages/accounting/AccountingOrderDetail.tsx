@@ -2136,7 +2136,7 @@ export default function AccountingOrderDetail() {
                     /* Edit Mode */
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <Label>Tên khách hàng *</Label>
+                        <Label>Tên người nhận *</Label>
                         <Input
                           value={cardEditValues.customerName || ""}
                           onChange={(e) =>
@@ -2145,12 +2145,12 @@ export default function AccountingOrderDetail() {
                               customerName: e.target.value,
                             })
                           }
-                          placeholder="Nhập tên khách hàng"
+                          placeholder="Nhập tên người nhận"
                         />
                       </div>
                       {customerType === "company" && (
                         <div className="space-y-2">
-                          <Label>Tên công ty</Label>
+                          <Label>Tên công ty (tham chiếu đơn hàng)</Label>
                           <Input
                             value={cardEditValues.customerCompanyName || ""}
                             onChange={(e) =>
@@ -2164,7 +2164,7 @@ export default function AccountingOrderDetail() {
                         </div>
                       )}
                       <div className="space-y-2">
-                        <Label>Số điện thoại *</Label>
+                        <Label>Số điện thoại </Label>
                         <Input
                           value={cardEditValues.customerPhone || ""}
                           onChange={(e) =>

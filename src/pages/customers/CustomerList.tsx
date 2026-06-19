@@ -558,7 +558,7 @@ export default function Customers() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label>ID nguồn</Label>
+                <Label>ID nguồn (bị xóa)</Label>
                 <Input type="number" value={mergeFromId ?? ""} onChange={(e) => setMergeFromId(Number(e.target.value) || null)} />
               </div>
               <div>
