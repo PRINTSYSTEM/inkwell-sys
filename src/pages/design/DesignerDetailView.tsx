@@ -21,6 +21,7 @@ import {
   Target,
   DollarSign,
   RotateCcw,
+  X,
   type LucideIcon,
 } from "lucide-react";
 
@@ -75,6 +76,7 @@ const DESIGN_STATUS_ICONS: Record<DesignStatusKey, LucideIcon> = {
   waiting_for_customer_approval: AlertCircle,
   confirmed_for_printing: CheckCircle2,
   returned: RotateCcw,
+  cancelled: X,
 };
 
 export default function DesignerDetailPage() {

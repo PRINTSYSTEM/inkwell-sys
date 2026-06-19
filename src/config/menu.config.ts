@@ -208,17 +208,43 @@ export const MENU_ITEMS: MenuItem[] = [
     ],
   },
   {
-    id: "production",
+    id: "production-group",
     title: "Sản xuất",
     icon: Factory,
-    path: ROUTE_PATHS.PRODUCTION.ROOT,
     allowedRoles: [
       ROLE.ADMIN,
       ROLE.MANAGER,
       ROLE.PRODUCTION,
       ROLE.PRODUCTION_LEAD,
     ],
+    children: [
+      {
+        id: "production-orders",
+        title: "Lệnh sản xuất",
+        icon: Factory,
+        path: ROUTE_PATHS.PRODUCTION.ROOT,
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.PRODUCTION,
+          ROLE.PRODUCTION_LEAD,
+        ],
+      },
+      {
+        id: "defect-records",
+        title: "Nhật ký lỗi sản xuất",
+        icon: AlertTriangle,
+        path: ROUTE_PATHS.PRODUCTION.DEFECT_RECORDS,
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.PRODUCTION,
+          ROLE.PRODUCTION_LEAD,
+        ],
+      },
+    ],
   },
+
   // ==== Phiếu giao hàng ====
   {
     id: "delivery-notes-list",
@@ -390,8 +416,21 @@ export const MENU_ITEMS: MenuItem[] = [
           ROLE.ACCOUNTING_LEAD,
         ],
       },
+      {
+        id: "defect-reports",
+        title: "Báo cáo lỗi trừ lương",
+        icon: FileBarChart,
+        path: ROUTE_PATHS.ACCOUNTING.DEFECT_REPORTS,
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.ACCOUNTING,
+          ROLE.ACCOUNTING_LEAD,
+        ],
+      },
     ],
   },
+
 
   
 

@@ -39,6 +39,7 @@ import {
   UpdateExpenseCategoryRequestSchema,
   type CreateExpenseCategoryRequest,
   type UpdateExpenseCategoryRequest,
+  type ExpenseCategoryResponse,
 } from "@/Schema/accounting.schema";
 
 interface ExpenseCategoryModalProps {

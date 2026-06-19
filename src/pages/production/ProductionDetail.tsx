@@ -68,6 +68,7 @@ import {
   MaterialExportDialog,
   DieCutStepDialog,
   CompletionDialog,
+  DefectRecordDialog,
 } from "@/components/production";
 import { productionStepTypeLabels } from "@/lib/status-utils";
 
@@ -85,6 +86,11 @@ export default function ProductionDetailPage() {
   const [isDieCutCompleteDialogOpen, setIsDieCutCompleteDialogOpen] =
     useState(false);
   const [isCompletionDialogOpen, setIsCompletionDialogOpen] = useState(false);
+  const [isDefectRecordDialogOpen, setIsDefectRecordDialogOpen] = useState(false);
+  const [defectPrefilledStepId, setDefectPrefilledStepId] = useState<number | null>(null);
+  const [defectPrefilledDesignId, setDefectPrefilledDesignId] = useState<number | null>(null);
+  const [defectPrefilledQuantity, setDefectPrefilledQuantity] = useState<number | null>(null);
+  const [defectPrefilledDescription, setDefectPrefilledDescription] = useState<string | null>(null);
 
   // Form states
   const [progressPercent, setProgressPercent] = useState("0");
@@ -567,6 +573,18 @@ export default function ProductionDetailPage() {
       setWastage("0");
       setDefectNotes("");
       setCompleteNotes("");
+
+      if (wastageValue > 0) {
+        const confirmLogDefect = window.confirm(
+          "Bạn đã ghi nhận hao hụt/lỗi > 0. Bạn có muốn ghi nhận lỗi này vào Nhật ký lỗi sản xuất để khấu trừ lương không?"
+        );
+        if (confirmLogDefect) {
+          setDefectPrefilledStepId(stepToComplete.id);
+          setDefectPrefilledQuantity(wastageValue);
+          setDefectPrefilledDescription(defectNotes.trim() || `Hao hụt/Lỗi xảy ra trong công đoạn ${stepToComplete.stepTypeName || stepToComplete.stepType}`);
+          setIsDefectRecordDialogOpen(true);
+        }
+      }
     } catch (error) {
       // Error is handled by the hook
     }
@@ -748,6 +766,20 @@ export default function ProductionDetailPage() {
                   {completing ? "Đang xử lý..." : "Hoàn thành"}
                 </Button>
               )}
+              <Button
+                variant="destructive"
+                className="gap-2"
+                onClick={() => {
+                  setDefectPrefilledStepId(currentActiveStep?.id || null);
+                  setDefectPrefilledDesignId(null);
+                  setDefectPrefilledQuantity(null);
+                  setDefectPrefilledDescription(null);
+                  setIsDefectRecordDialogOpen(true);
+                }}
+              >
+                <AlertTriangle className="h-4 w-4" />
+                Ghi nhận lỗi
+              </Button>
             </div>
           </div>
         </div>
@@ -1247,6 +1279,23 @@ export default function ProductionDetailPage() {
                                         Kích thước: {pod.design.dimensions}
                                       </p>
                                     )}
+                                    <div className="flex justify-end pt-1">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 gap-1"
+                                        onClick={() => {
+                                          setDefectPrefilledDesignId(pod.design?.id || null);
+                                          setDefectPrefilledStepId(currentActiveStep?.id || null);
+                                          setDefectPrefilledQuantity(null);
+                                          setDefectPrefilledDescription(null);
+                                          setIsDefectRecordDialogOpen(true);
+                                        }}
+                                      >
+                                        <AlertTriangle className="h-3 w-3" />
+                                        Báo lỗi
+                                      </Button>
+                                    </div>
                                   </div>
                                 </Card>
                               ))}
@@ -1691,6 +1740,23 @@ export default function ProductionDetailPage() {
                                         Kích thước: {pod.design.dimensions}
                                       </p>
                                     )}
+                                    <div className="flex justify-end pt-1">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 gap-1"
+                                        onClick={() => {
+                                          setDefectPrefilledDesignId(pod.design?.id || null);
+                                          setDefectPrefilledStepId(currentActiveStep?.id || null);
+                                          setDefectPrefilledQuantity(null);
+                                          setDefectPrefilledDescription(null);
+                                          setIsDefectRecordDialogOpen(true);
+                                        }}
+                                      >
+                                        <AlertTriangle className="h-3 w-3" />
+                                        Báo lỗi
+                                      </Button>
+                                    </div>
                                   </div>
                                 </Card>
                               ))}
@@ -2341,6 +2407,19 @@ export default function ProductionDetailPage() {
             step={stepToComplete}
             productionOrder={production}
             proofingOrder={proofingOrder || null}
+          />
+        )}
+
+        {/* Defect Record Dialog */}
+        {production?.id && (
+          <DefectRecordDialog
+            open={isDefectRecordDialogOpen}
+            onOpenChange={setIsDefectRecordDialogOpen}
+            productionOrderId={production.id}
+            prefilledStepId={defectPrefilledStepId}
+            prefilledDesignId={defectPrefilledDesignId}
+            prefilledQuantity={defectPrefilledQuantity}
+            prefilledDescription={defectPrefilledDescription}
           />
         )}
       </div>

@@ -27704,6 +27704,9 @@
             "format": "int32",
             "nullable": true
           },
+          "designer": {
+            "$ref": "#/components/schemas/UserInfo"
+          },
           "createdAt": {
             "type": "string",
             "format": "date-time"
@@ -29500,6 +29503,9 @@
           "orderDepositAmount": {
             "type": "number",
             "format": "double"
+          },
+          "createdBy": {
+            "$ref": "#/components/schemas/UserInfo"
           },
           "derivedStatus": {
             "type": "string",

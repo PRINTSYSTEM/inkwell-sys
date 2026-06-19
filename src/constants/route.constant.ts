@@ -53,7 +53,9 @@ export const ROUTE_PATHS = {
   PRODUCTION: {
     ROOT: "/productions" as const,
     DETAIL: "/productions/:id" as const,
+    DEFECT_RECORDS: "/production/defect-records" as const,
   },
+
 
   INVENTORY: {
     ROOT: "/inventory" as const,
@@ -117,7 +119,9 @@ export const ROUTE_PATHS = {
     // Expense & Payment Method
     EXPENSE_CATEGORIES: "/accounting/expense-categories" as const,
     PAYMENT_METHODS: "/accounting/payment-methods" as const,
+    DEFECT_REPORTS: "/accounting/defect-reports" as const,
   },
+
 
   DELIVERY_NOTES: {
     ROOT: "/delivery-notes" as const,

@@ -143,7 +143,6 @@ export default function AllDesignsPage() {
   const [reprintQuantity, setReprintQuantity] = useState<number | undefined>(1000);
   const [reprintNotes, setReprintNotes] = useState<string>("");
   const [reprintTargetId, setReprintTargetId] = useState<number | null>(null);
-  const [reprintNotes, setReprintNotes] = useState("");
   const reprintDesignMutation = useReprintDesign();
   const [viewingImage, setViewingImage] = useState<{ url: string; title?: string } | null>(null);
 

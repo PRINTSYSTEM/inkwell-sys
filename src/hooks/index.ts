@@ -31,5 +31,6 @@ export * from "./use-expense";
 export * from "./use-ar-ap";
 export * from "./use-inventory-report";
 export * from "./use-sales-report";
-export * from "./use-plate-export";
+export { usePlateExports, usePlateExport } from "./use-plate-export";
 export * from "./use-debt-notification";
+export * from "./use-defect-record";

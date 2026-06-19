@@ -668,51 +668,6 @@ export const useCancelDesign = () => {
   };
 };
 
-// DELETE /api/ready-designs/{id}
-export const useDeleteReadyDesign = () => {
-  const queryClient = useQueryClient();
 
-  const { data, loading, error, execute, reset } = useAsyncCallback<
-    void,
-    [number]
-  >(async (id: number) => {
-    await apiRequest.delete(API_SUFFIX.READY_DESIGNS_BY_ID(id));
-  });
-
-  const mutate = async (id: number) => {
-    try {
-      await execute(id);
-
-      // Invalidate ready-designs list to trigger refetch
-      queryClient.invalidateQueries({
-        queryKey: ["ready-designs"],
-      });
-
-      toast.success("Thành công", {
-        description: "Đã xóa thiết kế khỏi kho sẵn sàng",
-      });
-    } catch (err: unknown) {
-      const error = err as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      toast.error("Lỗi", {
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Không thể xóa thiết kế",
-      });
-      throw err;
-    }
-  };
-
-  return {
-    data,
-    loading,
-    error,
-    mutate,
-    reset,
-  };
-};
 
 

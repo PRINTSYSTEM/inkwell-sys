@@ -272,6 +272,13 @@ export const API_SUFFIX = {
   PRODUCTION_STEP_STATUS: (id: number) =>
     `/production-orders/steps/${id}/status`,
 
+  // ========== DEFECT RECORDS ==========
+  DEFECT_RECORDS: "/defect-records",
+  DEFECT_RECORD_BY_ID: (id: number) => `/defect-records/${id}`,
+  DEFECT_RECORDS_SUMMARY_BY_USER: "/defect-records/summary-by-user",
+  DEFECT_RECORDS_BY_PRODUCTION_ORDER: (productionOrderId: number) =>
+    `/defect-records/by-production-order/${productionOrderId}`,
+
   // ========== DELIVERY NOTES ==========
   DELIVERY_NOTES: "/delivery-notes",
   DELIVERY_NOTE_BY_ID: (id: number) => `/delivery-notes/${id}`,

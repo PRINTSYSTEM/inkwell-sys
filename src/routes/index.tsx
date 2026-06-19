@@ -72,6 +72,10 @@ const ProofingOutput = lazy(() => import("@/pages/prepress/PrepressOutput"));
 
 // Production
 const Production = lazy(() => import("@/pages/production/ProductionList"));
+const DefectRecordListPage = lazy(
+  () => import("@/pages/production/DefectRecordListPage")
+);
+
 
 // Inventory / Materials
 const Inventory = lazy(() => import("@/pages/inventory/InventoryPage"));
@@ -120,6 +124,10 @@ const AccountingRevenue = lazy(
 const AccountingExpenses = lazy(
   () => import("@/pages/accounting/AccountingExpenses")
 );
+const DefectReportPage = lazy(
+  () => import("@/pages/accounting/DefectReportPage")
+);
+
 
 // Cash Management
 const CashPaymentList = lazy(
@@ -554,6 +562,15 @@ export const router = createBrowserRouter([
           },
         ],
       },
+      {
+        path: "production/defect-records",
+        element: (
+          <Suspense fallback={<PageLoadingFallback />}>
+            <DefectRecordListPage />
+          </Suspense>
+        ),
+      },
+
 
       // ===== PLATE EXPORTS =====
       {
@@ -1031,15 +1048,16 @@ export const router = createBrowserRouter([
             ),
           },
           {
-            path: "payment-methods",
+            path: "defect-reports",
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
-                <PaymentMethodList />
+                <DefectReportPage />
               </Suspense>
             ),
           },
         ],
       },
+
 
       // ===== DELIVERY NOTES =====
       {

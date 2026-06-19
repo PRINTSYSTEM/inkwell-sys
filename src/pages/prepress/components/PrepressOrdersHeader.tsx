@@ -309,7 +309,6 @@ export function PrepressOrdersHeader({
                 isRejecting={isRejecting}
                 onFindDie={onFindDie}
                 isSelectionEnabled={isSelectionEnabled}
-                isCreatingOrder={isConfiguring}
                 searchTerm={designCode}
               />
               {/* Designs Pagination */}

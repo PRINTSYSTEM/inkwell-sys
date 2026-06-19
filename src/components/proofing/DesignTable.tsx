@@ -373,7 +373,7 @@ export function DesignTable({
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
                         {(() => {
-                          const specs = design.specification;
+                          const specs = design.specification as any;
                           if (Array.isArray(specs) && specs.length > 0) {
                             return specs.map((spec, i) => (
                               <Badge

@@ -32,6 +32,17 @@ import { useTakeOutDie, useReturnDie } from "@/hooks/use-die";
 import { useSearchDies } from "@/hooks/use-die";
 import { useDebounce } from "use-debounce";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AsyncSelect } from "@/components/forms/AsyncSelect";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { apiRequest } from "@/lib/http";
+import { API_SUFFIX } from "@/apis";
 import type {
   ProductionStepResponse,
   ProductionOrderResponse,
@@ -72,6 +83,59 @@ export function DieCutStepDialog({
   const [defectQty, setDefectQty] = useState<number>(0);
   const [defectNotes, setDefectNotes] = useState("");
   const [notes, setNotes] = useState("");
+
+  const [logDefectRecord, setLogDefectRecord] = useState(false);
+  const [defectSource, setDefectSource] = useState("production");
+  const [assignedToUserId, setAssignedToUserId] = useState<string | number>("");
+  const [defectDesignId, setDefectDesignId] = useState("");
+
+  const loadUsersOptions = async (search?: string) => {
+    try {
+      const res = await apiRequest.get("/users", {
+        params: {
+          pageNumber: 1,
+          pageSize: 100,
+          isActive: true,
+          search: search || undefined,
+        },
+      });
+      return (res.data?.items ?? []).map((u: any) => ({
+        value: u.id,
+        label: u.fullName || u.username || `User #${u.id}`,
+        description: u.role ? `Role: ${u.role}` : undefined,
+      }));
+    } catch (err) {
+      console.error("loadUsersOptions error:", err);
+      return [];
+    }
+  };
+
+  useEffect(() => {
+    if (open) {
+      if (step.assignedToId) {
+        setAssignedToUserId(step.assignedToId);
+      }
+      if (proofingOrder?.proofingOrderDesigns && proofingOrder.proofingOrderDesigns.length === 1) {
+        const singleDesign = proofingOrder.proofingOrderDesigns[0].design;
+        if (singleDesign?.id) {
+          setDefectDesignId(singleDesign.id.toString());
+        }
+      }
+    } else {
+      setLogDefectRecord(false);
+      setDefectSource("production");
+      setAssignedToUserId("");
+      setDefectDesignId("");
+    }
+  }, [open, step.assignedToId, proofingOrder]);
+
+  useEffect(() => {
+    if (defectQty > 0) {
+      setLogDefectRecord(true);
+    } else {
+      setLogDefectRecord(false);
+    }
+  }, [defectQty]);
 
   const [debouncedDieSearch] = useDebounce(dieSearchTerm, 300);
 
@@ -191,6 +255,17 @@ export function DieCutStepDialog({
       return;
     }
 
+    if (defectQty > 0 && logDefectRecord) {
+      if (!defectDesignId) {
+        toast.error("Vui lòng chọn thiết kế bị lỗi");
+        return;
+      }
+      if (!assignedToUserId) {
+        toast.error("Vui lòng chọn người chịu trách nhiệm lỗi");
+        return;
+      }
+    }
+
     if (!proofingOrderDies || proofingOrderDies.length === 0) {
       toast.error("Không tìm thấy thông tin khuôn bế để trả");
       return;
@@ -258,6 +333,34 @@ export function DieCutStepDialog({
           defectNotes: combinedNotes || undefined,
         },
       });
+
+      // Step 2.5: Create defect record if checked
+      if (defectQty > 0 && logDefectRecord) {
+        const selectedDesignIdNum = Number(defectDesignId);
+        const relatedPod = proofingOrder?.proofingOrderDesigns?.find(
+          (pod) => pod.design?.id === selectedDesignIdNum
+        );
+        
+        try {
+          await apiRequest.post(API_SUFFIX.DEFECT_RECORDS, {
+            productionOrderId: productionOrder.id,
+            productionStepId: step.id,
+            designId: selectedDesignIdNum,
+            orderDetailId: relatedPod?.id || undefined,
+            defectQuantity: defectQty,
+            description: defectNotes.trim() || `Lỗi trong quá trình hoàn thành công đoạn ${step.stepTypeName || step.stepType}`,
+            defectSource: defectSource,
+            assignedToUserId: Number(assignedToUserId),
+            defectOccurredAt: new Date().toISOString(),
+          });
+          toast.success("Đã ghi nhận lỗi vào Nhật ký lỗi sản xuất khấu trừ lương");
+        } catch (defectErr: any) {
+          console.error("Ghi nhận lỗi thất bại:", defectErr);
+          toast.error("Không thể ghi nhận lỗi phạt trừ lương", {
+            description: defectErr?.response?.data?.message || defectErr?.message || "Lỗi không xác định"
+          });
+        }
+      }
 
       toast.success("Đã trả khuôn bế và hoàn thành bước sản xuất", {
         description: `Số lượng sản xuất: ${outputQty}, Lỗi: ${defectQty || 0}`,
@@ -636,6 +739,91 @@ export function DieCutStepDialog({
                       </p>
                     )}
                   </div>
+
+                  {/* Defect Salary Deduction Logging Section */}
+                  {defectQty > 0 && (
+                    <div className="rounded-lg border border-orange-200 bg-orange-50/30 p-4 space-y-4">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="log-defect-checkbox-diecut"
+                          checked={logDefectRecord}
+                          onCheckedChange={(checked) => setLogDefectRecord(!!checked)}
+                          disabled={isProcessing}
+                        />
+                        <Label
+                          htmlFor="log-defect-checkbox-diecut"
+                          className="text-sm font-semibold text-orange-950 cursor-pointer"
+                        >
+                          Ghi nhận lỗi vào Nhật ký lỗi khấu trừ lương
+                        </Label>
+                      </div>
+
+                      {logDefectRecord && (
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t border-orange-100">
+                          {/* Thiết kế bị lỗi */}
+                          <div className="space-y-1">
+                            <Label htmlFor="defect-design-select-diecut" className="text-xs font-semibold text-orange-900">
+                              Mã hàng/Thiết kế bị lỗi <span className="text-destructive">*</span>
+                            </Label>
+                            <Select
+                              value={defectDesignId}
+                              onValueChange={setDefectDesignId}
+                              disabled={isProcessing}
+                            >
+                              <SelectTrigger id="defect-design-select-diecut" className="h-9 bg-background">
+                                <SelectValue placeholder="Chọn thiết kế..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {(proofingOrder?.proofingOrderDesigns ?? []).map((pod) => (
+                                  <SelectItem key={pod.id} value={pod.design?.id?.toString() || ""}>
+                                    {pod.design?.designName} ({pod.design?.code || "Chưa có mã"})
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Nguồn lỗi */}
+                          <div className="space-y-1">
+                            <Label htmlFor="defect-source-select-diecut" className="text-xs font-semibold text-orange-900">
+                              Nguồn lỗi <span className="text-destructive">*</span>
+                            </Label>
+                            <Select
+                              value={defectSource}
+                              onValueChange={setDefectSource}
+                              disabled={isProcessing}
+                            >
+                              <SelectTrigger id="defect-source-select-diecut" className="h-9 bg-background">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="design">Lỗi do thiết kế</SelectItem>
+                                <SelectItem value="proofing">Lỗi do bình bài</SelectItem>
+                                <SelectItem value="production">Lỗi do sản xuất</SelectItem>
+                                <SelectItem value="management_decision">Quyết định quản lý</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* Người chịu trách nhiệm */}
+                          <div className="space-y-1 flex flex-col justify-end">
+                            <Label className="text-xs font-semibold text-orange-900 mb-1">
+                              Người chịu trách nhiệm <span className="text-destructive">*</span>
+                            </Label>
+                            <AsyncSelect
+                              value={assignedToUserId}
+                              onValueChange={(val) => setAssignedToUserId(val as string | number)}
+                              loadOptions={loadUsersOptions}
+                              placeholder="Tìm kiếm nhân viên..."
+                              emptyMessage="Không tìm thấy nhân viên"
+                              disabled={isProcessing}
+                              className="w-full h-9 bg-background"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

@@ -27,6 +27,8 @@ export * from "./shared-address.schema";
 export * from "./report.schema";
 export * from "./return-note.schema";
 export * from "./generated-form-body";
+export * from "./defect-record.schema";
+
 
 // Re-export zod for convenience
 import { z } from "zod";

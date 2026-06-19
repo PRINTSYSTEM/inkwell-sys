@@ -15,6 +15,7 @@ export interface DesignItem {
   length: number; // from design.length
   width?: number; // from design.width
   height: number; // from design.height
+  dimensions?: string; // dimension string (e.g. Length x Width x Height)
   unit: string; // "mm" (constant)
   quantity: number; // from OrderDetailResponse.quantity
   availableQuantity?: number; // Số lượng tối đa có thể tạo bình bài (from design.availableQuantityForProofing in response, or fetched separately if missing)
