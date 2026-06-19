@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
+import { useDebounce } from "use-debounce";
 import {
   Search,
   Filter,
@@ -596,13 +597,26 @@ export default function DeliveryNoteListPage() {
   const [deliveryNoteStatusFilter, setDeliveryNoteStatusFilter] =
     useState<string>("all");
   const [deliveryNoteSearchQuery, setDeliveryNoteSearchQuery] = useState("");
+  const [debouncedDeliveryNoteSearchQuery] = useDebounce(deliveryNoteSearchQuery, 300);
   const [deliveryNotePage, setDeliveryNotePage] = useState(1);
 
-  // Query background notes to calculate stats
-  const { data: allNotesForStats } = useDeliveryNotes({ pageSize: 200 });
+  // Reset page when search or status filters change to avoid page offset issues
+  useEffect(() => {
+    setDeliveryNotePage(1);
+  }, [debouncedDeliveryNoteSearchQuery, deliveryNoteStatusFilter]);
+
+  // Query background notes to calculate stats and perform client-side search/pagination
+  const {
+    data: allNotesData,
+    isLoading: deliveryNotesLoading,
+    isError: deliveryNotesError,
+    error: deliveryNotesErrorObj,
+    refetch: refetchDeliveryNotes,
+  } = useDeliveryNotes({ pageSize: 200 });
+
   const stats = useMemo(() => {
-    const items = allNotesForStats?.items || [];
-    const total = allNotesForStats?.total || items.length;
+    const items = allNotesData?.items || [];
+    const total = allNotesData?.total || items.length;
     const todayStr = format(new Date(), "yyyy-MM-dd");
     const todayCount = items.filter(note => note.createdAt && note.createdAt.startsWith(todayStr)).length;
     const deliveredCount = items.filter(note => getDisplayStatus(note) === "completed").length;
@@ -618,7 +632,7 @@ export default function DeliveryNoteListPage() {
       pendingCount,
       failedCount,
     };
-  }, [allNotesForStats]);
+  }, [allNotesData]);
 
   const itemsPerPage = 10;
 
@@ -797,19 +811,72 @@ export default function DeliveryNoteListPage() {
     );
   }, [selectedOrders]);
 
-  const {
-    data: deliveryNotesData,
-    isLoading: deliveryNotesLoading,
-    isError: deliveryNotesError,
-    error: deliveryNotesErrorObj,
-    refetch: refetchDeliveryNotes,
-  } = useDeliveryNotes({
-    pageNumber: deliveryNotePage,
-    pageSize: itemsPerPage,
-    status:
-      deliveryNoteStatusFilter === "all" ? undefined : deliveryNoteStatusFilter,
-    searchTerm: deliveryNoteSearchQuery || undefined,
-  });
+  // Client-side filtering, sorting, and pagination
+  const filteredAndSortedNotes = useMemo(() => {
+    const items = allNotesData?.items || [];
+    let result = [...items];
+
+    // 1. Filter by status
+    if (deliveryNoteStatusFilter !== "all") {
+      result = result.filter(note => getDisplayStatus(note) === deliveryNoteStatusFilter);
+    }
+
+    // 2. Filter by search query (code, id, customer name, order code, design name/code, recipient name/phone)
+    if (debouncedDeliveryNoteSearchQuery.trim() !== "") {
+      const q = debouncedDeliveryNoteSearchQuery.toLowerCase();
+      result = result.filter(note => {
+        const matchCode = String(note.code || "").toLowerCase().includes(q);
+        const matchId = String(note.id || "").includes(q);
+        const matchOrders = (note.orders || []).some(order => 
+          String(order.customerName || "").toLowerCase().includes(q) ||
+          String(order.orderCode || "").toLowerCase().includes(q)
+        );
+        const matchLines = (note.lines || []).some(line => 
+          String(line.designName || "").toLowerCase().includes(q) ||
+          String(line.designCode || "").toLowerCase().includes(q)
+        );
+        const matchRecipient = 
+          String(note.recipientName || "").toLowerCase().includes(q) ||
+          String(note.recipientPhone || "").toLowerCase().includes(q);
+
+        return matchCode || matchId || matchOrders || matchLines || matchRecipient;
+      });
+    }
+
+    // 3. Sort (priority: pending first, then undelivered, then others; newer first)
+    const priority = (note: any) => {
+      if (!note) return 3;
+      if (String(note.status) === "pending") return 0;
+      const lines = note.lines || [];
+      const hasDelivered = lines.some((l: any) => l && l.status === "delivered");
+      if (!hasDelivered) return 1;
+      return 2;
+    };
+
+    result.sort((a: any, b: any) => {
+      const pa = priority(a);
+      const pb = priority(b);
+      if (pa !== pb) return pa - pb;
+      const da = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const db = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return db - da; // newer first
+    });
+
+    return result;
+  }, [allNotesData, deliveryNoteStatusFilter, debouncedDeliveryNoteSearchQuery]);
+
+  const paginatedNotesList = useMemo(() => {
+    const start = (deliveryNotePage - 1) * itemsPerPage;
+    return filteredAndSortedNotes.slice(start, start + itemsPerPage);
+  }, [filteredAndSortedNotes, deliveryNotePage]);
+
+  const deliveryNotesData = useMemo(() => {
+    return {
+      items: paginatedNotesList,
+      totalPages: Math.ceil(filteredAndSortedNotes.length / itemsPerPage),
+      total: filteredAndSortedNotes.length,
+    };
+  }, [paginatedNotesList, filteredAndSortedNotes.length]);
 
   const handleToggleSelectNote = (noteId?: number) => {
     if (!noteId) return;
@@ -1382,7 +1449,7 @@ export default function DeliveryNoteListPage() {
             handleBulkStartShipping={handleBulkStartShipping}
             updatingIds={updatingIds}
             onImageClick={handleImageClick}
-            allNotesForStats={allNotesForStats}
+            allNotesForStats={allNotesData}
           />
         </TabsContent>
       </Tabs>
@@ -1665,6 +1732,7 @@ function OrdersView({
                           <TableHead className="w-12">Hình</TableHead>
                           <TableHead className="w-[120px] font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Mã thiết kế</TableHead>
                           <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Tên sản phẩm</TableHead>
+                          <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Địa chỉ giao</TableHead>
                           <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-40">Đơn hàng</TableHead>
                           <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-24">Số lượng</TableHead>
                           <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider pr-4 w-32">Thành tiền</TableHead>
@@ -1702,7 +1770,7 @@ function OrdersView({
                                 />
                               </TableCell>
                               <TableCell className="w-12">
-                                <div className="h-8 w-8 rounded-lg bg-stone-100 dark:bg-stone-800 border flex items-center justify-center overflow-hidden relative">
+                                <div className="h-8 w-8 rounded-lg bg-stone-100 dark:bg-stone-850 border flex items-center justify-center overflow-hidden relative">
                                   {detail.designImageUrl ? (
                                     <img
                                       src={detail.designImageUrl}
@@ -1721,8 +1789,11 @@ function OrdersView({
                               <TableCell className="w-[120px] font-mono font-black text-[11px] uppercase text-stone-800 dark:text-stone-200">
                                 {detail.designCode}
                               </TableCell>
-                              <TableCell className="text-[11px] text-stone-500 font-medium truncate max-w-[200px] md:max-w-[300px]">
+                              <TableCell className="text-[11px] text-stone-500 font-medium truncate max-w-[150px] md:max-w-[200px]" title={detail.designName}>
                                 {detail.designName}
+                              </TableCell>
+                              <TableCell className="text-[11px] text-stone-500 font-medium truncate max-w-[150px] md:max-w-[200px]" title={detail.deliveryAddress || ""}>
+                                {detail.deliveryAddress || "—"}
                               </TableCell>
                               <TableCell className="text-right text-xs font-semibold text-stone-600 dark:text-stone-400 w-40">
                                 <div className="flex flex-col items-end">
@@ -1983,6 +2054,18 @@ function DeliveryNotesView({
       return next;
     });
   };
+
+  const toggleNote = (noteId: number) => {
+    const next = new Set(expandedNoteIds);
+    if (next.has(noteId)) {
+      next.delete(noteId);
+    } else {
+      next.add(noteId);
+    }
+    setExpandedNoteIds(next);
+  };
+
+
 
   return (
     <div className="space-y-6">
@@ -2314,6 +2397,7 @@ function DeliveryNotesView({
                                     <TableHead className="w-12 pl-4">Hình</TableHead>
                                     <TableHead className="w-[120px] font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Mã thiết kế</TableHead>
                                     <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Tên sản phẩm</TableHead>
+                                    <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Địa chỉ giao</TableHead>
                                     <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Mã bài</TableHead>
                                     <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-40">Đơn hàng</TableHead>
                                     <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-24">SL giao</TableHead>
@@ -2344,8 +2428,24 @@ function DeliveryNotesView({
                                         <TableCell className="w-[120px] font-mono font-black text-[11px] uppercase text-stone-800 dark:text-stone-200">
                                           {line.designCode}
                                         </TableCell>
-                                        <TableCell className="text-[11px] text-stone-500 font-medium truncate max-w-[200px] md:max-w-[300px]">
+                                        <TableCell className="text-[11px] text-stone-500 font-medium truncate max-w-[150px] md:max-w-[200px]" title={line.designName}>
                                           {line.designName}
+                                        </TableCell>
+                                        <TableCell
+                                          className="text-[11px] text-stone-500 font-medium truncate max-w-[150px] md:max-w-[200px]"
+                                          title={
+                                            line.customerAddress
+                                              ? [
+                                                  line.customerAddress.recipientName,
+                                                  line.customerAddress.recipientPhone,
+                                                  line.customerAddress.address,
+                                                ]
+                                                  .filter(Boolean)
+                                                  .join(" - ")
+                                              : ""
+                                          }
+                                        >
+                                          {line.customerAddress?.address || "—"}
                                         </TableCell>
                                         <TableCell className="text-[11px] font-medium text-stone-700 dark:text-stone-300">
                                           {line.proofingOrderCodes && line.proofingOrderCodes.length > 0 ? (
@@ -2371,7 +2471,7 @@ function DeliveryNotesView({
                                     ))
                                   ) : (
                                     <TableRow>
-                                      <TableCell colSpan={7} className="text-center py-4 text-stone-400 text-xs italic">
+                                      <TableCell colSpan={8} className="text-center py-4 text-stone-400 text-xs italic">
                                         Không có chi tiết sản phẩm nào
                                       </TableCell>
                                     </TableRow>

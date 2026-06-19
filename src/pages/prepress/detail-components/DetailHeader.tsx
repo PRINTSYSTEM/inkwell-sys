@@ -91,23 +91,12 @@ export function DetailHeader({
                   <div className="flex items-center gap-2">
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <span
-                          className={cn(
-                            "inline-block",
-                            order?.status === "not_completed" &&
-                              !canMarkCompleted &&
-                              "cursor-not-allowed"
-                          )}
-                        >
+                        <span className="inline-block">
                           <Button
                             variant="outline"
                             size="sm"
                             className="gap-1.5 h-8 text-xs"
                             onClick={onStatusChangeClick}
-                            disabled={
-                              order?.status === "not_completed" &&
-                              !canMarkCompleted
-                            }
                           >
                             <Edit className="h-3.5 w-3.5" />
                             {nextStatusInfo.buttonLabel}
@@ -158,7 +147,6 @@ export function DetailHeader({
                   size="sm"
                   className="gap-1.5 h-8 text-xs"
                   onClick={onOldStatusChangeClick}
-                  disabled={!order.proofingFileUrl}
                   title={
                     !order.proofingFileUrl
                       ? "Vui lòng tải lên file bình bài trước"

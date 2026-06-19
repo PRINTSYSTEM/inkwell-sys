@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { Check, ChevronsUpDown, Loader2, Package, Search, Plus, Trash2, Calendar, FileText, User, Image as ImageIcon, X, RefreshCw } from "lucide-react";
-import { useDeleteReadyDesign } from "@/hooks/use-design";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import { apiRequest, API_SUFFIX } from "@/apis";
@@ -61,6 +60,7 @@ import {
   useCreateOrderFromReadyDesigns,
   useDesign,
   useUpdateReadyDesign,
+  useDeleteReadyDesign,
 } from "@/hooks";
 import type { ReadyDesignResponse } from "@/Schema";
 
@@ -130,9 +130,8 @@ export default function ReadyDesignListPage() {
   const [dimensionsFilter, setDimensionsFilter] = useState("");
   const [debouncedDimensions] = useDebounce(dimensionsFilter, 300);
 
-  // Pagination disabled: load all items and allow scrolling
+  // Pagination/Filter reset state
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10000;
 
   // Selected designs
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -225,15 +224,15 @@ export default function ReadyDesignListPage() {
   // Fetch ready designs
   const readyDesignsParams = useMemo(() => {
     return {
-      pageNumber: currentPage,
-      pageSize: itemsPerPage,
+      pageNumber: 1,
+      pageSize: 10000,
       customerId: selectedCustomer?.id || undefined,
       search: debouncedSearchQuery.trim() || undefined,
       designType: selectedTypeName || undefined,
       materialType: materialFilter || undefined,
       dimensions: debouncedDimensions.trim() || undefined,
     };
-  }, [currentPage, selectedCustomer, debouncedSearchQuery, selectedTypeName, materialFilter, debouncedDimensions]);
+  }, [selectedCustomer, debouncedSearchQuery, selectedTypeName, materialFilter, debouncedDimensions]);
 
   const { data: readyDesignsData, isLoading: loadingDesigns, refetch: refetchDesigns } = useReadyDesigns(
     readyDesignsParams
@@ -293,7 +292,7 @@ export default function ReadyDesignListPage() {
   // Reset selected checkboxes if the page or customer filter changes
   useEffect(() => {
     setSelectedIds([]);
-  }, [selectedCustomer]);
+  }, [currentPage, selectedCustomer]);
 
   // Refetch designs every time the page is entered/mounted
   useEffect(() => {
@@ -363,8 +362,8 @@ export default function ReadyDesignListPage() {
   // Update Ready Design Mutation (for isUrgent flag)
   const { mutate: updateReadyDesign } = useUpdateReadyDesign();
   const { mutate: deleteReadyDesign } = useDeleteReadyDesign();
-  const [deletingId, setDeletingId] = useState<number | null>(null);
   const [updatingUrgentId, setUpdatingUrgentId] = useState<number | null>(null);
+  const [designToDelete, setDesignToDelete] = useState<ReadyDesignResponse | null>(null);
 
   const handleToggleUrgent = async (design: ReadyDesignResponse) => {
     if (!design.id) return;
@@ -499,6 +498,7 @@ export default function ReadyDesignListPage() {
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
+                  setCurrentPage(1);
                 }}
                 className="pl-9 h-9 text-sm"
               />
@@ -538,6 +538,7 @@ export default function ReadyDesignListPage() {
                           onSelect={() => {
                             setSelectedCustomer(null);
                             setCustomerComboOpen(false);
+                            setCurrentPage(1);
                           }}
                           className="py-2 text-sm text-destructive cursor-pointer hover:bg-destructive/10"
                         >
@@ -552,6 +553,7 @@ export default function ReadyDesignListPage() {
                           onSelect={() => {
                             setSelectedCustomer({ id: customer.id!, name: customer.name! });
                             setCustomerComboOpen(false);
+                            setCurrentPage(1);
                           }}
                           className="py-2 text-sm cursor-pointer hover:bg-accent"
                         >
@@ -575,9 +577,10 @@ export default function ReadyDesignListPage() {
             {/* Design Type */}
             <Select
               value={selectedTypeName ?? "0"}
-                onValueChange={(v) => {
+              onValueChange={(v) => {
                 setSelectedTypeName(v && v !== "0" ? v : null);
                 setMaterialFilter(null);
+                setCurrentPage(1);
               }}
             >
               <SelectTrigger className="h-9 text-sm">
@@ -594,7 +597,7 @@ export default function ReadyDesignListPage() {
             {/* Material */}
             <Select
               value={materialFilter ?? "0"}
-              onValueChange={(v) => { setMaterialFilter(v && v !== "0" ? v : null); }}
+              onValueChange={(v) => { setMaterialFilter(v && v !== "0" ? v : null); setCurrentPage(1); }}
             >
               <SelectTrigger className="h-9 text-sm">
                 <SelectValue placeholder="Chất liệu" />
@@ -611,7 +614,7 @@ export default function ReadyDesignListPage() {
             <Input
               placeholder="Kích thước"
               value={dimensionsFilter}
-              onChange={(e) => { setDimensionsFilter(e.target.value); }}
+              onChange={(e) => { setDimensionsFilter(e.target.value); setCurrentPage(1); }}
               className="h-9 text-sm"
             />
 
@@ -626,6 +629,7 @@ export default function ReadyDesignListPage() {
                 setSelectedTypeName(null);
                 setMaterialFilter(null);
                 setDimensionsFilter("");
+                setCurrentPage(1);
               }}
             >
               Làm sạch bộ lọc
@@ -643,21 +647,21 @@ export default function ReadyDesignListPage() {
                 <TableRow>
                   <TableHead className="w-[50px] text-center" />
                   <TableHead className="h-9 text-sm font-bold w-[75px] text-center">Hình ảnh</TableHead>
-                  <TableHead className="h-9 text-sm font-bold text-center">Mã thiết kế</TableHead>
-                  <TableHead className="h-9 text-sm font-bold text-center w-[320px]">Tên thiết kế</TableHead>
-                  <TableHead className="h-9 text-sm font-bold text-center">Khách hàng</TableHead>
-                  <TableHead className="h-9 text-sm font-bold text-center">Số lượng</TableHead>
-                  <TableHead className="h-9 text-sm font-bold text-center">Kích thước</TableHead>
-                  <TableHead className="h-9 text-sm font-bold text-center">Chất liệu</TableHead>
-                  <TableHead className="h-9 text-sm font-bold text-center">Ghi chú</TableHead>
+                  <TableHead className="h-9 text-sm font-bold">Mã thiết kế</TableHead>
+                  <TableHead className="h-9 text-sm font-bold">Tên thiết kế</TableHead>
+                  <TableHead className="h-9 text-sm font-bold">Khách hàng</TableHead>
+                  <TableHead className="h-9 text-sm font-bold">Số lượng sẵn sàng</TableHead>
+                  <TableHead className="h-9 text-sm font-bold">Kích thước</TableHead>
+                  <TableHead className="h-9 text-sm font-bold">Chất liệu</TableHead>
+                  <TableHead className="h-9 text-sm font-bold">Ghi chú</TableHead>
                   <TableHead className="h-9 text-sm font-bold text-center w-[120px]">Giao gấp</TableHead>
-                  <TableHead className="h-9 text-sm font-bold text-center w-[60px]">Xóa(Sale)</TableHead>
-                  <TableHead className="h-9 text-sm font-bold text-center">Ngày đặt hàng</TableHead>
+                  <TableHead className="h-9 text-sm font-bold">Ngày cập nhật</TableHead>
+                  <TableHead className="h-9 text-sm font-bold text-right pr-6 w-[80px]">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loadingDesigns ? (
-                  <TableSkeleton cols={11} rows={8} rowHeight="h-12" />
+                  <TableSkeleton cols={12} rows={8} rowHeight="h-12" />
                 ) : sortedDesigns.length > 0 ? (
                   sortedDesigns.map((design) => {
                     const isSelected = selectedIds.includes(design.id!);
@@ -685,25 +689,25 @@ export default function ReadyDesignListPage() {
                         <TableCell className="py-1 flex items-center justify-center">
                           <DesignImageThumbnail designId={design.designId!} />
                         </TableCell>
-                        <TableCell className="py-2 font-mono font-semibold text-sm text-center"  title={design.designCode}>
+                        <TableCell className="py-2 font-mono font-semibold text-sm">
                           {design.designCode}
                         </TableCell>
-                        <TableCell className="py-2 text-sm font-semibold break-words max-w-[420px] text-center" title={design.designName || ""}>
+                        <TableCell className="py-2 text-sm font-semibold break-words max-w-[240px]" title={design.designName || ""}>
                           {design.designName}
                         </TableCell>
-                        <TableCell className="py-2 text-sm font-medium break-words max-w-[200px] text-center" title={design.customerName}>
+                        <TableCell className="py-2 text-sm font-medium break-words max-w-[200px]">
                           {design.customerName}
                         </TableCell>
-                        <TableCell className={`py-2 text-sm font-bold text-center ${design.isUrgent ? "text-red-700 dark:text-red-300" : "text-indigo-600 dark:text-indigo-400"}`}>
+                        <TableCell className={`py-2 text-sm font-bold ${design.isUrgent ? "text-red-700 dark:text-red-300" : "text-indigo-600 dark:text-indigo-400"}`}>
                           {design.quantity?.toLocaleString("vi-VN")}
                         </TableCell>
-                        <TableCell className={`py-2 font-mono text-xs text-center ${design.isUrgent ? "text-red-600/80 dark:text-red-400/80" : "text-muted-foreground"}`}>
+                        <TableCell className={`py-2 font-mono text-xs ${design.isUrgent ? "text-red-600/80 dark:text-red-400/80" : "text-muted-foreground"}`}>
                           {design.dimensions || "—"}
                         </TableCell>
-                        <TableCell className={`py-2 text-xs font-medium truncate max-w-[150px] text-center ${design.isUrgent ? "text-red-600/80 dark:text-red-400/80" : "text-muted-foreground"}`} title={design.materialTypeName || ""}>
+                        <TableCell className={`py-2 text-xs font-medium truncate max-w-[150px] ${design.isUrgent ? "text-red-600/80 dark:text-red-400/80" : "text-muted-foreground"}`} title={design.materialTypeName || ""}>
                           {design.materialTypeName}
                         </TableCell>
-                        <TableCell className={`py-2 text-xs break-words max-w-[280px] text-center ${design.isUrgent ? "text-red-600/80 dark:text-red-400/80" : "text-muted-foreground"}`} title={design.notes || ""}>
+                        <TableCell className={`py-2 text-xs break-words max-w-[280px] ${design.isUrgent ? "text-red-600/80 dark:text-red-400/80" : "text-muted-foreground"}`} title={design.notes || ""}>
                           {design.notes || "—"}
                         </TableCell>
                         <TableCell className="py-2 text-center" onClick={(e) => e.stopPropagation()}>
@@ -720,37 +724,27 @@ export default function ReadyDesignListPage() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="py-2 text-center">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const ok = window.confirm("Xóa thiết kế khỏi kho sẵn sàng?\nHành động này không thể hoàn tác.");
-                              if (!ok) return;
-                              setDeletingId(design.id!);
-                              deleteReadyDesign(design.id!).finally(() => setDeletingId(null));
-                            }}
-                          >
-                            {deletingId === design.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            )}
-                          </Button>
-                        </TableCell>
-
-                        <TableCell className={`py-2 text-xs text-center ${design.isUrgent ? "text-red-650/80 dark:text-red-350/80" : "text-muted-foreground"}`}>
+                        <TableCell className={`py-2 text-xs ${design.isUrgent ? "text-red-650/80 dark:text-red-350/80" : "text-muted-foreground"}`}>
                           {design.updatedAt
                             ? new Date(design.updatedAt).toLocaleDateString("vi-VN")
                             : "—"}
+                        </TableCell>
+                        <TableCell className="py-2 text-right pr-6" onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive rounded-lg"
+                            onClick={() => setDesignToDelete(design)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     );
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center py-12">
+                    <TableCell colSpan={12} className="text-center py-12">
                       <div className="flex flex-col items-center justify-center text-muted-foreground">
                         <Package className="h-10 w-10 mb-2 opacity-50" />
                         <p className="text-sm">Không có thiết kế nào sẵn sàng trong kho</p>
@@ -762,7 +756,14 @@ export default function ReadyDesignListPage() {
             </table>
           </div>
 
-          {/* Pagination removed — list scrolls to show all items */}
+          {/* Total Count */}
+          {totalCount > 0 && (
+            <div className="flex items-center justify-between px-3 py-2 border-t shrink-0 bg-background">
+              <div className="text-xs text-muted-foreground">
+                Tổng số thiết kế sẵn sàng: <span className="font-semibold text-foreground">{totalCount}</span>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -783,64 +784,52 @@ export default function ReadyDesignListPage() {
             <div className="space-y-2">
               <Label className="font-semibold text-foreground">Các thiết kế đã chọn ({selectedDesignsDetails.length})</Label>
               <div className="bg-muted/40 border rounded-lg p-2.5 space-y-2.5 max-h-[200px] overflow-y-auto">
-                {selectedDesignsDetails.map((item, idx) => {
-                  const isLast = idx === selectedDesignsDetails.length - 1;
-                  return (
-                    <>
-                      <div
-                        key={item.id}
-                        className={`flex flex-col text-xs pb-2.5 gap-1.5 rounded-md transition-colors overflow-hidden ${
-                          item.isUrgent
-                            ? "bg-red-50/60 dark:bg-red-900/20 border border-red-200/40"
-                            : "bg-white border border-border/40"
-                        }`}
-                      >
-                        {/* Top row: Code and Quantity (with small center pill separator) */}
-                        <div className="flex items-center justify-between px-2 py-1">
-                          <span className="font-mono font-bold text-muted-foreground">{item.designCode}</span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] w-1 h-1 rounded-full bg-border/30 mr-1" />
-                            <span className="font-semibold text-indigo-600 dark:text-indigo-400">SL: {item.quantity?.toLocaleString("vi-VN")}</span>
-                          </div>
-                        </div>
-                        {/* Bottom row: Name and Urgent label (no checkbox) */}
-                        <div className="flex justify-between items-start gap-3 px-2 pb-2">
-                          <div className="flex flex-col min-w-0 flex-1">
-                            <span className="font-medium break-words text-foreground/80" title={item.designName || ""}>
-                              {item.designName}
-                            </span>
-                            {item.notes && (
-                              <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold break-words mt-0.5" title={item.notes}>
-                                Ghi chú: {item.notes}
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="flex items-center gap-1.5 shrink-0 select-none px-2 py-0.5 rounded-md cursor-pointer"
-                               onClick={() => handleToggleUrgent(item)}>
-                            {updatingUrgentId === item.id ? (
-                              <Loader2 className="h-3.5 w-3.5 animate-spin text-red-550 dark:text-red-400" />
-                            ) : (
-                              <>
-                                <span className={`text-[11px] font-semibold ${item.isUrgent ? 'text-red-700 animate-pulse' : 'text-red-700/80 dark:text-red-300'}`}>
-                                  Giao gấp
-                                </span>
-                                {item.isUrgent && (
-                                  <span className="w-2 h-2 rounded-full bg-red-600 animate-ping" />
-                                )}
-                              </>
-                            )}
-                          </div>
-                        </div>
+                {selectedDesignsDetails.map((item) => (
+                  <div key={item.id} className="flex flex-col text-xs border-b border-border/40 pb-2.5 last:border-0 last:pb-0 last:border-b-0 gap-1.5">
+                    {/* Top row: Code and Quantity */}
+                    <div className="flex justify-between items-center">
+                      <span className="font-mono font-bold text-muted-foreground">{item.designCode}</span>
+                      <span className="font-semibold text-indigo-600 dark:text-indigo-400">
+                        SL: {item.quantity?.toLocaleString("vi-VN")}
+                      </span>
+                    </div>
+                    {/* Bottom row: Name and Urgent Checkbox */}
+                    <div className="flex justify-between items-start gap-3">
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="font-medium break-words text-foreground/80" title={item.designName || ""}>
+                          {item.designName}
+                        </span>
+                        {item.notes && (
+                          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold break-words mt-0.5" title={item.notes}>
+                            Ghi chú: {item.notes}
+                          </span>
+                        )}
                       </div>
-                      {!isLast && (
-                        <div className="flex justify-center py-1">
-                          <span className="w-2.5 h-0.5 rounded-full bg-border/30" />
-                        </div>
-                      )}
-                    </>
-                  );
-                })}
+                      
+                      <div className="flex items-center gap-1.5 shrink-0 select-none bg-red-50/50 dark:bg-red-950/10 border border-red-200/40 dark:border-red-900/30 px-2 py-0.5 rounded-md">
+                        {updatingUrgentId === item.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin text-red-550 dark:text-red-400" />
+                        ) : (
+                          <Checkbox
+                            id={`dialog-urgent-${item.id}`}
+                            checked={item.isUrgent || false}
+                            onCheckedChange={() => handleToggleUrgent(item)}
+                            className="h-4 w-4 border-red-500/70 data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600 rounded cursor-pointer"
+                          />
+                        )}
+                        <label 
+                          htmlFor={`dialog-urgent-${item.id}`}
+                          className="text-[11px] font-semibold text-red-700 dark:text-red-300 cursor-pointer flex items-center gap-1"
+                        >
+                          Giao gấp
+                          {item.isUrgent && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-ping" />
+                          )}
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -1057,6 +1046,40 @@ export default function ReadyDesignListPage() {
               ) : (
                 "Xác nhận tạo đơn"
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!designToDelete} onOpenChange={(open) => !open && setDesignToDelete(null)}>
+        <DialogContent className="max-w-md bg-background border border-border shadow-2xl rounded-2xl p-6">
+          <DialogHeader className="pb-3 border-b border-border/40">
+            <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-destructive" />
+              Xác nhận xóa thiết kế
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground mt-1">
+              Bạn có chắc chắn muốn xóa thiết kế <span className="font-bold text-foreground">{designToDelete?.designCode}</span> ({designToDelete?.designName}) khỏi kho thiết kế sẵn sàng không?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="pt-3 border-t border-border/40 gap-2 shrink-0">
+            <Button
+              variant="outline"
+              onClick={() => setDesignToDelete(null)}
+            >
+              Hủy bỏ
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                if (designToDelete?.id) {
+                  await deleteReadyDesign(designToDelete.id);
+                  setDesignToDelete(null);
+                }
+              }}
+            >
+              Xác nhận xóa
             </Button>
           </DialogFooter>
         </DialogContent>

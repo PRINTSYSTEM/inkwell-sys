@@ -80,7 +80,7 @@ export function PrepressOrdersTable({
                         Xuất khuôn
                       </TableHead>
                       <TableHead className="h-10 text-sm font-bold">
-                        Ngày bình bài 
+                        Thời gian hoàn thành
                       </TableHead>
                     </TableRow>
                   </TableHeader>
