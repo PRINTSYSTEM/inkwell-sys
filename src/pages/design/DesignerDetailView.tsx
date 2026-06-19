@@ -21,7 +21,7 @@ import {
   Target,
   DollarSign,
   RotateCcw,
-  X,
+  XCircle,
   type LucideIcon,
 } from "lucide-react";
 
@@ -76,7 +76,7 @@ const DESIGN_STATUS_ICONS: Record<DesignStatusKey, LucideIcon> = {
   waiting_for_customer_approval: AlertCircle,
   confirmed_for_printing: CheckCircle2,
   returned: RotateCcw,
-  cancelled: X,
+  cancelled: XCircle,
 };
 
 export default function DesignerDetailPage() {
@@ -276,6 +276,8 @@ export default function DesignerDetailPage() {
       confirmed_for_printing: allDesigns.filter(
         (d) => d.status === "confirmed_for_printing"
       ).length,
+      returned: allDesigns.filter((d) => d.status === "returned").length,
+      cancelled: allDesigns.filter((d) => d.status === "cancelled").length,
     };
   }, [allDesigns, allDesignsData]);
 
