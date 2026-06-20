@@ -33,6 +33,9 @@ export interface DesignItem {
   designerName?: string; // from design.designer?.name
   accountantName?: string; // from design.accountant?.name
   specification?: string[]; // from design.specification
+  queueItemId?: string; // from BE queueItemId ("RD_xxx" or "OD_xxx")
+  readyDesignId?: number; // from BE readyDesignId
+  availableForProofing?: number; // from BE availableForProofing
 }
 
 export interface FilterOption {

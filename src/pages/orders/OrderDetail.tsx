@@ -1079,9 +1079,7 @@ export default function OrderDetailPage() {
                                   </span>{" "}
                                   <StatusBadge
                                     status={statusValue || ""}
-                                    label={
-                                      designStatusLabels[design?.status || ""]
-                                    }
+                                    label={statusLabel}
                                   />
                                 </div>
                                 <h4 className="font-medium break-all">
@@ -1223,6 +1221,37 @@ export default function OrderDetailPage() {
                                   </p>
                                 )}
                               </div>
+                              {/* Tiến độ giao hàng */}
+                              {orderDetail.isCutOver && (
+                                <div>
+                                  <p className="text-muted-foreground text-xs">Đã giao</p>
+                                  {(() => {
+                                    const delivered = (orderDetail as any).deliveredQtyTotal ?? 0;
+                                    const total = orderDetail.quantity ?? 0;
+                                    const remaining = Math.max(0, total - delivered);
+                                    return (
+                                      <>
+                                        <p className={`font-medium ${delivered > 0 ? "text-emerald-700 dark:text-emerald-400" : "text-muted-foreground"}`}>
+                                          {delivered.toLocaleString()}
+                                          <span className="text-muted-foreground font-normal">
+                                            {" / "}{total.toLocaleString()}
+                                          </span>
+                                        </p>
+                                        {remaining > 0 && (
+                                          <p className="text-xs text-amber-600">
+                                            Còn: {remaining.toLocaleString()}
+                                          </p>
+                                        )}
+                                        {remaining === 0 && delivered > 0 && (
+                                          <p className="text-xs text-emerald-600">
+                                            Hoàn thành
+                                          </p>
+                                        )}
+                                      </>
+                                    );
+                                  })()}
+                                </div>
+                              )}
                               {(() => {
                                 const specs =
                                   (design as any)?.specification ||

@@ -534,6 +534,10 @@ const UpdateCustomerRequest = z
     parentCustomerId: z.number().int().nullable(),
   })
   .partial();
+const MergeCustomerRequest = z.object({
+  fromCustomerId: z.number().int(),
+  toCustomerId: z.number().int(),
+});
 const CreateCustomerAddressRequest = z.object({
   label: z.string().min(0).max(100),
   recipientName: z.string().min(0).max(255).nullish(),
@@ -672,6 +676,8 @@ const OrderHistoryDetailResponse = z
     unitPrice: z.number(),
     totalPrice: z.number(),
     status: z.string().nullable(),
+    billableQuantity: z.number().int(),
+    lineTotalAtBillableQty: z.number().nullable(),
   })
   .partial();
 const CustomerOrderHistoryResponse = z
@@ -1325,6 +1331,7 @@ const OrderDetailForDeliveryResponse = z
     unitPrice: z.number(),
     customerId: z.number().int(),
     customerName: z.string().nullable(),
+    deliveryAddress: z.string().nullable(),
     proofingOrderCodes: z.array(z.string()).nullable(),
   })
   .partial();
@@ -2387,6 +2394,8 @@ const OrderDetailListResponse = z
     quantity: z.number().int(),
     status: z.string().nullable(),
     statusType: z.string().nullable(),
+    billableQuantity: z.number().int(),
+    lineTotalAtBillableQty: z.number().nullable(),
   })
   .partial();
 const OrderListResponse = z
@@ -2802,8 +2811,6 @@ const ProofingOrderDesignResponse = z
     proofingOrderId: z.number().int(),
     designId: z.number().int(),
     design: DesignResponse,
-    createdById: z.number().int().nullable(),
-    createdBy: UserInfo,
     quantity: z.number().int(),
     createdAt: z.string().datetime({ offset: true }),
     specification: z.array(z.string()).nullable(),
@@ -2889,6 +2896,7 @@ const DesignSimpleResponse = z
     status: z.string().nullable(),
     statusType: z.string().nullable(),
     availableQuantityForProofing: z.number().int().nullable(),
+    designer: UserInfo,
     createdAt: z.string().datetime({ offset: true }),
     updatedAt: z.string().datetime({ offset: true }).nullable(),
   })
@@ -2899,8 +2907,6 @@ const ProofingOrderDesignListResponse = z
     proofingOrderId: z.number().int(),
     designId: z.number().int(),
     design: DesignSimpleResponse,
-    createdById: z.number().int().nullable(),
-    createdBy: UserInfo,
     quantity: z.number().int(),
   })
   .partial();
@@ -2937,7 +2943,8 @@ const ProofingOrderListResponsePaginate = z
   })
   .partial();
 const AddProofingOrderDetailItem = z.object({
-  orderDetailId: z.number().int(),
+  orderDetailId: z.number().int().nullish(),
+  readyDesignId: z.number().int().nullish(),
   quantity: z.number().int().gte(1).lte(2147483647),
 });
 const AddDesignsToProofingOrderRequest = z.object({
@@ -2982,6 +2989,7 @@ const OrderDetailAvailableResponse = z
     lastUpdatedByAccountant: UserInfo,
     orderTotalAmount: z.number(),
     orderDepositAmount: z.number(),
+    createdBy: UserInfo,
     derivedStatus: z.string().nullable(),
     cutOverAt: z.string().datetime({ offset: true }).nullable(),
     itemStatus: z.string().nullable(),
@@ -3805,6 +3813,7 @@ export const schemas = {
   CustomerSummaryResponse,
   CustomerSummaryResponsePaginate,
   UpdateCustomerRequest,
+  MergeCustomerRequest,
   CreateCustomerAddressRequest,
   CustomerAddressResponse,
   CustomerAddressResponsePaginate,
@@ -5389,6 +5398,20 @@ const endpoints = makeApi([
       },
     ],
     response: CustomerStatisticsResponse,
+  },
+  {
+    method: "post",
+    path: "/api/customers/merge",
+    alias: "postApicustomersmerge",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: MergeCustomerRequest,
+      },
+    ],
+    response: z.void(),
   },
   {
     method: "post",

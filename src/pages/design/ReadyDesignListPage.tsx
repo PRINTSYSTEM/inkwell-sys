@@ -645,12 +645,24 @@ export default function ReadyDesignListPage() {
             <table className="w-full caption-bottom text-sm">
               <TableHeader className="sticky top-0 bg-background z-10 border-b">
                 <TableRow>
-                  <TableHead className="w-[50px] text-center" />
+                  <TableHead className="w-[50px] text-center">
+                    <Checkbox
+                      checked={isAllSelected}
+                      onCheckedChange={handleSelectAll}
+                      aria-label="Chọn tất cả"
+                    />
+                  </TableHead>
                   <TableHead className="h-9 text-sm font-bold w-[75px] text-center">Hình ảnh</TableHead>
                   <TableHead className="h-9 text-sm font-bold">Mã thiết kế</TableHead>
                   <TableHead className="h-9 text-sm font-bold">Tên thiết kế</TableHead>
                   <TableHead className="h-9 text-sm font-bold">Khách hàng</TableHead>
-                  <TableHead className="h-9 text-sm font-bold">Số lượng sẵn sàng</TableHead>
+                  <TableHead className="h-9 text-sm font-bold text-right">SL chốt in</TableHead>
+                  <TableHead className="h-9 text-sm font-bold text-right">SL đã đặt</TableHead>
+                  <TableHead className="h-9 text-sm font-bold text-right">Có thể đặt</TableHead>
+                  <TableHead className="h-9 text-sm font-bold text-right">Bình bài</TableHead>
+                  <TableHead className="h-9 text-sm font-bold text-right">Đã SX</TableHead>
+                  <TableHead className="h-9 text-sm font-bold text-right">Tồn kho</TableHead>
+                  <TableHead className="h-9 text-sm font-bold text-center">Trạng thái</TableHead>
                   <TableHead className="h-9 text-sm font-bold">Kích thước</TableHead>
                   <TableHead className="h-9 text-sm font-bold">Chất liệu</TableHead>
                   <TableHead className="h-9 text-sm font-bold">Ghi chú</TableHead>
@@ -661,7 +673,7 @@ export default function ReadyDesignListPage() {
               </TableHeader>
               <TableBody>
                 {loadingDesigns ? (
-                  <TableSkeleton cols={12} rows={8} rowHeight="h-12" />
+                  <TableSkeleton cols={18} rows={8} rowHeight="h-12" />
                 ) : sortedDesigns.length > 0 ? (
                   sortedDesigns.map((design) => {
                     const isSelected = selectedIds.includes(design.id!);
@@ -698,16 +710,34 @@ export default function ReadyDesignListPage() {
                         <TableCell className="py-2 text-sm font-medium break-words max-w-[200px]">
                           {design.customerName}
                         </TableCell>
-                        <TableCell className={`py-2 text-sm font-bold ${design.isUrgent ? "text-red-700 dark:text-red-300" : "text-indigo-600 dark:text-indigo-400"}`}>
-                          {design.quantity?.toLocaleString("vi-VN")}
+                        <TableCell className="py-2 text-sm font-medium text-right">
+                          {((design as any).requestedQuantity ?? design.quantity ?? 0).toLocaleString("vi-VN")}
                         </TableCell>
-                        <TableCell className={`py-2 font-mono text-xs ${design.isUrgent ? "text-red-600/80 dark:text-red-400/80" : "text-muted-foreground"}`}>
+                        <TableCell className="py-2 text-sm font-medium text-right text-muted-foreground">
+                          {((design as any).activeOrderedQty ?? 0).toLocaleString("vi-VN")}
+                        </TableCell>
+                        <TableCell className="py-2 text-sm font-bold text-right text-indigo-600 dark:text-indigo-400">
+                          {((design as any).availableQuantityForOrdering ?? 0).toLocaleString("vi-VN")}
+                        </TableCell>
+                        <TableCell className="py-2 text-sm font-medium text-right text-muted-foreground">
+                          {((design as any).summary?.lockedQty ?? 0).toLocaleString("vi-VN")}
+                        </TableCell>
+                        <TableCell className="py-2 text-sm font-medium text-right text-muted-foreground">
+                          {((design as any).summary?.producedQty ?? 0).toLocaleString("vi-VN")}
+                        </TableCell>
+                        <TableCell className="py-2 text-sm font-medium text-right text-muted-foreground">
+                          {((design as any).summary?.stockQty ?? 0).toLocaleString("vi-VN")}
+                        </TableCell>
+                        <TableCell className="py-2 text-center">
+                          {renderStatusBadge((design as any).status)}
+                        </TableCell>
+                        <TableCell className={`py-2 font-mono text-xs ${design.isUrgent ? "text-red-650/80 dark:text-red-400/80" : "text-muted-foreground"}`}>
                           {design.dimensions || "—"}
                         </TableCell>
-                        <TableCell className={`py-2 text-xs font-medium truncate max-w-[150px] ${design.isUrgent ? "text-red-600/80 dark:text-red-400/80" : "text-muted-foreground"}`} title={design.materialTypeName || ""}>
+                        <TableCell className={`py-2 text-xs font-medium truncate max-w-[150px] ${design.isUrgent ? "text-red-650/80 dark:text-red-400/80" : "text-muted-foreground"}`} title={design.materialTypeName || ""}>
                           {design.materialTypeName}
                         </TableCell>
-                        <TableCell className={`py-2 text-xs break-words max-w-[280px] ${design.isUrgent ? "text-red-600/80 dark:text-red-400/80" : "text-muted-foreground"}`} title={design.notes || ""}>
+                        <TableCell className={`py-2 text-xs break-words max-w-[280px] ${design.isUrgent ? "text-red-650/80 dark:text-red-400/80" : "text-muted-foreground"}`} title={design.notes || ""}>
                           {design.notes || "—"}
                         </TableCell>
                         <TableCell className="py-2 text-center" onClick={(e) => e.stopPropagation()}>
@@ -744,7 +774,7 @@ export default function ReadyDesignListPage() {
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={12} className="text-center py-12">
+                    <TableCell colSpan={18} className="text-center py-12">
                       <div className="flex flex-col items-center justify-center text-muted-foreground">
                         <Package className="h-10 w-10 mb-2 opacity-50" />
                         <p className="text-sm">Không có thiết kế nào sẵn sàng trong kho</p>
@@ -790,7 +820,7 @@ export default function ReadyDesignListPage() {
                     <div className="flex justify-between items-center">
                       <span className="font-mono font-bold text-muted-foreground">{item.designCode}</span>
                       <span className="font-semibold text-indigo-600 dark:text-indigo-400">
-                        SL: {item.quantity?.toLocaleString("vi-VN")}
+                        SL đặt: {((item as any).availableQuantityForOrdering ?? item.quantity ?? 0).toLocaleString("vi-VN")}
                       </span>
                     </div>
                     {/* Bottom row: Name and Urgent Checkbox */}

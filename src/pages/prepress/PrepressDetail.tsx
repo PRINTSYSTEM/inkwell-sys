@@ -1206,7 +1206,7 @@ export default function ProofingOrderDetailPage() {
         return;
       }
 
-      // Map designQuantities to items array with orderDetailId and quantity
+      // Map designQuantities to items array with orderDetailId, readyDesignId and quantity
       const items = Object.entries(designQuantities)
         .filter(([_, qty]) => qty > 0)
         .map(([id, qty]) => {
@@ -1214,13 +1214,16 @@ export default function ProofingOrderDetailPage() {
           if (!design) return null;
           const quantity = Number.isInteger(qty) ? qty : Math.floor(qty);
           if (quantity <= 0) return null;
+
+          const isPoolDesign = design.queueItemId?.startsWith("RD_") || false;
           return {
-            orderDetailId: design.id, // design.id is the orderDetailId
+            orderDetailId: isPoolDesign ? null : design.id,
+            readyDesignId: design.readyDesignId ?? design.designId ?? null,
             quantity: quantity,
           };
         })
         .filter(
-          (item): item is { orderDetailId: number; quantity: number } =>
+          (item): item is { orderDetailId: number | null; readyDesignId: number | null; quantity: number } =>
             item !== null,
         );
 

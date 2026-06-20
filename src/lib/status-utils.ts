@@ -457,6 +457,9 @@ export const statusColorMap: Record<string, string> = {
   // ===== ORDER DETAIL ITEM STATUSES (dùng chung với Order) =====
   // waiting_for_proofing, waiting_for_production, in_production,
   // production_completed, delivering, completed đã được định nghĩa ở trên
+  // V4 statuses:
+  partially_delivered: "bg-amber-50 text-amber-700 border-amber-200",
+  // waiting_for_delivery đã được định nghĩa ở ORDER STATUSES ở trên
 
   // ===== PRODUCTION STATUSES =====
   // waiting_for_production, in_production, completed đã được định nghĩa ở trên

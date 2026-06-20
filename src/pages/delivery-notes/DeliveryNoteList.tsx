@@ -1200,6 +1200,16 @@ export default function DeliveryNoteListPage() {
       return;
     }
 
+    // Validate: deliveryQty <= remainingToDeliver
+    const overLimitItems = selectedOrders.filter((od) => {
+      const qty = deliveryQtys[od.orderDetailId] || 0;
+      return qty > getRemainingQty(od);
+    });
+    if (overLimitItems.length > 0) {
+      toast.error("Số lượng giao vượt quá số còn lại. Vui lòng kiểm tra lại.");
+      return;
+    }
+
     try {
       const payload = {
         customerAddressId: selectedAddressId,
@@ -3084,9 +3094,25 @@ function CreateDeliveryNoteDialog({
                           <div className="text-sm text-slate-700 dark:text-slate-300 mt-0.5 line-clamp-1">
                             {od.designName}
                           </div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                            {od.orderedQty != null && (
+                              <span>
+                                Đơn hàng:{" "}
+                                <span className="font-semibold text-slate-700 dark:text-slate-300">
+                                  {new Intl.NumberFormat("vi-VN").format(od.orderedQty)}
+                                </span>
+                              </span>
+                            )}
+                            {od.deliveredQtyTotal != null && od.deliveredQtyTotal > 0 && (
+                              <span>
+                                Đã giao:{" "}
+                                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                                  {new Intl.NumberFormat("vi-VN").format(od.deliveredQtyTotal)}
+                                </span>
+                              </span>
+                            )}
                             <span>
-                              Tối đa:{" "}
+                              Còn lại:{" "}
                               <span className="font-bold text-primary">
                                 {new Intl.NumberFormat("vi-VN").format(getRemainingQty(od) || 0)}
                               </span>

@@ -78,15 +78,19 @@ export const ENTITY_CONFIG = {
   },
   orderDetailItemStatuses: {
     entityType: "OrderDetail",
-    description: "Trạng thái chi tiết đơn hàng sau chốt in",
+    description: "Trạng thái chi tiết đơn hàng sau chốt in (V4)",
     values: {
+      // V4 statuses (BE confirmed)
       waiting_for_proofing: "Chờ bình bài",
+      waiting_for_delivery: "Chờ giao hàng",
+      partially_delivered: "Giao một phần",
+      completed: "Hoàn thành",
+      // Legacy statuses (kept for backward compat)
       waiting_for_production: "Chờ sản xuất",
       in_production: "Đang sản xuất",
       production_completed: "Chờ giao hàng",
       waiting_for_redelivery: "Chờ giao lại",
       delivering: "Đang giao hàng",
-      completed: "Hoàn thành",
       returned: "Trả về (từ bình bài)",
     },
   },

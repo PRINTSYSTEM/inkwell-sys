@@ -294,7 +294,14 @@ export function DesignTable({
                       )}
                     </TableCell>
                     <TableCell className="py-3">
-                      {design.orderCode ? (
+                      {design.queueItemId?.startsWith("RD_") ? (
+                        <Badge
+                          variant="secondary"
+                          className="bg-gray-100 text-gray-600 border-none font-normal text-xs py-0.5 px-2 hover:bg-gray-100"
+                        >
+                          Chưa lên đơn
+                        </Badge>
+                      ) : design.orderCode ? (
                         <div className="flex items-center gap-1.5">
                           <FileText className="h-3 w-3 text-muted-foreground" />
                           <span className="font-semibold text-sm text-primary">
@@ -303,7 +310,7 @@ export function DesignTable({
                         </div>
                       ) : (
                         <span className="text-muted-foreground text-sm font-semibold">
-                          {design.orderId}
+                          {design.orderId || "—"}
                         </span>
                       )}
                     </TableCell>

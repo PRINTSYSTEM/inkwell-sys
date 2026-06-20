@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-06-18T07:02:17.609Z */
+/* Generated at: 2026-06-20T20:20:25.481Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -184,6 +184,7 @@ export const MaterialResponseIPaginateSchema = schemas.MaterialResponseIPaginate
 export const MaterialTypeItemSchema = schemas.MaterialTypeItem;
 export const MaterialTypeResponseSchema = schemas.MaterialTypeResponse;
 export const MaterialTypeResponsePaginateSchema = schemas.MaterialTypeResponsePaginate;
+export const MergeCustomerRequestSchema = schemas.MergeCustomerRequest;
 export const OrderDetailAvailableResponseSchema = schemas.OrderDetailAvailableResponse;
 export const OrderDetailAvailableResponsePaginateSchema = schemas.OrderDetailAvailableResponsePaginate;
 export const OrderDetailExportResponseSchema = schemas.OrderDetailExportResponse;

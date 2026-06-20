@@ -22992,14 +22992,19 @@
       },
       "AddProofingOrderDetailItem": {
         "required": [
-          "orderDetailId",
           "quantity"
         ],
         "type": "object",
         "properties": {
           "orderDetailId": {
             "type": "integer",
-            "format": "int32"
+            "format": "int32",
+            "nullable": true
+          },
+          "readyDesignId": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
           },
           "quantity": {
             "maximum": 2147483647,
@@ -29793,6 +29798,15 @@
           "statusType": {
             "type": "string",
             "nullable": true
+          },
+          "billableQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "lineTotalAtBillableQty": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
           }
         },
         "additionalProperties": false
@@ -30330,6 +30344,15 @@
           },
           "status": {
             "type": "string",
+            "nullable": true
+          },
+          "billableQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "lineTotalAtBillableQty": {
+            "type": "number",
+            "format": "double",
             "nullable": true
           }
         },

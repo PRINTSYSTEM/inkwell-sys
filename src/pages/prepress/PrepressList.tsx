@@ -548,10 +548,18 @@ export default function PrepressList() {
         .map(([id, qty]) => {
           const design = selectedDesigns.find((d) => d.id === parseInt(id, 10));
           if (!design) return null;
-          return { orderDetailId: design.id, quantity: Math.floor(qty) };
+          const quantity = Math.floor(qty);
+          if (quantity <= 0) return null;
+
+          const isPoolDesign = design.queueItemId?.startsWith("RD_") || false;
+          return {
+            orderDetailId: isPoolDesign ? null : design.id,
+            readyDesignId: design.readyDesignId ?? design.designId ?? null,
+            quantity: quantity,
+          };
         })
         .filter(
-          (item): item is { orderDetailId: number; quantity: number } =>
+          (item): item is { orderDetailId: number | null; readyDesignId: number | null; quantity: number } =>
             item !== null,
         );
 

@@ -418,10 +418,22 @@ export default function DesignDetailPage() {
       });
 
       refetchDesign();
-    } catch {
-      toast.error("Lỗi", {
-        description: "Không thể cập nhật trạng thái. Vui lòng thử lại.",
-      });
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      const msg = error?.response?.data?.message;
+      if (
+        (targetStatus === "confirmed_for_printing" && msg === "debt_exceeded") ||
+        msg?.toLowerCase().includes("debt")
+      ) {
+        toast.error("Không thể chốt in", {
+          description:
+            "Khách hàng đang vượt hạn mức công nợ. Vui lòng kiểm tra lại công nợ trước khi chốt in.",
+        });
+      } else {
+        toast.error("Lỗi", {
+          description: "Không thể cập nhật trạng thái. Vui lòng thử lại.",
+        });
+      }
     } finally {
       setUpdatingStatus(false);
     }

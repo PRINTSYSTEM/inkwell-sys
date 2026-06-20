@@ -123,8 +123,13 @@ export const useAvailableOrderDetailsForProofing = (
         })
         .map((od, index) => {
           const design = od.design!;
+          const qId = (od as any).queueItemId || "";
+          const isPoolDesign = qId.startsWith("RD_");
+          const rDesignId = (od as any).readyDesignId ?? design.id;
+          const avForProofing = (od as any).availableForProofing ?? (design.availableQuantityForProofing != null ? design.availableQuantityForProofing : undefined);
+
           const designItem = {
-            id: od.id ?? 0,
+            id: isPoolDesign ? -rDesignId : (od.id ?? 0),
             code: design.code || "",
             name: design.designName || "",
             designTypeId: design.designTypeId ?? 0,
@@ -137,11 +142,10 @@ export const useAvailableOrderDetailsForProofing = (
             unit: "mm",
             quantity: od.quantity ?? 0,
             unitPrice: od.unitPrice ?? 0,
-            // Map availableQuantityForProofing from design to availableQuantity
-            availableQuantity:
-              design.availableQuantityForProofing != null
-                ? design.availableQuantityForProofing
-                : undefined,
+            availableQuantity: avForProofing,
+            queueItemId: qId || undefined,
+            readyDesignId: rDesignId,
+            availableForProofing: avForProofing,
             orderId: od.orderId?.toString() || "",
             processClassificationOptionName:
               design.processClassification || undefined,
@@ -1179,8 +1183,9 @@ export const useRejectDesignFromProofingOrder = () => {
       queryClient.invalidateQueries({
         queryKey: [proofingKeys.all[0], "available-order-details"],
       });
-      toast.success("Thành công", {
-        description: "Đã từ chối thiết kế và hoàn về phòng thiết kế",
+      toast.success("Đã từ chối thiết kế", {
+        description:
+          "Thiết kế quay về hàng chờ sẵn sàng. Nếu muốn xóa khỏi đơn hàng, vui lòng thao tác tại trang chi tiết đơn.",
       });
     },
     onError: (error: ApiError) => {
