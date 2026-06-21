@@ -1167,14 +1167,14 @@ export const useRejectDesignFromProofingOrder = () => {
 
   return useMutation({
     mutationFn: async ({
-      orderDetailId,
+      designId,
       reason,
     }: {
-      orderDetailId: number;
+      designId: number;
       reason?: string | null;
     }) => {
       await apiRequest.post<void>(API_SUFFIX.PROOFING_REJECT_DESIGN, {
-        orderDetailId,
+        designId,
         reason: reason ?? null,
       } as RejectDesignRequest);
     },

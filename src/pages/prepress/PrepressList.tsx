@@ -297,12 +297,12 @@ export default function PrepressList() {
     useAvailableOrderDetailsForProofing(
       viewMode === "designs" || isSearchActiveAndEmpty
         ? {
-            materialTypeId: viewMode === "designs" ? materialTypeIdForApi : null,
-            designTypeId: viewMode === "designs" ? selectedDesignTypeId : null,
-            designCode: designCodeForApi,
-            pageNumber: designsPage,
-            pageSize: designsPageSize,
-          }
+          materialTypeId: viewMode === "designs" ? materialTypeIdForApi : null,
+          designTypeId: viewMode === "designs" ? selectedDesignTypeId : null,
+          designCode: designCodeForApi,
+          pageNumber: designsPage,
+          pageSize: designsPageSize,
+        }
         : undefined,
     );
 
@@ -423,16 +423,18 @@ export default function PrepressList() {
   const { mutateAsync: rejectDesignMutate, isPending: isRejecting } =
     useRejectDesignFromProofingOrder();
 
+
   const [isDieListDialogOpen, setIsDieListDialogOpen] = useState(false);
   const [isInventoryViewDialogOpen, setIsInventoryViewDialogOpen] =
     useState(false);
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<number>>(
     new Set(),
   );
-
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [rejectTarget, setRejectTarget] = useState<DesignItem | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+
+
 
   // Die list prefill state
   const [dieListInitialSize, setDieListInitialSize] = useState<
@@ -697,6 +699,8 @@ export default function PrepressList() {
     setRejectReason("");
   };
 
+
+
   return (
     <div className="relative">
       <div className="relative h-[calc(100vh-var(--header-height))] w-full overflow-hidden bg-background">
@@ -711,7 +715,7 @@ export default function PrepressList() {
                 </p>
               </div>
 
-               <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 {isProofer && (
                   isConfiguring ? (
                     <Button
@@ -846,7 +850,7 @@ export default function PrepressList() {
                         isRejecting={isRejecting}
                         onFindDie={handleFindDie}
                         isSelectionEnabled={isProofer && isConfiguring}
-                          isConfiguring={isConfiguring}
+                        isConfiguring={isConfiguring}
                         // Designs Pagination props
                         designsPage={designsPage}
                         setDesignsPage={setDesignsPage}
@@ -954,7 +958,7 @@ export default function PrepressList() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="reject-reason">Lý do (tuỳ chọn)</Label>
+                    <Label htmlFor="reject-reason">Lý do (bắt buộc)</Label>
                     <Textarea
                       id="reject-reason"
                       value={rejectReason}
@@ -981,7 +985,7 @@ export default function PrepressList() {
                     if (!rejectTarget) return;
                     try {
                       await rejectDesignMutate({
-                        orderDetailId: rejectTarget.id,
+                        designId: rejectTarget.designId || rejectTarget.id,
                         reason: rejectReason.trim() || null,
                       });
 
@@ -1006,13 +1010,15 @@ export default function PrepressList() {
                       // error toast already handled by hook
                     }
                   }}
-                  disabled={isRejecting || !rejectTarget}
+                  disabled={isRejecting || !rejectTarget || !rejectReason.trim()}
                 >
                   {isRejecting ? "Đang xử lý..." : "Xác nhận"}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+
+
         </div>
       </div>
     </div>

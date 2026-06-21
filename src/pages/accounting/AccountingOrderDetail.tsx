@@ -249,10 +249,10 @@ export default function AccountingOrderDetail() {
   const { data: cashReceiptsData } = useCashReceipts(
     order?.customerId
       ? {
-          pageNumber: 1,
-          pageSize: 100,
-          customerId: order.customerId,
-        }
+        pageNumber: 1,
+        pageSize: 100,
+        customerId: order.customerId,
+      }
       : undefined,
   );
 
@@ -507,12 +507,12 @@ export default function AccountingOrderDetail() {
         orderDetailId: orderDetail.id,
         quantity:
           orderDetailEditValues.quantity === "" ||
-          orderDetailEditValues.quantity === null
+            orderDetailEditValues.quantity === null
             ? null
             : Number(orderDetailEditValues.quantity),
         unitPrice:
           orderDetailEditValues.unitPrice === "" ||
-          orderDetailEditValues.unitPrice === null
+            orderDetailEditValues.unitPrice === null
             ? null
             : Number(orderDetailEditValues.unitPrice),
       },
@@ -554,48 +554,48 @@ export default function AccountingOrderDetail() {
     if (cardName === "customerInfo") {
       payload.customerName =
         cardEditValues.customerName === "" ||
-        cardEditValues.customerName === null
+          cardEditValues.customerName === null
           ? null
           : String(cardEditValues.customerName).trim();
       payload.customerCompanyName =
         cardEditValues.customerCompanyName === "" ||
-        cardEditValues.customerCompanyName === null
+          cardEditValues.customerCompanyName === null
           ? ""
           : String(cardEditValues.customerCompanyName).trim();
       payload.customerPhone =
         cardEditValues.customerPhone === "" ||
-        cardEditValues.customerPhone === null
+          cardEditValues.customerPhone === null
           ? ""
           : String(cardEditValues.customerPhone).trim();
       payload.customerEmail =
         cardEditValues.customerEmail === "" ||
-        cardEditValues.customerEmail === null
+          cardEditValues.customerEmail === null
           ? null
           : String(cardEditValues.customerEmail).trim();
       payload.customerTaxCode =
         cardEditValues.customerTaxCode === "" ||
-        cardEditValues.customerTaxCode === null
+          cardEditValues.customerTaxCode === null
           ? ""
           : String(cardEditValues.customerTaxCode).trim();
       payload.customerAddress =
         cardEditValues.customerAddress === "" ||
-        cardEditValues.customerAddress === null
+          cardEditValues.customerAddress === null
           ? ""
           : String(cardEditValues.customerAddress).trim();
       payload.deliveryAddress =
         cardEditValues.deliveryAddress === "" ||
-        cardEditValues.deliveryAddress === null
+          cardEditValues.deliveryAddress === null
           ? ""
           : String(cardEditValues.deliveryAddress).trim();
     } else if (cardName === "orderInfo") {
       payload.deliveryDate =
         cardEditValues.deliveryDate === "" ||
-        cardEditValues.deliveryDate === null
+          cardEditValues.deliveryDate === null
           ? null
           : new Date(cardEditValues.deliveryDate).toISOString();
       payload.deliveryAddress =
         cardEditValues.deliveryAddress === "" ||
-        cardEditValues.deliveryAddress === null
+          cardEditValues.deliveryAddress === null
           ? ""
           : String(cardEditValues.deliveryAddress).trim();
       payload.note =
@@ -609,18 +609,18 @@ export default function AccountingOrderDetail() {
           : Number(cardEditValues.totalAmount);
       payload.depositAmount =
         cardEditValues.depositAmount === "" ||
-        cardEditValues.depositAmount === null
+          cardEditValues.depositAmount === null
           ? null
           : Number(cardEditValues.depositAmount);
       payload.paymentDueDate =
         cardEditValues.paymentDueDate === "" ||
-        cardEditValues.paymentDueDate === null
+          cardEditValues.paymentDueDate === null
           ? null
           : new Date(cardEditValues.paymentDueDate).toISOString();
       // Phương thức thanh toán
       payload.paymentMethodId =
         cardEditValues.paymentMethodId === "" ||
-        cardEditValues.paymentMethodId === null
+          cardEditValues.paymentMethodId === null
           ? null
           : Number(cardEditValues.paymentMethodId);
       // Tài khoản/Quỹ
@@ -636,17 +636,17 @@ export default function AccountingOrderDetail() {
     } else if (cardName === "recipientInfo") {
       payload.recipientName =
         cardEditValues.recipientName === "" ||
-        cardEditValues.recipientName === null
+          cardEditValues.recipientName === null
           ? null
           : String(cardEditValues.recipientName).trim();
       payload.recipientPhone =
         cardEditValues.recipientPhone === "" ||
-        cardEditValues.recipientPhone === null
+          cardEditValues.recipientPhone === null
           ? null
           : String(cardEditValues.recipientPhone).trim();
       payload.recipientAddress =
         cardEditValues.recipientAddress === "" ||
-        cardEditValues.recipientAddress === null
+          cardEditValues.recipientAddress === null
           ? null
           : String(cardEditValues.recipientAddress).trim();
     }
@@ -1082,14 +1082,14 @@ export default function AccountingOrderDetail() {
     : false;
   const isDeliveryDatePassed =
     order.deliveryDate &&
-    order.status !== "completed" &&
-    order.status !== "delivered"
+      order.status !== "completed" &&
+      order.status !== "delivered"
       ? new Date(order.deliveryDate) < now
       : false;
   const isDebtOverLimit = Boolean(
     order.customer?.currentDebt &&
-      order.customer?.maxDebt &&
-      order.customer.currentDebt > order.customer.maxDebt
+    order.customer?.maxDebt &&
+    order.customer.currentDebt > order.customer.maxDebt
   );
 
   return (
@@ -1121,7 +1121,7 @@ export default function AccountingOrderDetail() {
                       }
                       label={
                         ENTITY_CONFIG.orderStatuses.values[
-                          order.status as keyof typeof ENTITY_CONFIG.orderStatuses.values
+                        order.status as keyof typeof ENTITY_CONFIG.orderStatuses.values
                         ]
                       }
                     />
@@ -1178,7 +1178,7 @@ export default function AccountingOrderDetail() {
                       ) : (
                         <CreditCard className="h-4 w-4 mr-2" />
                       )}
-                      Duyệt đơn hàng
+                      Xác nhận đã báo giá
                     </Button>
                   )}
                 {(user?.role === ROLE.ADMIN ||
@@ -1298,20 +1298,18 @@ export default function AccountingOrderDetail() {
                       </p>
                     </div>
                     <div
-                      className={`text-center p-4 rounded-lg ${
-                        remainingAmount > 0 && isPaymentDueOverdue
-                          ? "bg-red-100 dark:bg-red-950/40 border-2 border-red-300 dark:border-red-700"
-                          : remainingAmount > 0
-                            ? "bg-destructive/10"
-                            : "bg-success/10"
-                      }`}
+                      className={`text-center p-4 rounded-lg ${remainingAmount > 0 && isPaymentDueOverdue
+                        ? "bg-red-100 dark:bg-red-950/40 border-2 border-red-300 dark:border-red-700"
+                        : remainingAmount > 0
+                          ? "bg-destructive/10"
+                          : "bg-success/10"
+                        }`}
                     >
                       <p
-                        className={`text-sm mb-1 ${
-                          remainingAmount > 0 && isPaymentDueOverdue
-                            ? "text-red-700 dark:text-red-300 font-semibold"
-                            : "text-muted-foreground"
-                        }`}
+                        className={`text-sm mb-1 ${remainingAmount > 0 && isPaymentDueOverdue
+                          ? "text-red-700 dark:text-red-300 font-semibold"
+                          : "text-muted-foreground"
+                          }`}
                       >
                         Còn lại
                         {remainingAmount > 0 &&
@@ -1319,13 +1317,12 @@ export default function AccountingOrderDetail() {
                           " (Quá hạn)"}
                       </p>
                       <p
-                        className={`text-xl font-bold tabular-nums ${
-                          remainingAmount > 0 && isPaymentDueOverdue
-                            ? "text-red-700 dark:text-red-400"
-                            : remainingAmount > 0
-                              ? "text-destructive"
-                              : "text-success"
-                        }`}
+                        className={`text-xl font-bold tabular-nums ${remainingAmount > 0 && isPaymentDueOverdue
+                          ? "text-red-700 dark:text-red-400"
+                          : remainingAmount > 0
+                            ? "text-destructive"
+                            : "text-success"
+                          }`}
                       >
                         {formatCurrency(remainingAmount)}
                         {remainingAmount > 0 && isPaymentDueOverdue && (
@@ -1553,28 +1550,25 @@ export default function AccountingOrderDetail() {
                         >
                           <div className="flex items-center gap-2">
                             <Calendar
-                              className={`h-4 w-4 flex-shrink-0 ${
-                                isPaymentDueOverdue
-                                  ? "text-red-600 dark:text-red-400"
-                                  : "text-muted-foreground"
-                              }`}
+                              className={`h-4 w-4 flex-shrink-0 ${isPaymentDueOverdue
+                                ? "text-red-600 dark:text-red-400"
+                                : "text-muted-foreground"
+                                }`}
                             />
                             <div className="flex-1">
                               <span
-                                className={`text-xs ${
-                                  isPaymentDueOverdue
-                                    ? "text-red-700 dark:text-red-300 font-semibold"
-                                    : "text-muted-foreground"
-                                }`}
+                                className={`text-xs ${isPaymentDueOverdue
+                                  ? "text-red-700 dark:text-red-300 font-semibold"
+                                  : "text-muted-foreground"
+                                  }`}
                               >
                                 Hạn thanh toán:{" "}
                               </span>
                               <span
-                                className={`text-sm font-medium ${
-                                  isPaymentDueOverdue
-                                    ? "text-red-900 dark:text-red-100"
-                                    : ""
-                                }`}
+                                className={`text-sm font-medium ${isPaymentDueOverdue
+                                  ? "text-red-900 dark:text-red-100"
+                                  : ""
+                                  }`}
                               >
                                 {formatDateTime(order.paymentDueDate)}
                                 {isPaymentDueOverdue && (
@@ -1784,7 +1778,7 @@ export default function AccountingOrderDetail() {
                               </TableCell>
                               <TableCell className="text-sm text-muted-foreground max-w-[280px]">
                                 {item.deliveryAddress ||
-                                item.deliveryAddressLabel ? (
+                                  item.deliveryAddressLabel ? (
                                   <TooltipProvider>
                                     <Tooltip>
                                       <TooltipTrigger>
@@ -1870,12 +1864,12 @@ export default function AccountingOrderDetail() {
                               <TableCell className="text-right font-medium tabular-nums">
                                 {editingOrderDetailId === item.id
                                   ? formatCurrency(
-                                      (Number(orderDetailEditValues.quantity) ||
-                                        0) *
-                                        (Number(
-                                          orderDetailEditValues.unitPrice,
-                                        ) || 0),
-                                    )
+                                    (Number(orderDetailEditValues.quantity) ||
+                                      0) *
+                                    (Number(
+                                      orderDetailEditValues.unitPrice,
+                                    ) || 0),
+                                  )
                                   : formatCurrency(item.totalPrice || 0)}
                               </TableCell>
                               <TableCell>
@@ -1934,15 +1928,15 @@ export default function AccountingOrderDetail() {
                               </TableCell>
                             </TableRow>
                           )) || (
-                            <TableRow>
-                              <TableCell
-                                colSpan={8}
-                                className="text-center text-muted-foreground py-8"
-                              >
-                                Không có sản phẩm nào
-                              </TableCell>
-                            </TableRow>
-                          )}
+                              <TableRow>
+                                <TableCell
+                                  colSpan={8}
+                                  className="text-center text-muted-foreground py-8"
+                                >
+                                  Không có sản phẩm nào
+                                </TableCell>
+                              </TableRow>
+                            )}
                         </TableBody>
                       </Table>
                     </CardContent>
@@ -2401,11 +2395,10 @@ export default function AccountingOrderDetail() {
                       )}
 
                       <div
-                        className={`p-3 rounded-lg space-y-2 ${
-                          isDebtOverLimit
-                            ? "bg-red-50/50 dark:bg-red-950/10 border-2 border-red-200 dark:border-red-900"
-                            : "bg-muted/50"
-                        }`}
+                        className={`p-3 rounded-lg space-y-2 ${isDebtOverLimit
+                          ? "bg-red-50/50 dark:bg-red-950/10 border-2 border-red-200 dark:border-red-900"
+                          : "bg-muted/50"
+                          }`}
                       >
                         <div className="flex justify-between items-center text-sm">
                           <span className="text-muted-foreground">
@@ -2678,8 +2671,8 @@ export default function AccountingOrderDetail() {
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
                   <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
                   </svg>
                 )}
                 {isCopyingScreenshot ? "Đang chụp..." : "Chụp & Copy (Ctrl+V)"}
@@ -2719,226 +2712,226 @@ export default function AccountingOrderDetail() {
                   flexShrink: 0,
                 }}
               >
-            <div
-              ref={orderPreviewRef}
-              style={{
-                fontFamily: "'Times New Roman', Times, serif",
-                fontSize: "13px",
-                color: "#000",
-                background: "#fff",
-                width: "1052px",
-                minHeight: "744px",
-                padding: "28px 36px 24px",
-                boxShadow: "0 4px 24px rgba(0,0,0,0.18)",
-                lineHeight: 1.3,
-                boxSizing: "border-box" as const,
-                WebkitFontSmoothing: "antialiased" as const,
-                MozOsxFontSmoothing: "grayscale" as const,
-              }}
-            >
-              {/* Header – logo left, company info center */}
-              <div style={{ display: "flex", alignItems: "center", gap: "0", marginBottom: "4px" }}>
-                {/* Logo */}
-                <div style={{ width: "140px", flexShrink: 0 }}>
-                  <img
-                    src="/images/logo.png"
-                    alt="Quang Đạt Logo"
-                    crossOrigin="anonymous"
-                    style={{ width: "140px", height: "auto", display: "block", imageRendering: "crisp-edges" as const }}
-                  />
-                </div>
-                {/* Company info – paddingRight mirrors logo width so textAlign:center = true page center */}
-                <div style={{ flex: 1, textAlign: "center", paddingRight: "140px" }}>
-                  <div style={{ color: "#cc0000", fontWeight: "bold", fontSize: "20px", textTransform: "uppercase", lineHeight: 1.3, whiteSpace: "nowrap" }}>
-                    Công ty TNHH sản xuất thương mại dịch vụ quốc tế Quang Đạt
+                <div
+                  ref={orderPreviewRef}
+                  style={{
+                    fontFamily: "'Times New Roman', Times, serif",
+                    fontSize: "13px",
+                    color: "#000",
+                    background: "#fff",
+                    width: "1052px",
+                    minHeight: "744px",
+                    padding: "28px 36px 24px",
+                    boxShadow: "0 4px 24px rgba(0,0,0,0.18)",
+                    lineHeight: 1.3,
+                    boxSizing: "border-box" as const,
+                    WebkitFontSmoothing: "antialiased" as const,
+                    MozOsxFontSmoothing: "grayscale" as const,
+                  }}
+                >
+                  {/* Header – logo left, company info center */}
+                  <div style={{ display: "flex", alignItems: "center", gap: "0", marginBottom: "4px" }}>
+                    {/* Logo */}
+                    <div style={{ width: "140px", flexShrink: 0 }}>
+                      <img
+                        src="/images/logo.png"
+                        alt="Quang Đạt Logo"
+                        crossOrigin="anonymous"
+                        style={{ width: "140px", height: "auto", display: "block", imageRendering: "crisp-edges" as const }}
+                      />
+                    </div>
+                    {/* Company info – paddingRight mirrors logo width so textAlign:center = true page center */}
+                    <div style={{ flex: 1, textAlign: "center", paddingRight: "140px" }}>
+                      <div style={{ color: "#cc0000", fontWeight: "bold", fontSize: "20px", textTransform: "uppercase", lineHeight: 1.3, whiteSpace: "nowrap" }}>
+                        Công ty TNHH sản xuất thương mại dịch vụ quốc tế Quang Đạt
+                      </div>
+                      <div style={{ fontSize: "16px", marginTop: "2px" }}>
+                        Địa chỉ: 43D Ao Đôi, P. Bình Trị Đông A, Q. Bình Tân, TP. Hồ Chí Minh
+                      </div>
+                      <div style={{ fontSize: "16px" }}>Điện thoại: 0906 649 812 | MST: 0317703989</div>
+                      <div style={{ display: "flex", alignItems: "center", margin: "3px 60px 4px" }}>
+                        <div style={{ flex: 1, height: "1px", backgroundColor: "#aaa" }} />
+                        <span style={{ padding: "0 10px", fontSize: "11px", color: "#999" }}>o0o</span>
+                        <div style={{ flex: 1, height: "1px", backgroundColor: "#aaa" }} />
+                      </div>
+                      <div style={{ fontWeight: "bold", fontSize: "21px", letterSpacing: "4px", textTransform: "uppercase" }}>Đơn đặt hàng</div>
+                    </div>
                   </div>
-                  <div style={{ fontSize: "16px", marginTop: "2px" }}>
-                    Địa chỉ: 43D Ao Đôi, P. Bình Trị Đông A, Q. Bình Tân, TP. Hồ Chí Minh
+
+                  {/* Order code & date */}
+                  <div style={{ display: "flex", margin: "4px 0 3px", fontSize: "12.5px" }}>
+                    <span>Số {order?.code || "—"}</span>
+                    <span style={{ marginLeft: "auto", marginRight: "230px" }}>
+                      Ngày {format(order?.createdAt ? new Date(order.createdAt) : new Date(), "dd/MM/yyyy", { locale: vi })}
+                    </span>
                   </div>
-                  <div style={{ fontSize: "16px" }}>Điện thoại: 0906 649 812 | MST: 0317703989</div>
-                  <div style={{ display: "flex", alignItems: "center", margin: "3px 60px 4px" }}>
-                    <div style={{ flex: 1, height: "1px", backgroundColor: "#aaa" }} />
-                    <span style={{ padding: "0 10px", fontSize: "11px", color: "#999" }}>o0o</span>
-                    <div style={{ flex: 1, height: "1px", backgroundColor: "#aaa" }} />
+
+                  {/* Customer info – label left, value right, no border */}
+                  <table style={{ borderCollapse: "collapse", fontSize: "12.5px", marginBottom: "3px", width: "60%" }}>
+                    <tbody>
+                      <tr>
+                        <td style={{ width: "110px", paddingBottom: "2px", verticalAlign: "top" }}>Kính gửi:</td>
+                        <td style={{ fontWeight: "bold", paddingBottom: "2px" }}>{order?.customerName || order?.customer?.name || "—"}</td>
+                      </tr>
+                      <tr>
+                        <td style={{ paddingBottom: "2px", verticalAlign: "top" }}>Địa chỉ:</td>
+                        <td style={{ paddingBottom: "2px" }}>{order?.customerAddress || order?.customer?.address || "—"}</td>
+                      </tr>
+                      <tr>
+                        <td style={{ paddingBottom: "2px", verticalAlign: "top" }}>ĐC giao hàng:</td>
+                        <td style={{ paddingBottom: "2px" }}>{order?.deliveryAddress || order?.customer?.address || "—"}</td>
+                      </tr>
+                      <tr>
+                        <td style={{ paddingBottom: "2px" }}>Email:</td>
+                        <td style={{ paddingBottom: "2px" }}>{order?.customerEmail || order?.customer?.email || ""}</td>
+                      </tr>
+                      <tr>
+                        <td>Điện thoại:</td>
+                        <td>{order?.customerPhone || order?.customer?.phone || "—"}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  {/* Bank info */}
+                  <div style={{ fontWeight: "bold", fontSize: "12.5px", marginBottom: "2px" }}>
+                    STK: 63898698 – Tại Ngân hàng ACB – CN Phú Lâm
                   </div>
-                  <div style={{ fontWeight: "bold", fontSize: "21px", letterSpacing: "4px", textTransform: "uppercase" }}>Đơn đặt hàng</div>
-                </div>
-              </div>
+                  <div style={{ marginBottom: "4px", fontStyle: "italic", fontSize: "11.5px", textDecoration: "underline" }}>
+                    Căn cứ vào yêu cầu của quý khách. Chúng tôi trân trọng báo giá sản phẩm theo danh mục như sau:
+                  </div>
 
-              {/* Order code & date */}
-              <div style={{ display: "flex", margin: "4px 0 3px", fontSize: "12.5px" }}>
-                <span>Số {order?.code || "—"}</span>
-                <span style={{ marginLeft: "auto", marginRight: "230px" }}>
-                  Ngày {format(order?.createdAt ? new Date(order.createdAt) : new Date(), "dd/MM/yyyy", { locale: vi })}
-                </span>
-              </div>
-
-              {/* Customer info – label left, value right, no border */}
-              <table style={{ borderCollapse: "collapse", fontSize: "12.5px", marginBottom: "3px", width: "60%" }}>
-                <tbody>
-                  <tr>
-                    <td style={{ width: "110px", paddingBottom: "2px", verticalAlign: "top" }}>Kính gửi:</td>
-                    <td style={{ fontWeight: "bold", paddingBottom: "2px" }}>{order?.customerName || order?.customer?.name || "—"}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ paddingBottom: "2px", verticalAlign: "top" }}>Địa chỉ:</td>
-                    <td style={{ paddingBottom: "2px" }}>{order?.customerAddress || order?.customer?.address || "—"}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ paddingBottom: "2px", verticalAlign: "top" }}>ĐC giao hàng:</td>
-                    <td style={{ paddingBottom: "2px" }}>{order?.deliveryAddress || order?.customer?.address || "—"}</td>
-                  </tr>
-                  <tr>
-                    <td style={{ paddingBottom: "2px" }}>Email:</td>
-                    <td style={{ paddingBottom: "2px" }}>{order?.customerEmail || order?.customer?.email || ""}</td>
-                  </tr>
-                  <tr>
-                    <td>Điện thoại:</td>
-                    <td>{order?.customerPhone || order?.customer?.phone || "—"}</td>
-                  </tr>
-                </tbody>
-              </table>
-
-              {/* Bank info */}
-              <div style={{ fontWeight: "bold", fontSize: "12.5px", marginBottom: "2px" }}>
-                STK: 63898698 – Tại Ngân hàng ACB – CN Phú Lâm
-              </div>
-              <div style={{ marginBottom: "4px", fontStyle: "italic", fontSize: "11.5px", textDecoration: "underline" }}>
-                Căn cứ vào yêu cầu của quý khách. Chúng tôi trân trọng báo giá sản phẩm theo danh mục như sau:
-              </div>
-
-              {/* Items table – full width, black borders matching PDF */}
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11.5px", marginBottom: "0", tableLayout: "fixed" }}>
-                <colgroup>
-                  <col style={{ width: "32px" }} />
-                  <col style={{ width: "160px" }} />
-                  <col />
-                  <col style={{ width: "80px" }} />
-                  <col style={{ width: "68px" }} />
-                  <col style={{ width: "40px" }} />
-                  <col style={{ width: "80px" }} />
-                  <col style={{ width: "88px" }} />
-                  <col style={{ width: "96px" }} />
-                </colgroup>
-                <thead>
-                  <tr style={{ background: "#f2f2f2" }}>
-                    <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>STT</th>
-                    <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>TÊN HÀNG HÓA</th>
-                    <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>CHI TIẾT</th>
-                    <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>KÍCH THƯỚC (mm)</th>
-                    <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>SỐ LƯỢNG</th>
-                    <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>ĐVT</th>
-                    <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>HÌNH ẢNH</th>
-                    <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>ĐƠN GIÁ (ĐỒNG)</th>
-                    <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>THÀNH TIỀN</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(order?.orderDetails || []).map((item, idx) => {
-                    const unitPrice = item.unitPrice || 0;
-                    const qty = item.quantity || 0;
-                    const lineTotal = unitPrice * qty;
-                    const detail = [
-                      item.design?.designType?.name,
-                      item.design?.materialType?.name,
-                      item.requirements,
-                    ].filter(Boolean).join(", ");
-                    return (
-                      <tr key={item.id}>
-                        <td style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center" }}>{idx + 1}</td>
-                        <td style={{ border: "1px solid #333", padding: "5px 6px", textAlign: "center", wordBreak: "break-word" }}>
-                          {item.design?.designName || item.design?.code || "—"}
+                  {/* Items table – full width, black borders matching PDF */}
+                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11.5px", marginBottom: "0", tableLayout: "fixed" }}>
+                    <colgroup>
+                      <col style={{ width: "32px" }} />
+                      <col style={{ width: "160px" }} />
+                      <col />
+                      <col style={{ width: "80px" }} />
+                      <col style={{ width: "68px" }} />
+                      <col style={{ width: "40px" }} />
+                      <col style={{ width: "80px" }} />
+                      <col style={{ width: "88px" }} />
+                      <col style={{ width: "96px" }} />
+                    </colgroup>
+                    <thead>
+                      <tr style={{ background: "#f2f2f2" }}>
+                        <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>STT</th>
+                        <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>TÊN HÀNG HÓA</th>
+                        <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>CHI TIẾT</th>
+                        <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>KÍCH THƯỚC (mm)</th>
+                        <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>SỐ LƯỢNG</th>
+                        <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>ĐVT</th>
+                        <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>HÌNH ẢNH</th>
+                        <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>ĐƠN GIÁ (ĐỒNG)</th>
+                        <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>THÀNH TIỀN</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(order?.orderDetails || []).map((item, idx) => {
+                        const unitPrice = item.unitPrice || 0;
+                        const qty = item.quantity || 0;
+                        const lineTotal = unitPrice * qty;
+                        const detail = [
+                          item.design?.designType?.name,
+                          item.design?.materialType?.name,
+                          item.requirements,
+                        ].filter(Boolean).join(", ");
+                        return (
+                          <tr key={item.id}>
+                            <td style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center" }}>{idx + 1}</td>
+                            <td style={{ border: "1px solid #333", padding: "5px 6px", textAlign: "center", wordBreak: "break-word" }}>
+                              {item.design?.designName || item.design?.code || "—"}
+                            </td>
+                            <td style={{ border: "1px solid #333", padding: "5px 6px", textAlign: "center", wordBreak: "break-word" }}>
+                              {detail || "—"}
+                            </td>
+                            <td style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center" }}>
+                              {item.design?.dimensions || "—"}
+                            </td>
+                            <td style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center" }}>
+                              {qty.toLocaleString("vi-VN")}
+                            </td>
+                            <td style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center" }}>Bộ</td>
+                            <td style={{ border: "1px solid #333", padding: "4px 3px", textAlign: "center" }}>
+                              {item.design?.designImageUrl ? (
+                                <img
+                                  src={item.design.designImageUrl.replace("https://developer.quangdatgroup.com/uploads", "/uploads")}
+                                  alt=""
+                                  crossOrigin="anonymous"
+                                  style={{ width: "64px", height: "44px", objectFit: "cover", display: "block", margin: "0 auto" }}
+                                />
+                              ) : ""}
+                            </td>
+                            <td style={{ border: "1px solid #333", padding: "5px 6px", textAlign: "right" }}>
+                              {unitPrice.toLocaleString("vi-VN")}
+                            </td>
+                            <td style={{ border: "1px solid #333", padding: "5px 6px", textAlign: "right", fontWeight: "bold" }}>
+                              {lineTotal.toLocaleString("vi-VN")}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td colSpan={8} style={{ border: "1px solid #333", padding: "4px 10px", textAlign: "right", fontWeight: "bold" }}>
+                          CỘNG TIỀN HÀNG
                         </td>
-                        <td style={{ border: "1px solid #333", padding: "5px 6px", textAlign: "center", wordBreak: "break-word" }}>
-                          {detail || "—"}
-                        </td>
-                        <td style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center" }}>
-                          {item.design?.dimensions || "—"}
-                        </td>
-                        <td style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center" }}>
-                          {qty.toLocaleString("vi-VN")}
-                        </td>
-                        <td style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center" }}>Bộ</td>
-                        <td style={{ border: "1px solid #333", padding: "4px 3px", textAlign: "center" }}>
-                          {item.design?.designImageUrl ? (
-                            <img
-                              src={item.design.designImageUrl.replace("https://developer.quangdatgroup.com/uploads", "/uploads")}
-                              alt=""
-                              crossOrigin="anonymous"
-                              style={{ width: "64px", height: "44px", objectFit: "cover", display: "block", margin: "0 auto" }}
-                            />
-                          ) : ""}
-                        </td>
-                        <td style={{ border: "1px solid #333", padding: "5px 6px", textAlign: "right" }}>
-                          {unitPrice.toLocaleString("vi-VN")}
-                        </td>
-                        <td style={{ border: "1px solid #333", padding: "5px 6px", textAlign: "right", fontWeight: "bold" }}>
-                          {lineTotal.toLocaleString("vi-VN")}
+                        <td style={{ border: "1px solid #333", padding: "4px 6px", textAlign: "right", fontWeight: "bold" }}>
+                          {(order?.totalAmount || 0).toLocaleString("vi-VN")}
                         </td>
                       </tr>
-                    );
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr>
-                    <td colSpan={8} style={{ border: "1px solid #333", padding: "4px 10px", textAlign: "right", fontWeight: "bold" }}>
-                      CỘNG TIỀN HÀNG
-                    </td>
-                    <td style={{ border: "1px solid #333", padding: "4px 6px", textAlign: "right", fontWeight: "bold" }}>
-                      {(order?.totalAmount || 0).toLocaleString("vi-VN")}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td colSpan={8} style={{ border: "1px solid #333", padding: "4px 10px", textAlign: "right" }}>
-                      TIỀN THUẾ VAT 8%
-                    </td>
-                    <td style={{ border: "1px solid #333", padding: "4px 6px", textAlign: "right" }}>
-                      {Math.round((order?.totalAmount || 0) * 0.08).toLocaleString("vi-VN")}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td colSpan={8} style={{ border: "1px solid #333", padding: "4px 10px", textAlign: "right", fontWeight: "bold" }}>
-                      TỔNG CỘNG TIỀN THANH TOÁN
-                    </td>
-                    <td style={{ border: "1px solid #333", padding: "4px 6px", textAlign: "right", fontWeight: "bold" }}>
-                      {Math.round((order?.totalAmount || 0) * 1.08).toLocaleString("vi-VN")}
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
+                      <tr>
+                        <td colSpan={8} style={{ border: "1px solid #333", padding: "4px 10px", textAlign: "right" }}>
+                          TIỀN THUẾ VAT 8%
+                        </td>
+                        <td style={{ border: "1px solid #333", padding: "4px 6px", textAlign: "right" }}>
+                          {Math.round((order?.totalAmount || 0) * 0.08).toLocaleString("vi-VN")}
+                        </td>
+                      </tr>
+                      <tr>
+                        <td colSpan={8} style={{ border: "1px solid #333", padding: "4px 10px", textAlign: "right", fontWeight: "bold" }}>
+                          TỔNG CỘNG TIỀN THANH TOÁN
+                        </td>
+                        <td style={{ border: "1px solid #333", padding: "4px 6px", textAlign: "right", fontWeight: "bold" }}>
+                          {Math.round((order?.totalAmount || 0) * 1.08).toLocaleString("vi-VN")}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
 
-              {/* Amount in words – in bordered box like PDF */}
-              <div style={{ border: "1px solid #333", borderTop: "none", padding: "4px 8px", fontSize: "11.5px", marginBottom: "6px" }}>
-                <strong>Số tiền viết bằng chữ:</strong>{" "}
-                {numberToVietnamese(Math.round((order?.totalAmount || 0) * 1.08))}
-              </div>
+                  {/* Amount in words – in bordered box like PDF */}
+                  <div style={{ border: "1px solid #333", borderTop: "none", padding: "4px 8px", fontSize: "11.5px", marginBottom: "6px" }}>
+                    <strong>Số tiền viết bằng chữ:</strong>{" "}
+                    {numberToVietnamese(Math.round((order?.totalAmount || 0) * 1.08))}
+                  </div>
 
-              {/* Notes */}
-              <div style={{ fontSize: "11px", lineHeight: 1.6 }}>
-                {/* <div>* Đơn giá trên chưa bao gồm VAT 8%</div> */}
-                <div>* Số lượng giao hàng: +-10%</div>
-                <div>* Thời gian giao hàng: nhận, decal từ 4-7 ngày; túi từ 6-8 ngày kể từ ngày chốt in (trừ ngày lễ, chủ nhật và ngày duyệt mẫu)</div>
-                {order?.note && <div>* Ghi chú: {order.note}</div>}
-                <div style={{ color: "#cc0000", fontWeight: "bold", marginTop: "2px" }}>
-                  *Khách hàng vui lòng kiểm tra kỹ nội dung file và pháp lý, chính tả, bản in thứ (nếu có), thiết kế, kích thước, và các yếu tố kỹ thuật khác trước khi in hàng loạt.
+                  {/* Notes */}
+                  <div style={{ fontSize: "11px", lineHeight: 1.6 }}>
+                    {/* <div>* Đơn giá trên chưa bao gồm VAT 8%</div> */}
+                    <div>* Số lượng giao hàng: +-10%</div>
+                    <div>* Thời gian giao hàng: nhận, decal từ 4-7 ngày; túi từ 6-8 ngày kể từ ngày chốt in (trừ ngày lễ, chủ nhật và ngày duyệt mẫu)</div>
+                    {order?.note && <div>* Ghi chú: {order.note}</div>}
+                    <div style={{ color: "#cc0000", fontWeight: "bold", marginTop: "2px" }}>
+                      *Khách hàng vui lòng kiểm tra kỹ nội dung file và pháp lý, chính tả, bản in thứ (nếu có), thiết kế, kích thước, và các yếu tố kỹ thuật khác trước khi in hàng loạt.
+                    </div>
+                    <div style={{ color: "#cc0000", fontWeight: "bold" }}>* Sau khi xác nhận đồng ý in, mọi sai sót bên in sẽ không chịu trách nhiệm.</div>
+                    <div>* Trân trọng cảm ơn!</div>
+                  </div>
+
+                  {/* Signatures */}
+                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: "20px", textAlign: "center", fontSize: "12.5px" }}>
+                    <div style={{ width: "38%" }}>
+                      <div style={{ fontWeight: "bold", marginBottom: "52px" }}>XÁC NHẬN CỦA KHÁCH HÀNG</div>
+                    </div>
+                    <div style={{ width: "38%" }}>
+                      <div style={{ fontWeight: "bold", marginBottom: "52px" }}>ĐẠI DIỆN BÁN HÀNG</div>
+                      <div style={{ fontSize: "11.5px" }}>LÊ QUANG DIỆP</div>
+                    </div>
+                  </div>
+
+
                 </div>
-                <div style={{ color: "#cc0000", fontWeight: "bold" }}>* Sau khi xác nhận đồng ý in, mọi sai sót bên in sẽ không chịu trách nhiệm.</div>
-                <div>* Trân trọng cảm ơn!</div>
-              </div>
-
-              {/* Signatures */}
-              <div style={{ display: "flex", justifyContent: "space-between", marginTop: "20px", textAlign: "center", fontSize: "12.5px" }}>
-                <div style={{ width: "38%" }}>
-                  <div style={{ fontWeight: "bold", marginBottom: "52px" }}>XÁC NHẬN CỦA KHÁCH HÀNG</div>
-                </div>
-                <div style={{ width: "38%" }}>
-                  <div style={{ fontWeight: "bold", marginBottom: "52px" }}>ĐẠI DIỆN BÁN HÀNG</div>
-                  <div style={{ fontSize: "11.5px" }}>LÊ QUANG DIỆP</div>
-                </div>
-              </div>
-
-
-            </div>
               </div>
             </div>
           </div>

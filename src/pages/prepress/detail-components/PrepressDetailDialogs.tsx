@@ -682,11 +682,11 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
               </div>
               {(!order?.isPlateExported ||
                 (hasDieCutDesigns && !isDieExported)) && (
-                <p className="text-xs text-destructive mt-2">
-                  * Cần hoàn thành tất cả các điều kiện trên để chuyển xuống sản
-                  xuất
-                </p>
-              )}
+                  <p className="text-xs text-destructive mt-2">
+                    * Cần hoàn thành tất cả các điều kiện trên để chuyển xuống sản
+                    xuất
+                  </p>
+                )}
             </div>
           </div>
 
@@ -938,7 +938,7 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="reject-reason-dialog">Lý do (tuỳ chọn)</Label>
+                  <Label htmlFor="reject-reason-dialog">Lý do (bắt buộc)</Label>
                   <Textarea
                     id="reject-reason-dialog"
                     value={rejectReason}

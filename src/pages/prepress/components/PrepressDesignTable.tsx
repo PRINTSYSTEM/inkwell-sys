@@ -28,8 +28,8 @@ interface PrepressDesignTableProps {
   selectedIds: Set<number>;
   onToggleSelection: (design: DesignItem) => void;
   canSelect: (design: DesignItem) => boolean;
-  onReject: (design: DesignItem) => void;
-  isRejecting: boolean;
+  onReject?: (design: DesignItem) => void;
+  isRejecting?: boolean;
   designsPage: number;
   setDesignsPage: (page: number | ((p: number) => number)) => void;
   designsTotalPages: number;
@@ -324,18 +324,19 @@ export function PrepressDesignTable({
                                   </span>
                                 </TableCell>
                                 <TableCell className="py-2 text-right sticky right-0 bg-background z-10 flex items-center justify-end gap-2">
-                                  {/* Hoàn hàng: always available to return design to production */}
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    disabled={isRejecting}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      onReject(design);
-                                    }}
-                                  >
-                                    Hoàn hàng
-                                  </Button>
+                                  {onReject && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      disabled={isRejecting}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onReject(design);
+                                      }}
+                                    >
+                                      Hoàn hàng
+                                    </Button>
+                                  )}
 
                                   {/* If die-search is enabled and this is a box design, show magnifier */}
                                   {onFindDie &&
@@ -346,7 +347,6 @@ export function PrepressDesignTable({
                                         variant="ghost"
                                         size="sm"
                                         className="h-8 w-8"
-                                        disabled={isRejecting}
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           const dimensions = formatDesignDimensions(

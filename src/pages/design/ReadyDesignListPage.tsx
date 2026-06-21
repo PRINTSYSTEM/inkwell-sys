@@ -360,7 +360,7 @@ export default function ReadyDesignListPage() {
     const validPageIds = sortedDesigns
       .filter((d) => d.customerId === targetCustId && d.id !== undefined)
       .map((d) => d.id as number);
-    
+
     return validPageIds.length > 0 && validPageIds.every((id) => selectedIds.includes(id));
   }, [sortedDesigns, selectedIds, currentCustomerId]);
 
@@ -567,9 +567,8 @@ export default function ReadyDesignListPage() {
                           className="py-2 text-sm cursor-pointer hover:bg-accent"
                         >
                           <Check
-                            className={`mr-2 h-4 w-4 shrink-0 ${
-                              selectedCustomer?.id === customer.id ? "opacity-100" : "opacity-0"
-                            }`}
+                            className={`mr-2 h-4 w-4 shrink-0 ${selectedCustomer?.id === customer.id ? "opacity-100" : "opacity-0"
+                              }`}
                           />
                           <div className="flex flex-col">
                             <span className="font-medium">{customer.name}</span>
@@ -685,15 +684,14 @@ export default function ReadyDesignListPage() {
                     return (
                       <TableRow
                         key={design.id}
-                        className={`h-12 transition-all duration-150 relative ${
-                          design.isUrgent 
-                            ? isSelected 
-                              ? "bg-red-100/60 hover:bg-red-200/60 dark:bg-red-900/30 dark:hover:bg-red-800/30 text-red-755 dark:text-red-355" 
-                              : "bg-red-50/50 hover:bg-red-100/50 dark:bg-red-950/20 dark:hover:bg-red-900/20 text-red-700 dark:text-red-300"
-                            : isSelected 
-                              ? "bg-primary/5 hover:bg-primary/10" 
-                              : "hover:bg-muted/50"
-                        } ${isDisabled ? "opacity-45" : ""}`}
+                        className={`h-12 transition-all duration-150 relative ${design.isUrgent
+                          ? isSelected
+                            ? "bg-red-100/60 hover:bg-red-200/60 dark:bg-red-900/30 dark:hover:bg-red-800/30 text-red-755 dark:text-red-355"
+                            : "bg-red-50/50 hover:bg-red-100/50 dark:bg-red-950/20 dark:hover:bg-red-900/20 text-red-700 dark:text-red-300"
+                          : isSelected
+                            ? "bg-primary/5 hover:bg-primary/10"
+                            : "hover:bg-muted/50"
+                          } ${isDisabled ? "opacity-45" : ""}`}
                       >
                         <TableCell className={`text-center py-2 ${design.isUrgent ? "border-l-4 border-l-red-500 dark:border-l-red-650" : ""}`}>
                           <Checkbox
@@ -824,28 +822,19 @@ export default function ReadyDesignListPage() {
                           </span>
                         )}
                       </div>
-                      
-                      <div className="flex items-center gap-1.5 shrink-0 select-none bg-red-50/50 dark:bg-red-950/10 border border-red-200/40 dark:border-red-900/30 px-2 py-0.5 rounded-md">
-                        {updatingUrgentId === item.id ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin text-red-550 dark:text-red-400" />
-                        ) : (
-                          <Checkbox
-                            id={`dialog-urgent-${item.id}`}
-                            checked={item.isUrgent || false}
-                            onCheckedChange={() => handleToggleUrgent(item)}
-                            className="h-4 w-4 border-red-500/70 data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600 rounded cursor-pointer"
-                          />
-                        )}
-                        <label 
-                          htmlFor={`dialog-urgent-${item.id}`}
-                          className="text-[11px] font-semibold text-red-700 dark:text-red-300 cursor-pointer flex items-center gap-1"
-                        >
-                          Giao gấp
-                          {item.isUrgent && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-ping" />
-                          )}
-                        </label>
-                      </div>
+
+                      {item.isUrgent && (
+                        <div className="inline-flex items-center gap-1.5 shrink-0 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 px-2 py-1 rounded-md">
+                          <span className="relative flex h-2 w-2">
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+                            <span className="relative inline-flex h-2 w-2 rounded-full bg-red-600" />
+                          </span>
+
+                          <span className="text-xs font-medium text-red-700 dark:text-red-300">
+                            Giao gấp
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

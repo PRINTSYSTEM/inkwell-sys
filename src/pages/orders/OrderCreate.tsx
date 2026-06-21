@@ -248,8 +248,8 @@ export default function OrderCreatePage() {
   };
 
   const handleCreateCustomer = async () => {
-    if (!newCustomerForm.name.trim()) {
-      toast.error("Vui lòng điền đầy đủ thông tin bắt buộc");
+    if (!newCustomerForm.name.trim() || !newCustomerForm.companyName.trim()) {
+      toast.error("Vui lòng điền đầy đủ thông tin bắt buộc (Tên khách hàng và Tên công ty)");
       return;
     }
 
@@ -1222,82 +1222,11 @@ export default function OrderCreatePage() {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-medium flex items-center gap-2">
-                <Hash className="h-4 w-4 text-muted-foreground" />
-                Loại khách hàng
-              </Label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setNewCustomerForm((prev) => ({ ...prev, type: "company" }))
-                  }
-                  className={`p-3 rounded-lg border-2 transition-all flex flex-col items-center ${
-                    newCustomerForm.type === "company"
-                      ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                      : "border-border hover:border-primary/50"
-                  }`}
-                >
-                  <Building2
-                    className={`h-4 w-4 mb-1 ${
-                      newCustomerForm.type === "company"
-                        ? "text-primary"
-                        : "text-muted-foreground"
-                    }`}
-                  />
-                  <p
-                    className={`text-xs font-medium ${
-                      newCustomerForm.type === "company"
-                        ? "text-foreground"
-                        : "text-muted-foreground"
-                    }`}
-                  >
-                    Khách công ty
-                  </p>
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setNewCustomerForm((prev) => ({ ...prev, type: "retail" }))
-                  }
-                  className={`p-3 rounded-lg border-2 transition-all flex flex-col items-center ${
-                    newCustomerForm.type === "retail"
-                      ? "border-primary bg-primary/5 ring-1 ring-primary/20"
-                      : "border-border hover:border-primary/50"
-                  }`}
-                >
-                  <User
-                    className={`h-4 w-4 mb-1 ${
-                      newCustomerForm.type === "retail"
-                        ? "text-primary"
-                        : "text-muted-foreground"
-                    }`}
-                  />
-                  <p
-                    className={`text-xs font-medium ${
-                      newCustomerForm.type === "retail"
-                        ? "text-foreground"
-                        : "text-muted-foreground"
-                    }`}
-                  >
-                    Khách lẻ
-                  </p>
-                </button>
-              </div>
-            </div>
-            <div className="space-y-2">
               <Label>
-                Tên công ty{" "}
-                {newCustomerForm.type === "company" && (
-                  <span className="text-destructive">*</span>
-                )}
+                Tên công ty <span className="text-destructive">*</span>
               </Label>
               <Input
-                placeholder={
-                  newCustomerForm.type === "company"
-                    ? "Nhập tên công ty (bắt buộc)"
-                    : "Nhập tên công ty (nếu có)"
-                }
+                placeholder="Nhập tên công ty (bắt buộc)"
                 value={newCustomerForm.companyName}
                 onChange={(e) =>
                   setNewCustomerForm((prev) => ({

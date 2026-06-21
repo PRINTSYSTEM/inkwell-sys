@@ -318,9 +318,9 @@ async function generateOpenApiZod() {
 
   let spec;
   try {
-    const localContent = await readFile(join(rootDir, "swagger (2).json"), "utf8");
+    const localContent = await readFile(join(rootDir, "swagger.json"), "utf8");
     spec = JSON.parse(localContent);
-    console.log("✓ Loaded from local swagger (2).json");
+    console.log("✓ Loaded from local swagger.json");
   } catch (err) {
     console.log("📥 Fetch swagger:", SWAGGER_URL);
     const res = await fetch(SWAGGER_URL);

@@ -19,7 +19,6 @@ import {
   Calendar,
   TrendingUp,
   Target,
-  DollarSign,
   RotateCcw,
   XCircle,
   type LucideIcon,
@@ -333,37 +332,98 @@ export default function DesignerDetailPage() {
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4 shrink-0">
+      <div className="flex items-center justify-between mb-3 shrink-0">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9"
+            className="h-8 w-8"
             onClick={() => navigate("/design/management")}
+            title="Quay lại danh sách"
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex items-center gap-2">
-            <Avatar className="h-10 w-10">
-              <AvatarFallback className="bg-gradient-to-br from-purple-100 to-pink-100 text-purple-700 font-semibold text-sm">
+            <Avatar className="h-8 w-8">
+              <AvatarFallback className="bg-gradient-to-br from-purple-100 to-pink-100 text-purple-700 font-semibold text-xs">
                 {designer.username?.charAt(0).toUpperCase() || "?"}
               </AvatarFallback>
             </Avatar>
             <div>
-              <h1 className="text-xl font-bold tracking-tight">
+              <h1 className="text-base font-bold tracking-tight leading-none">
                 {designer.fullName || "Chưa có tên"}
               </h1>
-              <p className="text-xs text-muted-foreground">
-                @{designer.username || "unknown"} • Tháng {selectedMonth}/
-                {selectedYear}
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                @{designer.username || "unknown"}
               </p>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Date Selectors */}
+      {/* KPI and Controls Row */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-card border rounded-lg p-3 mb-3 shrink-0 shadow-sm">
+        {/* Left: DateRangePicker and KPI calculations */}
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap">Tính KPI:</span>
+            <DateRangePicker
+              value={kpiDateRange}
+              onValueChange={setKpiDateRange}
+              placeholder="Chọn khoảng thời gian"
+              className="w-[200px] h-8 text-xs font-normal"
+            />
+          </div>
+
+          {loadingKpi ? (
+            <div className="flex items-center gap-1">
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+              <span className="text-xs text-muted-foreground">Đang tính KPI...</span>
+            </div>
+          ) : kpiData && kpiDateRange?.from && kpiDateRange?.to ? (
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 border-l pl-4 border-slate-200 dark:border-slate-800">
+              {/* Đã chốt in */}
+              <div className="flex items-center gap-1.5 bg-blue-50 dark:bg-blue-950/20 px-2 py-1 rounded border border-blue-100 dark:border-blue-900/30">
+                <Target className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                <span className="text-xs text-blue-700 dark:text-blue-300 font-medium">Đã chốt in:</span>
+                <span className="text-xs font-bold text-blue-700 dark:text-blue-300">
+                  {kpiData.designsCompleted ?? 0}
+                  <span className="text-[10px] font-normal opacity-70">
+                    /{kpiData.totalDesignsAssigned ?? 0}
+                  </span>
+                </span>
+              </div>
+
+              {/* Tỷ lệ hoàn thành */}
+              <div className="flex items-center gap-1.5 bg-green-50 dark:bg-green-950/20 px-2 py-1 rounded border border-green-100 dark:border-green-900/30">
+                <TrendingUp className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                <span className="text-xs text-green-700 dark:text-green-300 font-medium">Tỷ lệ hoàn thành:</span>
+                <span className="text-xs font-bold text-green-700 dark:text-green-300">
+                  {kpiData.designCompletionRate
+                    ? `${(kpiData.designCompletionRate * 100).toFixed(1)}%`
+                    : "0%"}
+                </span>
+              </div>
+
+              {/* Thời gian TB */}
+              <div className="flex items-center gap-1.5 bg-orange-50 dark:bg-orange-950/20 px-2 py-1 rounded border border-orange-100 dark:border-orange-900/30">
+                <Clock className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400" />
+                <span className="text-xs text-orange-700 dark:text-orange-300 font-medium">Thời gian TB:</span>
+                <span className="text-xs font-bold text-orange-700 dark:text-orange-300">
+                  {kpiData.averageDesignTimeHours
+                    ? `${kpiData.averageDesignTimeHours.toFixed(1)}h`
+                    : "—"}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <span className="text-xs text-muted-foreground italic">Chọn ngày để tính KPI</span>
+          )}
+        </div>
+
+        {/* Right: Date Selectors for Design List */}
         <div className="flex items-center gap-2">
-          <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="text-xs font-semibold text-muted-foreground">Lọc ds theo tháng:</span>
           <Select
             value={selectedMonth}
             onValueChange={(v) => {
@@ -371,7 +431,7 @@ export default function DesignerDetailPage() {
               setCurrentPage(1);
             }}
           >
-            <SelectTrigger className="w-[100px] h-9 text-sm">
+            <SelectTrigger className="w-[90px] h-8 text-xs">
               <SelectValue placeholder="Tháng" />
             </SelectTrigger>
             <SelectContent>
@@ -390,7 +450,7 @@ export default function DesignerDetailPage() {
               setCurrentPage(1);
             }}
           >
-            <SelectTrigger className="w-[90px] h-9 text-sm">
+            <SelectTrigger className="w-[80px] h-8 text-xs">
               <SelectValue placeholder="Năm" />
             </SelectTrigger>
             <SelectContent>
@@ -407,156 +467,8 @@ export default function DesignerDetailPage() {
         </div>
       </div>
 
-      {/* KPI Section */}
-      <Card className="p-3 mb-3 shrink-0">
-        <CardHeader className="p-0 mb-2">
-          <CardTitle className="flex items-center gap-2 text-xs font-semibold">
-            <TrendingUp className="h-3.5 w-3.5" />
-            Chỉ số KPI
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0 space-y-2">
-          <div className="space-y-1">
-            <Label className="text-xs">Chọn khoảng thời gian để tính KPI</Label>
-            <DateRangePicker
-              value={kpiDateRange}
-              onValueChange={setKpiDateRange}
-              placeholder="Chọn từ ngày đến ngày"
-            />
-          </div>
-          {loadingKpi ? (
-            <div className="flex items-center justify-center py-4">
-              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            </div>
-          ) : kpiData && kpiDateRange?.from && kpiDateRange?.to ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              <Card className="p-2">
-                <CardContent className="p-0">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Target className="h-3.5 w-3.5 text-blue-600" />
-                    <p className="text-[10px] text-muted-foreground">
-                      Đã chốt in
-                    </p>
-                  </div>
-                  <p className="text-xl font-bold">
-                    {kpiData.designsCompleted ?? 0}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    / {kpiData.totalDesignsAssigned ?? 0} được giao
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="p-2">
-                <CardContent className="p-0">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <TrendingUp className="h-3.5 w-3.5 text-green-600" />
-                    <p className="text-[10px] text-muted-foreground">
-                      Tỷ lệ hoàn thành
-                    </p>
-                  </div>
-                  <p className="text-xl font-bold">
-                    {kpiData.designCompletionRate
-                      ? `${(kpiData.designCompletionRate * 100).toFixed(1)}%`
-                      : "0%"}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    Thiết kế
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="p-2">
-                <CardContent className="p-0">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Clock className="h-3.5 w-3.5 text-orange-600" />
-                    <p className="text-[10px] text-muted-foreground">
-                      Thời gian TB
-                    </p>
-                  </div>
-                  <p className="text-xl font-bold">
-                    {kpiData.averageDesignTimeHours
-                      ? `${kpiData.averageDesignTimeHours.toFixed(1)}h`
-                      : "—"}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    Giờ/thiết kế
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="p-2">
-                <CardContent className="p-0">
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <DollarSign className="h-3.5 w-3.5 text-purple-600" />
-                    <p className="text-[10px] text-muted-foreground">
-                      Doanh thu
-                    </p>
-                  </div>
-                  <p className="text-xl font-bold">
-                    {formatCurrency(kpiData.totalRevenueGenerated ?? 0)}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    Tổng doanh thu
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground text-center py-2">
-              Vui lòng chọn khoảng thời gian để xem KPI
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 mb-3 shrink-0">
-        <Card
-          className={`cursor-pointer transition-all p-2 ${
-            statusFilter === "all" ? "ring-2 ring-primary" : "hover:shadow-md"
-          }`}
-          onClick={() => {
-            setStatusFilter("all");
-            setCurrentPage(1);
-          }}
-        >
-          <CardContent className="p-0">
-            <div className="text-lg font-bold">{stats.total}</div>
-            <div className="text-[10px] text-muted-foreground">Tổng cộng</div>
-          </CardContent>
-        </Card>
-
-        {(Object.keys(designStatusConfig) as DesignStatusKey[]).map((key) => {
-          const config = designStatusConfig[key];
-          const count = stats[key as keyof typeof stats] || 0;
-          const Icon = DESIGN_STATUS_ICONS[key];
-          const isActive = statusFilter === key;
-
-          return (
-            <Card
-              key={key}
-              className={`cursor-pointer transition-all p-2 ${
-                isActive ? "ring-2 ring-primary" : "hover:shadow-md"
-              } ${config.bgColor}`}
-              onClick={() => {
-                setStatusFilter(key);
-                setCurrentPage(1);
-              }}
-            >
-              <CardContent className="p-0">
-                <div className="flex items-center gap-1.5">
-                  <Icon className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="text-lg font-bold">{count}</span>
-                </div>
-                <div className="text-[10px] text-muted-foreground line-clamp-1">
-                  {config.label}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Toolbar */}
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between bg-card border rounded-lg p-3 mb-3 shrink-0">
+      {/* Toolbar & Filters */}
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between bg-card border rounded-lg p-2.5 mb-3 shrink-0 shadow-sm">
         {/* Search */}
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -564,7 +476,7 @@ export default function DesignerDetailPage() {
             placeholder="Tìm theo mã, tên, loại thiết kế..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-9 text-sm"
+            className="pl-9 h-8 text-xs"
           />
         </div>
 
@@ -577,16 +489,16 @@ export default function DesignerDetailPage() {
               setCurrentPage(1);
             }}
           >
-            <SelectTrigger className="w-[180px] h-9 text-sm">
-              <Filter className="w-3.5 h-3.5 mr-2" />
+            <SelectTrigger className="w-[200px] h-8 text-xs">
+              <Filter className="w-3 h-3 mr-2 text-muted-foreground" />
               <SelectValue placeholder="Lọc trạng thái" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tất cả trạng thái</SelectItem>
+              <SelectItem value="all">Tất cả trạng thái ({stats.total})</SelectItem>
               {(Object.keys(designStatusConfig) as DesignStatusKey[]).map(
                 (key) => (
                   <SelectItem key={key} value={key}>
-                    {designStatusConfig[key].label}
+                    {designStatusConfig[key].label} ({stats[key as keyof typeof stats] || 0})
                   </SelectItem>
                 )
               )}
@@ -597,7 +509,7 @@ export default function DesignerDetailPage() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-9 text-xs"
+              className="h-8 text-xs"
               onClick={() => {
                 setSearchQuery("");
                 setStatusFilter("all");

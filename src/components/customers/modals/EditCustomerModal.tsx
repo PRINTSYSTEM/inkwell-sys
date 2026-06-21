@@ -115,9 +115,7 @@ export function EditCustomerModal({
     email: customer.email ?? "",
     taxCode: customer.taxCode ?? "",
     address: customer.address ?? "",
-    type: (customer.type === "retail" || customer.type === "company"
-      ? customer.type
-      : "retail") as "retail" | "company",
+    type: "company",
     scrapRate: customer.scrapRate ?? 0,
     currentDebt: customer.currentDebt ?? 0,
     maxDebt: customer.maxDebt ?? 0,
@@ -169,46 +167,19 @@ export function EditCustomerModal({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">Tên khách hàng *</FormLabel>
-                    <FormControl>
-                      <Input {...field} className="h-9" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">Loại khách hàng</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger className="h-9">
-                          <SelectValue />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="retail">Cá nhân</SelectItem>
-                        <SelectItem value="company">Công ty</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-xs">Tên khách hàng *</FormLabel>
+                  <FormControl>
+                    <Input {...field} className="h-9" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <div className="grid grid-cols-2 gap-4">
               <FormField

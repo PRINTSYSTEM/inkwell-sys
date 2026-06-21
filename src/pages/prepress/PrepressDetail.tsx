@@ -609,8 +609,11 @@ export default function ProofingOrderDetailPage() {
   const paperSizes = paperSizesData || [];
   const { mutateAsync: addDesignsMutate, isPending: isAddingDesigns } =
     useAddDesignsToProofingOrder();
-  const { mutate: removeDesignMutate, isPending: isRemovingDesign } =
-    useRemoveDesignFromProofingOrder();
+  const {
+    mutate: removeDesignMutate,
+    mutateAsync: removeDesignMutateAsync,
+    isPending: isRemovingDesign,
+  } = useRemoveDesignFromProofingOrder();
   const { mutateAsync: rejectDesignMutate, isPending: isRejecting } =
     useRejectDesignFromProofingOrder();
 
@@ -2097,7 +2100,6 @@ export default function ProofingOrderDetailPage() {
                         }
                       } : undefined}
                       canSelect={isProofer ? canSelect : () => false}
-                      onReject={isProofer ? handleOpenRejectDialog : undefined}
                       onFindDie={handleFindDie}
                     />
                   </div>
@@ -2343,10 +2345,18 @@ export default function ProofingOrderDetailPage() {
         handleConfirmReject={async () => {
           if (!rejectTarget || !order?.id) return;
           try {
+            // 1. Remove design from proofing order first
+            await removeDesignMutateAsync({
+              proofingOrderId: order.id,
+              proofingOrderDesignId: rejectTarget.id,
+            });
+
+            // 2. Reject/return design to design department
             await rejectDesignMutate({
-              orderDetailId: rejectTarget.id,
+              designId: rejectTarget.designId || rejectTarget.design?.id || rejectTarget.id,
               reason: rejectReason.trim() || null,
             });
+
             setIsRejectDialogOpen(false);
             setRejectTarget(null);
             setRejectReason("");
@@ -2357,7 +2367,7 @@ export default function ProofingOrderDetailPage() {
             console.error("Reject design failed:", err);
           }
         }}
-        isRejecting={isRejecting}
+        isRejecting={isRejecting || isRemovingDesign}
       />
     </div>
   );

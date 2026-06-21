@@ -2966,13 +2966,14 @@ const UpdateProofingOrderRequest = z
   })
   .partial();
 const RejectDesignRequest = z.object({
-  orderDetailId: z.number().int(),
+  designId: z.number().int(),
   reason: z.string().nullish(),
 });
 const OrderDetailAvailableResponse = z
   .object({
     id: z.number().int(),
     orderId: z.number().int(),
+    orderCode: z.string().nullable(),
     designId: z.number().int(),
     sharedAddressId: z.number().int().nullable(),
     sharedAddress: SharedAddressResponse,

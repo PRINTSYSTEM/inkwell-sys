@@ -208,7 +208,7 @@ export default function DesignCreateDialog({
   }, [isNhan, isDecal]);
 
   // Mutation for creating design standalone
-  const { mutateAsync: createDesign, loading: isCreating } = useCreateDesign();
+  const { mutateAsync: createDesign, isPending: isCreating } = useCreateDesign();
 
   const handleCustomerSelect = (customer: CustomerSummaryResponse) => {
     setSelectedCustomer(customer);
@@ -298,7 +298,7 @@ export default function DesignCreateDialog({
             <Label className="font-semibold text-foreground flex items-center gap-1">
               Khách hàng <span className="text-destructive">*</span>
             </Label>
-            <Popover open={customerComboOpen} onOpenChange={setCustomerComboOpen}>
+            <Popover open={customerComboOpen} onOpenChange={setCustomerComboOpen} modal={true}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"

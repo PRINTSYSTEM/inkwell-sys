@@ -153,7 +153,7 @@ export function DesignTable({
                               Đơn hàng:
                             </span>
                             <span className="font-semibold text-primary">
-                              {design.orderCode || design.orderId}
+                              {design.orderCode || "-"}
                             </span>
                           </div>
                           <div className="flex justify-between text-xs">
@@ -310,7 +310,7 @@ export function DesignTable({
                         </div>
                       ) : (
                         <span className="text-muted-foreground text-sm font-semibold">
-                          {design.orderId || "—"}
+                          -
                         </span>
                       )}
                     </TableCell>
@@ -441,6 +441,7 @@ export function DesignTable({
                           </Button>
                         )}
 
+
                         {onFindDie &&
                           (design.designTypeName || "")
                             .toLowerCase()
@@ -449,7 +450,6 @@ export function DesignTable({
                               variant="ghost"
                               size="sm"
                               className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10"
-                              disabled={isRejecting}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 const dimensions = `${design.length} × ${design.height}${design.width ? ` × ${design.width}` : ""}`;

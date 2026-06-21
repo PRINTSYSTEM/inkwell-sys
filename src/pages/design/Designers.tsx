@@ -324,108 +324,60 @@ export default function DesignersPage() {
         </div>
       </div>
 
-      {/* Team KPI Section */}
-      <Card className="p-3 mb-4 shrink-0">
-        <CardHeader className="p-0 mb-2">
-          <CardTitle className="flex items-center gap-2 text-xs font-semibold">
-            <TrendingUp className="h-3.5 w-3.5 text-purple-600" />
-            KPI Tổng hợp - Tháng {selectedMonth}/{selectedYear}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {loadingTeamKpi ? (
-            <div className="flex items-center justify-center py-4">
-              <div className="text-xs text-muted-foreground">
-                Đang tải dữ liệu KPI...
-              </div>
-            </div>
-          ) : teamKpi ? (
-            <div className="grid gap-2 md:grid-cols-4">
-              <div className="text-center p-2.5 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
-                <p className="text-[10px] text-muted-foreground mb-0.5">
-                  Tổng đã chốt in
-                </p>
-                <p className="text-xl font-bold text-blue-700">
-                  {teamKpi.totalDesignsCompleted ?? 0}
-                </p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                  Thiết kế đã hoàn thành
-                </p>
-              </div>
-              <div className="text-center p-2.5 bg-gradient-to-br from-green-50 to-green-100 rounded-lg">
-                <p className="text-[10px] text-muted-foreground mb-0.5">
-                  Tổng bình bài
-                </p>
-                <p className="text-xl font-bold text-green-700">
-                  {teamKpi.totalProofingOrdersCompleted ?? 0}
-                </p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                  mã bài hoàn thành
-                </p>
-              </div>
-              <div className="text-center p-2.5 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg">
-                <p className="text-[10px] text-muted-foreground mb-0.5">
-                  Tổng sản xuất
-                </p>
-                <p className="text-xl font-bold text-orange-700">
-                  {teamKpi.totalProductionsCompleted ?? 0}
-                </p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                  Lệnh sản xuất hoàn thành
-                </p>
-              </div>
-              <div className="text-center p-2.5 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg">
-                <p className="text-[10px] text-muted-foreground mb-0.5">
-                  Tổng doanh thu
-                </p>
-                <p className="text-xl font-bold text-purple-700">
-                  {teamKpi.totalRevenue
-                    ? new Intl.NumberFormat("vi-VN", {
-                        style: "currency",
-                        currency: "VND",
-                        notation: "compact",
-                      }).format(teamKpi.totalRevenue)
-                    : "0"}
-                </p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">
-                  Doanh thu trong tháng
-                </p>
-              </div>
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground text-center py-2">
-              Chưa có dữ liệu KPI cho tháng này
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Stats Cards */}
-      <div className="grid gap-3 mb-4 shrink-0 md:grid-cols-3">
-        <Card className="p-3">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-0 mb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">
-              Tổng số nhân viên
+      {/* Stats and KPI Section */}
+      <div className="grid gap-3 mb-4 shrink-0 grid-cols-2 md:grid-cols-4">
+        {/* KPI: Đã chốt in */}
+        <Card className="p-3 bg-gradient-to-br from-blue-50/60 to-blue-100/40 dark:from-blue-950/20 dark:to-blue-900/10 border-blue-100/80 dark:border-blue-900/20 shadow-sm relative overflow-hidden">
+          <div className="absolute right-2 top-2 text-blue-500/10 dark:text-blue-400/10">
+            <TrendingUp className="h-10 w-10" />
+          </div>
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-0 mb-1">
+            <CardTitle className="text-xs font-semibold text-blue-800 dark:text-blue-300">
+              Đã chốt in (Tháng {selectedMonth}/{selectedYear})
             </CardTitle>
-            <User className="h-3.5 w-3.5 text-blue-600" />
           </CardHeader>
           <CardContent className="p-0">
-            <div className="text-2xl font-bold">{totalCount}</div>
+            {loadingTeamKpi ? (
+              <div className="h-8 flex items-center">
+                <div className="animate-pulse bg-blue-200/50 dark:bg-blue-800/40 h-6 w-12 rounded" />
+              </div>
+            ) : (
+              <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">
+                {teamKpi?.totalDesignsCompleted ?? 0}
+              </div>
+            )}
+            <p className="text-[10px] text-blue-600/80 dark:text-blue-400/70 mt-0.5 font-medium">
+              Thiết kế đã hoàn thành
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Tổng số nhân viên */}
+        <Card className="p-3 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-0 mb-1">
+            <CardTitle className="text-xs font-semibold text-muted-foreground">
+              Tổng số nhân viên
+            </CardTitle>
+            <User className="h-3.5 w-3.5 text-slate-500" />
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="text-2xl font-bold text-foreground">{totalCount}</div>
             <p className="text-[10px] text-muted-foreground mt-0.5">
               Nhân viên thiết kế
             </p>
           </CardContent>
         </Card>
 
-        <Card className="p-3">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-0 mb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">
+        {/* Đang hoạt động */}
+        <Card className="p-3 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-0 mb-1">
+            <CardTitle className="text-xs font-semibold text-muted-foreground">
               Đang hoạt động
             </CardTitle>
-            <div className="h-2.5 w-2.5 rounded-full bg-green-500 animate-pulse" />
+            <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
           </CardHeader>
           <CardContent className="p-0">
-            <div className="text-2xl font-bold">{activeCount}</div>
+            <div className="text-2xl font-bold text-foreground">{activeCount}</div>
             <p className="text-[10px] text-muted-foreground mt-0.5">
               {totalCount > 0
                 ? `${((activeCount / totalCount) * 100).toFixed(0)}% tổng số`
@@ -434,15 +386,16 @@ export default function DesignersPage() {
           </CardContent>
         </Card>
 
-        <Card className="p-3">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-0 mb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">
+        {/* Ngừng hoạt động */}
+        <Card className="p-3 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 p-0 mb-1">
+            <CardTitle className="text-xs font-semibold text-muted-foreground">
               Ngừng hoạt động
             </CardTitle>
-            <div className="h-2.5 w-2.5 rounded-full bg-slate-400" />
+            <div className="h-2 w-2 rounded-full bg-slate-400" />
           </CardHeader>
           <CardContent className="p-0">
-            <div className="text-2xl font-bold">{inactiveCount}</div>
+            <div className="text-2xl font-bold text-foreground">{inactiveCount}</div>
             <p className="text-[10px] text-muted-foreground mt-0.5">
               {totalCount > 0
                 ? `${((inactiveCount / totalCount) * 100).toFixed(0)}% tổng số`
