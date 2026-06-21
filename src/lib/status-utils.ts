@@ -35,8 +35,11 @@ export const orderStatusDescription: Record<string, string> = {
 };
 
 // Trạng thái thiết kế (Design)
-export const designStatusLabels: Record<string, string> =
-  ENTITY_CONFIG.designStatuses.values;
+export const designStatusLabels: Record<string, string> = {
+  ...ENTITY_CONFIG.designStatuses.values,
+  available: "Sẵn sàng",
+  ordered: "Đã lên đơn",
+};
 
 // Trạng thái bình bài (ProofingOrder)
 export const proofingStatusLabels: Record<string, string> =
@@ -448,6 +451,8 @@ export const statusColorMap: Record<string, string> = {
 
   // ===== DESIGN STATUSES (dùng chung với Order) =====
   received_info: "bg-slate-100 text-slate-800 border-slate-200",
+  available: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30",
+  ordered: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900/30",
 
   // ===== PROOFING ORDER STATUSES =====
   not_completed: "bg-slate-100 text-slate-800 border-slate-200",
