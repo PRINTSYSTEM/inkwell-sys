@@ -389,7 +389,7 @@ export default function OrderDetailPage() {
     if (isDesignerRole) {
       updateData.quantity =
         orderDetailEditValues.quantity === "" ||
-        orderDetailEditValues.quantity === null
+          orderDetailEditValues.quantity === null
           ? null
           : Number(orderDetailEditValues.quantity);
     } else {
@@ -397,33 +397,33 @@ export default function OrderDetailPage() {
       if (isOrderRestricted) {
         updateData.unitPrice =
           orderDetailEditValues.unitPrice === "" ||
-          orderDetailEditValues.unitPrice === null
+            orderDetailEditValues.unitPrice === null
             ? null
             : Number(orderDetailEditValues.unitPrice);
       } else {
         // Include all fields if order is NOT restricted
         updateData.unitPrice =
           orderDetailEditValues.unitPrice === "" ||
-          orderDetailEditValues.unitPrice === null
+            orderDetailEditValues.unitPrice === null
             ? null
             : Number(orderDetailEditValues.unitPrice);
         updateData.quantity =
           orderDetailEditValues.quantity === "" ||
-          orderDetailEditValues.quantity === null
+            orderDetailEditValues.quantity === null
             ? null
             : Number(orderDetailEditValues.quantity);
         updateData.requirements =
           orderDetailEditValues.requirements === "" ||
-          orderDetailEditValues.requirements === null
+            orderDetailEditValues.requirements === null
             ? null
             : String(orderDetailEditValues.requirements).trim();
         updateData.additionalNotes =
           orderDetailEditValues.additionalNotes === "" ||
-          orderDetailEditValues.additionalNotes === null
+            orderDetailEditValues.additionalNotes === null
             ? null
             : String(orderDetailEditValues.additionalNotes).trim();
       }
-      
+
       // Address can be updated regardless of restriction status
       if (orderDetailEditValues.sharedAddressId !== undefined) {
         (updateData as any).sharedAddressId = orderDetailEditValues.sharedAddressId;
@@ -478,32 +478,32 @@ export default function OrderDetailPage() {
     if (cardName === "customerInfo") {
       payload.customerName =
         cardEditValues.customerName === "" ||
-        cardEditValues.customerName === null
+          cardEditValues.customerName === null
           ? null
           : String(cardEditValues.customerName).trim();
       payload.customerCompanyName =
         cardEditValues.customerCompanyName === "" ||
-        cardEditValues.customerCompanyName === null
+          cardEditValues.customerCompanyName === null
           ? ""
           : String(cardEditValues.customerCompanyName).trim();
       payload.customerPhone =
         cardEditValues.customerPhone === "" ||
-        cardEditValues.customerPhone === null
+          cardEditValues.customerPhone === null
           ? ""
           : String(cardEditValues.customerPhone).trim();
       payload.customerEmail =
         cardEditValues.customerEmail === "" ||
-        cardEditValues.customerEmail === null
+          cardEditValues.customerEmail === null
           ? null
           : String(cardEditValues.customerEmail).trim();
       payload.customerTaxCode =
         cardEditValues.customerTaxCode === "" ||
-        cardEditValues.customerTaxCode === null
+          cardEditValues.customerTaxCode === null
           ? ""
           : String(cardEditValues.customerTaxCode).trim();
       payload.customerAddress =
         cardEditValues.customerAddress === "" ||
-        cardEditValues.customerAddress === null
+          cardEditValues.customerAddress === null
           ? ""
           : String(cardEditValues.customerAddress).trim();
 
@@ -514,12 +514,12 @@ export default function OrderDetailPage() {
     } else if (cardName === "orderInfo") {
       payload.deliveryDate =
         cardEditValues.deliveryDate === "" ||
-        cardEditValues.deliveryDate === null
+          cardEditValues.deliveryDate === null
           ? null
           : new Date(cardEditValues.deliveryDate).toISOString();
       payload.deliveryAddress =
         cardEditValues.deliveryAddress === "" ||
-        cardEditValues.deliveryAddress === null
+          cardEditValues.deliveryAddress === null
           ? ""
           : String(cardEditValues.deliveryAddress).trim();
       payload.note =
@@ -529,7 +529,7 @@ export default function OrderDetailPage() {
       if (!isAccountingRole && cardEditValues.assignedToUserId !== undefined) {
         payload.assignedToUserId =
           cardEditValues.assignedToUserId === "" ||
-          cardEditValues.assignedToUserId === null
+            cardEditValues.assignedToUserId === null
             ? null
             : Number(cardEditValues.assignedToUserId);
       }
@@ -540,28 +540,28 @@ export default function OrderDetailPage() {
           : Number(cardEditValues.totalAmount);
       payload.depositAmount =
         cardEditValues.depositAmount === "" ||
-        cardEditValues.depositAmount === null
+          cardEditValues.depositAmount === null
           ? null
           : Number(cardEditValues.depositAmount);
       payload.paymentDueDate =
         cardEditValues.paymentDueDate === "" ||
-        cardEditValues.paymentDueDate === null
+          cardEditValues.paymentDueDate === null
           ? null
           : new Date(cardEditValues.paymentDueDate).toISOString();
     } else if (cardName === "recipientInfo") {
       payload.recipientName =
         cardEditValues.recipientName === "" ||
-        cardEditValues.recipientName === null
+          cardEditValues.recipientName === null
           ? null
           : String(cardEditValues.recipientName).trim();
       payload.recipientPhone =
         cardEditValues.recipientPhone === "" ||
-        cardEditValues.recipientPhone === null
+          cardEditValues.recipientPhone === null
           ? null
           : String(cardEditValues.recipientPhone).trim();
       payload.recipientAddress =
         cardEditValues.recipientAddress === "" ||
-        cardEditValues.recipientAddress === null
+          cardEditValues.recipientAddress === null
           ? null
           : String(cardEditValues.recipientAddress).trim();
     } else if (cardName === "orderDetails") {
@@ -762,8 +762,8 @@ export default function OrderDetailPage() {
     : false;
   const isDeliveryDatePassed =
     order.deliveryDate &&
-    order.status !== "completed" &&
-    order.status !== "delivered"
+      order.status !== "completed" &&
+      order.status !== "delivered"
       ? new Date(order.deliveryDate) < now
       : false;
   const isDebtOverLimit = Boolean(
@@ -825,17 +825,17 @@ export default function OrderDetailPage() {
             {(role === ROLE.SALE ||
               role === ROLE.ADMIN ||
               role === ROLE.MANAGER) && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-                onClick={() =>
-                  navigate(`/accounting/orders/${order.id}?tab=payment`)
-                }
-              >
-                Báo giá
-              </Button>
-            )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                  onClick={() =>
+                    navigate(`/accounting/orders/${order.id}?tab=payment`)
+                  }
+                >
+                  Báo giá
+                </Button>
+              )}
             {canExportExcel && (
               <Button
                 variant="outline"
@@ -1013,22 +1013,21 @@ export default function OrderDetailPage() {
                       : orderDetail.derivedStatus;
                     const statusLabel = isCutOver
                       ? orderDetailItemStatusLabels[orderDetail.status || ""] ||
-                        orderDetail.status ||
-                        "N/A"
+                      orderDetail.status ||
+                      "N/A"
                       : orderDetailDerivedStatusLabels[
-                          orderDetail.derivedStatus || ""
-                        ] ||
-                        orderDetail.derivedStatus ||
-                        "N/A";
+                      orderDetail.derivedStatus || ""
+                      ] ||
+                      orderDetail.derivedStatus ||
+                      "N/A";
 
                     return (
                       <div
                         key={orderDetail.id}
-                        className={`border rounded-lg overflow-hidden hover:shadow-md transition-shadow relative ${
-                          editingOrderDetailId !== orderDetail.id && design?.id
+                        className={`border rounded-lg overflow-hidden hover:shadow-md transition-shadow relative ${editingOrderDetailId !== orderDetail.id && design?.id
                             ? "cursor-pointer"
                             : ""
-                        }`}
+                          }`}
                         onClick={() => {
                           // Only navigate if not editing this orderDetail and design exists
                           if (
@@ -1195,13 +1194,13 @@ export default function OrderDetailPage() {
                                   Số lượng
                                 </p>
                                 {editingOrderDetailId === orderDetail.id &&
-                                (isDesignerRole || !isOrderRestricted) ? (
+                                  (isDesignerRole || !isOrderRestricted) ? (
                                   <Input
                                     type="number"
                                     min="1"
                                     value={
                                       orderDetailEditValues.quantity !==
-                                      undefined
+                                        undefined
                                         ? orderDetailEditValues.quantity
                                         : orderDetail.quantity?.toString() || ""
                                     }
@@ -1304,15 +1303,15 @@ export default function OrderDetailPage() {
                                               : design.sidesClassification === "two_side"
                                                 ? "Decal bộ"
                                                 : sidesClassificationLabels[
-                                                    design.sidesClassification
-                                                  ] ||
-                                                  design.sidesClassification ||
-                                                  "—"
-                                            : sidesClassificationLabels[
                                                 design.sidesClassification
-                                              ] ||
-                                              design.sidesClassification ||
-                                              "—"}
+                                                ] ||
+                                                design.sidesClassification ||
+                                                "—"
+                                            : sidesClassificationLabels[
+                                            design.sidesClassification
+                                            ] ||
+                                            design.sidesClassification ||
+                                            "—"}
                                         </p>
                                       </div>
                                     )}
@@ -1355,17 +1354,17 @@ export default function OrderDetailPage() {
                                       Đơn giá
                                     </p>
                                     {editingOrderDetailId === orderDetail.id &&
-                                    !isDesignerRole ? (
+                                      !isDesignerRole ? (
                                       <Input
                                         type="number"
                                         min="0"
                                         step="1000"
                                         value={
                                           orderDetailEditValues.unitPrice !==
-                                          undefined
+                                            undefined
                                             ? orderDetailEditValues.unitPrice
                                             : orderDetail.unitPrice?.toString() ||
-                                              ""
+                                            ""
                                         }
                                         onChange={(e) => {
                                           e.stopPropagation();
@@ -1423,120 +1422,112 @@ export default function OrderDetailPage() {
                               (orderDetail as any).sharedAddressId ||
                               orderDetail.requirements ||
                               orderDetail.additionalNotes) && (
-                              <div className="mt-3 p-3 bg-muted/50 rounded-lg text-sm space-y-3">
-                                {editingOrderDetailId === orderDetail.id &&
-                                !isDesignerRole && (
-                                  <div className="space-y-2">
-                                    <Label className="text-xs">Địa chỉ giao hàng</Label>
-                                    <div onClick={(e) => e.stopPropagation()}>
-                                      <Select
-                                        value={orderDetailEditValues.sharedAddressId ? orderDetailEditValues.sharedAddressId.toString() : "0"}
-                                        onValueChange={(v) => {
-                                          setOrderDetailEditValues({
-                                            ...orderDetailEditValues,
-                                            sharedAddressId: v && v !== "0" ? Number(v) : null,
-                                          });
-                                        }}
-                                      >
-                                        <SelectTrigger className="h-9 text-sm bg-background">
-                                          <SelectValue placeholder="Chọn địa chỉ giao hàng..." />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="0">Không chọn</SelectItem>
-                                          {sharedAddresses.map((sa: any) => (
-                                            <SelectItem key={sa.id} value={sa.id.toString()} className="text-sm">
-                                              {sa.label} {sa.address ? `- ${sa.address}` : ""}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                  </div>
-                                )}
-                                
-                                {editingOrderDetailId !== orderDetail.id && (orderDetail as any).sharedAddressId && (
-                                  <div>
-                                    <span className="text-muted-foreground">Địa chỉ giao hàng: </span>
-                                    <span className="font-medium">
-                                      {sharedAddresses.find(sa => sa.id === (orderDetail as any).sharedAddressId)?.label || "Đã chọn địa chỉ"}
-                                      {sharedAddresses.find(sa => sa.id === (orderDetail as any).sharedAddressId)?.address 
-                                        ? ` - ${sharedAddresses.find(sa => sa.id === (orderDetail as any).sharedAddressId)?.address}` 
-                                        : ""}
-                                    </span>
-                                  </div>
-                                )}
+                                <div className="mt-3 p-3 bg-muted/50 rounded-lg text-sm space-y-3">
+                                  {editingOrderDetailId === orderDetail.id &&
+                                    !isDesignerRole && (
+                                      <div className="space-y-2">
+                                        <Label className="text-xs">Địa chỉ giao hàng</Label>
+                                        <div onClick={(e) => e.stopPropagation()}>
+                                          <Select
+                                            value={orderDetailEditValues.sharedAddressId ? orderDetailEditValues.sharedAddressId.toString() : "0"}
+                                            onValueChange={(v) => {
+                                              setOrderDetailEditValues({
+                                                ...orderDetailEditValues,
+                                                sharedAddressId: v && v !== "0" ? Number(v) : null,
+                                              });
+                                            }}
+                                          >
+                                            <SelectTrigger className="h-9 text-sm bg-background">
+                                              <SelectValue placeholder="Chọn địa chỉ giao hàng..." />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="0">Không chọn</SelectItem>
+                                              {sharedAddresses.map((sa: any) => (
+                                                <SelectItem key={sa.id} value={sa.id.toString()} className="text-sm">
+                                                  {sa.label} {sa.address ? `- ${sa.address}` : ""}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                      </div>
+                                    )}
 
-                                {editingOrderDetailId === orderDetail.id &&
-                                !isDesignerRole &&
-                                !isOrderRestricted ? (
-                                  <>
-                                    <div className="space-y-2">
-                                      <Label className="text-xs">Yêu cầu</Label>
-                                      <Textarea
-                                        value={
-                                          orderDetailEditValues.requirements !==
-                                          undefined
-                                            ? orderDetailEditValues.requirements
-                                            : orderDetail.requirements || ""
-                                        }
-                                        onChange={(e) => {
-                                          e.stopPropagation();
-                                          setOrderDetailEditValues({
-                                            ...orderDetailEditValues,
-                                            requirements: e.target.value,
-                                          });
-                                        }}
-                                        onClick={(e) => e.stopPropagation()}
-                                        placeholder="Nhập yêu cầu"
-                                        rows={2}
-                                        className="text-sm"
-                                      />
+                                  {editingOrderDetailId !== orderDetail.id && (orderDetail as any).sharedAddressId && (
+                                    <div>
+                                      <span className="text-muted-foreground">Địa chỉ giao hàng: </span>
+                                      <span className="font-medium">
+                                        {sharedAddresses.find(sa => sa.id === (orderDetail as any).sharedAddressId)?.label || "Đã chọn địa chỉ"}
+                                        {sharedAddresses.find(sa => sa.id === (orderDetail as any).sharedAddressId)?.address
+                                          ? ` - ${sharedAddresses.find(sa => sa.id === (orderDetail as any).sharedAddressId)?.address}`
+                                          : ""}
+                                      </span>
                                     </div>
-                                    <div className="space-y-2">
-                                      <Label className="text-xs">Ghi chú</Label>
-                                      <Textarea
-                                        value={
-                                          orderDetailEditValues.additionalNotes !==
-                                          undefined
-                                            ? orderDetailEditValues.additionalNotes
-                                            : orderDetail.additionalNotes || ""
-                                        }
-                                        onChange={(e) => {
-                                          e.stopPropagation();
-                                          setOrderDetailEditValues({
-                                            ...orderDetailEditValues,
-                                            additionalNotes: e.target.value,
-                                          });
-                                        }}
-                                        onClick={(e) => e.stopPropagation()}
-                                        placeholder="Nhập ghi chú"
-                                        rows={2}
-                                        className="text-sm"
-                                      />
-                                    </div>
-                                  </>
-                                ) : (
-                                  <>
-                                    {orderDetail.requirements && (
-                                      <div>
-                                        <span className="text-muted-foreground">
-                                          Yêu cầu:{" "}
-                                        </span>
-                                        {orderDetail.requirements}
+                                  )}
+
+                                  {editingOrderDetailId === orderDetail.id &&
+                                    !isDesignerRole &&
+                                    !isOrderRestricted ? (
+                                    <>
+                                      <div className="space-y-2">
+                                        <Label className="text-xs">Yêu cầu</Label>
+                                        <Textarea
+                                          value={
+                                            orderDetailEditValues.requirements !==
+                                              undefined
+                                              ? orderDetailEditValues.requirements
+                                              : orderDetail.requirements || ""
+                                          }
+                                          onChange={(e) => {
+                                            e.stopPropagation();
+                                            setOrderDetailEditValues({
+                                              ...orderDetailEditValues,
+                                              requirements: e.target.value,
+                                            });
+                                          }}
+                                          onClick={(e) => e.stopPropagation()}
+                                          placeholder="Nhập yêu cầu"
+                                          rows={2}
+                                          className="text-sm"
+                                        />
                                       </div>
-                                    )}
-                                    {orderDetail.additionalNotes && (
-                                      <div>
-                                        <span className="text-muted-foreground">
-                                          Ghi chú:{" "}
-                                        </span>
-                                        {orderDetail.additionalNotes}
+                                      <div className="space-y-2">
+                                        <Label className="text-xs">Ghi chú</Label>
+                                        <Textarea
+                                          value={
+                                            orderDetailEditValues.additionalNotes !==
+                                              undefined
+                                              ? orderDetailEditValues.additionalNotes
+                                              : orderDetail.additionalNotes || ""
+                                          }
+                                          onChange={(e) => {
+                                            e.stopPropagation();
+                                            setOrderDetailEditValues({
+                                              ...orderDetailEditValues,
+                                              additionalNotes: e.target.value,
+                                            });
+                                          }}
+                                          onClick={(e) => e.stopPropagation()}
+                                          placeholder="Nhập ghi chú"
+                                          rows={2}
+                                          className="text-sm"
+                                        />
                                       </div>
-                                    )}
-                                  </>
-                                )}
-                              </div>
-                            )}
+                                    </>
+                                  ) : (
+                                    <>
+                                      {orderDetail.additionalNotes && (
+                                        <div>
+                                          <span className="text-muted-foreground">
+                                            Ghi chú:{" "}
+                                          </span>
+                                          {orderDetail.additionalNotes}
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                              )}
                           </div>
                         </div>
                       </div>
@@ -1730,13 +1721,12 @@ export default function OrderDetailPage() {
                                   <div
                                     className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary to-primary/80 rounded-full transition-all duration-500"
                                     style={{
-                                      width: `${
-                                        proof.productions.length > 0
+                                      width: `${proof.productions.length > 0
                                           ? (completedProductions /
-                                              proof.productions.length) *
-                                            100
+                                            proof.productions.length) *
+                                          100
                                           : 0
-                                      }%`,
+                                        }%`,
                                     }}
                                   />
                                 </div>
@@ -1865,13 +1855,12 @@ export default function OrderDetailPage() {
                                           <Tooltip>
                                             <TooltipTrigger asChild>
                                               <div
-                                                className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
-                                                  isCompleted
+                                                className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${isCompleted
                                                     ? "bg-emerald-500 border-emerald-500 text-white shadow-sm"
                                                     : isCurrent
                                                       ? "bg-blue-500 border-blue-500 text-white animate-pulse"
                                                       : "bg-background border-muted-foreground/30 text-muted-foreground"
-                                                }`}
+                                                  }`}
                                               >
                                                 {isCompleted ? (
                                                   <Check className="w-3.5 h-3.5" />
@@ -1897,9 +1886,8 @@ export default function OrderDetailPage() {
                                           </Tooltip>
                                         </TooltipProvider>
                                         <span
-                                          className={`mt-1.5 text-[11px] font-bold whitespace-nowrap px-1 ${
-                                            isCurrent ? "text-blue-600" : isCompleted ? "text-emerald-600" : "text-muted-foreground"
-                                          }`}
+                                          className={`mt-1.5 text-[11px] font-bold whitespace-nowrap px-1 ${isCurrent ? "text-blue-600" : isCompleted ? "text-emerald-600" : "text-muted-foreground"
+                                            }`}
                                         >
                                           {step.stepTypeName}
                                         </span>
@@ -2207,20 +2195,20 @@ export default function OrderDetailPage() {
                   </div>
                   {(customerType === "company" ||
                     cardEditValues.customerCompanyName) && (
-                    <div className="space-y-2">
-                      <Label>Tên công ty</Label>
-                      <Input
-                        value={cardEditValues.customerCompanyName || ""}
-                        onChange={(e) =>
-                          setCardEditValues({
-                            ...cardEditValues,
-                            customerCompanyName: e.target.value,
-                          })
-                        }
-                        placeholder="Nhập tên công ty"
-                      />
-                    </div>
-                  )}
+                      <div className="space-y-2">
+                        <Label>Tên công ty</Label>
+                        <Input
+                          value={cardEditValues.customerCompanyName || ""}
+                          onChange={(e) =>
+                            setCardEditValues({
+                              ...cardEditValues,
+                              customerCompanyName: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập tên công ty"
+                        />
+                      </div>
+                    )}
                   <div className="space-y-2">
                     <Label>Số điện thoại *</Label>
                     <Input
@@ -2349,7 +2337,7 @@ export default function OrderDetailPage() {
 
           {/* Order Info */}
 
-        
+
         </div>
       </div>
 

@@ -274,19 +274,30 @@ export default function AccountingOrderDetail() {
   });
 
   // Aggregate items from all invoices for this order
+  // Define a lightweight type for items returned by the invoice API.
+  interface InvoiceItem {
+    orderDetailId?: number;
+    vatAmount?: number;
+    grandTotal?: number;
+    [key: string]: unknown;
+  }
+
   const invoiceItems = useMemo(() => {
-    if (!invoicesData?.items) return [];
+    if (!invoicesData?.items) return [] as const;
     return invoicesData.items.flatMap((invoice) =>
-      (invoice.items || []).map((item) => ({
-        ...item,
-        // Find matching order detail for image/design info
-        orderDetail: order?.orderDetails?.find(
-          (od) => od.id === item.orderDetailId,
-        ),
-        taxRate: invoice.taxRate,
-        vatAmount: (item as any).vatAmount,
-        grandTotal: (item as any).grandTotal,
-      })),
+      (invoice.items || []).map((rawItem) => {
+        const item = rawItem as InvoiceItem;
+        return {
+          ...item,
+          // Find matching order detail for image/design info
+          orderDetail: order?.orderDetails?.find(
+            (od) => od.id === item.orderDetailId,
+          ),
+          taxRate: invoice.taxRate,
+          vatAmount: item.vatAmount,
+          grandTotal: item.grandTotal,
+        };
+      }),
     );
   }, [invoicesData, order?.orderDetails]);
 
@@ -299,20 +310,24 @@ export default function AccountingOrderDetail() {
   // Check if selected payment method is Bank Transfer
   const isBankTransfer = useMemo(() => {
     if (!cardEditValues.paymentMethodId) return false;
-    const method = paymentMethodsData?.items?.find(
-      (m: any) =>
-        m.id?.toString() === cardEditValues.paymentMethodId?.toString(),
-    );
+    // Define a simple type for payment method items
+    interface PaymentMethod { id?: number | string; name?: string }
+    const method = paymentMethodsData?.items?.find((m) => {
+      const pm = m as PaymentMethod;
+      return pm.id?.toString() === cardEditValues.paymentMethodId?.toString();
+    });
     return method?.name?.toLowerCase().includes("chuyển khoản") || false;
   }, [cardEditValues.paymentMethodId, paymentMethodsData]);
 
   // Check if selected payment method is Cash
   const isCash = useMemo(() => {
     if (!cardEditValues.paymentMethodId) return false;
-    const method = paymentMethodsData?.items?.find(
-      (m: any) =>
-        m.id?.toString() === cardEditValues.paymentMethodId?.toString(),
-    );
+    // Define a simple type for payment method items
+    interface PaymentMethod { id?: number | string; name?: string }
+    const method = paymentMethodsData?.items?.find((m) => {
+      const pm = m as PaymentMethod;
+      return pm.id?.toString() === cardEditValues.paymentMethodId?.toString();
+    });
     return method?.name?.toLowerCase().includes("tiền mặt") || false;
   }, [cardEditValues.paymentMethodId, paymentMethodsData]);
 

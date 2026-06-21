@@ -2972,6 +2972,8 @@ const RejectDesignRequest = z.object({
 const OrderDetailAvailableResponse = z
   .object({
     id: z.number().int(),
+    orderDetailId: z.number().int().nullable(),
+    readyDesignId: z.number().int().nullable(),
     orderId: z.number().int(),
     orderCode: z.string().nullable(),
     designId: z.number().int(),

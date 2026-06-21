@@ -7,7 +7,7 @@ import { DesignTypeCountResponseSchema } from "@/Schema/generated";
 
 // Error type for API responses
 type ApiError = {
-  response?: { data?: { message?: string } };
+  response?: { data?: { message?: string }; status?: number };
   message?: string;
 };
 
@@ -123,9 +123,9 @@ export const useAvailableOrderDetailsForProofing = (
         })
         .map((od, index) => {
           const design = od.design!;
-          const qId = (od as any).queueItemId || "";
-          const isPoolDesign = qId.startsWith("RD_");
-          const rDesignId = (od as any).readyDesignId ?? design.id;
+          const isPoolDesign = od.orderDetailId == null;
+          const rDesignId = od.readyDesignId ?? design.id;
+          const qId = (od as any).queueItemId || (isPoolDesign ? `RD_${rDesignId}` : `OD_${od.id}`);
           const avForProofing = (od as any).availableForProofing ?? (design.availableQuantityForProofing != null ? design.availableQuantityForProofing : undefined);
 
           const designItem = {
@@ -154,7 +154,7 @@ export const useAvailableOrderDetailsForProofing = (
             thumbnailUrl: design.designImageUrl || "",
             createdAt: design.createdAt || "",
             designId: design.id, // Store designId for fallback fetching if needed
-            orderCode: (design as any).latestOrderCode || undefined,
+            orderCode: od.orderCode || undefined,
             customerName: (design as any).customer?.name || undefined,
             customerCompanyName: (design as any).customer?.companyName || undefined,
             specification: (() => {
@@ -1101,12 +1101,24 @@ export const useAddDesignsToProofingOrder = () => {
       });
     },
     onError: (error: ApiError) => {
-      toast.error("Lỗi", {
-        description:
-          error.response?.data?.message ||
-          error.message ||
-          "Không thể thêm design",
-      });
+      // Specific handling for HTTP 409 Conflict – another operator allocated the design
+      if (error.response?.status === 409) {
+        toast.error("Lỗi", {
+          description: "Thiết kế vừa được phân bổ bởi người dùng khác. Vui lòng tải lại dữ liệu.",
+        });
+        // Refresh queries to get latest data
+        queryClient.invalidateQueries({ queryKey: proofingKeys.all });
+        queryClient.invalidateQueries({
+          queryKey: [proofingKeys.all[0], "available-order-details", null],
+        });
+      } else {
+        toast.error("Lỗi", {
+          description:
+            error.response?.data?.message ||
+            error.message ||
+            "Không thể thêm design",
+        });
+      }
     },
   });
 };

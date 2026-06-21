@@ -39,7 +39,11 @@ interface AddDesignToProofingDialogProps {
   materialTypeName?: string;
   currentDesign?: DesignItem | null; // Design hiện tại để so sánh quy cách
   onSubmit: (
-    orderDetailItems: Array<{ orderDetailId: number; quantity: number }>
+    orderDetailItems: Array<{
+      orderDetailId: number | null;
+      readyDesignId: number | null;
+      quantity: number;
+    }>
   ) => Promise<void>;
   isSubmitting?: boolean;
 }
@@ -186,8 +190,11 @@ export function AddDesignToProofingDialog({
           if (quantity <= 0) {
             throw new Error("Số lượng phải lớn hơn 0");
           }
+          const design = filteredDesigns.find((d) => d.id === parseInt(id, 10));
+          const isPoolDesign = design?.queueItemId?.startsWith("RD_") || false;
           return {
-            orderDetailId: parseInt(id, 10),
+            orderDetailId: isPoolDesign ? null : (design?.id ?? null),
+            readyDesignId: design?.readyDesignId ?? design?.designId ?? null,
             quantity: quantity,
           };
         });

@@ -153,7 +153,9 @@ export function DesignTable({
                               Đơn hàng:
                             </span>
                             <span className="font-semibold text-primary">
-                              {design.orderCode || "-"}
+                              {design.queueItemId?.startsWith("RD_")
+                                ? "Thiết kế sẵn / Chưa lên đơn"
+                                : design.orderCode || "-"}
                             </span>
                           </div>
                           <div className="flex justify-between text-xs">

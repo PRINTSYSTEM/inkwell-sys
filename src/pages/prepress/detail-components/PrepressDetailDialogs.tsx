@@ -737,6 +737,7 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
           }
           const items = orderDetailItems.map((item) => ({
             orderDetailId: item.orderDetailId,
+            readyDesignId: item.readyDesignId,
             quantity: item.quantity,
           }));
           if (items.length === 0) {

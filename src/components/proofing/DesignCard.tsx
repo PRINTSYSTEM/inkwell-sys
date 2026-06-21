@@ -75,7 +75,39 @@ export function DesignCard({
 
       <CardContent className="p-4 space-y-3">
         {/* Order Info */}
-        {design.orderCode && (
+        {design.queueItemId?.startsWith("RD_") ? (
+          <div className="pb-2 border-b">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Badge
+                variant="secondary"
+                className="bg-gray-100 text-gray-600 border-none font-normal text-xs py-0.5 px-2 hover:bg-gray-100 shrink-0"
+              >
+                Chưa lên đơn
+              </Badge>
+            </div>
+            {design.customerName && (
+              <div className="flex items-center gap-1.5">
+                {design.customerCompanyName ? (
+                  <Building2 className="h-3 w-3 text-muted-foreground" />
+                ) : (
+                  <User className="h-3 w-3 text-muted-foreground" />
+                )}
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {design.customerCompanyName || design.customerName}
+                      </p>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{design.customerCompanyName || design.customerName}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            )}
+          </div>
+        ) : design.orderCode ? (
           <div className="pb-2 border-b">
             <div className="flex items-center gap-1.5 mb-1">
               <FileText className="h-3 w-3 text-muted-foreground" />
@@ -105,7 +137,7 @@ export function DesignCard({
               </div>
             )}
           </div>
-        )}
+        ) : null}
 
         {/* Design Code */}
         <TooltipProvider>
