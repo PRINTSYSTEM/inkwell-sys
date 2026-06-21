@@ -53,6 +53,8 @@ import {
 } from "@/components/ui/dialog";
 import { TableSkeleton } from "@/components/ui/skeleton-components";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { designStatusLabels, orderStatusLabels, orderDetailItemStatusLabels } from "@/lib/status-utils";
 import {
   useReadyDesigns,
   useCustomers,
@@ -653,13 +655,7 @@ export default function ReadyDesignListPage() {
             <table className="w-full caption-bottom text-sm">
               <TableHeader className="sticky top-0 bg-background z-10 border-b">
                 <TableRow>
-                  <TableHead className="w-[50px] text-center">
-                    <Checkbox
-                      checked={isAllSelected}
-                      onCheckedChange={handleSelectAll}
-                      aria-label="Chọn tất cả"
-                    />
-                  </TableHead>
+                  <TableHead className="w-[50px] text-center"></TableHead>
                   <TableHead className="h-9 text-sm font-bold w-[75px] text-center">Hình ảnh</TableHead>
                   <TableHead className="h-9 text-sm font-bold">Mã thiết kế</TableHead>
                   <TableHead className="h-9 text-sm font-bold">Tên thiết kế</TableHead>
@@ -716,7 +712,16 @@ export default function ReadyDesignListPage() {
                           {((design as any).requestedQuantity ?? design.quantity ?? 0).toLocaleString("vi-VN")}
                         </TableCell>
                         <TableCell className="py-2 text-center">
-                          {renderStatusBadge((design as any).status)}
+                          <StatusBadge
+                            status={design.status || ""}
+                            label={
+                              orderDetailItemStatusLabels[design.status || ""] ||
+                              orderStatusLabels[design.status || ""] ||
+                              designStatusLabels[design.status || ""] ||
+                              design.status ||
+                              "N/A"
+                            }
+                          />
                         </TableCell>
                         <TableCell className={`py-2 font-mono text-xs ${design.isUrgent ? "text-red-650/80 dark:text-red-400/80" : "text-muted-foreground"}`}>
                           {design.dimensions || "—"}
