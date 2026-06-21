@@ -13,6 +13,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { designStatusLabels } from "@/lib/status-utils";
 import {
   Table,
   TableHeader,
@@ -110,6 +112,13 @@ function DesignImageThumbnail({ designId }: { designId: number }) {
       <ImageIcon className="w-4 h-4 text-muted-foreground/50" />
     </div>
   );
+}
+
+// Render a status badge for design statuses (keeps label mapping consistent)
+function renderStatusBadge(status: string | null | undefined) {
+  if (!status) return <StatusBadge status="unknown" label="—" />;
+  const label = designStatusLabels[status] || status;
+  return <StatusBadge status={status} label={label} />;
 }
 
 export default function ReadyDesignListPage() {
@@ -657,11 +666,6 @@ export default function ReadyDesignListPage() {
                   <TableHead className="h-9 text-sm font-bold">Tên thiết kế</TableHead>
                   <TableHead className="h-9 text-sm font-bold">Khách hàng</TableHead>
                   <TableHead className="h-9 text-sm font-bold text-right">SL chốt in</TableHead>
-                  <TableHead className="h-9 text-sm font-bold text-right">SL đã đặt</TableHead>
-                  <TableHead className="h-9 text-sm font-bold text-right">Có thể đặt</TableHead>
-                  <TableHead className="h-9 text-sm font-bold text-right">Bình bài</TableHead>
-                  <TableHead className="h-9 text-sm font-bold text-right">Đã SX</TableHead>
-                  <TableHead className="h-9 text-sm font-bold text-right">Tồn kho</TableHead>
                   <TableHead className="h-9 text-sm font-bold text-center">Trạng thái</TableHead>
                   <TableHead className="h-9 text-sm font-bold">Kích thước</TableHead>
                   <TableHead className="h-9 text-sm font-bold">Chất liệu</TableHead>
@@ -673,7 +677,7 @@ export default function ReadyDesignListPage() {
               </TableHeader>
               <TableBody>
                 {loadingDesigns ? (
-                  <TableSkeleton cols={18} rows={8} rowHeight="h-12" />
+                  <TableSkeleton cols={13} rows={8} rowHeight="h-12" />
                 ) : sortedDesigns.length > 0 ? (
                   sortedDesigns.map((design) => {
                     const isSelected = selectedIds.includes(design.id!);
@@ -712,21 +716,6 @@ export default function ReadyDesignListPage() {
                         </TableCell>
                         <TableCell className="py-2 text-sm font-medium text-right">
                           {((design as any).requestedQuantity ?? design.quantity ?? 0).toLocaleString("vi-VN")}
-                        </TableCell>
-                        <TableCell className="py-2 text-sm font-medium text-right text-muted-foreground">
-                          {((design as any).activeOrderedQty ?? 0).toLocaleString("vi-VN")}
-                        </TableCell>
-                        <TableCell className="py-2 text-sm font-bold text-right text-indigo-600 dark:text-indigo-400">
-                          {((design as any).availableQuantityForOrdering ?? 0).toLocaleString("vi-VN")}
-                        </TableCell>
-                        <TableCell className="py-2 text-sm font-medium text-right text-muted-foreground">
-                          {((design as any).summary?.lockedQty ?? 0).toLocaleString("vi-VN")}
-                        </TableCell>
-                        <TableCell className="py-2 text-sm font-medium text-right text-muted-foreground">
-                          {((design as any).summary?.producedQty ?? 0).toLocaleString("vi-VN")}
-                        </TableCell>
-                        <TableCell className="py-2 text-sm font-medium text-right text-muted-foreground">
-                          {((design as any).summary?.stockQty ?? 0).toLocaleString("vi-VN")}
                         </TableCell>
                         <TableCell className="py-2 text-center">
                           {renderStatusBadge((design as any).status)}
@@ -774,7 +763,7 @@ export default function ReadyDesignListPage() {
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={18} className="text-center py-12">
+                    <TableCell colSpan={13} className="text-center py-12">
                       <div className="flex flex-col items-center justify-center text-muted-foreground">
                         <Package className="h-10 w-10 mb-2 opacity-50" />
                         <p className="text-sm">Không có thiết kế nào sẵn sàng trong kho</p>
