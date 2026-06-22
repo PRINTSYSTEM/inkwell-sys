@@ -1,4 +1,5 @@
 import React from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "react-router-dom";
 import {
   Table,
@@ -72,6 +73,9 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { formatDieSize } from "@/utils/format-die-size";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
+import { apiRequest } from "@/lib/http";
+import { AsyncSelect } from "@/components/forms/AsyncSelect";
+import { useDefectRecordsByProductionOrder, defectRecordKeys } from "@/hooks/use-defect-record";
 
 interface ProductionListTableProps {
   isLoading: boolean;
@@ -648,6 +652,7 @@ function ProductionTableRow({
   onProductionClick: (id: number) => void;
   onStartProduction: (proofingOrderId: number) => void;
 }) {
+  const queryClient = useQueryClient();
   const [openDiePopover, setOpenDiePopover] = useState(false);
   const [openPlatePopover, setOpenPlatePopover] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
@@ -655,11 +660,48 @@ function ProductionTableRow({
   const { mutate: deleteProductionOrder } = useDeleteProductionOrder();
   const [isEditingPackaging, setIsEditingPackaging] = useState(false);
   const [tempPackagingValues, setTempPackagingValues] = useState<
-    Record<number, { outputQty: string; defectQty: string; notes: string }>
+    Record<
+      number,
+      {
+        outputQty: string;
+        defectQty: string;
+        notes: string;
+        assignedToUserId?: string;
+        defectSource?: string;
+      }
+    >
   >({});
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const imageContainerRef = React.useRef<HTMLDivElement>(null);
+
+  const { data: defectRecordsData } = useDefectRecordsByProductionOrder(
+    prod.id || null,
+    undefined,
+    !!prod.id,
+  );
+  const defectRecords = defectRecordsData?.items || [];
+
+  const loadUsersOptions = async (search?: string) => {
+    try {
+      const res = await apiRequest.get<any>("/users", {
+        params: {
+          pageNumber: 1,
+          pageSize: 100,
+          isActive: true,
+          search: search || undefined,
+        },
+      });
+      return (res.data?.items ?? []).map((u: any) => ({
+        value: u.id,
+        label: u.fullName || u.username || `User #${u.id}`,
+        description: u.role ? `Vai trò: ${u.role}` : undefined,
+      }));
+    } catch (err) {
+      console.error("loadUsersOptions error:", err);
+      return [];
+    }
+  };
 
   const isDraft = !prod.id;
   const isCreating = React.useRef(false);
@@ -816,7 +858,16 @@ function ProductionTableRow({
       });
     }
 
-    const initialValues: Record<number, { outputQty: string; defectQty: string; notes: string }> = {};
+    const initialValues: Record<
+      number,
+      {
+        outputQty: string;
+        defectQty: string;
+        notes: string;
+        assignedToUserId: string;
+        defectSource: string;
+      }
+    > = {};
     proofingOrder.proofingOrderDesigns.forEach((pod: any) => {
       const prodItem = productionItems.find(
         (i: any) =>
@@ -837,23 +888,33 @@ function ProductionTableRow({
         : "";
       const notesVal = prodItem?.notes || "";
       
+      const existingDefect = defectRecords.find(
+        (dr) => dr.designId === pod.design?.id || dr.orderDetailId === pod.id
+      );
+
       initialValues[pod.id] = {
         outputQty: outQty,
         defectQty: defQty,
         notes: notesVal,
+        assignedToUserId: existingDefect?.assignedToUserId?.toString() || "",
+        defectSource: existingDefect?.defectSource || "production",
       };
     });
     setTempPackagingValues(initialValues);
     setIsEditingPackaging(true);
   };
 
-  const handleTempChange = (podId: number, field: "outputQty" | "defectQty" | "notes", value: string) => {
-    setTempPackagingValues(prev => ({
+  const handleTempChange = (
+    podId: number,
+    field: "outputQty" | "defectQty" | "notes" | "assignedToUserId" | "defectSource",
+    value: string,
+  ) => {
+    setTempPackagingValues((prev) => ({
       ...prev,
       [podId]: {
         ...prev[podId],
-        [field]: value
-      }
+        [field]: value,
+      },
     }));
   };
 
@@ -873,6 +934,19 @@ function ProductionTableRow({
       return;
     }
 
+    // Validate that if defectQty > 0, an employee (assignedToUserId) is selected!
+    const missingEmployee = proofingOrder.proofingOrderDesigns.some((pod: any) => {
+      const values = tempPackagingValues[pod.id];
+      if (!values) return false;
+      const defectQty = Number(values.defectQty) || 0;
+      return defectQty > 0 && !values.assignedToUserId;
+    });
+
+    if (missingEmployee) {
+      toast.error("Vui lòng chọn nhân viên chịu trách nhiệm lỗi!");
+      return;
+    }
+
     try {
       const promises = proofingOrder.proofingOrderDesigns.map(async (pod: any) => {
         const prodItem = productionItems.find(
@@ -882,22 +956,91 @@ function ProductionTableRow({
             i.id === pod.id,
         );
         if (!prodItem) return;
-        const values = tempPackagingValues[pod.id] || { outputQty: "", defectQty: "", notes: "" };
-        
+        const values = tempPackagingValues[pod.id] || {
+          outputQty: "",
+          defectQty: "",
+          notes: "",
+          assignedToUserId: "",
+          defectSource: "production",
+        };
+        const defectQtyNum = Number(values.defectQty) || 0;
+
+        // 1. Update the production order item (standard flow)
         await updateOrderItem({
           productionOrderId: prod.id!,
           itemId: prodItem.id,
           data: {
             outputQty: Number(values.outputQty) || 0,
-            defectQty: Number(values.defectQty) || 0,
+            defectQty: defectQtyNum,
             notes: values.notes,
           },
         });
+
+        // 2. Find existing defect record for this design/item
+        const existingDefect = defectRecords.find(
+          (dr) => dr.designId === pod.design?.id || dr.orderDetailId === pod.id
+        );
+
+        // Calculate differences to avoid redundant API calls
+        const oldDefectQty = existingDefect ? existingDefect.defectQuantity : 0;
+        const oldWorkerId = existingDefect ? existingDefect.assignedToUserId?.toString() : "";
+        const oldDefectSource = existingDefect ? existingDefect.defectSource : "production";
+        const oldDescription = existingDefect ? existingDefect.description || "" : "";
+
+        const newWorkerId = values.assignedToUserId || "";
+        const newDefectSource = values.defectSource || "production";
+        const newDescription = values.notes.trim() || `Lỗi ghi nhận tại khâu kiểm hàng cho mã hàng ${pod.design?.code || pod.design?.designName || ""}`;
+
+        const isUnchanged =
+          defectQtyNum === oldDefectQty &&
+          newWorkerId === oldWorkerId &&
+          newDefectSource === oldDefectSource &&
+          (defectQtyNum === 0 || newDescription === oldDescription);
+
+        if (!isUnchanged) {
+          if (existingDefect) {
+            if (defectQtyNum > 0) {
+              // Update existing defect record
+              await apiRequest.put(`/defect-records/${existingDefect.id}`, {
+                defectQuantity: defectQtyNum,
+                assignedToUserId: Number(newWorkerId),
+                defectSource: newDefectSource,
+                description: newDescription,
+              });
+            } else {
+              // Delete existing defect record (quantity is 0)
+              await apiRequest.delete(`/defect-records/${existingDefect.id}`);
+            }
+          } else {
+            if (defectQtyNum > 0) {
+              // Create new defect record
+              await apiRequest.post("/defect-records", {
+                productionOrderId: prod.id!,
+                productionStepId: packagingStep?.id || undefined,
+                designId: pod.design?.id,
+                orderDetailId: pod.id,
+                defectQuantity: defectQtyNum,
+                description: newDescription,
+                defectSource: newDefectSource,
+                assignedToUserId: Number(newWorkerId),
+                defectOccurredAt: new Date().toISOString(),
+              });
+            }
+          }
+        }
       });
+
       await Promise.all(promises);
+
+      // Invalidate queries to refresh defect data in view mode
+      queryClient.invalidateQueries({
+        queryKey: defectRecordKeys.all,
+      });
+
       setIsEditingPackaging(false);
     } catch (error) {
-      console.error("Lỗi lưu thông tin đóng gói:", error);
+      console.error("Lỗi lưu thông tin đóng gói/lỗi sản xuất:", error);
+      toast.error("Đã xảy ra lỗi khi lưu thông tin đóng gói hoặc lỗi sản xuất!");
     }
   };
 
@@ -1538,6 +1681,38 @@ function ProductionTableRow({
                                     className="h-7 text-[12px] px-1.5 py-0 focus-visible:ring-red-500 font-bold text-red-600 tabular-nums"
                                   />
                                 </div>
+                                {Number(tempPackagingValues[pod.id]?.defectQty) > 0 && (
+                                  <div className="flex flex-col gap-1.5 border-t border-dashed pt-1.5 mt-0.5" onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex flex-col gap-0.5 text-left">
+                                      <span className="text-[9px] font-bold text-red-600 uppercase">Nhân viên lỗi</span>
+                                      <AsyncSelect
+                                        value={tempPackagingValues[pod.id]?.assignedToUserId || ""}
+                                        onValueChange={(val) => handleTempChange(pod.id, "assignedToUserId", val?.toString() || "")}
+                                        loadOptions={loadUsersOptions}
+                                        placeholder="Chọn nhân viên..."
+                                        emptyMessage="Không tìm thấy"
+                                        className="w-full text-[10px] h-7 min-h-7"
+                                      />
+                                    </div>
+                                    <div className="flex flex-col gap-0.5 text-left">
+                                      <span className="text-[9px] font-bold text-muted-foreground uppercase">Nguồn lỗi</span>
+                                      <Select
+                                        value={tempPackagingValues[pod.id]?.defectSource || "production"}
+                                        onValueChange={(val) => handleTempChange(pod.id, "defectSource", val)}
+                                      >
+                                        <SelectTrigger className="h-7 text-[10px] px-1.5 py-0 bg-background border-muted">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="design" className="text-xs">Lỗi thiết kế</SelectItem>
+                                          <SelectItem value="proofing" className="text-xs">Lỗi bình bài</SelectItem>
+                                          <SelectItem value="production" className="text-xs">Lỗi sản xuất</SelectItem>
+                                          <SelectItem value="management_decision" className="text-xs">Quyết định QL</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                  </div>
+                                )}
                                 <Input
                                   placeholder="Ghi chú..."
                                   className="h-7 w-full text-[10px] px-1.5 py-0 bg-background mt-0.5 border-amber-200 focus:border-amber-500"
@@ -1567,6 +1742,35 @@ function ProductionTableRow({
                                     {prodItem?.defectQty != null ? prodItem.defectQty : 0}
                                   </span>
                                 </div>
+
+                                {(() => {
+                                  const matchingDefects = defectRecords.filter(
+                                    (dr) => dr.designId === pod.design?.id || dr.orderDetailId === pod.id
+                                  );
+                                  if (matchingDefects.length === 0) return null;
+                                  return (
+                                    <div className="text-[9px] text-muted-foreground mt-1 border-t border-dashed pt-1 space-y-1 text-left">
+                                      {matchingDefects.map((dr: any) => (
+                                        <div key={dr.id} className="flex flex-col gap-0.5 border-b border-dotted last:border-0 pb-0.5 last:pb-0">
+                                          <div className="flex justify-between items-center gap-1 font-semibold text-foreground">
+                                            <span className="truncate max-w-[80px]" title={dr.assignedToUserName}>
+                                              {dr.assignedToUserName}
+                                            </span>
+                                            <span className="font-bold text-red-600 shrink-0">
+                                              {dr.defectQuantity}
+                                            </span>
+                                          </div>
+                                          {dr.defectSourceDisplay && (
+                                            <span className="text-[8px] text-red-500 italic block">
+                                              ({dr.defectSourceDisplay})
+                                            </span>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  );
+                                })()}
+
                                 {prodItem?.notes && (
                                   <div className="text-[10px] font-medium text-amber-700 dark:text-amber-500 break-words leading-tight border-l-2 border-amber-500/50 pl-1 mt-1 bg-amber-50/30 dark:bg-amber-900/10 py-0.5">
                                     {prodItem.notes}
