@@ -424,4 +424,8 @@ export const API_SUFFIX = {
   // ========== SHARED ADDRESSES ==========
   SHARED_ADDRESSES: "/shared-addresses",
   SHARED_ADDRESS_BY_ID: (id: number) => `/shared-addresses/${id}`,
+
+  // ========== SYSTEM SETTINGS ==========
+  SYSTEM_SETTINGS: "/system-settings",
+  SYSTEM_SETTING_BY_KEY: (key: string) => `/system-settings/${key}`,
 };

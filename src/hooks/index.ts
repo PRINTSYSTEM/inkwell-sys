@@ -33,4 +33,5 @@ export * from "./use-inventory-report";
 export * from "./use-sales-report";
 export { usePlateExports, usePlateExport } from "./use-plate-export";
 export * from "./use-debt-notification";
-export * from "./use-defect-record";
+export * from "./use-defect-record";
+export * from "./use-system-setting";

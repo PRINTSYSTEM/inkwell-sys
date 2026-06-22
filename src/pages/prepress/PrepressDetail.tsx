@@ -900,7 +900,7 @@ export default function ProofingOrderDetailPage() {
           } else {
             const baseAvailableQty =
               design.availableQuantity !== undefined &&
-              design.availableQuantity >= 0
+                design.availableQuantity >= 0
                 ? design.availableQuantity
                 : design.quantity;
             next[design.id] = baseAvailableQty;
@@ -1173,7 +1173,7 @@ export default function ProofingOrderDetailPage() {
         if (qty <= 0) return false;
         const maxAllowedQty =
           design.availableQuantity !== undefined &&
-          design.availableQuantity >= 0
+            design.availableQuantity >= 0
             ? design.availableQuantity
             : design.quantity;
         return qty > maxAllowedQty;
@@ -1831,13 +1831,7 @@ export default function ProofingOrderDetailPage() {
       // Cập nhật trạng thái sang completed trước
       await updateProofing({ id: order.id, data: { status: "completed" } });
 
-      // Sau đó hand to production
-      handToProductionMutate(order.id, {
-        onSuccess: () => {
-          setIsHandToProductionDialogOpen(false);
-          setPendingStatus(null);
-        },
-      });
+
     } catch (error) {
       toast.error("Lỗi", {
         description: "Không thể cập nhật trạng thái",
@@ -1887,13 +1881,13 @@ export default function ProofingOrderDetailPage() {
         proofingOrderId: order.id,
         dieId: removeTargetDieId,
       },
-      {
-        onSuccess: () => {
-          setIsRemoveDieConfirmOpen(false);
-          setRemoveTargetDieId(null);
+        {
+          onSuccess: () => {
+            setIsRemoveDieConfirmOpen(false);
+            setRemoveTargetDieId(null);
+          },
         },
-      },
-    );
+      );
     } catch (error) {
       console.error(error);
     }

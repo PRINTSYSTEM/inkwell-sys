@@ -141,6 +141,7 @@ export const ROUTE_PATHS = {
     USERS_CREATE: "/admin/users/create" as const,
     USERS_DETAIL: "/admin/users/:id" as const,
     ROLES: "/admin/roles" as const,
+    SETTINGS: "/admin/settings" as const,
     ANALYTICS: "/admin/analytics" as const,
     SHARED_ADDRESSES: "/admin/shared-addresses" as const,
   },

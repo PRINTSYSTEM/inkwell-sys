@@ -526,6 +526,13 @@ export const MENU_ITEMS: MenuItem[] = [
         path: ROUTE_PATHS.ADMIN.USERS,
         allowedRoles: [ROLE.ADMIN],
       },
+      {
+        id: "admin-settings",
+        title: "Cấu hình hệ thống",
+        icon: Settings,
+        path: ROUTE_PATHS.ADMIN.SETTINGS,
+        allowedRoles: [ROLE.ADMIN],
+      },
 
       // {
       //   id: "admin-roles",
