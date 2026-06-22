@@ -577,30 +577,6 @@ export function DetailDesignsListCard({
                                 <span className="truncate">Tải thiết kế</span>
                               </Button>
                             )}
-                            {order &&
-                              order.status !== "completed" &&
-                              pod.id &&
-                              isProofer &&
-                              onReject && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-7 px-2 justify-start gap-1.5 text-[11px] font-normal text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-orange-100 hover:border-orange-200"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onReject(pod);
-                                  }}
-                                  disabled={isRejecting}
-                                  title="Hoàn hàng về phòng thiết kế"
-                                >
-                                  {isRejecting ? (
-                                    <Loader2 className="h-3 w-3 animate-spin shrink-0" />
-                                  ) : (
-                                    <RotateCcw className="h-3 w-3 shrink-0" />
-                                  )}
-                                  <span className="truncate">Hoàn hàng</span>
-                                </Button>
-                              )}
                             {order && order.status !== "completed" && pod.id && isProofer && (
                               <Button
                                 variant="outline"

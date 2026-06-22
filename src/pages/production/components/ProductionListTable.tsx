@@ -1039,7 +1039,7 @@ function ProductionTableRow({
               )}
 
               {/* Nút hủy lệnh SX */}
-              {!isDraft && (
+              {!isDraft && materialExportStep?.status !== "done" && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();

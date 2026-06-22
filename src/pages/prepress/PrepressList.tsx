@@ -164,9 +164,12 @@ export default function PrepressList() {
   >(null);
   const [incompleteOrdersPage, setIncompleteOrdersPage] = useState(1);
   const [completedOrdersPage, setCompletedOrdersPage] = useState(1);
+  const [productionReturnedOrdersPage, setProductionReturnedOrdersPage] = useState(1);
   const [incompleteOrdersPageInput, setIncompleteOrdersPageInput] =
     useState<string>("");
   const [completedOrdersPageInput, setCompletedOrdersPageInput] =
+    useState<string>("");
+  const [productionReturnedOrdersPageInput, setProductionReturnedOrdersPageInput] =
     useState<string>("");
   const ordersTableRef = useRef<HTMLDivElement>(null);
 
@@ -196,11 +199,26 @@ export default function PrepressList() {
     return parsed.success ? parsed.data : {};
   }, [debouncedDesignCode, selectedMaterialTypeId, completedOrdersPage]);
 
+  const productionReturnedQueryParams = useMemo(() => {
+    const raw = {
+      status: "production_returned",
+      designCode: debouncedDesignCode.trim() || null,
+      materialTypeId: selectedMaterialTypeId,
+      pageSize: itemsPerPage,
+      pageNumber: productionReturnedOrdersPage,
+    };
+    const parsed = ProofingOrderListParamsSchema.safeParse(raw);
+    return parsed.success ? parsed.data : {};
+  }, [debouncedDesignCode, selectedMaterialTypeId, productionReturnedOrdersPage]);
+
   const { data: incompleteOrdersResp, isLoading: loadingIncompleteOrders } =
     useProofingOrders(incompleteQueryParams);
 
   const { data: completedOrdersResp, isLoading: loadingCompletedOrders } =
     useProofingOrders(completedQueryParams);
+
+  const { data: productionReturnedOrdersResp, isLoading: loadingProductionReturnedOrders } =
+    useProofingOrders(productionReturnedQueryParams);
 
   const incompleteOrders = useMemo<ProofingOrder[]>(() => {
     const items = incompleteOrdersResp?.items;
@@ -214,6 +232,12 @@ export default function PrepressList() {
     return items as unknown as ProofingOrder[];
   }, [completedOrdersResp?.items]);
 
+  const productionReturnedOrders = useMemo<ProofingOrder[]>(() => {
+    const items = productionReturnedOrdersResp?.items;
+    if (!items || !Array.isArray(items)) return [];
+    return items as unknown as ProofingOrder[];
+  }, [productionReturnedOrdersResp?.items]);
+
   const incompleteTotalCount = incompleteOrdersResp?.total ?? 0;
   const incompleteTotalPages =
     Math.ceil(incompleteTotalCount / itemsPerPage) || 1;
@@ -222,19 +246,26 @@ export default function PrepressList() {
   const completedTotalPages =
     Math.ceil(completedTotalCount / itemsPerPage) || 1;
 
+  const productionReturnedTotalCount = productionReturnedOrdersResp?.total ?? 0;
+  const productionReturnedTotalPages =
+    Math.ceil(productionReturnedTotalCount / itemsPerPage) || 1;
+
   const isSearchActiveAndEmpty = useMemo(() => {
-    if (loadingIncompleteOrders || loadingCompletedOrders) return false;
+    if (loadingIncompleteOrders || loadingCompletedOrders || loadingProductionReturnedOrders) return false;
     return (
       debouncedDesignCode.trim() !== "" &&
       incompleteTotalCount === 0 &&
-      completedTotalCount === 0
+      completedTotalCount === 0 &&
+      productionReturnedTotalCount === 0
     );
   }, [
     debouncedDesignCode,
     incompleteTotalCount,
     completedTotalCount,
+    productionReturnedTotalCount,
     loadingIncompleteOrders,
     loadingCompletedOrders,
+    loadingProductionReturnedOrders,
   ]);
 
   useEffect(() => {
@@ -246,8 +277,12 @@ export default function PrepressList() {
   }, [completedOrdersPage]);
 
   useEffect(() => {
+    setProductionReturnedOrdersPageInput(productionReturnedOrdersPage.toString());
+  }, [productionReturnedOrdersPage]);
+
+  useEffect(() => {
     if (ordersTableRef.current) ordersTableRef.current.scrollTop = 0;
-  }, [incompleteOrdersPage, completedOrdersPage]);
+  }, [incompleteOrdersPage, completedOrdersPage, productionReturnedOrdersPage]);
 
   useEffect(() => {
     // reset orders pagination when list filters change
@@ -255,6 +290,8 @@ export default function PrepressList() {
     setIncompleteOrdersPageInput("1");
     setCompletedOrdersPage(1);
     setCompletedOrdersPageInput("1");
+    setProductionReturnedOrdersPage(1);
+    setProductionReturnedOrdersPageInput("1");
   }, [debouncedDesignCode, selectedMaterialTypeId]);
 
   const handleIncompletePageInputBlur = () => {
@@ -272,6 +309,15 @@ export default function PrepressList() {
       setCompletedOrdersPage(page);
     } else {
       setCompletedOrdersPageInput(completedOrdersPage.toString());
+    }
+  };
+
+  const handleProductionReturnedPageInputBlur = () => {
+    const page = parseInt(productionReturnedOrdersPageInput, 10);
+    if (!isNaN(page) && page >= 1 && page <= productionReturnedTotalPages) {
+      setProductionReturnedOrdersPage(page);
+    } else {
+      setProductionReturnedOrdersPageInput(productionReturnedOrdersPage.toString());
     }
   };
 
@@ -814,14 +860,19 @@ export default function PrepressList() {
                         hasActiveFilters={viewMode === "designs"}
                         incompleteOrders={incompleteOrders}
                         completedOrders={completedOrders}
+                        productionReturnedOrders={productionReturnedOrders}
                         loadingIncomplete={loadingIncompleteOrders}
                         loadingCompleted={loadingCompletedOrders}
+                        loadingProductionReturned={loadingProductionReturnedOrders}
                         incompletePage={incompleteOrdersPage}
                         setIncompletePage={setIncompleteOrdersPage}
                         completedPage={completedOrdersPage}
                         setCompletedPage={setCompletedOrdersPage}
+                        productionReturnedPage={productionReturnedOrdersPage}
+                        setProductionReturnedPage={setProductionReturnedOrdersPage}
                         incompleteTotalPages={incompleteTotalPages}
                         completedTotalPages={completedTotalPages}
+                        productionReturnedTotalPages={productionReturnedTotalPages}
                         incompleteOrdersPageInput={incompleteOrdersPageInput}
                         setIncompleteOrdersPageInput={
                           setIncompleteOrdersPageInput
@@ -836,8 +887,16 @@ export default function PrepressList() {
                         handleCompletedPageInputBlur={
                           handleCompletedPageInputBlur
                         }
+                        productionReturnedOrdersPageInput={productionReturnedOrdersPageInput}
+                        setProductionReturnedOrdersPageInput={
+                          setProductionReturnedOrdersPageInput
+                        }
+                        handleProductionReturnedPageInputBlur={
+                          handleProductionReturnedPageInputBlur
+                        }
                         incompleteTotalCount={incompleteTotalCount}
                         completedTotalCount={completedTotalCount}
+                        productionReturnedTotalCount={productionReturnedTotalCount}
                         itemsPerPage={itemsPerPage}
                         shouldShowExpand={shouldShowExpand}
                         expandedOrderIds={expandedOrderIds}

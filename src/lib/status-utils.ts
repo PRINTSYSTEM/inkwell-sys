@@ -458,6 +458,7 @@ export const statusColorMap: Record<string, string> = {
   not_completed: "bg-slate-100 text-slate-800 border-slate-200",
   // completed đã được định nghĩa ở ORDER STATUSES ở trên
   paused: "bg-yellow-50 text-yellow-700 border-yellow-200",
+  production_returned: "bg-red-50 text-red-700 border-red-200",
 
   // ===== ORDER DETAIL ITEM STATUSES (dùng chung với Order) =====
   // waiting_for_proofing, waiting_for_production, in_production,

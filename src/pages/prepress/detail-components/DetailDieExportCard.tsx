@@ -57,7 +57,7 @@ export function DetailDieExportCard({
   const [showDebug, setShowDebug] = useState(false);
   if (!order) return null;
 
-  const dieExports = order.dieExports || [];
+  const dieExports = order.dieExports || order.proofingOrderDies || [];
 
   return (
     <Card className="relative h-full flex flex-col">

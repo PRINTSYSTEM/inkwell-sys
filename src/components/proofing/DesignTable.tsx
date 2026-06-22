@@ -200,15 +200,15 @@ export function DesignTable({
                         design.laminationType ||
                         (design.specification &&
                           design.specification.length > 0)) && (
-                        <div className="space-y-1.5">
-                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                            Quy cách sản xuất
-                          </p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {design.specification &&
-                            design.specification.length > 0
-                              ? design.specification.map((spec, i) => (
+                          <div className="space-y-1.5">
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                              Quy cách sản xuất
+                            </p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {design.specification &&
+                                design.specification.length > 0
+                                ? design.specification.map((spec, i) => (
                                   <Badge
                                     key={i}
                                     variant="secondary"
@@ -217,32 +217,32 @@ export function DesignTable({
                                     {spec}
                                   </Badge>
                                 ))
-                              : null}
-                            {!design.specification?.length &&
-                              design.processClassificationOptionName && (
-                                <Badge
-                                  variant="secondary"
-                                  className="text-[10px] bg-amber-100 text-amber-800 border-amber-200"
-                                >
-                                  {processClassificationLabels[
-                                    design.processClassificationOptionName
-                                  ] || design.processClassificationOptionName}
-                                </Badge>
-                              )}
-                            {!design.specification?.length &&
-                              design.laminationType && (
-                                <Badge
-                                  variant="secondary"
-                                  className="text-[10px]"
-                                >
-                                  {laminationTypeLabels[
-                                    design.laminationType
-                                  ] || design.laminationType}
-                                </Badge>
-                              )}
+                                : null}
+                              {!design.specification?.length &&
+                                design.processClassificationOptionName && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-[10px] bg-amber-100 text-amber-800 border-amber-200"
+                                  >
+                                    {processClassificationLabels[
+                                      design.processClassificationOptionName
+                                    ] || design.processClassificationOptionName}
+                                  </Badge>
+                                )}
+                              {!design.specification?.length &&
+                                design.laminationType && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-[10px]"
+                                  >
+                                    {laminationTypeLabels[
+                                      design.laminationType
+                                    ] || design.laminationType}
+                                  </Badge>
+                                )}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
                     </div>
                   </div>
                 </div>
@@ -260,11 +260,11 @@ export function DesignTable({
                       "h-14 transition-colors relative",
                       isSelectionEnabled && "cursor-pointer",
                       isSelected &&
-                        "bg-green-100/90 hover:bg-green-200/80 dark:bg-green-900/40 dark:hover:bg-green-900/60 shadow-[inset_4px_0_0_0_#22c55e]",
+                      "bg-green-100/90 hover:bg-green-200/80 dark:bg-green-900/40 dark:hover:bg-green-900/60 shadow-[inset_4px_0_0_0_#22c55e]",
                       isSelectionEnabled && !isSelected && selectable && "hover:bg-muted/50",
                       isSelectionEnabled && !selectable &&
-                        !isSelected &&
-                        "opacity-50 cursor-not-allowed",
+                      !isSelected &&
+                      "opacity-50 cursor-not-allowed",
                       !isSelectionEnabled && !isSelected && "hover:bg-transparent"
                     )}
                     onClick={() => {
@@ -338,11 +338,11 @@ export function DesignTable({
                     </TableCell>
                     <TableCell className="py-3">
                       <div className="text-sm font-semibold">
-                        {((design.designTypeName?.toLowerCase().includes("decal") || 
-                           design.materialTypeName?.toLowerCase().includes("decal")) && 
+                        {((design.designTypeName?.toLowerCase().includes("decal") ||
+                          design.materialTypeName?.toLowerCase().includes("decal")) &&
                           design.sidesClassification === "two_side"
-                            ? design.quantity * 2
-                            : design.quantity
+                          ? design.quantity * 2
+                          : design.quantity
                         ).toLocaleString()}
                       </div>
                       {design.availableQuantity !== undefined && (

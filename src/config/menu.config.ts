@@ -230,18 +230,6 @@ export const MENU_ITEMS: MenuItem[] = [
           ROLE.PRODUCTION_LEAD,
         ],
       },
-      {
-        id: "defect-records",
-        title: "Nhật ký lỗi sản xuất",
-        icon: AlertTriangle,
-        path: ROUTE_PATHS.PRODUCTION.DEFECT_RECORDS,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.PRODUCTION,
-          ROLE.PRODUCTION_LEAD,
-        ],
-      },
     ],
   },
 
@@ -418,7 +406,7 @@ export const MENU_ITEMS: MenuItem[] = [
       },
       {
         id: "defect-reports",
-        title: "Báo cáo lỗi trừ lương",
+        title: "Báo cáo lỗi",
         icon: FileBarChart,
         path: ROUTE_PATHS.ACCOUNTING.DEFECT_REPORTS,
         allowedRoles: [
@@ -428,11 +416,23 @@ export const MENU_ITEMS: MenuItem[] = [
           ROLE.ACCOUNTING_LEAD,
         ],
       },
+      {
+        id: "defect-records",
+        title: "Nhật ký lỗi sản xuất",
+        icon: AlertTriangle,
+        path: ROUTE_PATHS.PRODUCTION.DEFECT_RECORDS,
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.PRODUCTION,
+          ROLE.PRODUCTION_LEAD,
+        ],
+      },
     ],
   },
 
 
-  
+
 
   // ==== Quản lý kho ====
   {
@@ -526,7 +526,7 @@ export const MENU_ITEMS: MenuItem[] = [
         path: ROUTE_PATHS.ADMIN.USERS,
         allowedRoles: [ROLE.ADMIN],
       },
-     
+
       // {
       //   id: "admin-roles",
       //   title: "Quản lý vai trò",

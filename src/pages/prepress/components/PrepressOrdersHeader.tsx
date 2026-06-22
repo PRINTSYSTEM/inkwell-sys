@@ -60,22 +60,31 @@ interface PrepressOrdersHeaderProps {
   hasActiveFilters: boolean;
   incompleteOrders: any[];
   completedOrders: any[];
+  productionReturnedOrders: any[];
   loadingIncomplete: boolean;
   loadingCompleted: boolean;
+  loadingProductionReturned: boolean;
   incompletePage: number;
   setIncompletePage: (page: number) => void;
   completedPage: number;
   setCompletedPage: (page: number) => void;
+  productionReturnedPage: number;
+  setProductionReturnedPage: (page: number) => void;
   incompleteTotalPages: number;
   completedTotalPages: number;
+  productionReturnedTotalPages: number;
   incompleteOrdersPageInput: string;
   setIncompleteOrdersPageInput: (val: string) => void;
   handleIncompletePageInputBlur: () => void;
   completedOrdersPageInput: string;
   setCompletedOrdersPageInput: (val: string) => void;
   handleCompletedPageInputBlur: () => void;
+  productionReturnedOrdersPageInput: string;
+  setProductionReturnedOrdersPageInput: (val: string) => void;
+  handleProductionReturnedPageInputBlur: () => void;
   incompleteTotalCount: number;
   completedTotalCount: number;
+  productionReturnedTotalCount: number;
   itemsPerPage: number;
   searchTermLower: string;
   debouncedDesignCode: string;
@@ -122,22 +131,31 @@ export function PrepressOrdersHeader({
   hasActiveFilters,
   incompleteOrders,
   completedOrders,
+  productionReturnedOrders,
   loadingIncomplete,
   loadingCompleted,
+  loadingProductionReturned,
   incompletePage,
   setIncompletePage,
   completedPage,
   setCompletedPage,
+  productionReturnedPage,
+  setProductionReturnedPage,
   incompleteTotalPages,
   completedTotalPages,
+  productionReturnedTotalPages,
   incompleteOrdersPageInput,
   setIncompleteOrdersPageInput,
   handleIncompletePageInputBlur,
   completedOrdersPageInput,
   setCompletedOrdersPageInput,
   handleCompletedPageInputBlur,
+  productionReturnedOrdersPageInput,
+  setProductionReturnedOrdersPageInput,
+  handleProductionReturnedPageInputBlur,
   incompleteTotalCount,
   completedTotalCount,
+  productionReturnedTotalCount,
   itemsPerPage,
   searchTermLower,
   debouncedDesignCode,
@@ -164,9 +182,11 @@ export function PrepressOrdersHeader({
   const isSearchActiveAndEmpty =
     !loadingIncomplete &&
     !loadingCompleted &&
+    !loadingProductionReturned &&
     debouncedDesignCode.trim() !== "" &&
     incompleteTotalCount === 0 &&
-    completedTotalCount === 0;
+    completedTotalCount === 0 &&
+    productionReturnedTotalCount === 0;
 
   return (
     <div className="relative shrink-0">
@@ -196,8 +216,8 @@ export function PrepressOrdersHeader({
             >
               {selectedMaterialTypeId
                 ? materialTypeOptionsForOrders.find(
-                    (mt) => mt.id === selectedMaterialTypeId,
-                  )?.name || "Loại chất liệu  của bình bài"
+                  (mt) => mt.id === selectedMaterialTypeId,
+                )?.name || "Loại chất liệu  của bình bài"
                 : "Loại chất liệu  của bình bài"}
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
@@ -390,10 +410,94 @@ export function PrepressOrdersHeader({
       {/* Split lists shown when filters NOT active and search not empty/unmatched */}
       {!hasActiveFilters && !isSearchActiveAndEmpty && (
         <div className="mt-4 space-y-8">
+          {/* Production Returned Orders Section */}
+          {productionReturnedTotalCount > 0 && (
+            <div className="space-y-4">
+              <PrepressOrdersTable
+                title="Bình bài sản xuất trả về"
+                count={productionReturnedTotalCount}
+                orders={productionReturnedOrders}
+                loading={loadingProductionReturned}
+                shouldShowExpand={false}
+                expandedOrderIds={new Set()}
+                searchTermLower={searchTermLower}
+                debouncedSearchTerm={debouncedDesignCode}
+                onNavigate={onNavigate}
+              />
+              {productionReturnedTotalCount > itemsPerPage && (
+                <div className="flex items-center justify-between gap-3 bg-background px-1 py-1 border rounded-lg shadow-sm">
+                  <div className="text-xs text-muted-foreground ml-2">
+                    Hiển thị{" "}
+                    <span className="font-semibold text-foreground">
+                      {(productionReturnedPage - 1) * itemsPerPage + 1}
+                    </span>
+                    {" - "}
+                    <span className="font-semibold text-foreground">
+                      {Math.min(
+                        productionReturnedPage * itemsPerPage,
+                        productionReturnedTotalCount,
+                      )}
+                    </span>{" "}
+                    /{" "}
+                    <span className="font-semibold text-foreground">
+                      {productionReturnedTotalCount}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      onClick={() =>
+                        setProductionReturnedPage(Math.max(1, productionReturnedPage - 1))
+                      }
+                      disabled={productionReturnedPage === 1 || loadingProductionReturned}
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Input
+                        type="number"
+                        min={1}
+                        max={productionReturnedTotalPages}
+                        value={productionReturnedOrdersPageInput}
+                        onChange={(e) =>
+                          setProductionReturnedOrdersPageInput(e.target.value)
+                        }
+                        onBlur={handleProductionReturnedPageInputBlur}
+                        className="h-8 w-12 text-center text-xs"
+                        disabled={loadingProductionReturned}
+                      />
+                      <span className="text-xs text-muted-foreground">
+                        / {productionReturnedTotalPages}
+                      </span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      onClick={() =>
+                        setProductionReturnedPage(
+                          Math.min(productionReturnedTotalPages, productionReturnedPage + 1),
+                        )
+                      }
+                      disabled={
+                        productionReturnedPage >= productionReturnedTotalPages ||
+                        loadingProductionReturned
+                      }
+                    >
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Incomplete Orders Section */}
           <div className="space-y-4">
             <PrepressOrdersTable
-              title="Đơn hàng chờ xử lý"
+              title="Bình bài chờ xử lý"
               count={incompleteTotalCount}
               orders={incompleteOrders}
               loading={loadingIncomplete}
@@ -475,7 +579,7 @@ export function PrepressOrdersHeader({
           {/* Completed Orders Section */}
           <div className="space-y-4">
             <PrepressOrdersTable
-              title="Đơn hàng đã hoàn tất"
+              title="Bình bài đã hoàn tất"
               count={completedTotalCount}
               orders={completedOrders}
               loading={loadingCompleted}

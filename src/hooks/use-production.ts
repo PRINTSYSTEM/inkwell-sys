@@ -137,28 +137,7 @@ export const useDeleteProductionOrder = () => {
 
   const mutate = async (productionOrderId: number) => {
     try {
-      // 1. Fetch the full production order to get actual steps
-      const orderResp = await apiRequest.get<any>(
-        API_SUFFIX.PRODUCTION_ORDER_BY_ID(productionOrderId),
-      );
-      const steps: any[] = orderResp.data?.steps ?? [];
-      // 2. Silently reset ALL steps to "ready"
-      if (steps.length > 0) {
-        await Promise.all(
-          steps
-            .filter((s) => s.id)
-            .map((s) =>
-              apiRequest.put(API_SUFFIX.PRODUCTION_STEP_STATUS(s.id!), {
-                status: "pending",
-                inputQty: 0,
-                outputQty: 0,
-                defectQty: 0,
-              }),
-            ),
-        );
-      }
-
-      // 3. Delete the production order
+      // Delete the production order directly
       await apiRequest.delete(API_SUFFIX.PRODUCTION_ORDER_BY_ID(productionOrderId));
 
       queryClient.invalidateQueries({ queryKey: productionOrderKeys.all });

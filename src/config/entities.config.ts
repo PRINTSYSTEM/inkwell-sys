@@ -62,6 +62,7 @@ export const ENTITY_CONFIG = {
       not_completed: "Chưa hoàn thành",
       completed: "Hoàn thành",
       paused: "Tạm dừng",
+      production_returned: "Sản xuất trả về",
     },
   },
   orderDetailDerivedStatuses: {

@@ -42,6 +42,9 @@ export function PrepressOrderRow({
   onNavigate,
 }: PrepressOrderRowProps) {
   const designs = order.proofingOrderDesigns ?? [];
+  const isDieExported =
+    (order.dieExports?.length ?? 0) > 0 ||
+    (order.proofingOrderDies?.length ?? 0) > 0;
   const orderCodeMatches =
     shouldShowExpand && order.code?.toLowerCase().includes(searchTermLower);
 
@@ -336,17 +339,11 @@ export function PrepressOrderRow({
           (pod: any) => pod.design?.processClassification === "die_cut",
         ) ? (
           <StatusBadge
-            status={
-              (order.dieExports?.length ?? 0) > 0
-                ? "exported"
-                : "not_exported"
-            }
-            label={
-              (order.dieExports?.length ?? 0) > 0 ? "Đã xuất" : "Chưa xuất"
-            }
+            status={isDieExported ? "exported" : "not_exported"}
+            label={isDieExported ? "Đã xuất" : "Chưa xuất"}
             className={cn(
               "text-xs font-semibold",
-              (order.dieExports?.length ?? 0) > 0
+              isDieExported
                 ? "bg-green-100 text-green-800 border-green-300"
                 : "bg-red-100 text-red-800 border-red-300",
             )}

@@ -484,8 +484,8 @@ export default function ProofingOrderDetailPage() {
     ) {
       return (order as any).isDieExported;
     }
-    // Fallback: compute from dieExports array
-    return (order.dieExports?.length ?? 0) > 0;
+    // Fallback: compute from dieExports array or proofingOrderDies array
+    return (order.dieExports?.length ?? 0) > 0 || (order.proofingOrderDies?.length ?? 0) > 0;
   }, [order]);
 
   // Check if any design has processClassification === "die_cut" (Bế)
@@ -1688,8 +1688,8 @@ export default function ProofingOrderDetailPage() {
 
     const currentStatus = order.status;
 
-    // not_completed → completed
-    if (currentStatus === "not_completed") {
+    // not_completed or production_returned → completed
+    if (currentStatus === "not_completed" || currentStatus === "production_returned") {
       return {
         nextStatus: "completed",
         buttonLabel: "Hoàn thành",
@@ -1759,7 +1759,7 @@ export default function ProofingOrderDetailPage() {
     if (nextStatusInfo) {
       if (
         nextStatusInfo.nextStatus === "completed" &&
-        order?.status === "not_completed"
+        (order?.status === "not_completed" || order?.status === "production_returned")
       ) {
         if (!canMarkCompleted) {
           toast.error("Chưa thể hoàn thành vì còn thiếu thông tin:", {
@@ -1886,11 +1886,16 @@ export default function ProofingOrderDetailPage() {
       await removeDieMutate({
         proofingOrderId: order.id,
         dieId: removeTargetDieId,
-      });
-      setIsRemoveDieConfirmOpen(false);
-        setRemoveTargetDieId(null);
+      },
+      {
+        onSuccess: () => {
+          setIsRemoveDieConfirmOpen(false);
+          setRemoveTargetDieId(null);
+        },
+      },
+    );
     } catch (error) {
-      // Error is handled by the hook
+      console.error(error);
     }
   };
 
@@ -1914,9 +1919,16 @@ export default function ProofingOrderDetailPage() {
         proofingOrderDesignId: removeDesignTarget.proofingOrderDesignId,
       },
       {
-        onSuccess: () => {
-          setIsConfirmRemoveDesignDialogOpen(false);
-          setRemoveDesignTarget(null);
+        onSuccess: (data) => {
+          if (data === null) {
+            toast.success("Thành công", {
+              description: "Bình bài đã bị xóa",
+            });
+            navigate("/proofing");
+          } else {
+            setIsConfirmRemoveDesignDialogOpen(false);
+            setRemoveDesignTarget(null);
+          }
         },
       },
     );

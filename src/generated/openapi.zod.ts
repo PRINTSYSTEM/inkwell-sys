@@ -2931,6 +2931,8 @@ const ProofingOrderListResponse = z
     createdAt: z.string().datetime({ offset: true }),
     updatedAt: z.string().datetime({ offset: true }),
     proofingOrderDesigns: z.array(ProofingOrderDesignListResponse).nullable(),
+    dieExports: z.array(DieExportResponse).nullable(),
+    proofingOrderDies: z.array(DieExportResponse).nullable(),
   })
   .partial();
 const ProofingOrderListResponsePaginate = z
@@ -13628,6 +13630,11 @@ const endpoints = makeApi([
         name: "isActive",
         type: "Query",
         schema: z.boolean().optional(),
+      },
+      {
+        name: "vendorType",
+        type: "Query",
+        schema: z.string().optional(),
       },
       {
         name: "sortColumn",

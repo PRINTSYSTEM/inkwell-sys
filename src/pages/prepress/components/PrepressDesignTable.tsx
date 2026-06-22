@@ -230,7 +230,7 @@ export function PrepressDesignTable({
                                 className={cn(
                                   "cursor-pointer h-16",
                                   isSelected &&
-                                    "bg-green-100 ring-1 ring-green-200",
+                                  "bg-green-100 ring-1 ring-green-200",
                                   !selectable && !isSelected && "opacity-50",
                                 )}
                                 onClick={() => {
@@ -296,8 +296,8 @@ export function PrepressDesignTable({
                                   <span className="text-sm font-semibold">
                                     {design.availableQuantity != null
                                       ? design.availableQuantity.toLocaleString(
-                                          "vi-VN",
-                                        )
+                                        "vi-VN",
+                                      )
                                       : design.quantity.toLocaleString("vi-VN")}
                                   </span>
                                 </TableCell>

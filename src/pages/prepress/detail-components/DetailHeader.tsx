@@ -103,7 +103,7 @@ export function DetailHeader({
                           </Button>
                         </span>
                       </TooltipTrigger>
-                      {order?.status === "not_completed" &&
+                      {(order?.status === "not_completed" || order?.status === "production_returned") &&
                         !canMarkCompleted && (
                           <TooltipContent className="max-w-xs">
                             <div className="space-y-1">

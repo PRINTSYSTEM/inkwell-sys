@@ -14966,6 +14966,9 @@
                 }
               }
             }
+          },
+          "204": {
+            "description": "No Content"
           }
         }
       }
@@ -21484,6 +21487,13 @@
             "in": "query",
             "schema": {
               "type": "boolean"
+            }
+          },
+          {
+            "name": "vendorType",
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           },
           {
@@ -31696,6 +31706,20 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/ProofingOrderDesignListResponse"
+            },
+            "nullable": true
+          },
+          "dieExports": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DieExportResponse"
+            },
+            "nullable": true
+          },
+          "proofingOrderDies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DieExportResponse"
             },
             "nullable": true
           }

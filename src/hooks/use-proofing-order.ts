@@ -1142,6 +1142,11 @@ export const useRemoveDesignFromProofingOrder = () => {
         ),
       );
 
+      // If backend returns 204 No Content, order was deleted
+      if (response.status === 204) {
+        return null;
+      }
+
       const parseResult = ProofingOrderResponseSchema.safeParse(response.data);
       if (parseResult.success) {
         return parseResult.data;
