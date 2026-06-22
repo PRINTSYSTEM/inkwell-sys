@@ -269,6 +269,11 @@ const DebtNotificationPreviewPage = lazy(
   () => import("@/pages/notifications/DebtNotificationPreviewPage")
 );
 
+// Admin Settings
+const AdminSettingsPage = lazy(
+  () => import("@/pages/admin-settings/AdminSettings")
+);
+
 // Misc
 const NotFound = lazy(() => import("@/pages/NotFound"));
 
@@ -1138,6 +1143,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
                 <SharedAddressListPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: lastSegment(ROUTE_PATHS.ADMIN.SETTINGS), // "settings"
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <AdminSettingsPage />
               </Suspense>
             ),
           },

@@ -28,6 +28,7 @@ export * from "./report.schema";
 export * from "./return-note.schema";
 export * from "./generated-form-body";
 export * from "./defect-record.schema";
+export * from "./system-setting.schema";
 
 
 // Re-export zod for convenience
