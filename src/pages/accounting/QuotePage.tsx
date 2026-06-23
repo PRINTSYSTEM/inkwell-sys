@@ -13,7 +13,7 @@ export default function QuotePage() {
   const ordersParams = useMemo(() => {
     return {
       pageNumber: 1,
-      pageSize: 100, // Get all orders for stats calculation
+      pageSize: 1000, // Get more orders for stats calculation
       filterType: "payment",
       status: "",
       orderCode: "",
