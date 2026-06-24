@@ -33,14 +33,21 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { usePlateExports } from "@/hooks/use-plate-export";
 import { useActivePlateVendors, useActivePrintingVendors } from "@/hooks/use-vendor";
+import { useAuth } from "@/hooks/use-auth";
 import type { PlateExportResponse, PlateExportListParams } from "@/Schema";
 import { formatCurrency } from "@/lib/status-utils";
+import { cn } from "@/lib/utils";
 
 export default function PlateExportListPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
   const isOutsource = searchParams.get("type") === "outsource";
   const title = isOutsource ? "Quản lý in gia công" : "Quản lý bản kẽm";
+
+  const canViewPrice = useMemo(() => {
+    return !!user?.role && ["admin", "sale", "manager", "accounting", "accounting_lead"].includes(user.role);
+  }, [user]);
 
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
@@ -48,7 +55,6 @@ export default function PlateExportListPage() {
   const [vendorId, setVendorId] = useState<number | null>(null);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-  const [showInHouse, setShowInHouse] = useState(false);
 
   useEffect(() => {
     setPage(1);
@@ -56,7 +62,6 @@ export default function PlateExportListPage() {
     setSearchTerm("");
     setFromDate("");
     setToDate("");
-    setShowInHouse(false);
   }, [isOutsource]);
 
   const fromDateISO = fromDate
@@ -90,13 +95,9 @@ export default function PlateExportListPage() {
           (p) => p.printingVendorId === vendorId || p.printingVendor?.id === vendorId
         );
       }
-    } else {
-      if (!showInHouse) {
-        filtered = filtered.filter((p) => p.productionMethod === "outsource");
-      }
     }
     return filtered;
-  }, [plateExportsRaw, isOutsource, vendorId, showInHouse]);
+  }, [plateExportsRaw, isOutsource, vendorId]);
 
   const displayedPlateExports = useMemo(() => {
     const start = (page - 1) * pageSize;
@@ -111,13 +112,21 @@ export default function PlateExportListPage() {
     return statsList.length;
   }, [statsList.length]);
 
+  const receivedCount = useMemo(() => {
+    return statsList.filter((p) => {
+      const isPastEstimated = p.estimatedReceiveAt
+        ? new Date() > new Date(p.estimatedReceiveAt)
+        : false;
+      return !!p.receivedAt || isPastEstimated;
+    }).length;
+  }, [statsList]);
+
   const handleResetFilters = () => {
     setSearchTerm("");
     setVendorId(null);
     setFromDate("");
     setToDate("");
     setPage(1);
-    setShowInHouse(false);
   };
 
   const handleViewDetail = (id: number | undefined) => {
@@ -146,66 +155,34 @@ export default function PlateExportListPage() {
         <link rel="canonical" href="/plate-exports" />
       </Helmet>
 
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-            <Package className="h-6 w-6 text-primary" />
+      {/* Header & Stats */}
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between pb-2 border-b border-slate-100">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <h1 className="text-xl font-bold tracking-tight flex items-center gap-2 shrink-0 text-slate-900">
+            <Package className="h-5 w-5 text-primary" />
             {title}
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Theo dõi danh sách {title.toLowerCase()}, nhà cung cấp và tình trạng.
-          </p>
-        </div>
-      </div>
+          <div className="flex gap-2 flex-wrap">
+            <Badge className="bg-slate-900 text-white px-3 py-1">
+              Tổng lệnh
+              <span className="ml-2 text-sm font-bold">{totalCount}</span>
+            </Badge>
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
-        <Card className="border-0 shadow-sm">
-          <CardContent className="p-3 flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <Package className="h-4 w-4 text-primary" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
-                Tổng lệnh
-              </p>
-              <p className="text-base sm:text-xl font-bold mt-1 leading-none">
-                {totalCount}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-0 shadow-sm">
-          <CardContent className="p-3 flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
-              <Package className="h-4 w-4 text-emerald-500" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
-                Đang hoạt động
-              </p>
-              <p className="text-base sm:text-xl font-bold mt-1 leading-none text-emerald-600">
-                {statsList.filter((p) => p.isActive).length}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-0 shadow-sm">
-          <CardContent className="p-3 flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-blue-50 flex items-center justify-center shrink-0">
-              <Package className="h-4 w-4 text-blue-500" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
-                {isOutsource ? "Đã nhận hàng" : "Đã nhận kẽm"}
-              </p>
-              <p className="text-base sm:text-xl font-bold mt-1 leading-none text-blue-600">
-                {statsList.filter((p) => p.receivedAt).length}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+            {!isOutsource && (
+              <>
+                <Badge className="bg-amber-600 text-white px-3 py-1">
+                  Chờ kẽm
+                  <span className="ml-2 text-sm font-bold">{totalCount - receivedCount}</span>
+                </Badge>
+
+                <Badge className="bg-emerald-600 text-white px-3 py-1">
+                  Đã nhận kẽm
+                  <span className="ml-2 text-sm font-bold">{receivedCount}</span>
+                </Badge>
+              </>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Filters */}
@@ -271,36 +248,17 @@ export default function PlateExportListPage() {
                 className="h-7 border-0 bg-transparent shadow-none p-0 text-sm focus-visible:ring-0 w-[120px]"
               />
             </div>
-            {!isOutsource && (
-              <div className="flex items-center gap-2 bg-muted/50 rounded-md px-3 h-9">
-                <Checkbox
-                  id="show-in-house"
-                  checked={showInHouse}
-                  onCheckedChange={(checked) => {
-                    setShowInHouse(!!checked);
-                    setPage(1);
-                  }}
-                  className="data-[state=checked]:bg-primary"
-                />
-                <label
-                  htmlFor="show-in-house"
-                  className="text-xs font-semibold text-muted-foreground cursor-pointer select-none"
-                >
-                  Hiện cả in tại xưởng
-                </label>
-              </div>
-            )}
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
               onClick={handleResetFilters}
               disabled={isFetching}
-              className="h-9 text-muted-foreground hover:text-foreground"
+              className="h-9 bg-primary/10 hover:bg-primary/20 text-primary border-primary/20 transition-all font-medium flex items-center gap-1.5 px-3"
             >
               {isFetching ? (
-                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                <RefreshCw className="h-3.5 w-3.5" />
               )}
               Đặt lại
             </Button>
@@ -327,84 +285,101 @@ export default function PlateExportListPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50 hover:bg-muted/50">
-                      <TableHead className="w-[140px] font-semibold text-slate-700">Mã bài</TableHead>
-                      <TableHead className="font-semibold text-slate-700">Nhà cung cấp</TableHead>
-                      <TableHead className="text-center font-semibold text-slate-700">Số lượng kẽm</TableHead>
-                      <TableHead className="font-semibold text-slate-700">Hình thức in</TableHead>
-                      <TableHead className="text-center font-semibold text-slate-700">Trạng thái</TableHead>
-                      <TableHead className="font-semibold text-slate-700">Ngày gửi</TableHead>
-                      <TableHead className="font-semibold text-slate-700">Ngày nhận dự kiến</TableHead>
-                      <TableHead className="font-semibold text-slate-700">Ngày nhận thực tế</TableHead>
+                      <TableHead className="w-[140px] h-9 px-3 text-xs font-semibold text-slate-700">Mã bài</TableHead>
+                      <TableHead className="h-9 px-3 text-xs font-semibold text-slate-700">{isOutsource ? "Nhà in" : "Nhà cung cấp"}</TableHead>
+                      <TableHead className="h-9 px-3 text-center text-xs font-semibold text-slate-700">Số lượng kẽm</TableHead>
+                      {canViewPrice && (
+                        <TableHead className="h-9 px-3 text-right text-xs font-semibold text-slate-700">Tổng tiền</TableHead>
+                      )}
+                      {isOutsource && (
+                        <TableHead className="h-9 px-3 text-xs font-semibold text-slate-700">Hình thức in</TableHead>
+                      )}
+                      {!isOutsource && (
+                        <TableHead className="h-9 px-3 text-center text-xs font-semibold text-slate-700">Trạng thái</TableHead>
+                      )}
+                      <TableHead className="h-9 px-3 text-xs font-semibold text-slate-700">Ngày gửi</TableHead>
+                      <TableHead className="h-9 px-3 text-xs font-semibold text-slate-700">Ngày nhận dự kiến</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {displayedPlateExports.map((plateExport) => (
-                      <TableRow
-                        key={plateExport.id}
-                        className="cursor-pointer hover:bg-muted/30 transition-colors border-b border-slate-100"
-                        onClick={() => handleViewDetail(plateExport.id)}
-                      >
-                        <TableCell className="font-medium font-mono text-sm">
-                          {plateExport.proofingOrderCode || "—"}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                            <span className="text-sm">
-                              {plateExport.vendorName ||
-                                plateExport.plateVendor?.name ||
-                                "—"}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center font-medium">
-                          {plateExport.plateCount ?? "—"}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col gap-0.5">
-                            <span className={plateExport.productionMethod === "outsource" ? "text-orange-600 font-medium text-sm" : "text-blue-600 font-medium text-sm"}>
-                              {plateExport.productionMethodName || (plateExport.productionMethod === "outsource" ? "In ngoài" : "In tại xưởng")}
-                            </span>
-                            {plateExport.productionMethod === "outsource" && plateExport.printingVendorName && (
-                              <span className="text-xs text-muted-foreground truncate max-w-[150px]">
-                                {plateExport.printingVendorName}
+                    {displayedPlateExports.map((plateExport) => {
+                      const isPastEstimated = plateExport.estimatedReceiveAt
+                        ? new Date() > new Date(plateExport.estimatedReceiveAt)
+                        : false;
+                      const isDone = plateExport.receivedAt || isPastEstimated;
+
+                      return (
+                        <TableRow
+                          key={plateExport.id}
+                          className="cursor-pointer hover:bg-muted/30 transition-colors border-b border-slate-100"
+                          onClick={() => handleViewDetail(plateExport.id)}
+                        >
+                          <TableCell className="py-1 px-3 font-medium font-mono text-xs">
+                            {plateExport.proofingOrderCode || "—"}
+                          </TableCell>
+                          <TableCell className="py-1 px-3">
+                            <div className="flex items-center gap-1.5">
+                              <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                              <span className="text-xs">
+                                {isOutsource
+                                  ? (plateExport.printingVendorName || plateExport.printingVendor?.name || "—")
+                                  : (plateExport.vendorName || plateExport.plateVendor?.name || "—")
+                                }
                               </span>
-                            )}
-                            {plateExport.productionMethod === "outsource" && (plateExport.outsourceCost ?? 0) > 0 && (
-                              <span className="text-xs text-orange-500">
-                                {formatCurrency(plateExport.outsourceCost ?? 0)}
-                              </span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge
-                            variant={plateExport.isActive ? "default" : "secondary"}
-                          >
-                            {plateExport.isActive ? "Đang hoạt động" : "Không hoạt động"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-sm text-slate-600">{formatDate(plateExport.sentAt)}</TableCell>
-                        <TableCell className="text-sm text-slate-600">
-                          {formatDate(plateExport.estimatedReceiveAt)}
-                        </TableCell>
-                        <TableCell>
-                          {plateExport.receivedAt ? (
-                            <span className="text-emerald-600 font-medium text-sm">
-                              {formatDate(plateExport.receivedAt)}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-1 px-3 text-center font-medium text-xs">
+                            {plateExport.plateCount ?? "—"}
+                          </TableCell>
+                          {canViewPrice && (
+                            <TableCell className="py-1 px-3 text-right font-medium text-primary text-xs">
+                              {isOutsource
+                                ? (plateExport.outsourceCost ? formatCurrency(plateExport.outsourceCost) : "—")
+                                : (plateExport.totalPrice ? formatCurrency(plateExport.totalPrice) : "—")
+                              }
+                            </TableCell>
                           )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                          {isOutsource && (
+                            <TableCell className="py-1 px-3">
+                              <div className="flex flex-col gap-0.5">
+                                <span className="font-medium text-xs text-orange-600">
+                                  In gia công
+                                </span>
+                                {plateExport.printingVendorName && (
+                                  <span className="text-[10px] text-muted-foreground truncate max-w-[150px]">
+                                    {plateExport.printingVendorName}
+                                  </span>
+                                )}
+                              </div>
+                            </TableCell>
+                          )}
+                          {!isOutsource && (
+                            <TableCell className="py-1 px-3 text-center">
+                              <Badge
+                                className={cn(
+                                  "text-[10px] px-1.5 py-0 border font-semibold",
+                                  isDone
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-50/80"
+                                    : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-50/80"
+                                )}
+                              >
+                                {isDone ? "Đã nhận kẽm" : "Chờ kẽm"}
+                              </Badge>
+                            </TableCell>
+                          )}
+                          <TableCell className="py-1 px-3 text-xs text-slate-600">{formatDate(plateExport.sentAt)}</TableCell>
+                          <TableCell className="py-1 px-3 text-xs text-slate-600">
+                            {formatDate(plateExport.estimatedReceiveAt)}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
 
               {/* Pagination */}
-              <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200/60">
+              <div className="flex items-center justify-between px-4 py-2 border-t border-slate-200/60">
                 <span className="text-sm text-slate-500">
                   Trang <strong>{page}</strong> / <strong>{totalPages}</strong>
                   <span className="ml-2 text-muted-foreground">({totalCount} kết quả)</span>

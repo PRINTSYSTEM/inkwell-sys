@@ -58,6 +58,7 @@ import {
   useAssignDieToProofingOrder,
   useDiesByProofingOrder,
   useRemoveDieFromProofingOrder,
+  useReplaceDie,
 } from "@/hooks/use-die";
 import type { ProofingOrderResponse } from "@/Schema/proofing-order.schema";
 import type { DieResponse, DieListParams } from "@/Schema";
@@ -148,14 +149,15 @@ export function DieExportDialog({
 
   const queryClient = useQueryClient();
   const { data: vendors, isLoading: loadingVendors } = useActiveDieVendors();
-  const { mutate: createVendor, isPending: creatingVendor } = useCreateVendor();
+  const { mutateAsync: createVendor, isPending: creatingVendor } = useCreateVendor();
   const { mutate: recordDie, isPending: recordingDie } =
     useRecordDieExportWithFile();
-  const { mutate: createDie, isPending: creatingDie } = useCreateDie();
-  const { mutate: assignDie, isPending: assigningDie } =
+  const { mutateAsync: createDie, isPending: creatingDie } = useCreateDie();
+  const { mutateAsync: assignDie, isPending: assigningDie } =
     useAssignDieToProofingOrder();
   const { mutate: removeDie, isPending: removingDie } =
     useRemoveDieFromProofingOrder();
+  const { mutateAsync: replaceDie, isPending: replacingDie } = useReplaceDie();
 
   // Search dies with design code, size, customer name, and proofing order code
   const searchParams = useMemo((): DieListParams | undefined => {
@@ -614,12 +616,7 @@ export function DieExportDialog({
 
     // Validate images - chỉ khi tạo khuôn mới
     if (dieAction === "create") {
-      const firstDieExport = proofingOrder?.dieExports?.[0];
-      if (
-        dieFiles.length === 0 &&
-        !firstDieExport?.die?.imageUrl &&
-        (!firstDieExport || (firstDieExport && !firstDieExport.die?.imageUrl))
-      ) {
+      if (dieFiles.length === 0) {
         toast.error("Vui lòng chọn ít nhất một ảnh khuôn bế");
         return;
       }
@@ -633,35 +630,19 @@ export function DieExportDialog({
       }
     }
 
-    if (dieAction === "create") {
-      // No validation required - all fields are optional per schema
-    }
-
     try {
       // Step 1: Create vendor if needed - chỉ khi tạo khuôn mới
       let finalVendorId = vendorId;
       if (dieAction === "create" && !finalVendorId && vendorName.trim()) {
-        await new Promise<void>((resolve, reject) => {
-          createVendor(
-            {
-              name: vendorName.trim(),
-              phone: null,
-              email: null,
-              address: null,
-              note: null,
-              vendorType: "die",
-            },
-            {
-              onSuccess: (newVendor) => {
-                finalVendorId = newVendor.id;
-                resolve();
-              },
-              onError: (error) => {
-                reject(error);
-              },
-            },
-          );
+        const newVendor = await createVendor({
+          name: vendorName.trim(),
+          phone: null,
+          email: null,
+          address: null,
+          note: null,
+          vendorType: "die",
         });
+        finalVendorId = newVendor.id;
       }
 
       // Step 2: Create die if needed (but don't assign yet)
@@ -670,158 +651,92 @@ export function DieExportDialog({
         const imageToUpload =
           dieFiles.length > 0 ? dieFiles[0] : dieImage || undefined;
 
-        // Create die first
-        await new Promise<void>((resolve, reject) => {
-          const estimatedReceiveAt = receivedAtManual
-            ? convertLocalDateTimeToISO(receivedAtManual)
-            : undefined;
+        const estimatedReceiveAt = receivedAtManual
+          ? convertLocalDateTimeToISO(receivedAtManual)
+          : undefined;
 
-          createDie(
-            {
-              vendorId: finalVendorId || undefined,
-              estimatedReceiveAt: estimatedReceiveAt,
-              isReusable: isReusable,
-              image: imageToUpload,
-              FirstProofingOrderId: proofingOrderId,
-              name: dieName || undefined,
-              code: dieCode || undefined,
-              type: dieType || undefined,
-              size: dieSize || undefined,
-              length: dieLength,
-              width: dieWidth,
-              height: dieHeight,
-            } as any,
-            {
-              onSuccess: async (newDie) => {
-                if (newDie.id) {
-                  // Invalidate and refetch dies list to show newly created die
-                  queryClient.invalidateQueries({ queryKey: ["dies"] });
-                  queryClient.invalidateQueries({
-                    queryKey: ["dies", "search"],
-                  });
+        const newDie = await createDie({
+          vendorId: finalVendorId || undefined,
+          estimatedReceiveAt: estimatedReceiveAt,
+          isReusable: isReusable,
+          image: imageToUpload,
+          FirstProofingOrderId: proofingOrderId,
+          name: dieName || undefined,
+          code: dieCode || undefined,
+          type: dieType || undefined,
+          size: dieSize || undefined,
+          length: dieLength,
+          width: dieWidth,
+          height: dieHeight,
+        } as any);
 
-                  try {
-                    // If replacing, remove the old die first
-                    if (mode === "replace" && replacingDieId) {
-                      await new Promise<void>((resSelect, rejSelect) => {
-                        removeDie(
-                          {
-                            proofingOrderId,
-                            dieId: replacingDieId,
-                          },
-                          {
-                            onSuccess: () => resSelect(),
-                            onError: (error) => {
-                              toast.error("Không thể gỡ khuôn cũ", {
-                                description: getErrorMessage(error),
-                              });
-                              rejSelect(error);
-                            },
-                          }
-                        );
-                      });
-                    }
+        if (newDie?.id) {
+          // Invalidate and refetch dies list to show newly created die
+          queryClient.invalidateQueries({ queryKey: ["dies"] });
+          queryClient.invalidateQueries({
+            queryKey: ["dies", "search"],
+          });
 
-                    // Assign the newly created die to the proofing order immediately with notes
-                    await new Promise<void>((resSelect, rejSelect) => {
-                      assignDie(
-                        {
-                          proofingOrderId,
-                          data: {
-                            dieId: newDie.id!,
-                            isNewDie: false,
-                            notes: newDieNote?.trim() || undefined,
-                          },
-                        },
-                        {
-                          onSuccess: () => resSelect(),
-                          onError: (error) => {
-                            toast.error("Không thể gán khuôn bế vào bình bài", {
-                              description: getErrorMessage(error),
-                            });
-                            rejSelect(error);
-                          },
-                        }
-                      );
-                    });
-
-                    const successMessage =
-                      mode === "replace" ? "Thay thế khuôn thành công" :
-                      mode === "add" ? "Thêm khuôn thành công" :
-                      "Đã tạo và xuất khuôn bế thành công";
-
-                    toast.success(successMessage);
-                    onSuccess?.();
-                    onOpenChange(false);
-                  } catch (assignError) {
-                    console.error("Error in automatic die assignment:", assignError);
-                  }
-                }
-                resolve();
-              },
-              onError: (error) => {
-                toast.error("Không thể tạo khuôn bế", {
-                  description: getErrorMessage(error),
-                });
-                reject(error);
-              },
-            },
-          );
-        });
-
-        // After creating die, return early
-        return;
-      }
-
-      // Step 3: Assign selected dies to proofing order
-      if (selectedDieIds.length === 0) {
-        toast.error("Vui lòng chọn ít nhất một khuôn bế");
-        return;
-      }
-
-      // If replacing, remove the old die first
-      if (mode === "replace" && replacingDieId) {
-        await new Promise<void>((resolve, reject) => {
-          removeDie(
-            {
+          // If replacing, use replaceDie API. Otherwise assign
+          if (mode === "replace" && replacingDieId) {
+            await replaceDie({
               proofingOrderId,
-              dieId: replacingDieId,
-            },
-            {
-              onSuccess: () => resolve(),
-              onError: (error) => {
-                toast.error("Không thể gỡ khuôn cũ", {
-                  description: getErrorMessage(error),
-                });
-                reject(error);
+              currentDieId: replacingDieId,
+              data: {
+                newDieId: newDie.id,
+                notes: newDieNote?.trim() || null,
               },
-            }
-          );
-        });
-      }
-
-      for (const dieId of selectedDieIds) {
-        await new Promise<void>((resolve, reject) => {
-          assignDie(
-            {
+            });
+          } else {
+            // Assign the newly created die to the proofing order immediately with notes
+            await assignDie({
               proofingOrderId,
               data: {
-                dieId,
+                dieId: newDie.id,
                 isNewDie: false,
-                notes: dieNotes[dieId]?.trim() || undefined,
+                notes: newDieNote?.trim() || undefined,
               },
-            },
-            {
-              onSuccess: () => resolve(),
-              onError: (error) => {
-                toast.error("Không thể gán khuôn bế vào bình bài", {
-                  description: getErrorMessage(error),
-                });
-                reject(error);
-              },
-            },
-          );
+            });
+          }
+
+          const successMessage =
+            mode === "replace" ? "Thay thế khuôn thành công" :
+            mode === "add" ? "Thêm khuôn thành công" :
+            "Đã tạo và xuất khuôn bế thành công";
+
+          toast.success(successMessage);
+          onSuccess?.();
+          onOpenChange(false);
+        }
+        return;
+      }
+
+      // If replacing, use replaceDie API. Otherwise assign
+      if (mode === "replace" && replacingDieId) {
+        const newDieId = selectedDieIds[0];
+        if (!newDieId) {
+          toast.error("Vui lòng chọn khuôn bế mới");
+          return;
+        }
+        await replaceDie({
+          proofingOrderId,
+          currentDieId: replacingDieId,
+          data: {
+            newDieId,
+            notes: dieNotes[newDieId]?.trim() || null,
+          },
         });
+      } else {
+        for (const dieId of selectedDieIds) {
+          await assignDie({
+            proofingOrderId,
+            data: {
+              dieId,
+              isNewDie: false,
+              notes: dieNotes[dieId]?.trim() || undefined,
+            },
+          });
+        }
       }
 
       const successMessage = 
@@ -833,18 +748,17 @@ export function DieExportDialog({
       onSuccess?.();
       onOpenChange(false);
     } catch (error) {
-      // Errors are already handled in individual steps
       console.error("Error in die export process:", error);
+      toast.error("Đã xảy ra lỗi trong quá trình xử lý", {
+        description: getErrorMessage(error),
+      });
     }
   };
 
   const selectedVendor = vendors?.find((v) => v.id === vendorId);
-  const firstDieExport = proofingOrder?.dieExports?.[0];
-  const existingImages: string[] = []; // dieExports doesn't have images array, use imageUrl from die instead
-  const existingImageUrl = firstDieExport?.die?.imageUrl;
 
   const isSubmitting =
-    recordingDie || creatingDie || assigningDie || creatingVendor;
+    recordingDie || creatingDie || assigningDie || creatingVendor || replacingDie;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1639,19 +1553,6 @@ export function DieExportDialog({
                       <h4 className="text-sm font-semibold">Ảnh khuôn bế</h4>
                     </div>
                     <div className="flex flex-wrap gap-3 items-start">
-                      {/* Existing Image */}
-                      {existingImageUrl && (
-                        <div className="relative group border rounded-lg bg-muted/30 overflow-hidden w-24 h-24 flex-shrink-0">
-                          <img
-                            src={existingImageUrl}
-                            alt="Ảnh khuôn bế"
-                            className="w-full h-full object-cover"
-                          />
-                          <div className="absolute inset-x-0 bottom-0 bg-black/50 px-1 py-0.5 text-[9px] text-white text-center truncate">
-                            Ảnh đã lưu
-                          </div>
-                        </div>
-                      )}
 
                       {/* New Image Previews */}
                       {dieFiles.map((file, index) => (
@@ -1848,7 +1749,7 @@ export function DieExportDialog({
             disabled={
               isSubmitting ||
               (dieAction === "create" && !vendorId && !vendorName.trim()) ||
-              (dieAction === "create" && dieFiles.length === 0 && !existingImageUrl) ||
+              (dieAction === "create" && dieFiles.length === 0) ||
               (dieAction === "select" && selectedDieIds.length === 0)
             }
           >

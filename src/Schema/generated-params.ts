@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-06-22T00:32:59.956Z */
+/* Generated at: 2026-06-24T21:38:23.697Z */
 
 import { z } from "zod";
 import { IdSchema, PagedParamsSchema } from "./Common";
@@ -200,10 +200,21 @@ export const DebtReportApDetailParamsSchema = PagedParamsSchema.extend({
   toDate: z.string().datetime({ offset: true }).nullable().optional(),
   vendorId: z.number().int().nullable().optional(),
   searchTerm: z.string().nullable().optional(),
+  paymentStatus: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });
 export type DebtReportApDetailParams = z.infer<typeof DebtReportApDetailParamsSchema>;
+
+// ==== DebtReportApItemsParams (GET /api/debt-reports/ap-items) ====
+export const DebtReportApItemsParamsSchema = PagedParamsSchema.extend({
+  vendorId: z.number().int().nullable().optional(),
+  vendorType: z.string().nullable().optional(),
+  documentType: z.string().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
+});
+export type DebtReportApItemsParams = z.infer<typeof DebtReportApItemsParamsSchema>;
 
 // ==== DebtReportApOverdueParams (GET /api/debt-reports/ap-overdue) ====
 export const DebtReportApOverdueParamsSchema = PagedParamsSchema.extend({
@@ -944,6 +955,7 @@ export const PlateExportListParamsSchema = PagedParamsSchema.extend({
   toDate: z.string().datetime({ offset: true }).nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
+  paymentStatus: z.string().nullable().optional(),
 });
 export type PlateExportListParams = z.infer<typeof PlateExportListParamsSchema>;
 

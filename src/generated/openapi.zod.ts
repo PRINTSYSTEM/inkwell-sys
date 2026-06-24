@@ -1062,6 +1062,30 @@ const APSummaryResponseIPaginate = z
     items: z.array(APSummaryResponse).nullable(),
   })
   .partial();
+const APItemResponse = z
+  .object({
+    vendorId: z.number().int(),
+    vendorCode: z.string().nullable(),
+    vendorName: z.string().nullable(),
+    documentType: z.string().nullable(),
+    documentId: z.number().int(),
+    documentCode: z.string().nullable(),
+    itemName: z.string().nullable(),
+    documentDate: z.string().datetime({ offset: true }),
+    amount: z.number(),
+    paid: z.number(),
+    outstanding: z.number(),
+  })
+  .partial();
+const APItemResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(APItemResponse).nullable(),
+  })
+  .partial();
 const APDetailLedgerRow = z
   .object({
     date: z.string().datetime({ offset: true }),
@@ -1480,6 +1504,7 @@ const DesignResponse = z
 const UpdateDesignRequest = z
   .object({
     assignedDesignerId: z.number().int().nullable(),
+    materialTypeId: z.number().int().nullable(),
     designName: z.string().min(0).max(255).nullable(),
     designStatus: z.string().min(0).max(50).nullable(),
     requestedQuantity: z.number().int().nullable(),
@@ -1661,6 +1686,22 @@ const DieExportResponse = z
     proofingOrderCode: z.string().nullable(),
     dieId: z.number().int(),
     die: DieResponse,
+    notes: z.string().nullable(),
+    createdBy: UserInfo,
+    createdAt: z.string().datetime({ offset: true }),
+  })
+  .partial();
+const DieExportHistoryResponse = z
+  .object({
+    id: z.number().int(),
+    proofingOrderId: z.number().int(),
+    proofingOrderCode: z.string().nullable(),
+    dieExportId: z.number().int().nullable(),
+    previousDieId: z.number().int().nullable(),
+    previousDie: DieResponse,
+    newDieId: z.number().int().nullable(),
+    newDie: DieResponse,
+    eventType: z.string().nullable(),
     notes: z.string().nullable(),
     createdBy: UserInfo,
     createdAt: z.string().datetime({ offset: true }),
@@ -2688,6 +2729,8 @@ const PlateExportResponse = z
     notes: z.string().nullable(),
     createdAt: z.string().datetime({ offset: true }),
     createdBy: UserInfo,
+    amountPaid: z.number(),
+    outstanding: z.number(),
   })
   .partial();
 const PlateExportResponsePaginate = z
@@ -3636,6 +3679,20 @@ const UpdateStockOutRequest = z
     items: z.array(StockOutItemRequest).nullable(),
   })
   .partial();
+const SystemSettingResponse = z
+  .object({
+    key: z.string().nullable(),
+    value: z.string().nullable(),
+    description: z.string().nullable(),
+    isEditable: z.boolean(),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }).nullable(),
+  })
+  .partial();
+const UpdateSystemSettingRequest = z.object({
+  value: z.string().min(1),
+  description: z.string().nullish(),
+});
 const CreateUserRequest = z.object({
   username: z.string().min(0).max(100),
   password: z.string().min(6).max(100),
@@ -3867,6 +3924,8 @@ export const schemas = {
   APOverdueResponseIPaginate,
   APSummaryResponse,
   APSummaryResponseIPaginate,
+  APItemResponse,
+  APItemResponseIPaginate,
   APDetailLedgerRow,
   APDetailLedgerRowIPaginate,
   APDetailResponse,
@@ -3915,6 +3974,7 @@ export const schemas = {
   postApidies_Body,
   UpdateDieRequest,
   DieExportResponse,
+  DieExportHistoryResponse,
   AssignDieToProofingOrderRequest,
   ReplaceDieRequest,
   CreateDieRequest,
@@ -4082,6 +4142,8 @@ export const schemas = {
   ReturnItemRequest,
   ProcessDeliveryReturnRequest,
   UpdateStockOutRequest,
+  SystemSettingResponse,
+  UpdateSystemSettingRequest,
   CreateUserRequest,
   UserResponse,
   UserResponsePaginate,
@@ -5752,6 +5814,11 @@ const endpoints = makeApi([
         schema: z.string().optional(),
       },
       {
+        name: "paymentStatus",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
         name: "sortColumn",
         type: "Query",
         schema: z.string().optional(),
@@ -5841,6 +5908,50 @@ const endpoints = makeApi([
       },
     ],
     response: z.instanceof(File),
+  },
+  {
+    method: "get",
+    path: "/api/debt-reports/ap-items",
+    alias: "getApidebtReportsapItems",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "vendorId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "vendorType",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "documentType",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: APItemResponseIPaginate,
   },
   {
     method: "get",
@@ -8186,6 +8297,20 @@ const endpoints = makeApi([
   },
   {
     method: "get",
+    path: "/api/dies/proofing-order/:proofingOrderId/history",
+    alias: "getApidiesproofingOrderProofingOrderIdhistory",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "proofingOrderId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.array(DieExportHistoryResponse),
+  },
+  {
+    method: "get",
     path: "/api/dies/related",
     alias: "getApidiesrelated",
     requestFormat: "json",
@@ -10318,6 +10443,11 @@ const endpoints = makeApi([
       },
       {
         name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "paymentStatus",
         type: "Query",
         schema: z.string().optional(),
       },
@@ -13199,6 +13329,106 @@ const endpoints = makeApi([
       },
     ],
     response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/system-settings",
+    alias: "getApisystemSettings",
+    requestFormat: "json",
+    response: z.array(SystemSettingResponse),
+  },
+  {
+    method: "get",
+    path: "/api/system-settings/:key",
+    alias: "getApisystemSettingsKey",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "key",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: SystemSettingResponse,
+    errors: [
+      {
+        status: 404,
+        description: `Not Found`,
+        schema: z
+          .object({
+            type: z.string().nullable(),
+            title: z.string().nullable(),
+            status: z.number().int().nullable(),
+            detail: z.string().nullable(),
+            instance: z.string().nullable(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+  {
+    method: "put",
+    path: "/api/system-settings/:key",
+    alias: "putApisystemSettingsKey",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateSystemSettingRequest,
+      },
+      {
+        name: "key",
+        type: "Path",
+        schema: z.string(),
+      },
+    ],
+    response: SystemSettingResponse,
+    errors: [
+      {
+        status: 400,
+        description: `Bad Request`,
+        schema: z
+          .object({
+            type: z.string().nullable(),
+            title: z.string().nullable(),
+            status: z.number().int().nullable(),
+            detail: z.string().nullable(),
+            instance: z.string().nullable(),
+          })
+          .partial()
+          .passthrough(),
+      },
+      {
+        status: 403,
+        description: `Forbidden`,
+        schema: z
+          .object({
+            type: z.string().nullable(),
+            title: z.string().nullable(),
+            status: z.number().int().nullable(),
+            detail: z.string().nullable(),
+            instance: z.string().nullable(),
+          })
+          .partial()
+          .passthrough(),
+      },
+      {
+        status: 404,
+        description: `Not Found`,
+        schema: z
+          .object({
+            type: z.string().nullable(),
+            title: z.string().nullable(),
+            status: z.number().int().nullable(),
+            detail: z.string().nullable(),
+            instance: z.string().nullable(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
   },
   {
     method: "post",

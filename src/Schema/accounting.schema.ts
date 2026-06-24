@@ -13,6 +13,8 @@ import {
   APDetailResponseIPaginateSchema as GenAPDetailResponseIPaginateSchema,
   APSummaryResponseSchema as GenAPSummaryResponseSchema,
   APSummaryResponseIPaginateSchema as GenAPSummaryResponseIPaginateSchema,
+  APItemResponseSchema as GenAPItemResponseSchema,
+  APItemResponseIPaginateSchema as GenAPItemResponseIPaginateSchema,
   ARAgingResponseSchema as GenARAgingResponseSchema,
   ARAgingResponseIPaginateSchema as GenARAgingResponseIPaginateSchema,
   ARDetailResponseSchema as GenARDetailResponseSchema,
@@ -97,6 +99,11 @@ export const APSummaryResponseSchema = GenAPSummaryResponseSchema.passthrough();
 export type APSummaryResponse = z.infer<typeof APSummaryResponseSchema>;
 export const APSummaryResponseIPaginateSchema = GenAPSummaryResponseIPaginateSchema.passthrough();
 export type APSummaryResponseIPaginate = z.infer<typeof APSummaryResponseIPaginateSchema>;
+
+export const APItemResponseSchema = GenAPItemResponseSchema.passthrough();
+export type APItemResponse = z.infer<typeof APItemResponseSchema>;
+export const APItemResponseIPaginateSchema = GenAPItemResponseIPaginateSchema.passthrough();
+export type APItemResponseIPaginate = z.infer<typeof APItemResponseIPaginateSchema>;
 
 // AR (Accounts Receivable) Schemas
 export const ARAgingResponseSchema = GenARAgingResponseSchema.passthrough();

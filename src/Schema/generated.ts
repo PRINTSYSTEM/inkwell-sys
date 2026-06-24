@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-06-22T00:32:59.882Z */
+/* Generated at: 2026-06-24T21:38:23.619Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -17,6 +17,8 @@ export const APDetailLedgerRowSchema = schemas.APDetailLedgerRow;
 export const APDetailLedgerRowIPaginateSchema = schemas.APDetailLedgerRowIPaginate;
 export const APDetailResponseSchema = schemas.APDetailResponse;
 export const APDetailResponseIPaginateSchema = schemas.APDetailResponseIPaginate;
+export const APItemResponseSchema = schemas.APItemResponse;
+export const APItemResponseIPaginateSchema = schemas.APItemResponseIPaginate;
 export const APOverdueResponseSchema = schemas.APOverdueResponse;
 export const APOverdueResponseIPaginateSchema = schemas.APOverdueResponseIPaginate;
 export const APSummaryResponseSchema = schemas.APSummaryResponse;
@@ -148,6 +150,7 @@ export const DesignTimelineEntryResponsePaginateSchema = schemas.DesignTimelineE
 export const DesignTypeCountResponseSchema = schemas.DesignTypeCountResponse;
 export const DesignTypeResponseSchema = schemas.DesignTypeResponse;
 export const DesignTypeResponsePaginateSchema = schemas.DesignTypeResponsePaginate;
+export const DieExportHistoryResponseSchema = schemas.DieExportHistoryResponse;
 export const DieExportResponseSchema = schemas.DieExportResponse;
 export const DieResponseSchema = schemas.DieResponse;
 export const DieResponseIPaginateSchema = schemas.DieResponseIPaginate;
@@ -276,6 +279,7 @@ export const StockHistoryResponseSchema = schemas.StockHistoryResponse;
 export const StockHistoryResponseIPaginateSchema = schemas.StockHistoryResponseIPaginate;
 export const StockInItemRequestSchema = schemas.StockInItemRequest;
 export const StockOutItemRequestSchema = schemas.StockOutItemRequest;
+export const SystemSettingResponseSchema = schemas.SystemSettingResponse;
 export const TeamKpiSummaryResponseSchema = schemas.TeamKpiSummaryResponse;
 export const TopProductResponseSchema = schemas.TopProductResponse;
 export const TopProductResponseIPaginateSchema = schemas.TopProductResponseIPaginate;
@@ -311,6 +315,7 @@ export const UpdateReadyDesignRequestSchema = schemas.UpdateReadyDesignRequest;
 export const UpdateSharedAddressRequestSchema = schemas.UpdateSharedAddressRequest;
 export const UpdateStockInRequestSchema = schemas.UpdateStockInRequest;
 export const UpdateStockOutRequestSchema = schemas.UpdateStockOutRequest;
+export const UpdateSystemSettingRequestSchema = schemas.UpdateSystemSettingRequest;
 export const UpdateUserRequestSchema = schemas.UpdateUserRequest;
 export const UpdateVendorRequestSchema = schemas.UpdateVendorRequest;
 export const UserInfoSchema = schemas.UserInfo;

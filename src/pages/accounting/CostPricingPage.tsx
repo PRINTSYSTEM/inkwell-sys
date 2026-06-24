@@ -1,5 +1,5 @@
 // src/pages/accounting/CostPricingPage.tsx
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { format } from "date-fns";
@@ -205,9 +205,14 @@ function PlateTab({ filter }: { filter: PlateFilterState }) {
   const [page, setPage] = useState(1);
   const [savingId, setSavingId] = useState<number | null>(null);
 
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [filter.search, filter.vendorId, filter.fromDate, filter.toDate]);
+
   const { data, isLoading, refetch } = usePlateExports({
-    pageNumber: page,
-    pageSize: 15,
+    pageNumber: 1,
+    pageSize: 1000,
     search: filter.search || undefined,
     vendorId: filter.vendorId ? parseInt(filter.vendorId) : undefined,
     fromDate: filter.fromDate || undefined,
@@ -215,11 +220,22 @@ function PlateTab({ filter }: { filter: PlateFilterState }) {
   } as any);
   const { mutateAsync: updatePlate } = useUpdatePlateExport();
 
-  const items = data?.items ?? [];
-  const totalPages = data?.totalPages ?? 1;
+  const allItems = data?.items ?? [];
+
+  // Filter for unpaid items only
+  const items = allItems.filter(
+    (plate: any) =>
+      plate.isPaid !== true &&
+      plate.paymentStatus !== "paid" &&
+      plate.status !== "paid"
+  );
+
+  const pageSize = 10;
+  const totalPages = Math.ceil(items.length / pageSize) || 1;
+  const displayItems = items.slice((page - 1) * pageSize, page * pageSize);
 
   const handleSavePrice = async (id: number, price: number) => {
-    const plate = items.find((p: any) => p.id === id);
+    const plate = allItems.find((p: any) => p.id === id);
     if (!plate) return;
 
     setSavingId(id);
@@ -241,15 +257,6 @@ function PlateTab({ filter }: { filter: PlateFilterState }) {
 
   return (
     <div className="space-y-4">
-      {/* Info banner about default price */}
-      <div className="flex items-start gap-2.5 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
-        <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-        <span>
-          Giá mặc định cho mỗi bản kẽm là{" "}
-          <strong>{formatVND(DEFAULT_PLATE_PRICE)}</strong>. Kế toán có thể
-          click vào ô giá để chỉnh sửa khi thực tế thay đổi.
-        </span>
-      </div>
 
       {/* Table */}
       <Card className="border-0 shadow-sm overflow-hidden">
@@ -259,7 +266,7 @@ function PlateTab({ filter }: { filter: PlateFilterState }) {
               <Loader2 className="h-7 w-7 animate-spin text-[#93631F]" />
               <span className="ml-3 text-slate-500">Đang tải...</span>
             </div>
-          ) : items.length === 0 ? (
+          ) : displayItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-slate-400">
               <Layers className="h-12 w-12 mb-3 text-slate-300" />
               <p className="font-medium">Không có dữ liệu</p>
@@ -297,7 +304,7 @@ function PlateTab({ filter }: { filter: PlateFilterState }) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {items.map((plate: PlateExportResponse) => {
+                    {displayItems.map((plate: PlateExportResponse) => {
                       const effectivePrice =
                         (plate as { unitPrice?: number }).unitPrice ?? DEFAULT_PLATE_PRICE;
                       const totalCost =
@@ -403,21 +410,37 @@ function DieTab({ filter }: { filter: DieFilterState }) {
   const [page, setPage] = useState(1);
   const [savingId, setSavingId] = useState<number | null>(null);
 
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [filter.search, filter.vendorId, filter.priceFilter]);
+
   const { data: vendorsData } = useActiveVendors();
   const { data, isLoading } = useDies({
-    pageNumber: page,
-    pageSize: 15,
+    pageNumber: 1,
+    pageSize: 1000,
     q: filter.search || undefined,
     vendorName: filter.vendorId ? vendorsData?.find(v => v.id.toString() === filter.vendorId)?.name : undefined,
   });
   const { mutateAsync: updateDie } = useUpdateDie();
 
   const allItems = data?.items ?? [];
-  const items =
+  let filteredItems =
     filter.priceFilter === "no_price"
       ? allItems.filter((d: DieResponse) => !d.price || d.price === 0)
       : allItems;
-  const totalPages = data?.totalPages ?? 1;
+
+  // Filter for unpaid items only
+  const items = filteredItems.filter(
+    (die: any) =>
+      die.isPaid !== true &&
+      die.paymentStatus !== "paid" &&
+      die.status !== "paid"
+  );
+
+  const pageSize = 10;
+  const totalPages = Math.ceil(items.length / pageSize) || 1;
+  const displayItems = items.slice((page - 1) * pageSize, page * pageSize);
 
   const handleSavePrice = async (id: number, price: number) => {
     setSavingId(id);
@@ -448,7 +471,7 @@ function DieTab({ filter }: { filter: DieFilterState }) {
               <Loader2 className="h-7 w-7 animate-spin text-[#93631F]" />
               <span className="ml-3 text-slate-500">Đang tải...</span>
             </div>
-          ) : items.length === 0 ? (
+          ) : displayItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-slate-400">
               <Scissors className="h-12 w-12 mb-3 text-slate-300" />
               <p className="font-medium">
@@ -493,7 +516,7 @@ function DieTab({ filter }: { filter: DieFilterState }) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {items.map((die: DieResponse) => (
+                    {displayItems.map((die: DieResponse) => (
                       <TableRow
                         key={die.id}
                         className="group hover:bg-[#93631F]/5 transition-colors border-b border-slate-100"
@@ -514,11 +537,11 @@ function DieTab({ filter }: { filter: DieFilterState }) {
                           {(() => {
                             const code = die.firstProofingOrderCode || (die as any).usageHistory?.[0]?.proofingOrderCode;
                             const orderId = die.firstProofingOrderId || (die as any).usageHistory?.[0]?.proofingOrderId;
-                            
+
                             if (code && orderId) {
                               return (
-                                <Link 
-                                  to={`/proofing/${orderId}`} 
+                                <Link
+                                  to={`/proofing/${orderId}`}
                                   className="text-[#93631F] hover:text-[#7A521A] hover:underline font-medium transition-colors"
                                   target="_blank"
                                 >
@@ -614,9 +637,14 @@ function PrinterTab({ filter }: { filter: PrinterFilterState }) {
   const [page, setPage] = useState(1);
   const [savingId, setSavingId] = useState<number | null>(null);
 
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [filter.search, filter.vendorId, filter.fromDate, filter.toDate]);
+
   const { data, isLoading } = usePlateExports({
-    pageNumber: page,
-    pageSize: 100,
+    pageNumber: 1,
+    pageSize: 1000,
     search: filter.search || undefined,
     fromDate: filter.fromDate || undefined,
     toDate: filter.toDate || undefined,
@@ -625,15 +653,19 @@ function PrinterTab({ filter }: { filter: PrinterFilterState }) {
 
   const allItems = data?.items ?? [];
   const items = allItems.filter(
-    (p: any) => p.productionMethod === "outsource" || p.printingVendorId || p.printingVendorName
+    (p: any) =>
+      (p.productionMethod === "outsource" || p.printingVendorId || p.printingVendorName) &&
+      p.isPaid !== true &&
+      p.paymentStatus !== "paid" &&
+      p.status !== "paid"
   );
-  
+
   const displayItems = items.filter((p: any) => {
     if (!filter.vendorId || filter.vendorId === "all") return true;
     return p.printingVendorId?.toString() === filter.vendorId;
   });
 
-  const pageSize = 15;
+  const pageSize = 10;
   const totalPages = Math.max(1, Math.ceil(displayItems.length / pageSize));
   const currentItems = displayItems.slice((page - 1) * pageSize, page * pageSize);
 
@@ -706,8 +738,8 @@ function PrinterTab({ filter }: { filter: PrinterFilterState }) {
                           className="group hover:bg-[#93631F]/5 transition-colors border-b border-slate-100"
                         >
                           <TableCell className="font-mono font-medium text-sm">
-                            <Link 
-                              to={`/proofing/${plate.proofingOrderId}`} 
+                            <Link
+                              to={`/proofing/${plate.proofingOrderId}`}
                               className="text-[#93631F] hover:text-[#7A521A] hover:underline transition-colors"
                               target="_blank"
                             >

@@ -211,6 +211,8 @@ export const API_SUFFIX = {
   // DIE_SEARCH: "/dies/search", // Endpoint removed - use regular DIES endpoint with q parameter
   DIES_BY_PROOFING_ORDER: (proofingOrderId: number) =>
     `/dies/proofing-order/${proofingOrderId}`,
+  DIE_PROOFING_ORDER_HISTORY: (proofingOrderId: number) =>
+    `/dies/proofing-order/${proofingOrderId}/history`,
   DIE_ASSIGN_TO_PROOFING_ORDER: (proofingOrderId: number) =>
     `/dies/proofing-order/${proofingOrderId}/assign`,
   DIE_REMOVE_FROM_PROOFING_ORDER: (proofingOrderId: number, dieId: number) =>
@@ -373,6 +375,7 @@ export const API_SUFFIX = {
   AP_DETAIL_LEDGER_EXPORT: (vendorId: number) =>
     `/debt-reports/ap-detail-ledger/${vendorId}/export`,
   AP_OVERDUE: "/debt-reports/ap-overdue",
+  AP_ITEMS: "/debt-reports/ap-items",
   CUSTOMER_RECONCILIATION_EXPORT: "/debt-reports/customer-reconciliation/export",
   CUSTOMER_RECONCILIATION_EXPORT_PDF:
     "/debt-reports/customer-reconciliation/export-pdf",

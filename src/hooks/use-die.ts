@@ -12,6 +12,7 @@ import type {
   ReplaceDieRequest,
   DieExportResponse,
   UpdateDieStatusRequest,
+  DieExportHistoryResponse,
 } from "@/Schema";
 import type { postApidies_Body } from "@/Schema";
 import { createCrudHooks } from "./use-base";
@@ -360,6 +361,13 @@ export const useAssignDieToProofingOrder = () => {
           variables.proofingOrderId,
         ],
       });
+      queryClient.invalidateQueries({
+        queryKey: [
+          dieKeys.all[0],
+          "proofing-order-history",
+          variables.proofingOrderId,
+        ],
+      });
       queryClient.invalidateQueries({ queryKey: ["proofing-orders"] });
       queryClient.invalidateQueries({
         queryKey: ["proofing-orders", variables.proofingOrderId],
@@ -399,6 +407,13 @@ export const useRemoveDieFromProofingOrder = () => {
           variables.proofingOrderId,
         ],
       });
+      queryClient.invalidateQueries({
+        queryKey: [
+          dieKeys.all[0],
+          "proofing-order-history",
+          variables.proofingOrderId,
+        ],
+      });
       queryClient.invalidateQueries({ queryKey: ["proofing-orders"] });
       queryClient.invalidateQueries({
         queryKey: ["proofing-orders", variables.proofingOrderId],
@@ -426,6 +441,9 @@ export const useReturnDie = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: dieKeys.all });
+      queryClient.invalidateQueries({
+        queryKey: [dieKeys.all[0], "proofing-order-history"],
+      });
       queryClient.invalidateQueries({ queryKey: ["proofing-orders"] });
       toast.success("Đã trả khuôn bế thành công");
     },
@@ -450,6 +468,9 @@ export const useTakeOutDie = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: dieKeys.all });
+      queryClient.invalidateQueries({
+        queryKey: [dieKeys.all[0], "proofing-order-history"],
+      });
       queryClient.invalidateQueries({ queryKey: ["proofing-orders"] });
       toast.success("Đã lấy khuôn bế thành công");
     },
@@ -488,6 +509,13 @@ export const useReplaceDie = () => {
         queryKey: [
           dieKeys.all[0],
           "by-proofing-order",
+          variables.proofingOrderId,
+        ],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [
+          dieKeys.all[0],
+          "proofing-order-history",
           variables.proofingOrderId,
         ],
       });
@@ -583,6 +611,25 @@ export const useRelatedDiesByProofingOrder = (
             customer: params?.customer,
           },
         }
+      );
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
+// ===== Get Die Export History by Proofing Order =====
+// GET /api/dies/proofing-order/:proofingOrderId/history
+export const useDieExportHistory = (
+  proofingOrderId: number | null,
+  enabled: boolean = true
+) => {
+  return useQuery<DieExportHistoryResponse[]>({
+    queryKey: [dieKeys.all[0], "proofing-order-history", proofingOrderId],
+    enabled: enabled && !!proofingOrderId,
+    queryFn: async () => {
+      const res = await apiRequest.get<DieExportHistoryResponse[]>(
+        API_SUFFIX.DIE_PROOFING_ORDER_HISTORY(proofingOrderId as number)
       );
       return res.data;
     },
