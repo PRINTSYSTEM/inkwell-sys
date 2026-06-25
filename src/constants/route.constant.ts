@@ -63,6 +63,7 @@ export const ROUTE_PATHS = {
 
   MATERIALS: {
     ROOT: "/materials" as const,
+    SPECS: "/materials/specs" as const,
   },
 
   MATERIAL_TYPES: {

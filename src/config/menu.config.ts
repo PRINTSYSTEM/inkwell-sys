@@ -512,6 +512,7 @@ export const MENU_ITEMS: MenuItem[] = [
       },
     ],
   },
+
   // ==== Quản lý hệ thống ====
   {
     id: "system",
@@ -547,6 +548,13 @@ export const MENU_ITEMS: MenuItem[] = [
         icon: Settings,
         path: ROUTE_PATHS.DESIGN_TYPES.ROOT,
         allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
+      },
+      {
+        id: "materials-specs",
+        title: "Định mức chất liệu",
+        icon: FileSpreadsheet,
+        path: ROUTE_PATHS.MATERIALS.SPECS,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PRODUCTION, ROLE.PRODUCTION_LEAD],
       },
     ],
   },
