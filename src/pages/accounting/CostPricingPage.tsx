@@ -425,7 +425,7 @@ function DieTab({ filter }: { filter: DieFilterState }) {
   const { mutateAsync: updateDie } = useUpdateDie();
 
   const allItems = data?.items ?? [];
-  let filteredItems =
+  const filteredItems =
     filter.priceFilter === "no_price"
       ? allItems.filter((d: DieResponse) => !d.price || d.price === 0)
       : allItems;

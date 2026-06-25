@@ -48,26 +48,27 @@ export function DetailDieExportCard({
   isProofer = true,
 }: DetailDieExportCardProps) {
   const [showDebug, setShowDebug] = useState(false);
-  if (!order) return null;
 
   const { data: dieHistory, isLoading: isLoadingHistory } = useDieExportHistory(
-    order.id,
+    order?.id,
     isDieExported
   );
 
   const activeDies = useMemo(() => {
-    return order.proofingOrderDies || [];
-  }, [order.proofingOrderDies]);
+    return order?.proofingOrderDies || [];
+  }, [order?.proofingOrderDies]);
 
   const allExports = useMemo(() => {
-    return (order.dieExports && order.dieExports.length > 0)
+    return (order?.dieExports && order.dieExports.length > 0)
       ? order.dieExports
       : activeDies;
-  }, [order.dieExports, activeDies]);
+  }, [order?.dieExports, activeDies]);
 
   const activeExportIds = useMemo(() => {
     return new Set(activeDies.map((d: any) => d.id).filter(Boolean));
   }, [activeDies]);
+
+  if (!order) return null;
 
   return (
     <Card className="relative h-full flex flex-col">

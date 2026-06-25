@@ -25,11 +25,9 @@ export function DetailPlateExportCard({
   isHandingToProduction,
   isProofer = true,
 }: DetailPlateExportCardProps) {
-  if (!order) return null;
-
-  const plateExport = order.plateExport;
+  const plateExport = order?.plateExport;
   const plateExportsList =
-    order.plateExports?.length > 0
+    order?.plateExports?.length > 0
       ? order.plateExports
       : plateExport
         ? [plateExport]
@@ -45,6 +43,8 @@ export function DetailPlateExportCard({
   const sortedPlateExports = useMemo(() => {
     return [...plateExportsWithIndex].reverse();
   }, [plateExportsWithIndex]);
+
+  if (!order) return null;
 
   return (
     <Card className="relative h-full flex flex-col">

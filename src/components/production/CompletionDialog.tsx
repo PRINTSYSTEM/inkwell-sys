@@ -756,7 +756,9 @@ export function CompletionDialog({
                     });
                     toast.success("Đã đưa bước sản xuất về trạng thái Sẵn sàng");
                     handleClose();
-                  } catch (err) {}
+                  } catch (err) {
+                    // Lỗi đã được xử lý trong hook mutation
+                  }
                 }
               }} 
               disabled={isProcessing}

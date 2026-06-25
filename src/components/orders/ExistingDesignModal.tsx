@@ -88,13 +88,6 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
     const { data, isLoading } = useSharedAddresses({ pageNumber: 1, pageSize: 1000 });
     const items = data?.items || [];
     const [search, setSearch] = useState<string>("");
-    const filtered = items.filter((sa: any) => {
-      const text = `${sa.label || ""} ${sa.address || ""}`.toLowerCase();
-      return text.includes(search.trim().toLowerCase());
-    });
-
-    if (isLoading) return <p className="text-sm text-muted-foreground">Đang tải địa chỉ...</p>;
-
     // create/update hooks
     const { mutate: createSharedAddress } = useCreateSharedAddress();
     const { mutate: updateSharedAddress } = useUpdateSharedAddress();
@@ -110,6 +103,13 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
         setAddressEditingId(undefined);
       }
     }, [addressDialogOpen]);
+
+    const filtered = items.filter((sa: any) => {
+      const text = `${sa.label || ""} ${sa.address || ""}`.toLowerCase();
+      return text.includes(search.trim().toLowerCase());
+    });
+
+    if (isLoading) return <p className="text-sm text-muted-foreground">Đang tải địa chỉ...</p>;
 
     const openAddAddressDialog = () => {
       setAddressEditingId(undefined);
@@ -138,7 +138,9 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
           setSharedAddressId(created.id);
         }
         setAddressDialogOpen(false);
-      } catch (err) {}
+      } catch (err) {
+        // Lỗi đã được xử lý trong hook mutation
+      }
     };
 
     return (

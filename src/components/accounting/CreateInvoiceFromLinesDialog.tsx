@@ -181,7 +181,7 @@ export function CreateInvoiceFromLinesDialog({
   const filteredItems = useMemo(() => {
     if (!billableItems) return [];
     
-    let items = billableItems;
+    const items = billableItems;
     
     const query = searchQuery.trim().toLowerCase();
     if (!query) return items;
@@ -330,7 +330,7 @@ export function CreateInvoiceFromLinesDialog({
                               
                               <div className="grid grid-cols-2 gap-1 text-[11px] text-muted-foreground pt-1 border-t border-dashed mt-1.5">
                                 <div>Đơn giá: <span className="font-semibold text-foreground">{formatCurrency(item.unitPrice || 0)}</span></div>
-                                <div>Số lượng: <span className="font-semibold text-foreground">{item.remainingToInvoice || 0} {item.unit || "Tờ"}</span></div>
+                                <div>Số lượng: <span className="font-semibold text-foreground">{item.remainingToInvoice || 0} {(item.unit as string | undefined) || "Tờ"}</span></div>
                               </div>
                             </div>
                           </div>

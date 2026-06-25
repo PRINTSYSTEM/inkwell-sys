@@ -426,9 +426,9 @@ export function InvoiceList() {
   const uniqueCustomers = useMemo(() => {
     const customers = new Map<number, { id: number; name: string; companyName: string | null }>();
     selectedOrders.forEach((order) => {
-      if (order.customer?.id) {
-        customers.set(order.customer.id, {
-          id: order.customer.id,
+      if (order.customerId) {
+        customers.set(order.customerId, {
+          id: order.customerId,
           name: order.customerName || "",
           companyName: order.customerCompanyName || null,
         });
@@ -709,9 +709,6 @@ export function InvoiceList() {
                                 )}
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-xs text-muted-foreground">
-                                {order.customerPhone || "—"}
-                              </span>
                               <CustomerTypeBadge type={customerType} />
                             </div>
                           </div>
