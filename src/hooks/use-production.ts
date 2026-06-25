@@ -17,9 +17,11 @@ import type {
   UpdateProductionStepRequest,
   ProductionListParams,
   AssignProductionStepRequest,
+  ProductionPendingMaterialParams,
 } from "@/Schema";
 import { useAsyncCallback } from "@/hooks/use-async";
 import { API_SUFFIX } from "@/apis";
+import { normalizeParams } from "@/apis/util.api";
 
 // Production Order CRUD hooks (new API structure)
 const {
@@ -53,6 +55,23 @@ export const useProductionOrder = (id: number | null, enabled = true) =>
   useProductionOrderDetailBase(id, enabled);
 
 export const useCreateProductionOrder = () => useCreateProductionOrderBase();
+
+export const usePendingMaterialProductionOrders = (
+  params?: ProductionPendingMaterialParams
+) => {
+  return useQuery<ProductionOrderResponsePaginate>({
+    queryKey: [...productionOrderKeys.all, "pending-material", params],
+    queryFn: async () => {
+      const res = await apiRequest.get<ProductionOrderResponsePaginate>(
+        "/production-orders/pending-material",
+        {
+          params: normalizeParams((params ?? {}) as Record<string, unknown>),
+        }
+      );
+      return res.data;
+    },
+  });
+};
 export const useProductionOrdersByOrder = (
   orderId: number | null,
   params?: {

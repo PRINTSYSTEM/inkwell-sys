@@ -8,6 +8,7 @@ export * from "./design.schema";
 export * from "./design-type.schema";
 export * from "./material-type.schema";
 export * from "./material.schema";
+export * from "./material-spec.schema";
 export * from "./order.schema";
 export * from "./proofing-order.schema";
 export * from "./production.schema";

@@ -316,6 +316,33 @@ export const dieStatusLabels: Record<string, string> =
 export const dieLocationLabels: Record<string, string> =
   ENTITY_CONFIG.dieLocations.values;
 
+// Loại chứng từ công nợ NCC (APDocumentType)
+export const apDocumentTypeLabels: Record<string, string> = {
+  StockIn: "Nhập kho vật tư",
+  StockInLabor: "Nhân công",
+  PlateExport: "Xuất kẽm",
+  PrintingExport: "In gia công",
+  DieExport: "Xuất khuôn",
+};
+
+// Trạng thái thanh toán AP (APPaymentStatusFilter)
+export const apPaymentStatusLabels: Record<string, string> = {
+  unpaid: "Chưa thanh toán",
+  paid: "Đã thanh toán",
+  overdue: "Quá hạn",
+  all: "Tất cả",
+};
+
+// Loại thay đổi công nợ NCC (VendorDebtChangeType)
+export const vendorDebtChangeTypeLabels: Record<string, string> = {
+  StockIn: "Nhập kho vật tư",
+  StockInLabor: "Nhân công",
+  Payment: "Thanh toán",
+  PlateExport: "Xuất kẽm",
+  DieExport: "Xuất khuôn",
+  Cancellation: "Hủy bỏ",
+};
+
 // ===== DESIGN STATUS CONFIG (cho UI) =====
 export type DesignStatusKey = keyof typeof ENTITY_CONFIG.designStatuses.values;
 

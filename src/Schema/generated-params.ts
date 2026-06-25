@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-06-24T21:38:23.697Z */
+/* Generated at: 2026-06-25T11:03:01.241Z */
 
 import { z } from "zod";
 import { IdSchema, PagedParamsSchema } from "./Common";
@@ -236,6 +236,17 @@ export const DebtReportApSummaryParamsSchema = PagedParamsSchema.extend({
   sortOrder: z.string().nullable().optional(),
 });
 export type DebtReportApSummaryParams = z.infer<typeof DebtReportApSummaryParamsSchema>;
+
+// ==== DebtReportApSummaryReportParams (GET /api/debt-reports/ap-summary-report) ====
+export const DebtReportApSummaryReportParamsSchema = PagedParamsSchema.extend({
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+  vendorId: z.number().int().nullable().optional(),
+  searchTerm: z.string().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
+});
+export type DebtReportApSummaryReportParams = z.infer<typeof DebtReportApSummaryReportParamsSchema>;
 
 // ==== DebtReportArAgingExportPdfParams (GET /api/debt-reports/ar-aging/export-pdf) ====
 export const DebtReportArAgingExportPdfParamsSchema = z.object({
@@ -830,6 +841,13 @@ export const MaterialListParamsSchema = PagedParamsSchema.extend({
 });
 export type MaterialListParams = z.infer<typeof MaterialListParamsSchema>;
 
+// ==== MaterialSpecListParams (GET /api/material-specs) ====
+export const MaterialSpecListParamsSchema = PagedParamsSchema.extend({
+  materialTypeId: z.number().int().nullable().optional(),
+  search: z.string().nullable().optional(),
+});
+export type MaterialSpecListParams = z.infer<typeof MaterialSpecListParamsSchema>;
+
 // ==== MaterialTypeListParams (GET /api/designs/materials) ====
 export const MaterialTypeListParamsSchema = PagedParamsSchema.extend({
   status: z.string().nullable().optional(),
@@ -971,10 +989,21 @@ export type ProductionByOrderParams = z.infer<typeof ProductionByOrderParamsSche
 export const ProductionListParamsSchema = PagedParamsSchema.extend({
   status: z.string().nullable().optional(),
   proofingOrderId: z.number().int().nullable().optional(),
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });
 export type ProductionListParams = z.infer<typeof ProductionListParamsSchema>;
+
+// ==== ProductionPendingMaterialParams (GET /api/production-orders/pending-material) ====
+export const ProductionPendingMaterialParamsSchema = PagedParamsSchema.extend({
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
+});
+export type ProductionPendingMaterialParams = z.infer<typeof ProductionPendingMaterialParamsSchema>;
 
 // ==== ProofingOrderAvailableOrderDetailsDesignTypeSummaryParams (GET /api/proofing-orders/available-order-details/design-type-summary) ====
 export const ProofingOrderAvailableOrderDetailsDesignTypeSummaryParamsSchema = z.object({

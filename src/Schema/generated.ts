@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-06-24T21:38:23.619Z */
+/* Generated at: 2026-06-25T11:03:01.199Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -21,6 +21,8 @@ export const APItemResponseSchema = schemas.APItemResponse;
 export const APItemResponseIPaginateSchema = schemas.APItemResponseIPaginate;
 export const APOverdueResponseSchema = schemas.APOverdueResponse;
 export const APOverdueResponseIPaginateSchema = schemas.APOverdueResponseIPaginate;
+export const APSummaryReportResponseSchema = schemas.APSummaryReportResponse;
+export const APSummaryReportResponseIPaginateSchema = schemas.APSummaryReportResponseIPaginate;
 export const APSummaryResponseSchema = schemas.APSummaryResponse;
 export const APSummaryResponseIPaginateSchema = schemas.APSummaryResponseIPaginate;
 export const ARAgingResponseSchema = schemas.ARAgingResponse;
@@ -88,6 +90,7 @@ export const CreateInvoiceFromLinesRequestSchema = schemas.CreateInvoiceFromLine
 export const CreateInvoiceRequestSchema = schemas.CreateInvoiceRequest;
 export const CreateMaterialCutRequestSchema = schemas.CreateMaterialCutRequest;
 export const CreateMaterialRequestSchema = schemas.CreateMaterialRequest;
+export const CreateMaterialSpecRequestSchema = schemas.CreateMaterialSpecRequest;
 export const CreateMaterialTypeRequestSchema = schemas.CreateMaterialTypeRequest;
 export const CreateOrderFromReadyDesignsRequestSchema = schemas.CreateOrderFromReadyDesignsRequest;
 export const CreateOrderRequestSchema = schemas.CreateOrderRequest;
@@ -184,6 +187,8 @@ export const MaterialCutOutputLineResponseSchema = schemas.MaterialCutOutputLine
 export const MaterialCutResponseSchema = schemas.MaterialCutResponse;
 export const MaterialResponseSchema = schemas.MaterialResponse;
 export const MaterialResponseIPaginateSchema = schemas.MaterialResponseIPaginate;
+export const MaterialSpecResponseSchema = schemas.MaterialSpecResponse;
+export const MaterialSpecResponseIPaginateSchema = schemas.MaterialSpecResponseIPaginate;
 export const MaterialTypeItemSchema = schemas.MaterialTypeItem;
 export const MaterialTypeResponseSchema = schemas.MaterialTypeResponse;
 export const MaterialTypeResponsePaginateSchema = schemas.MaterialTypeResponsePaginate;
@@ -299,6 +304,7 @@ export const UpdateEInvoiceInfoRequestSchema = schemas.UpdateEInvoiceInfoRequest
 export const UpdateExpenseCategoryRequestSchema = schemas.UpdateExpenseCategoryRequest;
 export const UpdateInvoiceRequestSchema = schemas.UpdateInvoiceRequest;
 export const UpdateMaterialRequestSchema = schemas.UpdateMaterialRequest;
+export const UpdateMaterialSpecRequestSchema = schemas.UpdateMaterialSpecRequest;
 export const UpdateMaterialTypeRequestSchema = schemas.UpdateMaterialTypeRequest;
 export const UpdateMyProfileRequestSchema = schemas.UpdateMyProfileRequest;
 export const UpdateOrderDetailForAccountingRequestSchema = schemas.UpdateOrderDetailForAccountingRequest;

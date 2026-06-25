@@ -15,6 +15,7 @@ import type {
   ARAgingResponseIPaginate,
   APSummaryResponse,
   APSummaryResponseIPaginate,
+  APSummaryReportResponseIPaginate,
   APDetailResponse,
   APDetailResponseIPaginate,
   APAgingResponse,
@@ -67,6 +68,7 @@ import type {
   DebtReportArDetailParams,
   DebtReportArAgingParams,
   DebtReportApSummaryParams,
+  DebtReportApSummaryReportParams,
   DebtReportApDetailParams,
   DebtReportApAgingParams,
   DebtReportCollectionScheduleParams,
@@ -259,6 +261,22 @@ export const useAPSummary = (params?: DebtReportApSummaryParams) => {
       );
       const res = await apiRequest.get<APSummaryResponseIPaginate>(
         API_SUFFIX.AP_SUMMARY,
+        { params: normalizedParams }
+      );
+      return res.data;
+    },
+  });
+};
+
+export const useAPSummaryReport = (params?: DebtReportApSummaryReportParams) => {
+  return useQuery({
+    queryKey: ["ap-summary-report", params],
+    queryFn: async () => {
+      const normalizedParams = normalizeParams(
+        (params ?? {}) as Record<string, unknown>
+      );
+      const res = await apiRequest.get<APSummaryReportResponseIPaginate>(
+        API_SUFFIX.AP_SUMMARY_REPORT,
         { params: normalizedParams }
       );
       return res.data;

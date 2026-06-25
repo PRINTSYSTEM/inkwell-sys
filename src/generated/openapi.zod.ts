@@ -1062,6 +1062,28 @@ const APSummaryResponseIPaginate = z
     items: z.array(APSummaryResponse).nullable(),
   })
   .partial();
+const APSummaryReportResponse = z
+  .object({
+    vendorId: z.number().int(),
+    vendorCode: z.string().nullable(),
+    vendorName: z.string().nullable(),
+    openingDebit: z.number(),
+    openingCredit: z.number(),
+    periodDebit: z.number(),
+    periodCredit: z.number(),
+    closingDebit: z.number(),
+    closingCredit: z.number(),
+  })
+  .partial();
+const APSummaryReportResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(APSummaryReportResponse).nullable(),
+  })
+  .partial();
 const APItemResponse = z
   .object({
     vendorId: z.number().int(),
@@ -1844,8 +1866,11 @@ const StockCardEntryResponse = z
     date: z.string().datetime({ offset: true }),
     voucherCode: z.string().nullable(),
     inQuantity: z.number(),
+    inValue: z.number(),
     outQuantity: z.number(),
+    outValue: z.number(),
     balance: z.number(),
+    balanceValue: z.number(),
     notes: z.string().nullable(),
     reference: z.string().nullable(),
     voucherType: z.string().nullable(),
@@ -2230,6 +2255,48 @@ const MaterialCutResponse = z
     createdAt: z.string().datetime({ offset: true }),
     updatedAt: z.string().datetime({ offset: true }).nullable(),
     outputs: z.array(MaterialCutOutputLineResponse).nullable(),
+  })
+  .partial();
+const MaterialSpecResponse = z
+  .object({
+    id: z.number().int(),
+    materialTypeId: z.number().int(),
+    materialTypeName: z.string().nullable(),
+    materialTypeCode: z.string().nullable(),
+    basisWeight: z.number().int(),
+    name: z.string().nullable(),
+    defaultLength: z.number().nullable(),
+    defaultWidth: z.number().nullable(),
+    defaultUnit: z.string().nullable(),
+    isActive: z.boolean(),
+  })
+  .partial();
+const MaterialSpecResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(MaterialSpecResponse).nullable(),
+  })
+  .partial();
+const CreateMaterialSpecRequest = z.object({
+  materialTypeId: z.number().int(),
+  basisWeight: z.number().int(),
+  name: z.string().min(1),
+  defaultLength: z.number().nullish(),
+  defaultWidth: z.number().nullish(),
+  defaultUnit: z.string().nullish(),
+});
+const UpdateMaterialSpecRequest = z
+  .object({
+    materialTypeId: z.number().int().nullable(),
+    basisWeight: z.number().int().nullable(),
+    name: z.string().nullable(),
+    defaultLength: z.number().nullable(),
+    defaultWidth: z.number().nullable(),
+    defaultUnit: z.string().nullable(),
+    isActive: z.boolean().nullable(),
   })
   .partial();
 const CreateMaterialTypeRequest = z.object({
@@ -3924,6 +3991,8 @@ export const schemas = {
   APOverdueResponseIPaginate,
   APSummaryResponse,
   APSummaryResponseIPaginate,
+  APSummaryReportResponse,
+  APSummaryReportResponseIPaginate,
   APItemResponse,
   APItemResponseIPaginate,
   APDetailLedgerRow,
@@ -4019,6 +4088,10 @@ export const schemas = {
   CreateMaterialCutRequest,
   MaterialCutOutputLineResponse,
   MaterialCutResponse,
+  MaterialSpecResponse,
+  MaterialSpecResponseIPaginate,
+  CreateMaterialSpecRequest,
+  UpdateMaterialSpecRequest,
   CreateMaterialTypeRequest,
   MaterialTypeResponsePaginate,
   MaterialTypeItem,
@@ -6045,6 +6118,55 @@ const endpoints = makeApi([
       },
     ],
     response: APSummaryResponseIPaginate,
+  },
+  {
+    method: "get",
+    path: "/api/debt-reports/ap-summary-report",
+    alias: "getApidebtReportsapSummaryReport",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "vendorId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "searchTerm",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: APSummaryReportResponseIPaginate,
   },
   {
     method: "get",
@@ -9368,6 +9490,124 @@ const endpoints = makeApi([
   },
   {
     method: "get",
+    path: "/api/material-specs",
+    alias: "getApimaterialSpecs",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(20),
+      },
+      {
+        name: "materialTypeId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "search",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: MaterialSpecResponseIPaginate,
+  },
+  {
+    method: "post",
+    path: "/api/material-specs",
+    alias: "postApimaterialSpecs",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateMaterialSpecRequest,
+      },
+    ],
+    response: MaterialSpecResponse,
+  },
+  {
+    method: "get",
+    path: "/api/material-specs/:id",
+    alias: "getApimaterialSpecsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: MaterialSpecResponse,
+  },
+  {
+    method: "put",
+    path: "/api/material-specs/:id",
+    alias: "putApimaterialSpecsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateMaterialSpecRequest,
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: MaterialSpecResponse,
+  },
+  {
+    method: "delete",
+    path: "/api/material-specs/:id",
+    alias: "deleteApimaterialSpecsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/material-specs/by-material-type/:materialTypeId",
+    alias: "getApimaterialSpecsbyMaterialTypeMaterialTypeId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "materialTypeId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.array(MaterialSpecResponse),
+  },
+  {
+    method: "get",
+    path: "/api/material-specs/by-vendor/:vendorId",
+    alias: "getApimaterialSpecsbyVendorVendorId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "vendorId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.array(MaterialSpecResponse),
+  },
+  {
+    method: "get",
     path: "/api/materials",
     alias: "getApimaterials",
     requestFormat: "json",
@@ -10528,6 +10768,16 @@ const endpoints = makeApi([
         schema: z.number().int().optional(),
       },
       {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
         name: "sortColumn",
         type: "Query",
         schema: z.string().optional(),
@@ -10617,6 +10867,45 @@ const endpoints = makeApi([
         name: "status",
         type: "Query",
         schema: z.string().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: ProductionOrderResponsePaginate,
+  },
+  {
+    method: "get",
+    path: "/api/production-orders/pending-material",
+    alias: "getApiproductionOrderspendingMaterial",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
       },
       {
         name: "sortColumn",

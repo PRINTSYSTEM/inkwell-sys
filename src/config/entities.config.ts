@@ -175,6 +175,9 @@ export const ENTITY_CONFIG = {
       material: "Nhà cung cấp vật tư",
       paper: "Nhà cung cấp giấy",
       ink: "Nhà cung cấp mực",
+      solvent: "Nhà cung cấp dung môi",
+      glue: "Nhà cung cấp keo",
+      accessory: "Nhà cung cấp phụ liệu",
     },
   },
   deliveryNoteStatuses: {

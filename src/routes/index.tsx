@@ -88,6 +88,9 @@ const CreateMaterial = lazy(
 const ProductTemplates = lazy(
   () => import("@/pages/inventory/ProductTemplatesPage")
 );
+const MaterialSpecPage = lazy(
+  () => import("@/pages/materials/MaterialSpecPage")
+);
 
 // Stock Management
 const StockSummary = lazy(() => import("@/pages/stock/StockSummary"));
@@ -633,6 +636,21 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
                 <InventoryDetail />
+              </Suspense>
+            ),
+          },
+        ],
+      },
+
+      // ===== MATERIALS =====
+      {
+        path: "materials",
+        children: [
+          {
+            path: "specs",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <MaterialSpecPage />
               </Suspense>
             ),
           },

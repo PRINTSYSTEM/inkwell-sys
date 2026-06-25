@@ -132,6 +132,14 @@ export const API_SUFFIX = {
   MATERIAL_BY_ID: (id: number) => `/materials/${id}`,
   MATERIAL_HISTORY: (id: number) => `/materials/${id}/history`,
 
+  // ========== MATERIAL SPECS ==========
+  MATERIAL_SPECS: "/material-specs",
+  MATERIAL_SPEC_BY_ID: (id: number) => `/material-specs/${id}`,
+  MATERIAL_SPECS_BY_MATERIAL_TYPE: (id: number) =>
+    `/material-specs/by-material-type/${id}`,
+  MATERIAL_SPECS_BY_VENDOR: (vendorId: number) =>
+    `/material-specs/by-vendor/${vendorId}`,
+
   // ========== DESIGNS ==========
   DESIGNS: "/designs",
   DESIGN_BY_ID: (id: number) => `/designs/${id}`,
@@ -366,6 +374,7 @@ export const API_SUFFIX = {
   AR_UNDERDUE: "/debt-reports/ar-underdue",
   AP_SUMMARY: "/debt-reports/ap-summary",
   AP_SUMMARY_EXPORT: "/debt-reports/ap-summary/export",
+  AP_SUMMARY_REPORT: "/debt-reports/ap-summary-report",
   AP_DETAIL: "/debt-reports/ap-detail",
   AP_AGING: "/debt-reports/ap-aging",
   AP_AGING_EXPORT: "/debt-reports/ap-aging/export",

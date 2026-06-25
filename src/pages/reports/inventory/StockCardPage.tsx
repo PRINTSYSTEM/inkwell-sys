@@ -353,9 +353,12 @@ export default function StockCardPage() {
                 <TableHead className="w-[140px]">Ngày</TableHead>
                 <TableHead className="w-[140px]">Số chứng từ</TableHead>
                 <TableHead>Diễn giải</TableHead>
-                <TableHead className="text-right">Nhập</TableHead>
-                <TableHead className="text-right">Xuất</TableHead>
-                <TableHead className="text-right">Tồn</TableHead>
+                <TableHead className="text-right">SL Nhập</TableHead>
+                <TableHead className="text-right">Giá trị Nhập</TableHead>
+                <TableHead className="text-right">SL Xuất</TableHead>
+                <TableHead className="text-right">Giá trị Xuất</TableHead>
+                <TableHead className="text-right">SL Tồn</TableHead>
+                <TableHead className="text-right">Giá trị Tồn</TableHead>
                 <TableHead>Tham chiếu</TableHead>
               </TableRow>
             </TableHeader>
@@ -363,7 +366,7 @@ export default function StockCardPage() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 7 }).map((_, j) => (
+                    {Array.from({ length: 10 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
                       </TableCell>
@@ -373,61 +376,85 @@ export default function StockCardPage() {
               ) : !historyData?.items || historyData.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={10}
                     className="h-24 text-center text-muted-foreground"
                   >
                     Không có giao dịch nào trong khoảng thời gian này.
                   </TableCell>
                 </TableRow>
               ) : (
-                historyData.items.map((entry, index) => (
-                  <TableRow
-                    key={index}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() =>
-                      handleVoucherClick(entry.voucherType, entry.voucherId)
-                    }
-                  >
-                    <TableCell className="text-sm">
-                      {entry.date ? formatDate(entry.date) : "—"}
-                    </TableCell>
-                    <TableCell className="font-mono text-sm font-medium">
-                      {entry.voucherCode || "—"}
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div>{entry.notes || "—"}</div>
-                        {entry.voucherType && (
-                          <div className="text-xs text-muted-foreground">
-                            {entry.voucherType === "StockIn"
-                              ? "Phiếu nhập"
-                              : entry.voucherType === "StockOut"
-                                ? "Phiếu xuất"
-                                : entry.voucherType}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums text-green-600">
-                      {entry.inQuantity !== undefined && entry.inQuantity > 0
-                        ? entry.inQuantity.toLocaleString()
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums text-red-600">
-                      {entry.outQuantity !== undefined && entry.outQuantity > 0
-                        ? entry.outQuantity.toLocaleString()
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums">
-                      {entry.balance !== undefined
-                        ? entry.balance.toLocaleString()
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {entry.reference || "—"}
-                    </TableCell>
-                  </TableRow>
-                ))
+                historyData.items.map((entry, index) => {
+                  const matchedEntry = stockCardData?.entries?.find(
+                    (e) => e.voucherCode === entry.voucherCode && e.voucherId === entry.voucherId
+                  );
+                  const inValue = matchedEntry?.inValue ?? 0;
+                  const outValue = matchedEntry?.outValue ?? 0;
+                  const balanceValue = matchedEntry?.balanceValue ?? 0;
+
+                  return (
+                    <TableRow
+                      key={index}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() =>
+                        handleVoucherClick(entry.voucherType, entry.voucherId)
+                      }
+                    >
+                      <TableCell className="text-sm">
+                        {entry.date ? formatDate(entry.date) : "—"}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm font-medium">
+                        {entry.voucherCode || "—"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1">
+                          <div>{entry.notes || "—"}</div>
+                          {entry.voucherType && (
+                            <div className="text-xs text-muted-foreground">
+                              {entry.voucherType === "StockIn"
+                                ? "Phiếu nhập"
+                                : entry.voucherType === "StockOut"
+                                  ? "Phiếu xuất"
+                                  : entry.voucherType}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-medium tabular-nums text-green-600">
+                        {entry.inQuantity !== undefined && entry.inQuantity > 0
+                          ? entry.inQuantity.toLocaleString()
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-right font-medium tabular-nums text-green-600">
+                        {entry.inQuantity !== undefined && entry.inQuantity > 0 && inValue !== undefined
+                          ? formatCurrency(inValue)
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-right font-medium tabular-nums text-red-600">
+                        {entry.outQuantity !== undefined && entry.outQuantity > 0
+                          ? entry.outQuantity.toLocaleString()
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-right font-medium tabular-nums text-red-600">
+                        {entry.outQuantity !== undefined && entry.outQuantity > 0 && outValue !== undefined
+                          ? formatCurrency(outValue)
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-right font-medium tabular-nums">
+                        {entry.balance !== undefined
+                          ? entry.balance.toLocaleString()
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-right font-medium tabular-nums text-primary">
+                        {balanceValue !== undefined
+                          ? formatCurrency(balanceValue)
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {entry.reference || "—"}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
