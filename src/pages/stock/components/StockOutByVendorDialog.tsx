@@ -29,6 +29,7 @@ import {
   useCreateReturnVendorStockOut,
   useCreateAdjustmentStockOut,
 } from "@/hooks/use-stock";
+import { usePendingMaterialProductionOrders } from "@/hooks/use-production";
 import { cn } from "@/lib/utils";
 import {
   Popover,
@@ -136,6 +137,84 @@ function MaterialSelector({
   );
 }
 
+interface JobCodeSelectorProps {
+  value: string;
+  onSelect: (code: string) => void;
+  productionOrders: any[];
+  placeholder?: string;
+  className?: string;
+}
+
+function JobCodeSelector({
+  value,
+  onSelect,
+  productionOrders,
+  placeholder = "Mã bài...",
+  className,
+}: JobCodeSelectorProps) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className={cn(
+            "h-9 w-full justify-between text-xs bg-white border-slate-200 rounded-lg font-normal hover:bg-slate-50/50 cursor-pointer px-3",
+            className
+          )}
+        >
+          <span className="truncate font-mono">
+            {value || placeholder}
+          </span>
+          <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50 text-slate-500" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[300px] p-0" align="start">
+        <Command className="w-full">
+          <CommandInput
+            placeholder="Tìm mã bài..."
+            className="h-9 w-full bg-transparent text-xs border-none focus:ring-0 focus-visible:ring-0"
+          />
+          <CommandList className="max-h-[220px]">
+            <CommandEmpty>Không tìm thấy mã bài nào.</CommandEmpty>
+            <CommandGroup>
+              {productionOrders.map((po) => (
+                <CommandItem
+                  key={po.id}
+                  value={`${po.proofingOrderCode || ""} ${po.customerName || ""} ${po.id}`}
+                  onSelect={() => {
+                    onSelect(po.proofingOrderCode || "");
+                    setOpen(false);
+                  }}
+                  className="text-xs cursor-pointer flex flex-col items-start gap-0.5 py-1.5 px-3 hover:bg-slate-50"
+                >
+                  <div className="flex items-center w-full justify-between">
+                    <span className="font-bold font-mono text-slate-700">
+                      {po.proofingOrderCode || "N/A"}
+                    </span>
+                    {value === po.proofingOrderCode && (
+                      <Check className="h-3.5 w-3.5 text-rose-600 shrink-0" />
+                    )}
+                  </div>
+                  {po.customerName && (
+                    <span className="text-[10px] text-slate-500 truncate w-full">
+                      KH: {po.customerName}
+                    </span>
+                  )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function StockOutByVendorDialog({
   open,
   onOpenChange,
@@ -206,6 +285,12 @@ export function StockOutByVendorDialog({
     size: 1000,
   });
   const vendorMaterials = materialsData?.items || [];
+
+  // Load pending material production orders for Mã bài selector
+  const { data: pendingProdOrdersData } = usePendingMaterialProductionOrders({
+    pageSize: 1000,
+  });
+  const pendingProdOrders = pendingProdOrdersData?.items || [];
 
   // Filter materials based on purpose
   // Xuất sản xuất: currently applied for sheet (tờ)
@@ -738,11 +823,12 @@ export function StockOutByVendorDialog({
                           </td>
                           {purpose === "production" && (
                             <td className="py-2 px-3">
-                              <Input
-                                placeholder="Mã bài..."
+                              <JobCodeSelector
                                 value={item.jobCode}
-                                onChange={(e) => handleItemChange(index, "jobCode", e.target.value)}
-                                className="h-9 text-xs font-mono border-slate-200 focus-visible:ring-rose-500 rounded-lg bg-white"
+                                onSelect={(val) => handleItemChange(index, "jobCode", val)}
+                                productionOrders={pendingProdOrders}
+                                placeholder="Mã bài..."
+                                className="h-9"
                               />
                             </td>
                           )}
