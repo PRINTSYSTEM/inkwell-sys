@@ -23,10 +23,13 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useVendor, useUpdateVendor } from "@/hooks/use-vendor";
+import { useSupplierTypes } from "@/hooks/use-supplier-type";
 import type { UpdateVendorRequest } from "@/Schema/vendor.schema";
-import { vendorTypeLabels } from "@/lib/status-utils";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+
+
+
 
 export default function VendorEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -34,11 +37,13 @@ export default function VendorEditPage() {
   const navigate = useNavigate();
   const { data: vendor, isLoading } = useVendor(vendorId, !!vendorId);
   const { mutate: updateVendor, isPending } = useUpdateVendor();
+  const { data: supplierTypesResp, isLoading: isLoadingTypes } = useSupplierTypes({ page: 1, size: 1000 });
 
-  const [formData, setFormData] = useState<UpdateVendorRequest>({
+  const [formData, setFormData] = useState<UpdateVendorRequest & { supplierTypeId?: number }>({
     id: 0,
     name: "",
     vendorType: "",
+    supplierTypeId: undefined,
     phone: "",
     email: "",
     address: "",
@@ -46,8 +51,10 @@ export default function VendorEditPage() {
   });
 
   const [errors, setErrors] = useState<
-    Partial<Record<keyof UpdateVendorRequest, string>>
+    Partial<Record<keyof UpdateVendorRequest | "supplierTypeId", string>>
   >({});
+
+  const supplierTypes = supplierTypesResp?.items || [];
 
   // Prefill form when data is loaded
   useEffect(() => {
@@ -56,6 +63,7 @@ export default function VendorEditPage() {
         id: vendor.id!,
         name: vendor.name || "",
         vendorType: vendor.vendorType || "",
+        supplierTypeId: vendor.supplierTypeId || undefined,
         phone: vendor.phone || "",
         email: vendor.email || "",
         address: vendor.address || "",
@@ -64,12 +72,12 @@ export default function VendorEditPage() {
     }
   }, [vendor]);
 
-  const validateField = (field: keyof UpdateVendorRequest, value: string) => {
+  const validateField = (field: keyof UpdateVendorRequest | "supplierTypeId", value: any) => {
     const newErrors = { ...errors };
 
     switch (field) {
       case "name":
-        if (!value.trim()) {
+        if (!value || !value.trim()) {
           newErrors.name = "Tên nhà cung cấp là bắt buộc";
         } else if (value.length > 255) {
           newErrors.name = "Tên nhà cung cấp không được vượt quá 255 ký tự";
@@ -77,11 +85,11 @@ export default function VendorEditPage() {
           delete newErrors.name;
         }
         break;
-      case "vendorType":
+      case "supplierTypeId":
         if (!value) {
-          newErrors.vendorType = "Loại nhà cung cấp là bắt buộc";
+          newErrors.supplierTypeId = "Loại nhà cung cấp là bắt buộc";
         } else {
-          delete newErrors.vendorType;
+          delete newErrors.supplierTypeId;
         }
         break;
       case "phone":
@@ -108,22 +116,22 @@ export default function VendorEditPage() {
   };
 
   const handleInputChange = (
-    field: keyof UpdateVendorRequest,
-    value: string
+    field: keyof UpdateVendorRequest | "supplierTypeId",
+    value: any
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
-    if (errors[field]) {
+    if (errors[field as keyof typeof errors]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
-        delete newErrors[field];
+        delete newErrors[field as keyof typeof errors];
         return newErrors;
       });
     }
   };
 
-  const handleBlur = (field: keyof UpdateVendorRequest) => {
-    validateField(field, formData[field] as string);
+  const handleBlur = (field: keyof UpdateVendorRequest | "supplierTypeId") => {
+    validateField(field, formData[field as keyof typeof formData]);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -131,7 +139,7 @@ export default function VendorEditPage() {
 
     // Validate all fields
     validateField("name", formData.name || "");
-    validateField("vendorType", formData.vendorType || "");
+    validateField("supplierTypeId", formData.supplierTypeId);
 
     if (formData.phone) {
       validateField("phone", formData.phone);
@@ -142,18 +150,21 @@ export default function VendorEditPage() {
 
     // Check if there are any errors
     const hasErrors = Object.keys(errors).length > 0;
-    if (hasErrors || !formData.name?.trim() || !formData.vendorType) {
+    if (hasErrors || !formData.name?.trim() || !formData.supplierTypeId) {
       toast.error("Vui lòng điền đầy đủ thông tin bắt buộc", {
         description: "Kiểm tra lại các trường được đánh dấu *",
       });
       return;
     }
 
+    const selectedType = supplierTypes.find(t => t.id === formData.supplierTypeId);
+
     // Prepare payload - convert empty strings to undefined for optional fields
     const payload: UpdateVendorRequest = {
       id: vendorId!,
       name: formData.name?.trim(),
-      vendorType: formData.vendorType,
+      vendorType: selectedType?.code || "",
+      supplierTypeId: formData.supplierTypeId,
       phone: formData.phone?.trim() || undefined,
       email: formData.email?.trim() || undefined,
       address: formData.address?.trim() || undefined,
@@ -198,10 +209,10 @@ export default function VendorEditPage() {
             </Button>
             <div className="flex-1">
               <h1 className="text-2xl sm:text-3xl font-bold text-balance">
-                Cập nhật nhà cung cấp
+                Chỉnh sửa nhà cung cấp
               </h1>
               <p className="text-sm text-muted-foreground mt-1">
-                Chỉnh sửa thông tin hồ sơ nhà cung cấp
+                Cập nhật thông tin chi tiết nhà cung cấp
               </p>
             </div>
             <Sparkles className="h-6 w-6 text-accent hidden sm:block" />
@@ -250,34 +261,31 @@ export default function VendorEditPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="vendorType">
+                <Label htmlFor="supplierTypeId">
                   Loại nhà cung cấp
                 </Label>
                 <Select
-                  disabled
-                  value={formData.vendorType || undefined}
+                  value={formData.supplierTypeId?.toString() || undefined}
                   onValueChange={(value) => {
-                    handleInputChange("vendorType", value);
-                    validateField("vendorType", value);
+                    const idNum = Number(value);
+                    handleInputChange("supplierTypeId", idNum);
+                    validateField("supplierTypeId", idNum);
                   }}
+                  disabled={isLoadingTypes}
                 >
                   <SelectTrigger
-                    id="vendorType"
-                    className="bg-muted/50 text-muted-foreground"
+                    id="supplierTypeId"
                   >
-                    <SelectValue placeholder="Chọn loại nhà cung cấp" />
+                    <SelectValue placeholder={isLoadingTypes ? "Đang tải..." : "Chọn loại nhà cung cấp"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(vendorTypeLabels).map(([key, label]) => (
-                      <SelectItem key={key} value={key}>
-                        {label}
+                    {supplierTypes.map((type) => (
+                      <SelectItem key={type.id} value={type.id.toString()}>
+                        {type.description || type.name || type.code}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground">
-                  Loại nhà cung cấp không thể thay đổi sau khi tạo.
-                </p>
               </div>
 
               <div className="space-y-2">

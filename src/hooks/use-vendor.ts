@@ -63,7 +63,7 @@ export const useDeleteVendor = () => useDeleteVendorBase();
 // Lấy danh sách nhà cung cấp đang hoạt động theo loại
 // Note: Sử dụng endpoint /vendors với query params thay vì /vendors/active
 // vì endpoint /vendors/active không có trong OpenAPI schema
-export const useActiveVendors = (vendorType?: "plate" | "die" | "printing" | "material" | "paper" | "ink") => {
+export const useActiveVendors = (vendorType?: "plate" | "die" | "printing" | "material" | "paper" | "ink" | "film" | "solvent" | "glue" | "accessory") => {
   return useQuery({
     queryKey: [vendorKeys.all[0], "active", vendorType],
     queryFn: async () => {

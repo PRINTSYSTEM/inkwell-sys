@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-06-25T11:03:01.241Z */
+/* Generated at: 2026-06-28T19:40:32.228Z */
 
 import { z } from "zod";
 import { IdSchema, PagedParamsSchema } from "./Common";
@@ -821,6 +821,14 @@ export const MaterialCutListParamsSchema = PagedParamsSchema.extend({
 });
 export type MaterialCutListParams = z.infer<typeof MaterialCutListParamsSchema>;
 
+// ==== MaterialFamilieListParams (GET /api/material-families) ====
+export const MaterialFamilieListParamsSchema = z.object({
+  page: z.number().int().nullable().optional(),
+  size: z.number().int().nullable().optional(),
+  search: z.string().nullable().optional(),
+}).passthrough();
+export type MaterialFamilieListParams = z.infer<typeof MaterialFamilieListParamsSchema>;
+
 // ==== MaterialHistoryParams (GET /api/materials/:id/history) ====
 export const MaterialHistoryParamsSchema = PagedParamsSchema.extend({
   transactionType: z.string().nullable().optional(),
@@ -1333,6 +1341,18 @@ export const SharedAddresseListParamsSchema = PagedParamsSchema.extend({
 });
 export type SharedAddresseListParams = z.infer<typeof SharedAddresseListParamsSchema>;
 
+// ==== SpecTemplateListParams (GET /api/spec-templates) ====
+export const SpecTemplateListParamsSchema = z.object({
+  familyId: z.number().int().nullable().optional(),
+}).passthrough();
+export type SpecTemplateListParams = z.infer<typeof SpecTemplateListParamsSchema>;
+
+// ==== SpecValueListParams (GET /api/spec-values) ====
+export const SpecValueListParamsSchema = z.object({
+  specTemplateId: z.number().int().nullable().optional(),
+}).passthrough();
+export type SpecValueListParams = z.infer<typeof SpecValueListParamsSchema>;
+
 // ==== StockInByDeliveryNoteParams (GET /api/stock-ins/by-delivery-note/:deliveryNoteId) ====
 export const StockInByDeliveryNoteParamsSchema = PagedParamsSchema.extend({
 });
@@ -1388,6 +1408,20 @@ export const StockOutSummaryParamsSchema = z.object({
 }).passthrough();
 export type StockOutSummaryParams = z.infer<typeof StockOutSummaryParamsSchema>;
 
+// ==== SupplierCatalogListParams (GET /api/supplier-catalogs) ====
+export const SupplierCatalogListParamsSchema = z.object({
+  vendorId: z.number().int().nullable().optional(),
+}).passthrough();
+export type SupplierCatalogListParams = z.infer<typeof SupplierCatalogListParamsSchema>;
+
+// ==== SupplierTypeListParams (GET /api/supplier-types) ====
+export const SupplierTypeListParamsSchema = z.object({
+  page: z.number().int().nullable().optional(),
+  size: z.number().int().nullable().optional(),
+  search: z.string().nullable().optional(),
+}).passthrough();
+export type SupplierTypeListParams = z.infer<typeof SupplierTypeListParamsSchema>;
+
 // ==== UserDesignersListParams (GET /api/users/designers) ====
 export const UserDesignersListParamsSchema = PagedParamsSchema.extend({
   sortColumn: z.string().nullable().optional(),
@@ -1424,6 +1458,7 @@ export const VendorListParamsSchema = PagedParamsSchema.extend({
   search: z.string().nullable().optional(),
   isActive: z.boolean().nullable().optional(),
   vendorType: z.string().nullable().optional(),
+  supplierTypeId: z.number().int().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });

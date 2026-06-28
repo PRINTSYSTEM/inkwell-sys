@@ -81,6 +81,7 @@ export function CreateCashPaymentDialog({
   });
   const { data: vendorsData } = useVendors({
     pageSize: 1000,
+    isActive: true,
   });
 
   const paymentMethods = paymentMethodsData?.items || [];

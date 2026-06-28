@@ -171,13 +171,14 @@ export const ENTITY_CONFIG = {
     values: {
       plate: "Nhà cung cấp kẽm",
       die: "Nhà cung cấp khuôn bế",
-      printing: "Nhà in",
-      material: "Nhà cung cấp vật tư",
+      printing: "Nhà gia công in",
+      material: "Nhà cung cấp tổng hợp (bán nhiều nhóm vật tư)",
       paper: "Nhà cung cấp giấy",
       ink: "Nhà cung cấp mực",
       solvent: "Nhà cung cấp dung môi",
       glue: "Nhà cung cấp keo",
-      accessory: "Nhà cung cấp phụ liệu",
+      accessory: "Nhà cung cấp vật tư tiêu hao / phụ kiện",
+      film: "Nhà cung cấp màng",
     },
   },
   deliveryNoteStatuses: {

@@ -534,6 +534,13 @@ export const MENU_ITEMS: MenuItem[] = [
         path: ROUTE_PATHS.ADMIN.SETTINGS,
         allowedRoles: [ROLE.ADMIN],
       },
+      {
+        id: "material-hierarchy",
+        title: "Cấu hình phân cấp vật tư",
+        icon: Layers,
+        path: ROUTE_PATHS.ADMIN.MATERIAL_HIERARCHY,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
+      },
 
       // {
       //   id: "admin-roles",

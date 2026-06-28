@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-06-25T11:03:01.199Z */
+/* Generated at: 2026-06-28T19:40:32.167Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -89,6 +89,7 @@ export const CreateExpenseCategoryRequestSchema = schemas.CreateExpenseCategoryR
 export const CreateInvoiceFromLinesRequestSchema = schemas.CreateInvoiceFromLinesRequest;
 export const CreateInvoiceRequestSchema = schemas.CreateInvoiceRequest;
 export const CreateMaterialCutRequestSchema = schemas.CreateMaterialCutRequest;
+export const CreateMaterialFamilyRequestSchema = schemas.CreateMaterialFamilyRequest;
 export const CreateMaterialRequestSchema = schemas.CreateMaterialRequest;
 export const CreateMaterialSpecRequestSchema = schemas.CreateMaterialSpecRequest;
 export const CreateMaterialTypeRequestSchema = schemas.CreateMaterialTypeRequest;
@@ -103,6 +104,8 @@ export const CreateProductionStockOutByVendorRequestSchema = schemas.CreateProdu
 export const CreateReturnNoteRequestSchema = schemas.CreateReturnNoteRequest;
 export const CreateReturnVendorStockOutRequestSchema = schemas.CreateReturnVendorStockOutRequest;
 export const CreateSharedAddressRequestSchema = schemas.CreateSharedAddressRequest;
+export const CreateSpecValueRequestSchema = schemas.CreateSpecValueRequest;
+export const CreateSpecificationTemplateRequestSchema = schemas.CreateSpecificationTemplateRequest;
 export const CreateStockInFromCutRequestSchema = schemas.CreateStockInFromCutRequest;
 export const CreateStockInFromDeliveryReturnRequestSchema = schemas.CreateStockInFromDeliveryReturnRequest;
 export const CreateStockInFromProductionRequestSchema = schemas.CreateStockInFromProductionRequest;
@@ -112,6 +115,8 @@ export const CreateStockOutForDeliveryRequestSchema = schemas.CreateStockOutForD
 export const CreateStockOutForProductionRequestSchema = schemas.CreateStockOutForProductionRequest;
 export const CreateStockOutForSpecialReasonRequestSchema = schemas.CreateStockOutForSpecialReasonRequest;
 export const CreateStockOutRequestSchema = schemas.CreateStockOutRequest;
+export const CreateSupplierCatalogRequestSchema = schemas.CreateSupplierCatalogRequest;
+export const CreateSupplierTypeRequestSchema = schemas.CreateSupplierTypeRequest;
 export const CreateUserRequestSchema = schemas.CreateUserRequest;
 export const CreateVendorRequestSchema = schemas.CreateVendorRequest;
 export const CurrentStockResponseSchema = schemas.CurrentStockResponse;
@@ -185,6 +190,8 @@ export const LowStockResponseIPaginateSchema = schemas.LowStockResponseIPaginate
 export const MaterialCutOutputLineRequestSchema = schemas.MaterialCutOutputLineRequest;
 export const MaterialCutOutputLineResponseSchema = schemas.MaterialCutOutputLineResponse;
 export const MaterialCutResponseSchema = schemas.MaterialCutResponse;
+export const MaterialFamilyResponseSchema = schemas.MaterialFamilyResponse;
+export const MaterialFamilyResponseIPaginateSchema = schemas.MaterialFamilyResponseIPaginate;
 export const MaterialResponseSchema = schemas.MaterialResponse;
 export const MaterialResponseIPaginateSchema = schemas.MaterialResponseIPaginate;
 export const MaterialSpecResponseSchema = schemas.MaterialSpecResponse;
@@ -278,12 +285,17 @@ export const SharedAddressResponseSchema = schemas.SharedAddressResponse;
 export const SharedAddressResponsePaginateSchema = schemas.SharedAddressResponsePaginate;
 export const SlowMovingResponseSchema = schemas.SlowMovingResponse;
 export const SlowMovingResponseIPaginateSchema = schemas.SlowMovingResponseIPaginate;
+export const SpecValueResponseSchema = schemas.SpecValueResponse;
+export const SpecificationTemplateResponseSchema = schemas.SpecificationTemplateResponse;
 export const StockCardEntryResponseSchema = schemas.StockCardEntryResponse;
 export const StockCardResponseSchema = schemas.StockCardResponse;
 export const StockHistoryResponseSchema = schemas.StockHistoryResponse;
 export const StockHistoryResponseIPaginateSchema = schemas.StockHistoryResponseIPaginate;
 export const StockInItemRequestSchema = schemas.StockInItemRequest;
 export const StockOutItemRequestSchema = schemas.StockOutItemRequest;
+export const SupplierCatalogResponseSchema = schemas.SupplierCatalogResponse;
+export const SupplierTypeResponseSchema = schemas.SupplierTypeResponse;
+export const SupplierTypeResponseIPaginateSchema = schemas.SupplierTypeResponseIPaginate;
 export const SystemSettingResponseSchema = schemas.SystemSettingResponse;
 export const TeamKpiSummaryResponseSchema = schemas.TeamKpiSummaryResponse;
 export const TopProductResponseSchema = schemas.TopProductResponse;
@@ -303,6 +315,7 @@ export const UpdateDieStatusRequestSchema = schemas.UpdateDieStatusRequest;
 export const UpdateEInvoiceInfoRequestSchema = schemas.UpdateEInvoiceInfoRequest;
 export const UpdateExpenseCategoryRequestSchema = schemas.UpdateExpenseCategoryRequest;
 export const UpdateInvoiceRequestSchema = schemas.UpdateInvoiceRequest;
+export const UpdateMaterialFamilyRequestSchema = schemas.UpdateMaterialFamilyRequest;
 export const UpdateMaterialRequestSchema = schemas.UpdateMaterialRequest;
 export const UpdateMaterialSpecRequestSchema = schemas.UpdateMaterialSpecRequest;
 export const UpdateMaterialTypeRequestSchema = schemas.UpdateMaterialTypeRequest;
@@ -319,8 +332,12 @@ export const UpdateProofingDesignItemSchema = schemas.UpdateProofingDesignItem;
 export const UpdateProofingOrderRequestSchema = schemas.UpdateProofingOrderRequest;
 export const UpdateReadyDesignRequestSchema = schemas.UpdateReadyDesignRequest;
 export const UpdateSharedAddressRequestSchema = schemas.UpdateSharedAddressRequest;
+export const UpdateSpecValueRequestSchema = schemas.UpdateSpecValueRequest;
+export const UpdateSpecificationTemplateRequestSchema = schemas.UpdateSpecificationTemplateRequest;
 export const UpdateStockInRequestSchema = schemas.UpdateStockInRequest;
 export const UpdateStockOutRequestSchema = schemas.UpdateStockOutRequest;
+export const UpdateSupplierCatalogRequestSchema = schemas.UpdateSupplierCatalogRequest;
+export const UpdateSupplierTypeRequestSchema = schemas.UpdateSupplierTypeRequest;
 export const UpdateSystemSettingRequestSchema = schemas.UpdateSystemSettingRequest;
 export const UpdateUserRequestSchema = schemas.UpdateUserRequest;
 export const UpdateVendorRequestSchema = schemas.UpdateVendorRequest;

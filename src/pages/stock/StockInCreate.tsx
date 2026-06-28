@@ -191,7 +191,7 @@ export default function StockInCreatePage() {
     isPending,
     isSuccess,
   } = useCreateStockInFromVendor();
-  const { data: vendorsData } = useVendors({ pageNumber: 1, pageSize: 100 });
+  const { data: vendorsData } = useVendors({ pageNumber: 1, pageSize: 100, isActive: true });
   const allVendors = (vendorsData?.items || []).filter(
     (v) =>
       v.vendorType !== "die" &&

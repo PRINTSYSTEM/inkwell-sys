@@ -1467,6 +1467,8 @@ const MaterialTypeResponse = z
     pricePerM2: z.number(),
     minimumQuantity: z.number().int(),
     designTypeId: z.number().int().nullable(),
+    materialFamilyId: z.number().int().nullable(),
+    materialFamilyName: z.string().nullable(),
     status: z.string().nullable(),
     statusType: z.string().nullable(),
     createdAt: z.string().datetime({ offset: true }),
@@ -1626,6 +1628,8 @@ const VendorResponse = z
     note: z.string().nullable(),
     vendorType: z.string().nullable(),
     vendorTypeName: z.string().nullable(),
+    supplierTypeId: z.number().int().nullable(),
+    supplierTypeName: z.string().nullable(),
     isActive: z.boolean(),
     currentDebt: z.number(),
     createdById: z.number().int(),
@@ -2159,6 +2163,9 @@ const UpdateEInvoiceInfoRequest = z
 const MaterialResponse = z
   .object({
     id: z.number().int(),
+    code: z.string().nullable(),
+    businessKey: z.string().nullable(),
+    status: z.string().nullable(),
     name: z.string().nullable(),
     type: z.string().nullable(),
     length: z.number(),
@@ -2166,6 +2173,11 @@ const MaterialResponse = z
     unit: z.string().nullable(),
     unitPrice: z.number(),
     basisWeight: z.number().int().nullable(),
+    materialFamilyId: z.number().int().nullable(),
+    materialFamilyName: z.string().nullable(),
+    materialTypeId: z.number().int().nullable(),
+    materialTypeName: z.string().nullable(),
+    specValues: z.string().nullable(),
     currentStock: z.number().int(),
     vendorId: z.number().int().nullable(),
     vendorName: z.string().nullable(),
@@ -2185,7 +2197,9 @@ const MaterialResponseIPaginate = z
   })
   .partial();
 const CreateMaterialRequest = z.object({
-  name: z.string().min(1),
+  code: z.string().nullish(),
+  status: z.string().nullish(),
+  name: z.string().nullish(),
   type: z
     .string()
     .min(1)
@@ -2195,10 +2209,14 @@ const CreateMaterialRequest = z.object({
   unit: z.string().max(50).nullish(),
   unitPrice: z.number().gte(0),
   basisWeight: z.number().int().nullish(),
+  materialFamilyId: z.number().int().nullish(),
+  materialTypeId: z.number().int().nullish(),
+  specValues: z.string().nullish(),
   vendorId: z.number().int().nullish(),
 });
 const UpdateMaterialRequest = z
   .object({
+    status: z.string().nullable(),
     name: z.string().nullable(),
     type: z
       .string()
@@ -2209,6 +2227,9 @@ const UpdateMaterialRequest = z
     unit: z.string().max(50).nullable(),
     unitPrice: z.number().gte(0).nullable(),
     basisWeight: z.number().int().nullable(),
+    materialFamilyId: z.number().int().nullable(),
+    materialTypeId: z.number().int().nullable(),
+    specValues: z.string().nullable(),
     vendorId: z.number().int().nullable(),
     clearVendor: z.boolean().nullable(),
   })
@@ -2255,6 +2276,81 @@ const MaterialCutResponse = z
     createdAt: z.string().datetime({ offset: true }),
     updatedAt: z.string().datetime({ offset: true }).nullable(),
     outputs: z.array(MaterialCutOutputLineResponse).nullable(),
+  })
+  .partial();
+const MaterialFamilyResponse = z
+  .object({
+    id: z.number().int(),
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+    allowedUnits: z.array(z.string()).nullable(),
+    defaultUnitId: z.number().int(),
+    defaultUnitCode: z.string().nullable(),
+    defaultUnitName: z.string().nullable(),
+    defaultUnitSymbol: z.string().nullable(),
+    allowCutting: z.boolean(),
+    allowRollConversion: z.boolean(),
+    allowImposition: z.boolean(),
+    trackInventory: z.boolean(),
+    allowPurchase: z.boolean(),
+    allowIssue: z.boolean(),
+    allowStockAdjustment: z.boolean(),
+    allowTransfer: z.boolean(),
+    allowReturn: z.boolean(),
+    importProcess: z.string().nullable(),
+    icon: z.string().nullable(),
+    displayOrder: z.number().int(),
+    isActive: z.boolean(),
+    createdById: z.number().int(),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }).nullable(),
+  })
+  .partial();
+const MaterialFamilyResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(MaterialFamilyResponse).nullable(),
+  })
+  .partial();
+const CreateMaterialFamilyRequest = z.object({
+  code: z.string().min(0).max(50),
+  name: z.string().min(0).max(200),
+  allowedUnits: z.array(z.string()).nullish(),
+  defaultUnitId: z.number().int(),
+  allowCutting: z.boolean().optional(),
+  allowRollConversion: z.boolean().optional(),
+  allowImposition: z.boolean().optional(),
+  trackInventory: z.boolean().optional(),
+  allowPurchase: z.boolean().optional(),
+  allowIssue: z.boolean().optional(),
+  allowStockAdjustment: z.boolean().optional(),
+  allowTransfer: z.boolean().optional(),
+  allowReturn: z.boolean().optional(),
+  importProcess: z.string().min(0).max(500).nullish(),
+  icon: z.string().min(0).max(50).nullish(),
+  displayOrder: z.number().int().optional(),
+});
+const UpdateMaterialFamilyRequest = z
+  .object({
+    code: z.string().min(0).max(50).nullable(),
+    name: z.string().min(0).max(200).nullable(),
+    allowedUnits: z.array(z.string()).nullable(),
+    defaultUnitId: z.number().int().nullable(),
+    allowCutting: z.boolean().nullable(),
+    allowRollConversion: z.boolean().nullable(),
+    allowImposition: z.boolean().nullable(),
+    trackInventory: z.boolean().nullable(),
+    allowPurchase: z.boolean().nullable(),
+    allowIssue: z.boolean().nullable(),
+    allowStockAdjustment: z.boolean().nullable(),
+    allowTransfer: z.boolean().nullable(),
+    allowReturn: z.boolean().nullable(),
+    importProcess: z.string().min(0).max(500).nullable(),
+    icon: z.string().min(0).max(50).nullable(),
+    displayOrder: z.number().int().nullable(),
   })
   .partial();
 const MaterialSpecResponse = z
@@ -2306,6 +2402,7 @@ const CreateMaterialTypeRequest = z.object({
   description: z.string().nullish(),
   pricePerM2: z.number().gte(0),
   designTypeId: z.number().int().nullish(),
+  materialFamilyId: z.number().int().nullish(),
   status: z
     .string()
     .min(1)
@@ -2342,6 +2439,7 @@ const UpdateMaterialTypeRequest = z
     description: z.string().nullable(),
     pricePerM2: z.number().gte(0).nullable(),
     designTypeId: z.number().int().nullable(),
+    materialFamilyId: z.number().int().nullable(),
     status: z
       .string()
       .regex(/^(active|inactive)$/)
@@ -3551,6 +3649,61 @@ const UpdateSharedAddressRequest = z
     address: z.string().min(0).max(500).nullable(),
   })
   .partial();
+const SpecificationTemplateResponse = z
+  .object({
+    id: z.number().int(),
+    materialFamilyId: z.number().int(),
+    key: z.string().nullable(),
+    name: z.string().nullable(),
+    dataType: z.string().nullable(),
+    isRequired: z.boolean(),
+    displayOrder: z.number().int(),
+    isActive: z.boolean(),
+    createdAt: z.string().datetime({ offset: true }),
+  })
+  .partial();
+const CreateSpecificationTemplateRequest = z.object({
+  materialFamilyId: z.number().int(),
+  key: z.string().min(0).max(50),
+  name: z.string().min(0).max(200),
+  dataType: z.string().min(0).max(20).nullish(),
+  isRequired: z.boolean().optional(),
+  displayOrder: z.number().int().optional(),
+});
+const UpdateSpecificationTemplateRequest = z
+  .object({
+    key: z.string().min(0).max(50).nullable(),
+    name: z.string().min(0).max(200).nullable(),
+    dataType: z.string().min(0).max(20).nullable(),
+    isRequired: z.boolean().nullable(),
+    displayOrder: z.number().int().nullable(),
+    isActive: z.boolean().nullable(),
+  })
+  .partial();
+const SpecValueResponse = z
+  .object({
+    id: z.number().int(),
+    specificationTemplateId: z.number().int(),
+    value: z.string().nullable(),
+    label: z.string().nullable(),
+    displayOrder: z.number().int(),
+    isActive: z.boolean(),
+  })
+  .partial();
+const CreateSpecValueRequest = z.object({
+  specificationTemplateId: z.number().int(),
+  value: z.string().min(0).max(200),
+  label: z.string().min(0).max(200).nullish(),
+  displayOrder: z.number().int().optional(),
+});
+const UpdateSpecValueRequest = z
+  .object({
+    value: z.string().min(0).max(200).nullable(),
+    label: z.string().min(0).max(200).nullable(),
+    displayOrder: z.number().int().nullable(),
+    isActive: z.boolean().nullable(),
+  })
+  .partial();
 const StockInItemRequest = z.object({
   lineKind: z.string().max(32).nullish(),
   itemName: z.string().min(1),
@@ -3746,6 +3899,70 @@ const UpdateStockOutRequest = z
     items: z.array(StockOutItemRequest).nullable(),
   })
   .partial();
+const SupplierCatalogResponse = z
+  .object({
+    id: z.number().int(),
+    vendorId: z.number().int(),
+    vendorName: z.string().nullable(),
+    materialTypeId: z.number().int(),
+    materialTypeName: z.string().nullable(),
+    supplierSku: z.string().nullable(),
+    defaultUnitPrice: z.number().nullable(),
+    isActive: z.boolean(),
+    createdAt: z.string().datetime({ offset: true }),
+    allowedSpecValueIds: z.array(z.number().int()).nullable(),
+  })
+  .partial();
+const CreateSupplierCatalogRequest = z.object({
+  vendorId: z.number().int(),
+  materialTypeId: z.number().int(),
+  supplierSku: z.string().min(0).max(100).nullish(),
+  defaultUnitPrice: z.number().gte(0).nullish(),
+  allowedSpecValueIds: z.array(z.number().int()).nullish(),
+});
+const UpdateSupplierCatalogRequest = z
+  .object({
+    supplierSku: z.string().min(0).max(100).nullable(),
+    defaultUnitPrice: z.number().gte(0).nullable(),
+    isActive: z.boolean().nullable(),
+    allowedSpecValueIds: z.array(z.number().int()).nullable(),
+  })
+  .partial();
+const SupplierTypeResponse = z
+  .object({
+    id: z.number().int(),
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+    description: z.string().nullable(),
+    isActive: z.boolean(),
+    createdById: z.number().int(),
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }).nullable(),
+  })
+  .partial();
+const SupplierTypeResponseIPaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(SupplierTypeResponse).nullable(),
+  })
+  .partial();
+const CreateSupplierTypeRequest = z.object({
+  code: z.string().min(0).max(50),
+  name: z.string().min(0).max(200),
+  description: z.string().min(0).max(500).nullish(),
+  isActive: z.boolean().optional(),
+});
+const UpdateSupplierTypeRequest = z
+  .object({
+    code: z.string().min(0).max(50).nullable(),
+    name: z.string().min(0).max(200).nullable(),
+    description: z.string().min(0).max(500).nullable(),
+    isActive: z.boolean().nullable(),
+  })
+  .partial();
 const SystemSettingResponse = z
   .object({
     key: z.string().nullable(),
@@ -3866,6 +4083,7 @@ const CreateVendorRequest = z.object({
   address: z.string().nullish(),
   note: z.string().nullish(),
   vendorType: z.string().min(0).max(20),
+  supplierTypeId: z.number().int().nullish(),
 });
 const VendorResponsePaginate = z
   .object({
@@ -3884,6 +4102,7 @@ const UpdateVendorRequest = z
     address: z.string().nullable(),
     note: z.string().nullable(),
     vendorType: z.string().min(0).max(20).nullable(),
+    supplierTypeId: z.number().int().nullable(),
     isActive: z.boolean().nullable(),
   })
   .partial();
@@ -4088,6 +4307,10 @@ export const schemas = {
   CreateMaterialCutRequest,
   MaterialCutOutputLineResponse,
   MaterialCutResponse,
+  MaterialFamilyResponse,
+  MaterialFamilyResponseIPaginate,
+  CreateMaterialFamilyRequest,
+  UpdateMaterialFamilyRequest,
   MaterialSpecResponse,
   MaterialSpecResponseIPaginate,
   CreateMaterialSpecRequest,
@@ -4195,6 +4418,12 @@ export const schemas = {
   CreateSharedAddressRequest,
   SharedAddressResponsePaginate,
   UpdateSharedAddressRequest,
+  SpecificationTemplateResponse,
+  CreateSpecificationTemplateRequest,
+  UpdateSpecificationTemplateRequest,
+  SpecValueResponse,
+  CreateSpecValueRequest,
+  UpdateSpecValueRequest,
   StockInItemRequest,
   CreateStockInRequest,
   CreateStockInFromVendorRequest,
@@ -4215,6 +4444,13 @@ export const schemas = {
   ReturnItemRequest,
   ProcessDeliveryReturnRequest,
   UpdateStockOutRequest,
+  SupplierCatalogResponse,
+  CreateSupplierCatalogRequest,
+  UpdateSupplierCatalogRequest,
+  SupplierTypeResponse,
+  SupplierTypeResponseIPaginate,
+  CreateSupplierTypeRequest,
+  UpdateSupplierTypeRequest,
   SystemSettingResponse,
   UpdateSystemSettingRequest,
   CreateUserRequest,
@@ -9490,6 +9726,91 @@ const endpoints = makeApi([
   },
   {
     method: "get",
+    path: "/api/material-families",
+    alias: "getApimaterialFamilies",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "page",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "size",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "search",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: MaterialFamilyResponseIPaginate,
+  },
+  {
+    method: "post",
+    path: "/api/material-families",
+    alias: "postApimaterialFamilies",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateMaterialFamilyRequest,
+      },
+    ],
+    response: MaterialFamilyResponse,
+  },
+  {
+    method: "get",
+    path: "/api/material-families/:id",
+    alias: "getApimaterialFamiliesId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: MaterialFamilyResponse,
+  },
+  {
+    method: "put",
+    path: "/api/material-families/:id",
+    alias: "putApimaterialFamiliesId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateMaterialFamilyRequest,
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: MaterialFamilyResponse,
+  },
+  {
+    method: "delete",
+    path: "/api/material-families/:id",
+    alias: "deleteApimaterialFamiliesId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
     path: "/api/material-specs",
     alias: "getApimaterialSpecs",
     requestFormat: "json",
@@ -12944,6 +13265,156 @@ const endpoints = makeApi([
     response: z.void(),
   },
   {
+    method: "get",
+    path: "/api/spec-templates",
+    alias: "getApispecTemplates",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "familyId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+    ],
+    response: z.array(SpecificationTemplateResponse),
+  },
+  {
+    method: "post",
+    path: "/api/spec-templates",
+    alias: "postApispecTemplates",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateSpecificationTemplateRequest,
+      },
+    ],
+    response: SpecificationTemplateResponse,
+  },
+  {
+    method: "get",
+    path: "/api/spec-templates/:id",
+    alias: "getApispecTemplatesId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: SpecificationTemplateResponse,
+  },
+  {
+    method: "put",
+    path: "/api/spec-templates/:id",
+    alias: "putApispecTemplatesId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateSpecificationTemplateRequest,
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: SpecificationTemplateResponse,
+  },
+  {
+    method: "delete",
+    path: "/api/spec-templates/:id",
+    alias: "deleteApispecTemplatesId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/spec-values",
+    alias: "getApispecValues",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "specTemplateId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+    ],
+    response: z.array(SpecValueResponse),
+  },
+  {
+    method: "post",
+    path: "/api/spec-values",
+    alias: "postApispecValues",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateSpecValueRequest,
+      },
+    ],
+    response: SpecValueResponse,
+  },
+  {
+    method: "get",
+    path: "/api/spec-values/:id",
+    alias: "getApispecValuesId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: SpecValueResponse,
+  },
+  {
+    method: "put",
+    path: "/api/spec-values/:id",
+    alias: "putApispecValuesId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateSpecValueRequest,
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: SpecValueResponse,
+  },
+  {
+    method: "delete",
+    path: "/api/spec-values/:id",
+    alias: "deleteApispecValuesId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
     method: "post",
     path: "/api/stock-ins",
     alias: "postApistockIns",
@@ -13621,6 +14092,152 @@ const endpoints = makeApi([
   },
   {
     method: "get",
+    path: "/api/supplier-catalogs",
+    alias: "getApisupplierCatalogs",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "vendorId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+    ],
+    response: z.array(SupplierCatalogResponse),
+  },
+  {
+    method: "post",
+    path: "/api/supplier-catalogs",
+    alias: "postApisupplierCatalogs",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateSupplierCatalogRequest,
+      },
+    ],
+    response: SupplierCatalogResponse,
+  },
+  {
+    method: "put",
+    path: "/api/supplier-catalogs/:id",
+    alias: "putApisupplierCatalogsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateSupplierCatalogRequest,
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: SupplierCatalogResponse,
+  },
+  {
+    method: "delete",
+    path: "/api/supplier-catalogs/:id",
+    alias: "deleteApisupplierCatalogsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/supplier-types",
+    alias: "getApisupplierTypes",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "page",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "size",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "search",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: SupplierTypeResponseIPaginate,
+  },
+  {
+    method: "post",
+    path: "/api/supplier-types",
+    alias: "postApisupplierTypes",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: CreateSupplierTypeRequest,
+      },
+    ],
+    response: SupplierTypeResponse,
+  },
+  {
+    method: "get",
+    path: "/api/supplier-types/:id",
+    alias: "getApisupplierTypesId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: SupplierTypeResponse,
+  },
+  {
+    method: "put",
+    path: "/api/supplier-types/:id",
+    alias: "putApisupplierTypesId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateSupplierTypeRequest,
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: SupplierTypeResponse,
+  },
+  {
+    method: "delete",
+    path: "/api/supplier-types/:id",
+    alias: "deleteApisupplierTypesId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
     path: "/api/system-settings",
     alias: "getApisystemSettings",
     requestFormat: "json",
@@ -14154,6 +14771,11 @@ const endpoints = makeApi([
         name: "vendorType",
         type: "Query",
         schema: z.string().optional(),
+      },
+      {
+        name: "supplierTypeId",
+        type: "Query",
+        schema: z.number().int().optional(),
       },
       {
         name: "sortColumn",

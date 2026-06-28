@@ -91,6 +91,9 @@ const ProductTemplates = lazy(
 const MaterialSpecPage = lazy(
   () => import("@/pages/materials/MaterialSpecPage")
 );
+const MaterialHierarchyPage = lazy(
+  () => import("@/pages/admin-settings/MaterialHierarchyPage")
+);
 
 // Stock Management
 const StockSummary = lazy(() => import("@/pages/stock/StockSummary"));
@@ -1169,6 +1172,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
                 <AdminSettingsPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: lastSegment(ROUTE_PATHS.ADMIN.MATERIAL_HIERARCHY), // "material-hierarchy"
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <MaterialHierarchyPage />
               </Suspense>
             ),
           },

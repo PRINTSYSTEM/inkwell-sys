@@ -69,6 +69,8 @@ export const ConstantsResponseSchema = z
     dieUsageTypes: ConstantGroupSchema.optional(),
     dieStatuses: ConstantGroupSchema.optional(),
     dieLocations: ConstantGroupSchema.optional(),
+    materialUnits: ConstantGroupSchema.optional(),
+    productionMethods: ConstantGroupSchema.optional(),
   })
   .passthrough();
 

@@ -24,17 +24,22 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { useCreateVendor } from "@/hooks/use-vendor";
+import { useSupplierTypes } from "@/hooks/use-supplier-type";
 import type { CreateVendorRequest } from "@/Schema/vendor.schema";
-import { vendorTypeLabels } from "@/lib/status-utils";
 import { toast } from "sonner";
+
+
+
 
 export default function VendorCreatePage() {
   const navigate = useNavigate();
   const { mutate: createVendor, isPending, isSuccess } = useCreateVendor();
+  const { data: supplierTypesResp, isLoading: isLoadingTypes } = useSupplierTypes({ page: 1, size: 1000 });
 
-  const [formData, setFormData] = useState<CreateVendorRequest>({
+  const [formData, setFormData] = useState<CreateVendorRequest & { supplierTypeId?: number }>({
     name: "",
     vendorType: "",
+    supplierTypeId: undefined,
     phone: "",
     email: "",
     address: "",
@@ -42,15 +47,17 @@ export default function VendorCreatePage() {
   });
 
   const [errors, setErrors] = useState<
-    Partial<Record<keyof CreateVendorRequest, string>>
+    Partial<Record<keyof CreateVendorRequest | "supplierTypeId", string>>
   >({});
 
-  const validateField = (field: keyof CreateVendorRequest, value: string) => {
+  const supplierTypes = supplierTypesResp?.items || [];
+
+  const validateField = (field: keyof CreateVendorRequest | "supplierTypeId", value: any) => {
     const newErrors = { ...errors };
 
     switch (field) {
       case "name":
-        if (!value.trim()) {
+        if (!value || !value.trim()) {
           newErrors.name = "Tên nhà cung cấp là bắt buộc";
         } else if (value.length > 255) {
           newErrors.name = "Tên nhà cung cấp không được vượt quá 255 ký tự";
@@ -58,11 +65,11 @@ export default function VendorCreatePage() {
           delete newErrors.name;
         }
         break;
-      case "vendorType":
+      case "supplierTypeId":
         if (!value) {
-          newErrors.vendorType = "Loại nhà cung cấp là bắt buộc";
+          newErrors.supplierTypeId = "Loại nhà cung cấp là bắt buộc";
         } else {
-          delete newErrors.vendorType;
+          delete newErrors.supplierTypeId;
         }
         break;
       case "phone":
@@ -89,22 +96,22 @@ export default function VendorCreatePage() {
   };
 
   const handleInputChange = (
-    field: keyof CreateVendorRequest,
-    value: string
+    field: keyof CreateVendorRequest | "supplierTypeId",
+    value: any
   ) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
-    if (errors[field]) {
+    if (errors[field as keyof typeof errors]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
-        delete newErrors[field];
+        delete newErrors[field as keyof typeof errors];
         return newErrors;
       });
     }
   };
 
-  const handleBlur = (field: keyof CreateVendorRequest) => {
-    validateField(field, formData[field] as string);
+  const handleBlur = (field: keyof CreateVendorRequest | "supplierTypeId") => {
+    validateField(field, formData[field as keyof typeof formData]);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -112,7 +119,7 @@ export default function VendorCreatePage() {
 
     // Validate all fields
     validateField("name", formData.name || "");
-    validateField("vendorType", formData.vendorType || "");
+    validateField("supplierTypeId", formData.supplierTypeId);
 
     if (formData.phone) {
       validateField("phone", formData.phone);
@@ -123,17 +130,20 @@ export default function VendorCreatePage() {
 
     // Check if there are any errors
     const hasErrors = Object.keys(errors).length > 0;
-    if (hasErrors || !formData.name?.trim() || !formData.vendorType) {
+    if (hasErrors || !formData.name?.trim() || !formData.supplierTypeId) {
       toast.error("Vui lòng điền đầy đủ thông tin bắt buộc", {
         description: "Kiểm tra lại các trường được đánh dấu *",
       });
       return;
     }
 
+    const selectedType = supplierTypes.find(t => t.id === formData.supplierTypeId);
+
     // Prepare payload - convert empty strings to undefined for optional fields
     const payload: CreateVendorRequest = {
       name: formData.name.trim(),
-      vendorType: formData.vendorType,
+      vendorType: selectedType?.code || "",
+      supplierTypeId: formData.supplierTypeId,
       phone: formData.phone?.trim() || undefined,
       email: formData.email?.trim() || undefined,
       address: formData.address?.trim() || undefined,
@@ -218,36 +228,36 @@ export default function VendorCreatePage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="vendorType">
+                <Label htmlFor="supplierTypeId">
                   Loại nhà cung cấp <span className="text-red-500">*</span>
                 </Label>
                 <Select
-                  value={formData.vendorType || undefined}
+                  value={formData.supplierTypeId?.toString() || undefined}
                   onValueChange={(value) => {
-                    handleInputChange("vendorType", value);
-                    validateField("vendorType", value);
+                    const idNum = Number(value);
+                    handleInputChange("supplierTypeId", idNum);
+                    validateField("supplierTypeId", idNum);
                   }}
+                  disabled={isLoadingTypes}
                 >
                   <SelectTrigger
-                    id="vendorType"
-                    className={errors.vendorType ? "border-red-500" : ""}
+                    id="supplierTypeId"
+                    className={errors.supplierTypeId ? "border-red-500" : ""}
                   >
-                    <SelectValue placeholder="Chọn loại nhà cung cấp" />
+                    <SelectValue placeholder={isLoadingTypes ? "Đang tải loại NCC..." : "Chọn loại nhà cung cấp"} />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(vendorTypeLabels)
-                      .filter(([key]) => key !== "paper" && key !== "ink")
-                      .map(([key, label]) => (
-                        <SelectItem key={key} value={key}>
-                          {label}
-                        </SelectItem>
-                      ))}
+                    {supplierTypes.map((type) => (
+                      <SelectItem key={type.id} value={type.id.toString()}>
+                        {type.description || type.name || type.code}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-                {errors.vendorType && (
+                {errors.supplierTypeId && (
                   <p className="text-sm text-red-500 flex items-center gap-1">
                     <AlertCircle className="h-4 w-4" />
-                    {errors.vendorType}
+                    {errors.supplierTypeId}
                   </p>
                 )}
               </div>

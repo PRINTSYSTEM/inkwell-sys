@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+// src/pages/stock/components/CreateMaterialDialog.tsx
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -17,14 +18,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-import { useCreateMaterial } from "@/hooks/use-material";
-import { useMaterialTypeList } from "@/hooks/use-material-type";
-import { useActiveVendors } from "@/hooks/use-vendor";
-import { Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { Loader2, Plus } from "lucide-react";
 import type { MaterialResponse } from "@/Schema/material.schema";
+
+// Import hooks
+import { useCreateMaterial } from "@/hooks/use-material";
+import { useMaterialFamilies } from "@/hooks/use-material-family";
+import { useMaterialTypeList } from "@/hooks/use-material-type";
+import { useSpecTemplates } from "@/hooks/use-spec-template";
+import { useSpecValues } from "@/hooks/use-spec-value";
+import { useActiveVendors } from "@/hooks/use-vendor";
+import { useSupplierCatalogs } from "@/hooks/use-supplier-catalog";
 
 interface CreateMaterialDialogProps {
   open: boolean;
@@ -50,365 +55,406 @@ export function CreateMaterialDialog({
   dimensionUnit = "mm",
   submitButtonClassName,
 }: CreateMaterialDialogProps) {
-  const { data: materialTypesData } = useMaterialTypeList({ page: 1, size: 1000 });
-  const materialTypes = materialTypesData?.items || [];
-
-  // Fetch active vendors
+  // Master hooks
   const { data: vendorsData, isLoading: isLoadingVendors } = useActiveVendors();
-
+  const { data: familiesResp } = useMaterialFamilies({ page: 1, size: 1000 });
+  const { data: templatesResp } = useMaterialTypeList({ pageSize: 1000 });
   const { mutate: createMaterial, isPending } = useCreateMaterial();
 
-  const [formData, setFormData] = useState<{
-    name: string;
-    materialTypeId: number;
-    type: "cuon" | "to" | "";
-    vendorId: number | undefined;
-    length: number;
-    width: number | undefined;
-    height: number | undefined;
-    unit: string;
-    unitPrice: number | undefined;
-    quantity: number | undefined;
-  }>({
-    name: "",
-    materialTypeId: defaultMaterialTypeId || 0,
-    type: "",
-    vendorId: undefined,
-    length: 0,
-    width: undefined,
-    height: undefined,
-    unit: "",
-    unitPrice: undefined,
-    quantity: undefined,
-  });
+  const [selectedVendorId, setSelectedVendorId] = useState<number | undefined>(undefined);
+  const [selectedFamilyId, setSelectedFamilyId] = useState<number | null>(null);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
+
+  // Load catalogs for selected vendor
+  const { data: catalogsData } = useSupplierCatalogs(
+    selectedVendorId ? { vendorId: selectedVendorId } : undefined
+  );
+  const catalogs = catalogsData || [];
+
+  // Specs
+  const { data: specTemplates } = useSpecTemplates(
+    selectedFamilyId ? { familyId: selectedFamilyId } : undefined
+  );
+  const { data: specValues } = useSpecValues();
+
+  // Form states
+  const [specSelections, setSpecSelections] = useState<Record<string, string>>({});
+  const [width, setWidth] = useState<number>(0);
+  const [length, setLength] = useState<number>(0);
+  const [unit, setUnit] = useState<string>("");
+  const [unitPrice, setUnitPrice] = useState<number>(0);
+
+  const families = familiesResp?.items || [];
+  const templates = templatesResp?.items || [];
+  const vendors = vendorsData || [];
 
   // Reset form when dialog opens
   useEffect(() => {
     if (open) {
-      setFormData({
-        name: "",
-        materialTypeId: defaultMaterialTypeId || materialTypes[0]?.id || 0,
-        type: "",
-        vendorId: undefined,
-        length: 0,
-        width: undefined,
-        height: undefined,
-        unit: "",
-        unitPrice: undefined,
-        quantity: undefined,
-      });
+      setSelectedVendorId(undefined);
+      setSelectedFamilyId(null);
+      setSelectedTemplateId(null);
+      setSpecSelections({});
+      setWidth(0);
+      setLength(0);
+      setUnit("");
+      setUnitPrice(0);
     }
   }, [open]);
 
-  // Sync materialTypeId if materialTypes load or defaultMaterialTypeId changes
+  // Set default vendor and reset template when vendor changes
   useEffect(() => {
-    if (open && materialTypes.length > 0 && !formData.materialTypeId) {
-      setFormData((prev) => ({
-        ...prev,
-        materialTypeId: defaultMaterialTypeId || materialTypes[0]?.id || 0,
-      }));
+    if (open && vendors.length > 0 && selectedVendorId === undefined) {
+      setSelectedVendorId(vendors[0].id);
     }
-  }, [open, materialTypes, defaultMaterialTypeId]);
+  }, [open, vendors, selectedVendorId]);
 
-  // Helper to parse dimensions from material name
-  const parseDimensionsFromName = (name: string): { length?: number; width?: number | null } => {
-    if (!name) return {};
+  useEffect(() => {
+    setSelectedTemplateId(null);
+    setSpecSelections({});
+  }, [selectedVendorId]);
 
-    // Pattern 1: "Màng PE 64x53" -> length = 64, width = 53
-    const crossMatch = name.match(/(\d+(?:\.\d+)?)\s*[xX]\s*(\d+(?:\.\d+)?)/);
-    if (crossMatch) {
-      return {
-        length: parseFloat(crossMatch[1]),
-        width: parseFloat(crossMatch[2]),
-      };
+  // Set selectedFamilyId automatically when selectedTemplateId changes
+  useEffect(() => {
+    if (selectedTemplateId) {
+      const template = templates.find((t) => t.id === selectedTemplateId);
+      if (template?.materialFamilyId) {
+        setSelectedFamilyId(template.materialFamilyId);
+      }
+    } else {
+      setSelectedFamilyId(null);
+    }
+  }, [selectedTemplateId, templates]);
+
+  // Default unit when selectedFamilyId changes
+  useEffect(() => {
+    if (selectedFamilyId) {
+      const family = families.find((f) => f.id === selectedFamilyId);
+      if (family?.allowedUnits && family.allowedUnits.length > 0) {
+        setUnit(family.allowedUnits[0] || "");
+      }
+    } else {
+      setUnit("");
+    }
+  }, [selectedFamilyId, families]);
+
+  // Filter templates: only show those linked to the selected Vendor in the catalogs
+  const filteredTemplates = useMemo(() => {
+    if (!selectedVendorId || !catalogs.length) return [];
+    return templates.filter((t: any) =>
+      catalogs.some((c) => c.materialTypeId === t.id)
+    );
+  }, [templates, selectedVendorId, catalogs]);
+
+  // Select first template automatically
+  useEffect(() => {
+    if (filteredTemplates.length > 0 && selectedTemplateId === null) {
+      setSelectedTemplateId(filteredTemplates[0].id);
+    }
+  }, [filteredTemplates, selectedTemplateId]);
+
+  const currentVendor = useMemo(() => {
+    return vendors.find((v) => v.id === selectedVendorId) || null;
+  }, [selectedVendorId, vendors]);
+
+  const currentTemplate = useMemo(() => {
+    return templates.find((t) => t.id === selectedTemplateId) || null;
+  }, [selectedTemplateId, templates]);
+
+  const currentFamilyObj = useMemo(() => {
+    return families.find((f) => f.id === selectedFamilyId) || null;
+  }, [selectedFamilyId, families]);
+
+  // Preview generated SKU Name
+  const previewSkuName = useMemo(() => {
+    if (!currentVendor || !currentTemplate) return "Xem trước...";
+
+    // Get GSM if selected
+    const gsmSpec = specTemplates?.find(t => t.key?.toLowerCase() === "gsm");
+    const gsmVal = gsmSpec ? (specSelections[gsmSpec.id.toString()] || "...") : "";
+
+    let sizeStr = "";
+    if (width > 0 && length > 0) {
+      sizeStr = `${width}x${length}`;
+    } else if (width > 0) {
+      sizeStr = `${width}cm`;
+    } else {
+      sizeStr = "Kích thước";
     }
 
-    // Pattern 2: "Cuộn PE khổ 64" -> length = 64, width = null
-    const widthMatch = name.match(/(?:khổ|kho)\s*:?\s*(\d+(?:\.\d+)?)/i);
-    if (widthMatch) {
-      return {
-        length: parseFloat(widthMatch[1]),
-        width: null,
-      };
-    }
+    const gsmStr = gsmVal ? ` - ${gsmVal}gsm` : "";
+    return `${currentVendor.name} - ${currentTemplate.name}${gsmStr} - ${sizeStr}`;
+  }, [currentVendor, currentTemplate, specTemplates, specSelections, width, length]);
 
-    return {};
+  const getValuesForSpecTemplate = (templateId: number) => {
+    if (!specValues) return [];
+    const values = specValues.filter((v: any) => v.specTemplateId === templateId);
+
+    // Find catalog entry for selected vendor and selected template
+    const currentCatalog = catalogs.find((c) => c.materialTypeId === selectedTemplateId);
+    if (!selectedVendorId || !selectedTemplateId || !currentCatalog) return values;
+
+    // Filter values by allowedSpecValueIds
+    if (currentCatalog.allowedSpecValueIds && currentCatalog.allowedSpecValueIds.length > 0) {
+      return values.filter((v) => currentCatalog.allowedSpecValueIds.includes(v.id));
+    }
+    return values;
   };
 
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const name = e.target.value;
-    const parsed = parseDimensionsFromName(name);
-    
-    // Automatically guess type based on name to delight the user
-    let guessedType: "cuon" | "to" | "" = "";
-    const lowerName = name.toLowerCase();
-    if (lowerName.includes("cuộn") || lowerName.includes("cuon")) {
-      guessedType = "cuon";
-    } else if (lowerName.includes("tờ") || lowerName.includes("to")) {
-      guessedType = "to";
-    }
-
-    setFormData((prev) => {
-      const updated = { ...prev, name };
-      if (parsed.length !== undefined) {
-        updated.length = parsed.length;
-      }
-      if (parsed.width !== undefined) {
-        updated.width = parsed.width === null ? undefined : parsed.width;
-      }
-      if (guessedType) {
-        updated.type = guessedType;
-        updated.unit = guessedType === "cuon" ? "m dài" : "m^2";
-      }
-      return updated;
-    });
-  };
+  const allowedUnitsOptions = useMemo(() => {
+    if (!selectedFamilyId) return [];
+    const family = families.find((f) => f.id === selectedFamilyId);
+    if (!family?.allowedUnits) return [];
+    return family.allowedUnits;
+  }, [selectedFamilyId, families]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name.trim()) {
-      toast.error("Vui lòng nhập tên chất liệu!");
+    if (!selectedVendorId) {
+      toast.error("Vui lòng chọn nhà cung cấp!");
       return;
     }
 
-    if (!formData.type) {
-      toast.error("Vui lòng chọn thể loại vật tư (Cuộn hoặc Tờ)!");
+    if (!selectedFamilyId) {
+      toast.error("Vui lòng chọn nhóm vật tư!");
       return;
     }
 
-    const finalMaterialTypeId = formData.materialTypeId || defaultMaterialTypeId || materialTypes[0]?.id || 1;
+    if (!selectedTemplateId) {
+      toast.error("Vui lòng chọn định mức chất liệu!");
+      return;
+    }
+
+    // Check if required specs are filled
+    const missingRequiredSpec = specTemplates?.find(
+      (t) => t.isRequired && !specSelections[t.id.toString()]
+    );
+    if (missingRequiredSpec) {
+      toast.error(`Vui lòng chọn thông số bắt buộc: ${missingRequiredSpec.name}`);
+      return;
+    }
+
+    // Validate that selected spec values are allowed in the catalog
+    const currentCatalog = catalogs.find((c) => c.materialTypeId === selectedTemplateId);
+    if (currentCatalog && currentCatalog.allowedSpecValueIds && currentCatalog.allowedSpecValueIds.length > 0) {
+      const invalidSpec = specTemplates?.find((t) => {
+        const selectedVal = specSelections[t.id.toString()];
+        if (!selectedVal) return false;
+
+        const specValObj = specValues?.find(v => v.specTemplateId === t.id && v.value === selectedVal);
+        if (!specValObj) return false;
+
+        return !currentCatalog.allowedSpecValueIds.includes(specValObj.id);
+      });
+
+      if (invalidSpec) {
+        toast.error(`Thuộc tính đã chọn không hợp lệ hoặc không được phân phối bởi NCC này: ${invalidSpec.name}`);
+        return;
+      }
+    }
+
+    const specDict: Record<string, string> = {};
+    if (specTemplates) {
+      specTemplates.forEach((t) => {
+        const val = specSelections[t.id.toString()];
+        if (val) {
+          specDict[t.key] = val;
+        }
+      });
+    }
+
+    const isRollType = currentFamilyObj?.code?.includes("roll") || currentFamilyObj?.code?.includes("cuon");
 
     createMaterial(
       {
-        name: formData.name.trim(),
-        type: formData.type as "cuon" | "to",
-        length: formData.length,
-        width: formData.width,
-        unit: formData.unit.trim() || undefined,
-        unitPrice: formData.unitPrice || 0,
-        vendorId: formData.vendorId || undefined,
+        name: previewSkuName,
+        type: isRollType ? "cuon" : "to",
+        length: isRollType ? 0 : length,
+        width: width || 0,
+        unit: unit || allowedUnitsOptions[0] || (isRollType ? "m" : "tờ"),
+        unitPrice: unitPrice || 0,
+        basisWeight: specDict["gsm"] ? Number(specDict["gsm"]) : undefined,
+        materialFamilyId: selectedFamilyId,
+        materialTypeId: selectedTemplateId,
+        specValues: JSON.stringify(specDict),
+        vendorId: selectedVendorId,
       },
       {
         onSuccess: (newMaterial) => {
           toast.success("Tạo chất liệu mới thành công!");
           onOpenChange(false);
           if (newMaterial.id) {
-            onSuccess?.(newMaterial.id, newMaterial, formData.unit, formData.unitPrice);
+            onSuccess?.(newMaterial.id, newMaterial, newMaterial.unit || undefined, newMaterial.unitPrice || undefined);
           }
-          // Reset form
-          setFormData({
-            name: "",
-            materialTypeId: defaultMaterialTypeId || materialTypes[0]?.id || 0,
-            type: "",
-            vendorId: undefined,
-            length: 0,
-            width: undefined,
-            height: undefined,
-            unit: "",
-            unitPrice: undefined,
-            quantity: undefined,
-          });
         },
-        onError: (err) => {
+        onError: (err: any) => {
           const errMsg = err.response?.data?.message || err.message || "Không thể tạo vật tư mới.";
           toast.error(`Lỗi: ${errMsg}`);
-        }
+        },
       }
     );
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Tạo chất liệu mới</DialogTitle>
-          <DialogDescription>
-            Tạo chất liệu mới để sử dụng trong hệ thống
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4 py-2">
-          {/* Tên chất liệu */}
-          <div className="space-y-1.5">
-            <Label htmlFor="name">
-              Tên chất liệu <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={handleNameChange}
-              className="bg-slate-50/50 font-medium focus-visible:ring-[#93631F]"
-              placeholder="Nhập tên chất liệu (ví dụ: Decal cuộn 65x40)"
-            />
-          </div>
+      <DialogContent className="max-w-md rounded-xl border-slate-200">
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-slate-800 flex items-center gap-2">
+              <Plus className="h-5 w-5 text-indigo-600" />
+              Tạo vật tư mới
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Điền thông tin phân tầng để tạo SKU vật tư mới vào hệ thống.
+            </DialogDescription>
+          </DialogHeader>
 
-          {/* Thể loại (Cuộn/Tờ) & Nhà cung cấp */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-3.5 text-xs max-h-[380px] overflow-y-auto px-1">
+            {/* Chọn Nhà cung cấp */}
             <div className="space-y-1.5">
-              <Label htmlFor="type">
-                Thể loại vật tư <span className="text-red-500">*</span>
-              </Label>
-              <Select
-                value={formData.type}
-                onValueChange={(val: "cuon" | "to") =>
-                  setFormData({
-                    ...formData,
-                    type: val,
-                    unit: val === "cuon" ? "m dài" : "m^2",
-                  })
-                }
-              >
-                <SelectTrigger id="type" className="bg-slate-50/50 cursor-pointer">
-                  <SelectValue placeholder="Chọn thể loại" />
+              <Label className="font-semibold text-slate-700">Chọn Nhà cung cấp</Label>
+              <Select value={selectedVendorId?.toString() || ""} onValueChange={(val) => setSelectedVendorId(Number(val))}>
+                <SelectTrigger className="h-10 text-xs">
+                  <SelectValue placeholder="Chọn nhà cung cấp..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="cuon">Dạng cuộn (cuon)</SelectItem>
-                  <SelectItem value="to">Dạng tờ (to)</SelectItem>
+                  {vendors.map((v: any) => (
+                    <SelectItem key={v.id} value={v.id.toString()}>{v.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
+            {/* Chọn Chất liệu */}
             <div className="space-y-1.5">
-              <Label htmlFor="vendorId">Nhà cung cấp</Label>
-              <Select
-                value={formData.vendorId ? String(formData.vendorId) : "none"}
-                onValueChange={(val) =>
-                  setFormData({
-                    ...formData,
-                    vendorId: val === "none" ? undefined : Number(val),
-                  })
-                }
-              >
-                <SelectTrigger id="vendorId" className="bg-slate-50/50 cursor-pointer">
-                  <SelectValue placeholder="Chọn nhà cung cấp" />
+              <Label className="font-semibold text-slate-700">Chọn Định mức chất liệu (Template)</Label>
+              <Select value={selectedTemplateId?.toString() || ""} onValueChange={(val) => setSelectedTemplateId(Number(val))}>
+                <SelectTrigger className="h-10 text-xs" disabled={filteredTemplates.length === 0}>
+                  <SelectValue placeholder={filteredTemplates.length === 0 ? "Chưa cấu hình chất liệu" : "Chọn định mức chất liệu..."} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Không gán (Trống)</SelectItem>
-                  {isLoadingVendors ? (
-                    <div className="flex items-center justify-center p-2">
-                      <Loader2 className="h-4 w-4 animate-spin text-[#93631F]" />
-                    </div>
-                  ) : (
-                    vendorsData?.map((vendor) => (
-                      <SelectItem key={vendor.id} value={String(vendor.id)}>
-                        {vendor.name || vendor.code}
-                      </SelectItem>
-                    ))
-                  )}
+                  {filteredTemplates.map((t: any) => (
+                    <SelectItem key={t.id} value={t.id.toString()}>{t.name} ({t.code})</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Dynamic Spec values */}
+            {specTemplates && specTemplates.length > 0 && (
+              <div className="space-y-3 border border-slate-100 rounded-lg p-3 bg-slate-50/50">
+                <span className="font-semibold text-indigo-700 text-xs block mb-1">Thông số kỹ thuật</span>
+                <div className="grid grid-cols-2 gap-3">
+                  {specTemplates.map((t) => {
+                    const values = getValuesForSpecTemplate(t.id);
+                    return (
+                      <div key={t.id} className="space-y-1.5">
+                        <Label className="text-slate-600 font-medium">
+                          {t.name} {t.isRequired && <span className="text-red-500">*</span>}
+                        </Label>
+                        <Select
+                          value={specSelections[t.id.toString()] || ""}
+                          onValueChange={(val) =>
+                            setSpecSelections((prev) => ({ ...prev, [t.id.toString()]: val }))
+                          }
+                        >
+                          <SelectTrigger className="h-9 text-xs bg-white">
+                            <SelectValue placeholder={`Chọn ${t.name}...`} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {values.map((v: any) => (
+                              <SelectItem key={v.id} value={v.value}>{v.value}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Kích thước */}
+            <div className="space-y-1.5">
+              <Label className="font-semibold text-slate-700">Kích thước khổ vật tư</Label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Input
+                    type="number"
+                    placeholder="Chiều rộng"
+                    value={width || ""}
+                    onChange={(e) => setWidth(parseFloat(e.target.value) || 0)}
+                    className="h-10 text-xs font-mono text-center"
+                  />
+                  <span className="text-[10px] text-slate-400 block text-center mt-0.5">Chiều rộng (cm/mm)</span>
+                </div>
+                <div className="space-y-1">
+                  <Input
+                    type="number"
+                    placeholder="Chiều dài"
+                    disabled={currentFamilyObj?.code?.includes("roll") || currentFamilyObj?.code?.includes("cuon")}
+                    value={currentFamilyObj?.code?.includes("roll") || currentFamilyObj?.code?.includes("cuon") ? 0 : (length || "")}
+                    onChange={(e) => setLength(parseFloat(e.target.value) || 0)}
+                    className="h-10 text-xs font-mono text-center"
+                  />
+                  <span className="text-[10px] text-slate-400 block text-center mt-0.5">Chiều dài (Tờ)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Preview generated SKU */}
+            <div className="space-y-1.5 select-none">
+              <Label className="font-semibold text-slate-700">Tên SKU sinh ra (Xem trước)</Label>
+              <div className="p-3 bg-indigo-50/50 border border-indigo-100 text-indigo-900 rounded-lg font-bold text-xs truncate">
+                {previewSkuName}
+              </div>
+            </div>
+
+            {/* Giá & Đơn vị tính */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="font-semibold text-slate-700">Đơn vị tính</Label>
+                <Select value={unit} onValueChange={setUnit}>
+                  <SelectTrigger className="h-10 text-xs">
+                    <SelectValue placeholder="Chọn đơn vị..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allowedUnitsOptions.map((opt) => (
+                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="font-semibold text-slate-700">Đơn giá nhập (đ)</Label>
+                <Input
+                  type="number"
+                  placeholder="Nhập giá..."
+                  value={unitPrice || ""}
+                  onChange={(e) => setUnitPrice(parseFloat(e.target.value) || 0)}
+                  className="h-10 text-xs font-mono"
+                />
+              </div>
+            </div>
           </div>
 
-          {/* Kích thước */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="length">
-                Chiều dài ({dimensionUnit}) <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="length"
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.length || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, length: parseFloat(e.target.value) || 0 })
-                }
-                placeholder="0"
-                className="focus-visible:ring-[#93631F]"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="width">Chiều rộng ({dimensionUnit})</Label>
-              <Input
-                id="width"
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.width ?? ""}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    width: e.target.value === "" ? undefined : parseFloat(e.target.value) || 0,
-                  })
-                }
-                placeholder="0 (tùy chọn)"
-                className="focus-visible:ring-[#93631F]"
-              />
-            </div>
-          </div>
-
-          {/* Đơn giá & Đơn vị tính */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="unitPrice">Đơn giá (VND) <span className="text-red-500">*</span></Label>
-              <Input
-                id="unitPrice"
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.unitPrice ?? ""}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    unitPrice: e.target.value === "" ? undefined : parseFloat(e.target.value) || undefined,
-                  })
-                }
-                placeholder="0"
-                className="focus-visible:ring-[#93631F]"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="unit">Đơn vị tính (ĐVT)</Label>
-              <Input
-                id="unit"
-                value={formData.unit}
-                disabled
-                placeholder="ĐVT tự động gán theo thể loại"
-                className="bg-slate-100 font-semibold cursor-not-allowed text-slate-700"
-              />
-            </div>
-          </div>
-
-          {/* Số lượng tồn kho (nếu bật) */}
-          {showQuantity && (
-            <div className="space-y-1.5">
-              <Label htmlFor="quantity">Số lượng tồn kho có sẵn</Label>
-              <Input
-                id="quantity"
-                type="number"
-                min="0"
-                step="1"
-                value={formData.quantity ?? ""}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    quantity: e.target.value === "" ? undefined : parseInt(e.target.value, 10) ?? undefined,
-                  })
-                }
-                placeholder="0 (tùy chọn)"
-                className="focus-visible:ring-[#93631F]"
-              />
-            </div>
-          )}
-
-          <DialogFooter className="pt-4 gap-2">
+          <DialogFooter className="pt-2 border-t border-slate-100 gap-2 sm:gap-0">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={isPending}
+              className="rounded-md text-xs h-10 cursor-pointer"
             >
               Hủy
             </Button>
             <Button
               type="submit"
               disabled={isPending}
-              className={cn("cursor-pointer transition-colors duration-200 bg-[#93631F] hover:bg-[#7a521a] text-white border-none", submitButtonClassName)}
+              className="rounded-md text-xs h-10 bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer border-none"
             >
-              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isPending ? "Đang tạo..." : "Tạo chất liệu"}
+              {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Tạo vật tư
             </Button>
           </DialogFooter>
         </form>

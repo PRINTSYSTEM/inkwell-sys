@@ -140,6 +140,19 @@ export const API_SUFFIX = {
   MATERIAL_SPECS_BY_VENDOR: (vendorId: number) =>
     `/material-specs/by-vendor/${vendorId}`,
 
+  // ========== MATERIAL 8-LAYER MANAGEMENT SYSTEM ==========
+  SUPPLIER_TYPES: "/supplier-types",
+  SUPPLIER_TYPE_BY_ID: (id: number) => `/supplier-types/${id}`,
+  MATERIAL_FAMILIES: "/material-families",
+  MATERIAL_FAMILY_BY_ID: (id: number) => `/material-families/${id}`,
+  SPEC_TEMPLATES: "/spec-templates",
+  SPEC_TEMPLATE_BY_ID: (id: number) => `/spec-templates/${id}`,
+  SPEC_VALUES: "/spec-values",
+  SPEC_VALUE_BY_ID: (id: number) => `/spec-values/${id}`,
+  SUPPLIER_CATALOGS: "/supplier-catalogs",
+  SUPPLIER_CATALOG_BY_ID: (id: number) => `/supplier-catalogs/${id}`,
+
+
   // ========== DESIGNS ==========
   DESIGNS: "/designs",
   DESIGN_BY_ID: (id: number) => `/designs/${id}`,
