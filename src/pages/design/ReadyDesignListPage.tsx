@@ -207,13 +207,13 @@ export default function ReadyDesignListPage() {
     queryKey: ["materials", selectedTypeId],
     queryFn: async () => {
       if (selectedTypeId) {
-        const res = await apiRequest.get(API_SUFFIX.MATERIAL_TYPES_BY_DESIGN_TYPE(selectedTypeId));
+        const res = await apiRequest.get(API_SUFFIX.MATERIAL_TYPES_BY_DESIGN_TYPE(selectedTypeId), { params: { status: "active" } });
         const payload = res.data;
         if (Array.isArray(payload)) return payload;
         if (payload?.items && Array.isArray(payload.items)) return payload.items;
         return [];
       }
-      const res = await apiRequest.get(API_SUFFIX.MATERIAL_TYPES, { params: { pageNumber: 1, pageSize: 100 } });
+      const res = await apiRequest.get(API_SUFFIX.MATERIAL_TYPES, { params: { pageNumber: 1, pageSize: 100, status: "active" } });
       const payload = res.data;
       if (Array.isArray(payload)) return payload;
       if (payload?.items && Array.isArray(payload.items)) return payload.items;

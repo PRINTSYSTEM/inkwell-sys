@@ -355,6 +355,20 @@ export default function DesignDetailPage() {
         ?.id as number | undefined)
     );
 
+  // Filter active materials or the currently selected material of this design (even if inactive)
+  const filteredDropdownMaterials = useMemo(() => {
+    const currentMaterialId =
+      (design?.materialTypeId as number | undefined) ||
+      ((design?.materialType as unknown as { id?: number })?.id as
+        | number
+        | undefined);
+
+    return (materialsByDesignType || []).filter(
+      (mt) => mt.status === "active" || mt.id === currentMaterialId
+    );
+  }, [materialsByDesignType, design]);
+
+
   // ==== ORDER BY DESIGN ====
   const { data: orderDetails } = useQuery<OrderDetailResponse[]>({
     queryKey: ["order-details", "by-design", designId],
@@ -1299,7 +1313,7 @@ export default function DesignDetailPage() {
                               />
                             </SelectTrigger>
                             <SelectContent>
-                              {materialsByDesignType.map((mt) => (
+                              {filteredDropdownMaterials.map((mt) => (
                                 <SelectItem key={mt.id} value={String(mt.id)}>
                                   {mt.name}
                                 </SelectItem>
