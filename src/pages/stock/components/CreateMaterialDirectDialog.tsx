@@ -90,6 +90,7 @@ export function CreateMaterialDirectDialog({
     box: "hộp",
     pack: "gói",
     piece: "cái",
+    m2: "M2",
   }), []);
 
   const translateUnit = (unitStr: string): string => {
@@ -273,9 +274,10 @@ export function CreateMaterialDirectDialog({
   }, [selectedFamilyId, families]);
 
   const unitsOptions = useMemo(() => {
+    const defaultUnits = ["sheet", "roll", "kg", "m", "box", "pack", "piece", "m2"];
     const rawOptions = allowedUnitsOptions && allowedUnitsOptions.length > 0
-      ? allowedUnitsOptions
-      : ["sheet", "roll", "kg", "m", "box", "pack", "piece"];
+      ? [...allowedUnitsOptions, ...defaultUnits]
+      : defaultUnits;
     const mapped = rawOptions.map(opt => translateUnit(opt));
     return Array.from(new Set(mapped));
   }, [allowedUnitsOptions]);

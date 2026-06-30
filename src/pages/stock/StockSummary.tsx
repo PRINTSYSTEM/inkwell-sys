@@ -39,7 +39,8 @@ import {
   Scissors,
   Boxes,
   Download,
-  Eye
+  Eye,
+  Layers
 } from "lucide-react";
 import { useMaterials } from "@/hooks/use-material";
 import { useActiveVendors } from "@/hooks/use-vendor";
@@ -49,6 +50,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { toast } from "sonner";
 import { CreateMaterialDirectDialog } from "./components/CreateMaterialDirectDialog";
 import { StockOutByVendorDialog } from "./components/StockOutByVendorDialog";
+import { PendingExportsDialog } from "./components/PendingExportsDialog";
 import { downloadBlob } from "@/lib/download-utils";
 import { apiRequest } from "@/lib/http";
 import { API_SUFFIX } from "@/apis";
@@ -142,6 +144,10 @@ export default function StockSummary() {
 
   // Stock Out Dialog States
   const [isStockOutOpen, setIsStockOutOpen] = useState(false);
+
+  // Pending Production Exports Dialog States
+  const [isPendingExportsOpen, setIsPendingExportsOpen] = useState(false);
+  const [prefillStockOutItems, setPrefillStockOutItems] = useState<any[] | undefined>(undefined);
 
   // Vendor Reconciliation Excel Export States
   const [isExportingReconciliation, setIsExportingReconciliation] = useState(false);
@@ -279,6 +285,15 @@ export default function StockSummary() {
               >
                 <Minus className="h-3.5 w-3.5 mr-1.5 text-rose-600" />
                 Xuất kho NCC
+              </Button>
+              <Button 
+                onClick={() => setIsPendingExportsOpen(true)}
+                variant="outline"
+                size="sm"
+                className="cursor-pointer border-rose-200 text-xs h-9 rounded-lg hover:bg-rose-50 text-rose-700 font-semibold"
+              >
+                <Layers className="h-3.5 w-3.5 mr-1.5 text-rose-500" />
+                Bài chưa xuất kho
               </Button>
               <Button 
                 onClick={handleRefreshAll}
@@ -756,10 +771,36 @@ export default function StockSummary() {
       {/* Dialog Xuất kho NCC */}
       <StockOutByVendorDialog
         open={isStockOutOpen}
-        onOpenChange={setIsStockOutOpen}
+        onOpenChange={(val) => {
+          setIsStockOutOpen(val);
+          if (!val) {
+            setPrefillStockOutItems(undefined);
+          }
+        }}
         selectedVendorId={selectedVendorId !== "all" ? Number(selectedVendorId) : null}
         vendors={vendorsData || []}
         refetch={refetch}
+        prefillItems={prefillStockOutItems}
+      />
+
+      {/* Dialog Bài chưa xuất kho */}
+      <PendingExportsDialog
+        open={isPendingExportsOpen}
+        onOpenChange={setIsPendingExportsOpen}
+        vendors={vendorsData || []}
+        onInitiateStockOut={(vendorId, jobCode, quantity, paperName) => {
+          const prefill = {
+            materialId: null,
+            jobCode,
+            quantity,
+            notes: `Xuất sản xuất cho bài ${jobCode}`,
+            prefillPaperName: paperName,
+          };
+          setPrefillStockOutItems([prefill]);
+          setSelectedVendorId(String(vendorId));
+          setIsPendingExportsOpen(false);
+          setIsStockOutOpen(true);
+        }}
       />
 
 
