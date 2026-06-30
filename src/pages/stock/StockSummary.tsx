@@ -71,6 +71,14 @@ export default function StockSummary() {
   // Fetch Vendors (All active suppliers)
   const { data: vendorsData, isLoading: isLoadingVendors } = useActiveVendors();
 
+  const filteredVendors = useMemo(() => {
+    if (!vendorsData) return [];
+    return vendorsData.filter((v) => {
+      const type = v.vendorType?.toUpperCase();
+      return type !== "PLATE" && type !== "DIE" && type !== "PRINTING";
+    });
+  }, [vendorsData]);
+
   // Fetch ALL materials for the selected query (up to 1000 items)
   const { 
     data: materialsData, 
@@ -348,7 +356,7 @@ export default function StockSummary() {
                         <Loader2 className="h-4 w-4 animate-spin text-primary" />
                       </div>
                     ) : (
-                      vendorsData?.map((vendor) => (
+                      filteredVendors?.map((vendor) => (
                         <SelectItem key={vendor.id} value={String(vendor.id)}>
                           {vendor.name || vendor.code}
                         </SelectItem>
@@ -425,7 +433,7 @@ export default function StockSummary() {
                       <TableHeader>
                         <TableRow className="bg-slate-50/50 whitespace-nowrap text-xs border-b border-slate-200/60">
                           <TableHead className="w-[50px] font-bold py-2.5 pl-4">ID</TableHead>
-                          <TableHead className="min-w-[120px] font-bold py-2.5">Khổ cuộn</TableHead>
+                          <TableHead className="min-w-[120px] font-bold py-2.5">Tên vật tư / Quy cách</TableHead>
                           <TableHead className="w-[80px] text-right font-bold py-2.5 pr-4">Tồn kho</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -521,7 +529,7 @@ export default function StockSummary() {
                       <TableHeader>
                         <TableRow className="bg-slate-50/50 whitespace-nowrap text-xs border-b border-slate-200/60">
                           <TableHead className="w-[50px] font-bold py-2.5 pl-4">ID</TableHead>
-                          <TableHead className="min-w-[120px] font-bold py-2.5">Khổ tờ</TableHead>
+                          <TableHead className="min-w-[120px] font-bold py-2.5">Tên vật tư / Quy cách</TableHead>
                           <TableHead className="w-[80px] text-right font-bold py-2.5 pr-4">Tồn kho</TableHead>
                         </TableRow>
                       </TableHeader>

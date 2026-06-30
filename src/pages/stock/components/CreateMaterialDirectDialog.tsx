@@ -165,6 +165,12 @@ export function CreateMaterialDirectDialog({
     return families.find((f) => f.id === selectedFamilyId) || null;
   }, [selectedFamilyId, families]);
 
+  const isGroup3 = useMemo(() => {
+    if (!currentFamilyObj?.code) return false;
+    const codeUpper = currentFamilyObj.code.toUpperCase();
+    return ["INK", "GLUE", "SOLVENT", "ACCESSORY"].includes(codeUpper);
+  }, [currentFamilyObj]);
+
   // Reset form when dialog opens
   useEffect(() => {
     if (open) {
@@ -327,20 +333,22 @@ export function CreateMaterialDirectDialog({
       }
     }
 
-    if (width <= 0) {
-      toast.error("Vui lòng nhập chiều rộng!");
-      return;
-    }
-
     const isRollType =
       currentFamilyObj?.code?.includes("roll") ||
       currentFamilyObj?.code?.includes("cuon") ||
       currentTemplate?.name?.toLowerCase().includes("cuộn") ||
       currentTemplate?.code?.toLowerCase().includes("cuon");
 
-    if (!isRollType && length <= 0) {
-      toast.error("Vui lòng nhập chiều dài!");
-      return;
+    if (!isGroup3) {
+      if (width <= 0) {
+        toast.error("Vui lòng nhập chiều rộng!");
+        return;
+      }
+
+      if (!isRollType && length <= 0) {
+        toast.error("Vui lòng nhập chiều dài!");
+        return;
+      }
     }
 
     if (quantity < 0) {
@@ -372,8 +380,8 @@ export function CreateMaterialDirectDialog({
       const payload = {
         name: name.trim(),
         type: isRollType ? "cuon" : "to",
-        length: isRollType ? 0 : length,
-        width: width || 0,
+        length: (isGroup3 || isRollType) ? 0 : length,
+        width: isGroup3 ? 0 : (width || 0),
         unit: unit || unitsOptions[0] || (isRollType ? "m" : "tờ"),
         unitPrice: unitPrice || 0,
         basisWeight: basisWeight,
@@ -566,32 +574,34 @@ export function CreateMaterialDirectDialog({
             )}
 
             {/* Kích thước (Tầng 8) */}
-            <div className="space-y-1.5">
-              <Label className="font-semibold text-slate-700">Kích thước khổ vật tư</Label>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Input
-                    type="number"
-                    placeholder="Chiều rộng"
-                    value={width || ""}
-                    onChange={(e) => setWidth(parseFloat(e.target.value) || 0)}
-                    className="h-10 text-xs font-mono text-center"
-                  />
-                  <span className="text-[10px] text-slate-400 block text-center mt-0.5">Chiều rộng (cm/mm)</span>
-                </div>
-                <div className="space-y-1">
-                  <Input
-                    type="number"
-                    placeholder="Chiều dài"
-                    disabled={currentFamilyObj?.code?.includes("roll") || currentFamilyObj?.code?.includes("cuon")}
-                    value={currentFamilyObj?.code?.includes("roll") || currentFamilyObj?.code?.includes("cuon") ? 0 : (length || "")}
-                    onChange={(e) => setLength(parseFloat(e.target.value) || 0)}
-                    className="h-10 text-xs font-mono text-center"
-                  />
-                  <span className="text-[10px] text-slate-400 block text-center mt-0.5">Chiều dài (cm/mm)</span>
+            {!isGroup3 && (
+              <div className="space-y-1.5 animate-in fade-in duration-200">
+                <Label className="font-semibold text-slate-700">Kích thước khổ vật tư</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Input
+                      type="number"
+                      placeholder="Chiều rộng"
+                      value={width || ""}
+                      onChange={(e) => setWidth(parseFloat(e.target.value) || 0)}
+                      className="h-10 text-xs font-mono text-center"
+                    />
+                    <span className="text-[10px] text-slate-400 block text-center mt-0.5">Chiều rộng (cm/mm)</span>
+                  </div>
+                  <div className="space-y-1">
+                    <Input
+                      type="number"
+                      placeholder="Chiều dài"
+                      disabled={currentFamilyObj?.code?.includes("roll") || currentFamilyObj?.code?.includes("cuon")}
+                      value={currentFamilyObj?.code?.includes("roll") || currentFamilyObj?.code?.includes("cuon") ? 0 : (length || "")}
+                      onChange={(e) => setLength(parseFloat(e.target.value) || 0)}
+                      className="h-10 text-xs font-mono text-center"
+                    />
+                    <span className="text-[10px] text-slate-400 block text-center mt-0.5">Chiều dài (cm/mm)</span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Giá & Đơn vị tính */}
             <div className="grid grid-cols-2 gap-3">
