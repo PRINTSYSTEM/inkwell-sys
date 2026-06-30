@@ -64,6 +64,7 @@ import {
 import { useCreateStockInFromVendor } from "@/hooks/use-stock";
 import type { StockInItemRequest } from "@/Schema/stock.schema";
 import { useVendors, useCreateVendor } from "@/hooks/use-vendor";
+import { useSupplierTypes } from "@/hooks/use-supplier-type";
 import { useMaterials } from "@/hooks/use-material";
 import { useMaterialTypeList } from "@/hooks/use-material-type";
 import { toast } from "sonner";
@@ -198,6 +199,8 @@ export default function StockInCreatePage() {
       v.vendorType !== "plate" &&
       v.vendorType !== "printing"
   );
+  const { data: supplierTypesResp } = useSupplierTypes({ page: 1, size: 1000 });
+  const supplierTypes = supplierTypesResp?.items || [];
   const { mutate: createVendor, isPending: isCreatingVendor } =
     useCreateVendor();
   const { data: materialsData } = useMaterials({ page: 1, size: 1000 });
@@ -1159,10 +1162,14 @@ export default function StockInCreatePage() {
                   toast.error("Vui lòng chọn loại nhà cung cấp trước");
                   return;
                 }
+                const materialSupplierType = supplierTypes.find(
+                  (t) => t.code?.toUpperCase() === "MATERIAL"
+                );
                 createVendor(
                   {
                     name: newVendorData.name.trim(),
-                    vendorType: newVendorData.vendorType,
+                    vendorType: materialSupplierType?.code || "MATERIAL",
+                    supplierTypeId: materialSupplierType?.id,
                     phone: newVendorData.phone?.trim() || undefined,
                     email: newVendorData.email?.trim() || undefined,
                     address: newVendorData.address?.trim() || undefined,

@@ -157,6 +157,27 @@ export function DetailOrderInfoCard({
     return warnings;
   }, [order?.basisWeight, order?.proofingOrderDesigns]);
 
+  const hasGrammage = useMemo(() => {
+    const familyName = order.materialType?.materialFamilyName?.toLowerCase() || "";
+    const typeName = order.materialType?.name?.toLowerCase() || "";
+    const typeCode = order.materialType?.code?.toLowerCase() || "";
+
+    return (
+      familyName.includes("giấy") ||
+      familyName.includes("giay") ||
+      familyName.includes("paper") ||
+      typeName.includes("giấy") ||
+      typeName.includes("giay") ||
+      typeName.includes("paper") ||
+      typeName.includes("ivory") ||
+      typeName.includes("bristol") ||
+      typeName.includes("couche") ||
+      typeName.includes("duplex") ||
+      typeName.includes("kraft") ||
+      typeCode.includes("paper")
+    );
+  }, [order.materialType]);
+
   return (
     <Card className="relative h-full flex flex-col">
       <CardHeader className="pb-1.5 px-4 flex flex-row items-center justify-between space-y-0 gap-2">
@@ -441,57 +462,59 @@ export function DetailOrderInfoCard({
               </div>
             </div>
 
-            <div
-              className="flex items-center justify-between group cursor-pointer"
-              onClick={() =>
-                order.status !== "completed" &&
-                editingField !== "all" &&
-                isProofer &&
-                handleStartEditField("basisWeight")
-              }
-            >
-              <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">
-                Định lượng (GSM)
-              </Label>
-              <div className="flex items-center gap-1">
-                {(editingField === "basisWeight" || editingField === "all") ? (
-                  <div className="flex gap-1 items-center">
-                    <Input
-                      type="number"
-                      min="1"
-                      value={inlineBasisWeight}
-                      onChange={(e) => setInlineBasisWeight(e.target.value)}
-                      className="h-6 text-xs font-bold px-2 w-24"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleSaveField();
-                        else if (e.key === "Escape") handleCancelEditField();
-                      }}
-                      autoFocus={editingField === "basisWeight"}
-                    />
-                    {editingField !== "all" && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-5 px-1.5 text-[10px] text-green-600"
-                        onClick={handleSaveField}
-                        disabled={isUpdatingInfo}
-                      >
-                        Lưu
-                      </Button>
-                    )}
-                  </div>
-                ) : (
-                  <>
-                    <p className="font-bold text-[12px]">
-                      {order.basisWeight ? `${order.basisWeight} gsm` : "Chưa nhập"}
-                    </p>
-                    {order.status !== "completed" && isProofer && (
-                      <Edit className="h-2.5 w-2.5 text-muted-foreground opacity-0 group-hover:opacity-100" />
-                    )}
-                  </>
-                )}
+            {hasGrammage && (
+              <div
+                className="flex items-center justify-between group cursor-pointer"
+                onClick={() =>
+                  order.status !== "completed" &&
+                  editingField !== "all" &&
+                  isProofer &&
+                  handleStartEditField("basisWeight")
+                }
+              >
+                <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">
+                  Định lượng (GSM)
+                </Label>
+                <div className="flex items-center gap-1">
+                  {(editingField === "basisWeight" || editingField === "all") ? (
+                    <div className="flex gap-1 items-center">
+                      <Input
+                        type="number"
+                        min="1"
+                        value={inlineBasisWeight}
+                        onChange={(e) => setInlineBasisWeight(e.target.value)}
+                        className="h-6 text-xs font-bold px-2 w-24"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSaveField();
+                          else if (e.key === "Escape") handleCancelEditField();
+                        }}
+                        autoFocus={editingField === "basisWeight"}
+                      />
+                      {editingField !== "all" && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-5 px-1.5 text-[10px] text-green-600"
+                          onClick={handleSaveField}
+                          disabled={isUpdatingInfo}
+                        >
+                          Lưu
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <p className="font-bold text-[12px]">
+                        {order.basisWeight ? `${order.basisWeight} gsm` : "Chưa nhập"}
+                      </p>
+                      {order.status !== "completed" && isProofer && (
+                        <Edit className="h-2.5 w-2.5 text-muted-foreground opacity-0 group-hover:opacity-100" />
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             {((order.materialType?.name?.toLowerCase().includes("cuộn") ||
               order.materialType?.name?.toLowerCase().includes("cuon") ||

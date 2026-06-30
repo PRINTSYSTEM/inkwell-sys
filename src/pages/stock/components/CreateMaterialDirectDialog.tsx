@@ -77,7 +77,42 @@ export function CreateMaterialDirectDialog({
   // Fetch all spec values
   const { data: specValues } = useSpecValues();
 
+  // Translation map for units of measure
+  const unitTranslation: Record<string, string> = useMemo(() => ({
+    sheet: "tờ",
+    ram: "ram",
+    roll: "cuộn",
+    kg: "kg",
+    kilogram: "kg",
+    meter: "m",
+    metre: "m",
+    m: "m",
+    box: "hộp",
+    pack: "gói",
+    piece: "cái",
+  }), []);
+
+  const translateUnit = (unitStr: string): string => {
+    if (!unitStr) return "";
+    const lower = unitStr.toLowerCase().trim();
+    return unitTranslation[lower] || unitStr;
+  };
+
+  // Helper functions to check width and length specification templates
+  const isWidthSpec = (nameStr: string, keyStr: string) => {
+    const n = nameStr.toLowerCase();
+    const k = keyStr.toLowerCase();
+    return n.includes("rộng") || n.includes("rong") || n.includes("width") || k.includes("rong") || k.includes("width");
+  };
+
+  const isLengthSpec = (nameStr: string, keyStr: string) => {
+    const n = nameStr.toLowerCase();
+    const k = keyStr.toLowerCase();
+    return n.includes("cao") || n.includes("height") || n.includes("dài") || n.includes("dai") || n.includes("length") || k.includes("cao") || k.includes("height") || k.includes("dai") || k.includes("length");
+  };
+
   // Form states
+  const [name, setName] = useState<string>("");
   const [specSelections, setSpecSelections] = useState<Record<string, string>>({});
   const [width, setWidth] = useState<number>(0);
   const [length, setLength] = useState<number>(0);
@@ -120,9 +155,20 @@ export function CreateMaterialDirectDialog({
   const families = familiesResp?.items || [];
   const templates = templatesResp?.items || [];
 
+  // Find selected material template
+  const currentTemplate = useMemo(() => {
+    return templates.find((t) => t.id === selectedTemplateId) || null;
+  }, [selectedTemplateId, templates]);
+
+  // Find selected family object
+  const currentFamilyObj = useMemo(() => {
+    return families.find((f) => f.id === selectedFamilyId) || null;
+  }, [selectedFamilyId, families]);
+
   // Reset form when dialog opens
   useEffect(() => {
     if (open) {
+      setName("");
       setSelectedFamilyId(null);
       setSelectedTemplateId(null);
       setSpecSelections({});
@@ -135,6 +181,13 @@ export function CreateMaterialDirectDialog({
       setBasisWeight(undefined);
     }
   }, [open]);
+
+  // Pre-fill name based on current template selection
+  useEffect(() => {
+    if (open && currentTemplate) {
+      setName(currentTemplate.name || "");
+    }
+  }, [open, currentTemplate]);
 
   // Set selectedFamilyId automatically when selectedTemplateId changes
   useEffect(() => {
@@ -153,7 +206,7 @@ export function CreateMaterialDirectDialog({
     if (selectedFamilyId) {
       const family = families.find((f) => f.id === selectedFamilyId);
       if (family?.allowedUnits && family.allowedUnits.length > 0) {
-        setUnit(family.allowedUnits[0] || "");
+        setUnit(translateUnit(family.allowedUnits[0] || ""));
         return;
       }
     }
@@ -193,19 +246,14 @@ export function CreateMaterialDirectDialog({
   }, [selectedFamilyId, families]);
 
   const unitsOptions = useMemo(() => {
-    if (allowedUnitsOptions && allowedUnitsOptions.length > 0) return allowedUnitsOptions;
-    return ["tờ", "cuộn", "kg", "m", "hộp", "thùng", "cái"];
+    const rawOptions = allowedUnitsOptions && allowedUnitsOptions.length > 0
+      ? allowedUnitsOptions
+      : ["sheet", "roll", "kg", "m", "box", "pack", "piece"];
+    const mapped = rawOptions.map(opt => translateUnit(opt));
+    return Array.from(new Set(mapped));
   }, [allowedUnitsOptions]);
 
-  // Find selected material template
-  const currentTemplate = useMemo(() => {
-    return templates.find((t) => t.id === selectedTemplateId) || null;
-  }, [selectedTemplateId, templates]);
 
-  // Find selected family object
-  const currentFamilyObj = useMemo(() => {
-    return families.find((f) => f.id === selectedFamilyId) || null;
-  }, [selectedFamilyId, families]);
 
   // Spec Value list for each spec template
   const getValuesForSpecTemplate = (templateId: number) => {
@@ -223,31 +271,21 @@ export function CreateMaterialDirectDialog({
     return values;
   };
 
-  // Preview generated SKU Name
-  const previewSkuName = useMemo(() => {
-    if (!selectedVendor || !currentTemplate) return "APP - Couche - 150gsm - 79x109 (Xem trước)";
-    
-    // Get GSM if selected
-    const gsmVal = hasSpecs ? (basisWeight?.toString() || "") : "";
-    
-    let sizeStr = "";
-    if (width > 0 && length > 0) {
-      sizeStr = `${width}x${length}`;
-    } else if (width > 0) {
-      sizeStr = `${width}cm`;
-    } else {
-      sizeStr = "Kích thước";
-    }
-
-    const gsmStr = gsmVal ? ` - ${gsmVal}gsm` : "";
-    return `${selectedVendor.name} - ${currentTemplate.name}${gsmStr} - ${sizeStr}`;
-  }, [selectedVendor, currentTemplate, hasSpecs, basisWeight, width, length]);
+  // Filter dynamic spec templates: exclude width and length templates from the dropdowns list
+  const visibleSpecTemplates = useMemo(() => {
+    return specTemplates?.filter((t) => !isWidthSpec(t.name, t.key) && !isLengthSpec(t.name, t.key)) || [];
+  }, [specTemplates]);
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (selectedVendorId === "all" || !selectedVendor) {
       toast.error("Vui lòng chọn một Nhà cung cấp ở bộ lọc trước khi nhập vật tư mới!");
+      return;
+    }
+
+    if (!name.trim()) {
+      toast.error("Vui lòng nhập tên vật tư!");
       return;
     }
 
@@ -262,7 +300,7 @@ export function CreateMaterialDirectDialog({
     }
 
     // Check if required specs are filled
-    const missingRequiredSpec = specTemplates?.find(
+    const missingRequiredSpec = visibleSpecTemplates.find(
       (t) => t.isRequired && !specSelections[t.id.toString()]
     );
     if (missingRequiredSpec) {
@@ -273,7 +311,7 @@ export function CreateMaterialDirectDialog({
     // Validate that selected spec values are allowed in the catalog
     const currentCatalog = catalogs.find((c) => c.materialTypeId === selectedTemplateId);
     if (currentCatalog && currentCatalog.allowedSpecValueIds && currentCatalog.allowedSpecValueIds.length > 0) {
-      const invalidSpec = specTemplates?.find((t) => {
+      const invalidSpec = visibleSpecTemplates.find((t) => {
         const selectedVal = specSelections[t.id.toString()];
         if (!selectedVal) return false;
 
@@ -289,6 +327,22 @@ export function CreateMaterialDirectDialog({
       }
     }
 
+    if (width <= 0) {
+      toast.error("Vui lòng nhập chiều rộng!");
+      return;
+    }
+
+    const isRollType =
+      currentFamilyObj?.code?.includes("roll") ||
+      currentFamilyObj?.code?.includes("cuon") ||
+      currentTemplate?.name?.toLowerCase().includes("cuộn") ||
+      currentTemplate?.code?.toLowerCase().includes("cuon");
+
+    if (!isRollType && length <= 0) {
+      toast.error("Vui lòng nhập chiều dài!");
+      return;
+    }
+
     if (quantity < 0) {
       toast.error("Số lượng ban đầu không được âm!");
       return;
@@ -298,31 +352,31 @@ export function CreateMaterialDirectDialog({
     const specDict: Record<string, string> = {};
     if (specTemplates) {
       specTemplates.forEach((t) => {
-        const val = specSelections[t.id.toString()];
-        if (val) {
-          specDict[t.key] = val;
+        if (isWidthSpec(t.name, t.key)) {
+          specDict[t.key] = width.toString();
+        } else if (isLengthSpec(t.name, t.key)) {
+          specDict[t.key] = length.toString();
+        } else {
+          const val = specSelections[t.id.toString()];
+          if (val) {
+            specDict[t.key] = val;
+          }
         }
       });
     }
-    if (hasSpecs && basisWeight) {
+    if (basisWeight) {
       specDict["gsm"] = basisWeight.toString();
     }
 
-    const isRollType =
-      currentFamilyObj?.code?.includes("roll") ||
-      currentFamilyObj?.code?.includes("cuon") ||
-      currentTemplate?.name?.toLowerCase().includes("cuộn") ||
-      currentTemplate?.code?.toLowerCase().includes("cuon");
-
     try {
       const payload = {
-        name: previewSkuName, // Optional: backend will auto-generate if null, but sending preview name for visibility
+        name: name.trim(),
         type: isRollType ? "cuon" : "to",
         length: isRollType ? 0 : length,
         width: width || 0,
         unit: unit || unitsOptions[0] || (isRollType ? "m" : "tờ"),
         unitPrice: unitPrice || 0,
-        basisWeight: hasSpecs ? basisWeight : undefined,
+        basisWeight: basisWeight,
         materialFamilyId: selectedFamilyId,
         materialTypeId: selectedTemplateId,
         specValues: JSON.stringify(specDict),
@@ -402,7 +456,7 @@ export function CreateMaterialDirectDialog({
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-indigo-700 flex items-center gap-2">
               <Plus className="h-5 w-5 text-indigo-600" />
-              Tạo vật tư SKU phân tầng (8 Lớp)
+              Tạo vật tư nhà cung cấp
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
               Nhà cung cấp: <strong className="text-indigo-700">{selectedVendor?.name}</strong>
@@ -410,9 +464,9 @@ export function CreateMaterialDirectDialog({
           </DialogHeader>
 
           <div className="space-y-3.5 text-xs max-h-[380px] overflow-y-auto px-1">
-            {/* 1. Chọn Định mức chất liệu (T4) */}
+            {/* Chọn loại chất liệu */}
             <div className="space-y-1.5">
-              <Label className="font-semibold text-slate-700">1. Chọn Định mức chất liệu (Template)</Label>
+              <Label className="font-semibold text-slate-700">Chọn loại chất liệu</Label>
               <Select value={selectedTemplateId?.toString() || ""} onValueChange={(val) => setSelectedTemplateId(Number(val))}>
                 <SelectTrigger className="h-10 text-xs" disabled={filteredTemplates.length === 0}>
                   <SelectValue placeholder={filteredTemplates.length === 0 ? "Nhà cung cấp chưa có chất liệu liên kết nào" : "Chọn định mức chất liệu..."} />
@@ -425,10 +479,23 @@ export function CreateMaterialDirectDialog({
               </Select>
             </div>
 
+            {/* Tên vật tư (SKU) */}
+            <div className="space-y-1.5">
+              <Label className="font-semibold text-slate-700">Tên vật tư (SKU) <span className="text-red-500">*</span></Label>
+              <Input
+                type="text"
+                placeholder="Nhập tên vật tư..."
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="h-10 text-xs font-bold text-slate-900 dark:text-slate-100"
+                required
+              />
+            </div>
+
             {/* Định lượng (GSM) */}
             {selectedTemplateId && hasSpecs && (
               <div className="space-y-1.5 animate-in fade-in duration-200">
-                <Label className="font-semibold text-slate-700">2. Định lượng (GSM) <span className="text-red-500">*</span></Label>
+                <Label className="font-semibold text-slate-700">Định lượng (GSM) <span className="text-red-500">*</span></Label>
                 <Select
                   value={basisWeight ? basisWeight.toString() : ""}
                   onValueChange={(v) => setBasisWeight(Number(v))}
@@ -458,12 +525,12 @@ export function CreateMaterialDirectDialog({
               </div>
             )}
 
-            {/* 2. Điền các thuộc tính động (T5/T6) */}
-            {specTemplates && specTemplates.length > 0 && (
-              <div className="space-y-3 border border-slate-100 rounded-lg p-3 bg-slate-50/50">
-                <span className="font-semibold text-indigo-700 text-xs block mb-1">2. Thông số kỹ thuật của nhóm</span>
+            {/* Điền các thuộc tính động (T5/T6) */}
+            {visibleSpecTemplates && visibleSpecTemplates.length > 0 && (
+              <div className="space-y-3 border border-slate-100 rounded-lg p-3 bg-slate-50/50 animate-in fade-in duration-200">
+                <span className="font-semibold text-indigo-700 text-xs block mb-1">Thông số kỹ thuật của nhóm</span>
                 <div className="grid grid-cols-2 gap-3">
-                  {specTemplates.map((t) => {
+                  {visibleSpecTemplates.map((t) => {
                     const values = getValuesForSpecTemplate(t.id);
                     return (
                       <div key={t.id} className="space-y-1.5">
@@ -472,9 +539,15 @@ export function CreateMaterialDirectDialog({
                         </Label>
                         <Select
                           value={specSelections[t.id.toString()] || ""}
-                          onValueChange={(val) =>
-                            setSpecSelections((prev) => ({ ...prev, [t.id.toString()]: val }))
-                          }
+                          onValueChange={(val) => {
+                            setSpecSelections((prev) => ({ ...prev, [t.id.toString()]: val }));
+                            if (t.key.toLowerCase().includes("gsm") || t.name.toLowerCase().includes("định lượng") || t.name.toLowerCase().includes("dinh luong")) {
+                              const numericVal = parseFloat(val);
+                              if (!isNaN(numericVal)) {
+                                setBasisWeight(numericVal);
+                              }
+                            }
+                          }}
                         >
                           <SelectTrigger className="h-9 text-xs bg-white">
                             <SelectValue placeholder={`Chọn ${t.name}...`} />
@@ -492,9 +565,9 @@ export function CreateMaterialDirectDialog({
               </div>
             )}
 
-            {/* 4. Kích thước (Tầng 8) */}
+            {/* Kích thước (Tầng 8) */}
             <div className="space-y-1.5">
-              <Label className="font-semibold text-slate-700">4. Kích thước khổ vật tư</Label>
+              <Label className="font-semibold text-slate-700">Kích thước khổ vật tư</Label>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Input
@@ -515,16 +588,8 @@ export function CreateMaterialDirectDialog({
                     onChange={(e) => setLength(parseFloat(e.target.value) || 0)}
                     className="h-10 text-xs font-mono text-center"
                   />
-                  <span className="text-[10px] text-slate-400 block text-center mt-0.5">Chiều dài (Tờ)</span>
+                  <span className="text-[10px] text-slate-400 block text-center mt-0.5">Chiều dài (cm/mm)</span>
                 </div>
-              </div>
-            </div>
-
-            {/* Preview SKU Name */}
-            <div className="space-y-1.5 select-none">
-              <Label className="font-semibold text-slate-700">Tên SKU sinh tự động (Xem trước)</Label>
-              <div className="p-3 bg-indigo-50/50 border border-indigo-100 text-indigo-900 rounded-lg font-bold text-xs truncate">
-                {previewSkuName}
               </div>
             </div>
 

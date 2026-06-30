@@ -52,6 +52,7 @@ import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import { useRecordDieExportWithFile } from "@/hooks/use-proofing-order";
 import { useActiveDieVendors, useCreateVendor } from "@/hooks/use-vendor";
+import { useSupplierTypes } from "@/hooks/use-supplier-type";
 import {
   useCreateDie,
   useSearchDies,
@@ -149,6 +150,8 @@ export function DieExportDialog({
 
   const queryClient = useQueryClient();
   const { data: vendors, isLoading: loadingVendors } = useActiveDieVendors();
+  const { data: supplierTypesResp } = useSupplierTypes({ page: 1, size: 1000 });
+  const supplierTypes = supplierTypesResp?.items || [];
   const { mutateAsync: createVendor, isPending: creatingVendor } = useCreateVendor();
   const { mutate: recordDie, isPending: recordingDie } =
     useRecordDieExportWithFile();
@@ -489,6 +492,10 @@ export function DieExportDialog({
       return;
     }
 
+    const dieSupplierType = supplierTypes.find(
+      (t) => t.code?.toUpperCase() === "DIE"
+    );
+
     createVendor(
       {
         name: vendorName.trim(),
@@ -496,7 +503,8 @@ export function DieExportDialog({
         email: vendorEmail.trim() || null,
         address: vendorAddress.trim() || null,
         note: vendorNote.trim() || null,
-        vendorType: "die",
+        vendorType: dieSupplierType?.code || "DIE",
+        supplierTypeId: dieSupplierType?.id,
       },
       {
         onSuccess: (newVendor) => {

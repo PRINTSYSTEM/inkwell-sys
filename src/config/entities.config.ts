@@ -378,7 +378,7 @@ export const ENTITY_CONFIG = {
     description: "Hình thức sản xuất",
     values: {
       in_house: "In tại xưởng",
-      outsource: "Thuê in ngoài",
+      outsource: "",
     },
   },
 };

@@ -66,7 +66,7 @@ export function DetailPlateExportCard({
                 Chưa có thông tin xuất kẽm
               </p>
               <p className="text-[11px] text-muted-foreground/60">
-                Ghi nhận thông tin để tiếp tục 
+                Ghi nhận thông tin để tiếp tục
               </p>
             </div>
             {order.status !== "completed" && isProofer && (
@@ -179,7 +179,7 @@ export function DetailPlateExportCard({
                           <span className="font-semibold">
                             {exportItem?.productionMethod === "outsource" ? (
                               <span className={isLatest ? "text-orange-600 dark:text-orange-400" : "text-orange-600/80"}>
-                                {exportItem?.printingVendorName || exportItem?.printingVendor?.name || exportItem?.productionMethodName || "In ngoài"}
+                                {exportItem?.printingVendorName || exportItem?.printingVendor?.name || exportItem?.productionMethodName || "In gia công ngoài"}
                               </span>
                             ) : (
                               <span className={isLatest ? "text-blue-600 dark:text-blue-400" : "text-blue-600/80"}>
@@ -209,11 +209,11 @@ export function DetailPlateExportCard({
                           )}>
                             {exportItem?.createdAt || exportItem?.exportedAt
                               ? format(
-                                  new Date(
-                                    exportItem.createdAt || exportItem.exportedAt,
-                                  ),
-                                  "dd/MM/yyyy HH:mm",
-                                )
+                                new Date(
+                                  exportItem.createdAt || exportItem.exportedAt,
+                                ),
+                                "dd/MM/yyyy HH:mm",
+                              )
                               : "—"}
                           </span>
                         </div>
@@ -305,9 +305,9 @@ export function DetailPlateExportCard({
                 <p className="text-[11px] text-green-700/70 font-medium italic">
                   {order.handedToProductionAt
                     ? format(
-                        new Date(order.handedToProductionAt),
-                        "HH:mm dd/MM/yyyy",
-                      )
+                      new Date(order.handedToProductionAt),
+                      "HH:mm dd/MM/yyyy",
+                    )
                     : ""}
                 </p>
               </div>
