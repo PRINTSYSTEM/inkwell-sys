@@ -2,7 +2,6 @@ import { useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import APUnifiedPage from "./APUnifiedPage";
-import APAgingPage from "./APAgingPage";
 import APItemsPage from "./APItemsPage";
 import APDetailPage from "./APDetailPage";
 
@@ -46,10 +45,9 @@ export default function APPage() {
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={handleTabChange}>
           {activeTab !== "detail" && (
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="debt">Tổng hợp công nợ</TabsTrigger>
               <TabsTrigger value="items">Bảng kê chi phí</TabsTrigger>
-              <TabsTrigger value="aging">Phân tích tuổi nợ</TabsTrigger>
             </TabsList>
           )}
 
@@ -59,10 +57,6 @@ export default function APPage() {
 
           <TabsContent value="items" className="mt-6">
             <APItemsPage />
-          </TabsContent>
-
-          <TabsContent value="aging" className="mt-6">
-            <APAgingPage />
           </TabsContent>
 
           <TabsContent value="detail" className="mt-6">

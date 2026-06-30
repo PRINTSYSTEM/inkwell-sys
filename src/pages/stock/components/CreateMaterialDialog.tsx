@@ -92,6 +92,27 @@ export function CreateMaterialDialog({
     !!selectedTemplateId
   );
 
+  const filteredMaterialSpecs = useMemo(() => {
+    if (!materialSpecs || materialSpecs.length === 0) return [];
+    
+    // Find catalog entry for selected vendor and selected template
+    const currentCatalog = catalogs.find((c) => c.materialTypeId === selectedTemplateId);
+    if (!selectedVendorId || !selectedTemplateId || !currentCatalog) return materialSpecs;
+    
+    // Filter by allowedSpecValueIds
+    if (currentCatalog.allowedSpecValueIds && currentCatalog.allowedSpecValueIds.length > 0 && specValues) {
+      const allowedValues = specValues
+        .filter((v: any) => currentCatalog.allowedSpecValueIds.includes(v.id))
+        .map((v: any) => parseInt(v.value, 10))
+        .filter((v: any) => !isNaN(v));
+        
+      if (allowedValues.length > 0) {
+        return materialSpecs.filter((spec) => allowedValues.includes(spec.basisWeight ?? 0));
+      }
+    }
+    return materialSpecs;
+  }, [materialSpecs, catalogs, selectedVendorId, selectedTemplateId, specValues]);
+
   const hasSpecs = useMemo(() => {
     if (!materialSpecs || materialSpecs.length === 0) return false;
     if (materialSpecs.length === 1 && (materialSpecs[0].basisWeight === 0 || !materialSpecs[0].basisWeight)) {
@@ -232,26 +253,7 @@ export function CreateMaterialDialog({
     );
   }, [currentTemplate, currentFamilyObj, unit]);
 
-  const filteredMaterialSpecs = useMemo(() => {
-    if (!materialSpecs || materialSpecs.length === 0) return [];
-    
-    // Find catalog entry for selected vendor and selected template
-    const currentCatalog = catalogs.find((c) => c.materialTypeId === selectedTemplateId);
-    if (!selectedVendorId || !selectedTemplateId || !currentCatalog) return materialSpecs;
-    
-    // Filter by allowedSpecValueIds
-    if (currentCatalog.allowedSpecValueIds && currentCatalog.allowedSpecValueIds.length > 0 && specValues) {
-      const allowedValues = specValues
-        .filter((v: any) => currentCatalog.allowedSpecValueIds.includes(v.id))
-        .map((v: any) => parseInt(v.value, 10))
-        .filter((v: any) => !isNaN(v));
-        
-      if (allowedValues.length > 0) {
-        return materialSpecs.filter((spec) => allowedValues.includes(spec.basisWeight ?? 0));
-      }
-    }
-    return materialSpecs;
-  }, [materialSpecs, catalogs, selectedVendorId, selectedTemplateId, specValues]);
+
 
   // Preview generated SKU Name
   const previewSkuName = useMemo(() => {

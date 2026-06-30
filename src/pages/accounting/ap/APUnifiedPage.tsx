@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -55,31 +55,15 @@ export default function APUnifiedPage() {
   const [expandedVendors, setExpandedVendors] = useState<Set<number>>(new Set());
   const [selectedOrders, setSelectedOrders] = useState<Map<number, any>>(new Map());
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<"standard" | "report">("standard");
-  const itemsPerPage = 10;
-
-  const isReport = viewMode === "report";
-
-  const {
-    data: apSummaryData,
-    isLoading: isLoadingSummary,
-    isError: isSummaryError,
-    error: summaryError,
-    refetch: refetchSummary,
-  } = useAPSummary({
-    pageNumber: currentPage,
-    pageSize: itemsPerPage,
-    fromDate: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
-    toDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
-    searchTerm: searchQuery || undefined,
-  });
+  const itemsPerPage = 1000;
+  const isReport = true;
 
   const {
     data: apReportData,
-    isLoading: isLoadingReport,
-    isError: isReportError,
-    error: reportError,
-    refetch: refetchReport,
+    isLoading,
+    isError,
+    error,
+    refetch,
   } = useAPSummaryReport({
     pageNumber: currentPage,
     pageSize: itemsPerPage,
@@ -88,11 +72,21 @@ export default function APUnifiedPage() {
     searchTerm: searchQuery || undefined,
   });
 
-  const apData = isReport ? apReportData : apSummaryData;
-  const isLoading = isReport ? isLoadingReport : isLoadingSummary;
-  const isError = isReport ? isReportError : isSummaryError;
-  const error = isReport ? reportError : summaryError;
-  const refetch = isReport ? refetchReport : refetchSummary;
+  const apData = apReportData;
+
+  const filteredAPItems = useMemo(() => {
+    if (!apData?.items) return [];
+    return apData.items.filter((item: any) => {
+      return (
+        (item.openingDebit ?? 0) !== 0 ||
+        (item.openingCredit ?? 0) !== 0 ||
+        (item.periodDebit ?? 0) !== 0 ||
+        (item.periodCredit ?? 0) !== 0 ||
+        (item.closingDebit ?? 0) !== 0 ||
+        (item.closingCredit ?? 0) !== 0
+      );
+    });
+  }, [apData?.items]);
 
   const { mutate: exportSummary, loading: isExportingSummary } = useExportAPSummary();
 
@@ -323,19 +317,7 @@ export default function APUnifiedPage() {
               onValueChange={setDateRange}
               className="w-[280px]"
             />
-            <div className="flex items-center gap-2 border px-3 h-9 rounded-md bg-background shrink-0">
-              <Switch
-                id="view-mode"
-                checked={viewMode === "report"}
-                onCheckedChange={(checked) => {
-                  setViewMode(checked ? "report" : "standard");
-                  setCurrentPage(1);
-                }}
-              />
-              <Label htmlFor="view-mode" className="text-xs font-semibold cursor-pointer select-none">
-                {viewMode === "report" ? "Sổ tổng hợp (Nợ/Có)" : "Bảng tổng hợp"}
-              </Label>
-            </div>
+            
           </div>
           <div className="flex items-center gap-2 w-full md:w-auto justify-end">
             <Button
@@ -438,7 +420,7 @@ export default function APUnifiedPage() {
                     ))}
                   </TableRow>
                 ))
-              ) : !apData?.items || apData.items.length === 0 ? (
+              ) : !filteredAPItems || filteredAPItems.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={isReport ? 10 : 9} className="h-32 text-center">
                     <div className="flex flex-col items-center justify-center text-muted-foreground">
@@ -448,7 +430,7 @@ export default function APUnifiedPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                apData.items.map((item: any) => {
+                filteredAPItems.map((item: any) => {
                   const isExpanded = item.vendorId ? expandedVendors.has(item.vendorId) : false;
                   return (
                     <>
@@ -574,10 +556,10 @@ export default function APUnifiedPage() {
         </div>
 
         {/* Pagination Container */}
-        {apData && apData.totalPages > 1 && (
+        {apData && filteredAPItems.length > 0 && (
           <div className="px-4 py-3 border-t bg-muted/5 flex items-center justify-between">
             <p className="text-xs text-muted-foreground">
-              Hiển thị {apData.items?.length || 0} / {apData.total} nhà cung cấp
+              Hiển thị {filteredAPItems.length} nhà cung cấp
             </p>
             <div className="flex items-center gap-2">
               <Button
@@ -654,11 +636,16 @@ function VendorDetailRow({
     );
   }
 
-  if (!detailData?.items || detailData.items.length === 0) {
+  const unpaidItems = useMemo(() => {
+    if (!detailData?.items) return [];
+    return detailData.items.filter((detail: any) => (detail.outstanding ?? 0) > 0);
+  }, [detailData?.items]);
+
+  if (unpaidItems.length === 0) {
     return (
       <TableRow className="bg-muted/10">
         <TableCell colSpan={colSpan} className="text-center py-4 text-xs text-muted-foreground italic">
-          Không có giao dịch chi tiết trong kỳ
+          Không có giao dịch chưa thanh toán trong kỳ
         </TableCell>
       </TableRow>
     );
@@ -666,7 +653,7 @@ function VendorDetailRow({
 
   return (
     <>
-      {detailData.items.map((detail, index) => (
+      {unpaidItems.map((detail, index) => (
         <TableRow
           key={detail.documentId || index}
           className={cn(
@@ -687,6 +674,11 @@ function VendorDetailRow({
             <div className="flex flex-col">
               <span className="font-bold text-sm text-primary/80">{detail.documentNumber || "—"}</span>
               <span className="text-[10px] text-muted-foreground uppercase">{detail.documentType || "Hóa đơn"}</span>
+              {detail.items && detail.items.length > 0 && (
+                <div className="text-[11px] text-slate-500 font-medium mt-1">
+                  Vật tư: {detail.items.map(item => `${item.name || "Vật tư"} (x${item.quantity})`).join(", ")}
+                </div>
+              )}
             </div>
           </TableCell>
           <TableCell className="text-center text-xs font-medium">

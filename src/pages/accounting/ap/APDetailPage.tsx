@@ -377,7 +377,12 @@ export default function APDetailPage() {
                           {item.documentNumber || "—"}
                         </TableCell>
                         <TableCell className="text-sm font-semibold">
-                          {translateDocType(item.documentType)}
+                          <div>{translateDocType(item.documentType)}</div>
+                          {item.items && item.items.length > 0 && (
+                            <div className="text-[11px] text-slate-500 font-normal mt-0.5">
+                              Vật tư: {item.items.map(i => `${i.name || "Vật tư"} (x${i.quantity})`).join(", ")}
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell className="text-center font-medium text-xs">
                           {item.documentDate ? formatDate(item.documentDate) : "—"}

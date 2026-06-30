@@ -833,6 +833,15 @@ const ARDetailByInvoiceResponseIPaginate = z
     items: z.array(ARDetailByInvoiceResponse).nullable(),
   })
   .partial();
+const ARDetailItemResponse = z
+  .object({
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+    quantity: z.number().int(),
+    unitPrice: z.number(),
+    totalAmount: z.number(),
+  })
+  .partial();
 const ARDetailResponse = z
   .object({
     customerId: z.number().int(),
@@ -848,6 +857,7 @@ const ARDetailResponse = z
     overdueDays: z.number().int(),
     vatRate: z.number(),
     vatAmount: z.number(),
+    items: z.array(ARDetailItemResponse).nullable(),
   })
   .partial();
 const ARDetailResponseIPaginate = z
@@ -1127,6 +1137,15 @@ const APDetailLedgerRowIPaginate = z
     items: z.array(APDetailLedgerRow).nullable(),
   })
   .partial();
+const APDetailItemResponse = z
+  .object({
+    code: z.string().nullable(),
+    name: z.string().nullable(),
+    quantity: z.number().int(),
+    unitPrice: z.number(),
+    totalAmount: z.number(),
+  })
+  .partial();
 const APDetailResponse = z
   .object({
     vendorId: z.number().int(),
@@ -1140,6 +1159,7 @@ const APDetailResponse = z
     amountPaid: z.number(),
     outstanding: z.number(),
     overdueDays: z.number().int(),
+    items: z.array(APDetailItemResponse).nullable(),
   })
   .partial();
 const APDetailResponseIPaginate = z
@@ -4228,6 +4248,7 @@ export const schemas = {
   ARDetailLedgerRowIPaginate,
   ARDetailByInvoiceResponse,
   ARDetailByInvoiceResponseIPaginate,
+  ARDetailItemResponse,
   ARDetailResponse,
   ARDetailResponseIPaginate,
   ARAgingResponse,
@@ -4256,6 +4277,7 @@ export const schemas = {
   APItemResponseIPaginate,
   APDetailLedgerRow,
   APDetailLedgerRowIPaginate,
+  APDetailItemResponse,
   APDetailResponse,
   APDetailResponseIPaginate,
   APAgingResponse,

@@ -1,4 +1,4 @@
-import { useState, Fragment } from "react";
+import { useState, useMemo, Fragment } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -53,7 +53,7 @@ export default function ARSummaryPage() {
   const [expandedCustomers, setExpandedCustomers] = useState<Set<number>>(new Set());
   const [selectedOrders, setSelectedOrders] = useState<Map<number, any>>(new Map());
   const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
-  const itemsPerPage = 10;
+  const itemsPerPage = 1000;
 
   const {
     data: arData,
@@ -68,6 +68,18 @@ export default function ARSummaryPage() {
     toDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
     searchTerm: searchQuery || undefined,
   });
+
+  const filteredARItems = useMemo(() => {
+    if (!arData?.items) return [];
+    return arData.items.filter((item: any) => {
+      return (
+        (item.openingBalance ?? 0) !== 0 ||
+        (item.increase ?? 0) !== 0 ||
+        (item.decrease ?? 0) !== 0 ||
+        (item.closingBalance ?? 0) !== 0
+      );
+    });
+  }, [arData?.items]);
 
   const { mutate: exportSummary, loading: isExporting } = useExportARSummary();
   const { mutate: exportCustomerDebt } = useExportDebtComparison();
@@ -313,7 +325,7 @@ export default function ARSummaryPage() {
                     ))}
                   </TableRow>
                 ))
-              ) : !arData?.items || arData.items.length === 0 ? (
+              ) : !filteredARItems || filteredARItems.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={9} className="h-32 text-center">
                     <div className="flex flex-col items-center justify-center text-muted-foreground">
@@ -323,7 +335,7 @@ export default function ARSummaryPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                arData.items.map((item, index) => {
+                filteredARItems.map((item, index) => {
                   const isExpanded = item.customerId ? expandedCustomers.has(item.customerId) : false;
                   return (
                     <Fragment key={item.customerId ?? index}>
@@ -432,10 +444,10 @@ export default function ARSummaryPage() {
         </div>
 
         {/* Pagination Container */}
-        {arData && arData.totalPages > 1 && (
+        {arData && filteredARItems.length > 0 && (
           <div className="px-4 py-3 border-t bg-muted/5 flex items-center justify-between">
             <p className="text-xs text-muted-foreground">
-              Hiển thị {arData.items?.length || 0} / {arData.total} khách hàng
+              Hiển thị {filteredARItems.length} khách hàng
             </p>
             <div className="flex items-center gap-2">
               <Button
@@ -508,11 +520,16 @@ function CustomerDetailRow({
     );
   }
 
-  if (!detailData?.items || detailData.items.length === 0) {
+  const unpaidItems = useMemo(() => {
+    if (!detailData?.items) return [];
+    return detailData.items.filter((detail: any) => (detail.outstanding ?? 0) > 0);
+  }, [detailData?.items]);
+
+  if (unpaidItems.length === 0) {
     return (
       <TableRow className="bg-muted/10">
         <TableCell colSpan={9} className="text-center py-4 text-xs text-muted-foreground italic">
-          Không có giao dịch chi tiết trong kỳ
+          Không có giao dịch chưa thanh toán trong kỳ
         </TableCell>
       </TableRow>
     );
@@ -520,7 +537,7 @@ function CustomerDetailRow({
 
   return (
     <>
-      {detailData.items.map((detail, index) => (
+      {unpaidItems.map((detail, index) => (
         <TableRow
           key={detail.documentId || index}
           className={cn(
@@ -541,6 +558,11 @@ function CustomerDetailRow({
             <div className="flex flex-col">
               <span className="font-bold text-sm text-primary/80">{detail.documentNumber || "—"}</span>
               <span className="text-[10px] text-muted-foreground uppercase">{detail.documentType || "Hóa đơn"}</span>
+              {detail.items && detail.items.length > 0 && (
+                <div className="text-[11px] text-slate-500 font-medium mt-1">
+                  Hàng hóa: {detail.items.map(item => `${item.name || "Sản phẩm"} (x${item.quantity})`).join(", ")}
+                </div>
+              )}
             </div>
           </TableCell>
           <TableCell className="text-center text-xs font-medium">

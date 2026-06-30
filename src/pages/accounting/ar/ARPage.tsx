@@ -1,33 +1,7 @@
-import { useState, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ARSummaryPage from "./ARSummaryPage";
-import ARAgingPage from "./ARAgingPage";
 
 export default function ARPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const tabFromUrl = searchParams.get("tab");
-  const defaultTab = tabFromUrl || "summary";
-  const [activeTab, setActiveTab] = useState(defaultTab);
-
-  // Ensure default tab is "summary" and sync with URL on mount
-  useEffect(() => {
-    if (!tabFromUrl) {
-      const newParams = new URLSearchParams(searchParams);
-      newParams.set("tab", "summary");
-      setSearchParams(newParams, { replace: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run on mount
-
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    const newParams = new URLSearchParams(searchParams);
-    newParams.set("tab", value);
-    setSearchParams(newParams);
-  };
-
   return (
     <>
       <Helmet>
@@ -49,21 +23,10 @@ export default function ARPage() {
           </p>
         </div>
 
-        {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="summary">Công nợ</TabsTrigger>
-            <TabsTrigger value="aging">Phân tích tuổi nợ</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="summary" className="mt-6">
-            <ARSummaryPage />
-          </TabsContent>
-
-          <TabsContent value="aging" className="mt-6">
-            <ARAgingPage />
-          </TabsContent>
-        </Tabs>
+        {/* Summary Content */}
+        <div className="mt-6">
+          <ARSummaryPage />
+        </div>
       </div>
     </>
   );

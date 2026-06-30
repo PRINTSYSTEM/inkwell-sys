@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-06-29T22:42:16.456Z */
+/* Generated at: 2026-06-30T21:43:28.787Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -13,6 +13,7 @@ export const APAgingResponseSchema = schemas.APAgingResponse;
 export const APAgingResponseIPaginateSchema = schemas.APAgingResponseIPaginate;
 export const APByPurchaseInvoiceResponseSchema = schemas.APByPurchaseInvoiceResponse;
 export const APByPurchaseInvoiceResponseIPaginateSchema = schemas.APByPurchaseInvoiceResponseIPaginate;
+export const APDetailItemResponseSchema = schemas.APDetailItemResponse;
 export const APDetailLedgerRowSchema = schemas.APDetailLedgerRow;
 export const APDetailLedgerRowIPaginateSchema = schemas.APDetailLedgerRowIPaginate;
 export const APDetailResponseSchema = schemas.APDetailResponse;
@@ -31,6 +32,7 @@ export const ARByItemResponseSchema = schemas.ARByItemResponse;
 export const ARByItemResponseIPaginateSchema = schemas.ARByItemResponseIPaginate;
 export const ARDetailByInvoiceResponseSchema = schemas.ARDetailByInvoiceResponse;
 export const ARDetailByInvoiceResponseIPaginateSchema = schemas.ARDetailByInvoiceResponseIPaginate;
+export const ARDetailItemResponseSchema = schemas.ARDetailItemResponse;
 export const ARDetailLedgerRowSchema = schemas.ARDetailLedgerRow;
 export const ARDetailLedgerRowIPaginateSchema = schemas.ARDetailLedgerRowIPaginate;
 export const ARDetailResponseSchema = schemas.ARDetailResponse;
