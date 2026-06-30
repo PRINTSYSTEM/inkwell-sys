@@ -50,7 +50,13 @@ export default function ProductionListPage() {
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
   // Filter dates & View tab
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    const t = new Date();
+    return {
+      from: new Date(t.getFullYear(), t.getMonth(), t.getDate()),
+      to: new Date(t.getFullYear(), t.getMonth(), t.getDate(), 23, 59, 59, 999),
+    };
+  });
   const [viewTab, setViewTab] = useState<"all" | "pending-material">("all");
   const isPendingMaterialMode = viewTab === "pending-material";
 
@@ -296,14 +302,14 @@ export default function ProductionListPage() {
     () => ({
       total: totalCount,
       pending:
-        productions?.filter((p) => p.status === "WaitingForProduction")
+        displayProductions?.filter((p) => (p as any).status === "waiting_for_production")
           .length || 0,
       inProgress:
-        productions?.filter((p) => p.status === "InProduction").length || 0,
+        displayProductions?.filter((p) => (p as any).status === "in_production").length || 0,
       completed:
-        productions?.filter((p) => p.status === "Completed").length || 0,
+        displayProductions?.filter((p) => (p as any).status === "completed").length || 0,
     }),
-    [totalCount, productions]
+    [totalCount, displayProductions]
   );
 
   return (

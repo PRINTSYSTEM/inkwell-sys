@@ -56,11 +56,11 @@ export function ProductionListFilter({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả</SelectItem>
-                <SelectItem value="WaitingForProduction">
+                <SelectItem value="waiting_for_production">
                   Chưa thực hiện
                 </SelectItem>
-                <SelectItem value="InProduction">Đang thực hiện</SelectItem>
-                <SelectItem value="Completed">Đã hoàn thành</SelectItem>
+                <SelectItem value="in_production">Đang thực hiện</SelectItem>
+                <SelectItem value="completed">Đã hoàn thành</SelectItem>
               </SelectContent>
             </Select>
 

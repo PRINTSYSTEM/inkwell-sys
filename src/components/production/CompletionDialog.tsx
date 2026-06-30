@@ -339,16 +339,13 @@ export function CompletionDialog({
       // Step 2.5: Create defect record if checked
       if (defectQty > 0 && logDefectRecord) {
         const selectedDesignIdNum = Number(defectDesignId);
-        const relatedPod = proofingOrder?.proofingOrderDesigns?.find(
-          (pod) => pod.design?.id === selectedDesignIdNum
-        );
         
         try {
           await apiRequest.post(API_SUFFIX.DEFECT_RECORDS, {
             productionOrderId: productionOrder.id,
             productionStepId: step.id,
             designId: selectedDesignIdNum,
-            orderDetailId: relatedPod?.id || undefined,
+            // orderDetailId không truyền vì relatedPod.id là ProofingOrderDesign.id, không phải OrderDetail.id
             defectQuantity: defectQty,
             description: defectNotes.trim() || `Lỗi trong quá trình hoàn thành công đoạn ${step.stepTypeName || step.stepType}`,
             defectSource: defectSource,
