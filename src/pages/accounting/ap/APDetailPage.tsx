@@ -376,11 +376,32 @@ export default function APDetailPage() {
                         <TableCell className="font-mono text-xs font-bold text-slate-700">
                           {item.documentNumber || "—"}
                         </TableCell>
-                        <TableCell className="text-sm font-semibold">
+                        <TableCell className="text-sm font-semibold py-3">
                           <div>{translateDocType(item.documentType)}</div>
                           {item.items && item.items.length > 0 && (
-                            <div className="text-[11px] text-slate-500 font-normal mt-0.5">
-                              Vật tư: {item.items.map(i => `${i.name || "Vật tư"} (x${i.quantity})`).join(", ")}
+                            <div className="max-w-md mt-1 border rounded-lg overflow-hidden bg-background/50 shadow-sm font-normal">
+                              <Table>
+                                <TableHeader className="bg-muted/40">
+                                  <TableRow className="hover:bg-transparent">
+                                    <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2">Mã vật tư</TableHead>
+                                    <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2">Tên vật tư</TableHead>
+                                    <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2 text-right">SL</TableHead>
+                                    <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2 text-right">Đơn giá</TableHead>
+                                    <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2 text-right">Thành tiền</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {item.items.map((goodsItem, idx) => (
+                                    <TableRow key={idx} className="hover:bg-muted/10">
+                                      <TableCell className="text-[11px] font-mono py-1 px-2">{goodsItem.code || "—"}</TableCell>
+                                      <TableCell className="text-[11px] font-medium py-1 px-2 max-w-[120px] truncate" title={goodsItem.name || ""}>{goodsItem.name || "—"}</TableCell>
+                                      <TableCell className="text-[11px] py-1 px-2 text-right tabular-nums">{goodsItem.quantity ?? 0}</TableCell>
+                                      <TableCell className="text-[11px] py-1 px-2 text-right tabular-nums text-muted-foreground">{formatCurrency(goodsItem.unitPrice ?? 0)}</TableCell>
+                                      <TableCell className="text-[11px] py-1 px-2 text-right tabular-nums font-semibold">{formatCurrency(goodsItem.totalAmount ?? 0)}</TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
                             </div>
                           )}
                         </TableCell>

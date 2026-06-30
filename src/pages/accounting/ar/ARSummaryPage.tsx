@@ -507,6 +507,11 @@ function CustomerDetailRow({
     }
   };
 
+  const unpaidItems = useMemo(() => {
+    if (!detailData?.items) return [];
+    return detailData.items.filter((detail: any) => (detail.outstanding ?? 0) > 0);
+  }, [detailData?.items]);
+
   if (isLoadingDetail) {
     return (
       <TableRow className="bg-muted/10">
@@ -519,11 +524,6 @@ function CustomerDetailRow({
       </TableRow>
     );
   }
-
-  const unpaidItems = useMemo(() => {
-    if (!detailData?.items) return [];
-    return detailData.items.filter((detail: any) => (detail.outstanding ?? 0) > 0);
-  }, [detailData?.items]);
 
   if (unpaidItems.length === 0) {
     return (
@@ -554,13 +554,36 @@ function CustomerDetailRow({
               />
             )}
           </TableCell>
-          <TableCell colSpan={2} className="pl-12">
-            <div className="flex flex-col">
-              <span className="font-bold text-sm text-primary/80">{detail.documentNumber || "—"}</span>
-              <span className="text-[10px] text-muted-foreground uppercase">{detail.documentType || "Hóa đơn"}</span>
+          <TableCell colSpan={2} className="pl-12 py-3">
+            <div className="flex flex-col space-y-2">
+              <div>
+                <span className="font-bold text-sm text-primary/80">{detail.documentNumber || "—"}</span>
+                <span className="text-[10px] text-muted-foreground uppercase ml-2">({detail.documentType || "Hóa đơn"})</span>
+              </div>
               {detail.items && detail.items.length > 0 && (
-                <div className="text-[11px] text-slate-500 font-medium mt-1">
-                  Hàng hóa: {detail.items.map(item => `${item.name || "Sản phẩm"} (x${item.quantity})`).join(", ")}
+                <div className="max-w-md mt-1 border rounded-lg overflow-hidden bg-background/50 shadow-sm">
+                  <Table>
+                    <TableHeader className="bg-muted/40">
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2">Mã hàng</TableHead>
+                        <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2">Tên hàng</TableHead>
+                        <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2 text-right">SL</TableHead>
+                        <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2 text-right">Đơn giá</TableHead>
+                        <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2 text-right">Thành tiền</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {detail.items.map((item, idx) => (
+                        <TableRow key={idx} className="hover:bg-muted/10">
+                          <TableCell className="text-[11px] font-mono py-1 px-2">{item.code || "—"}</TableCell>
+                          <TableCell className="text-[11px] font-medium py-1 px-2 max-w-[120px] truncate" title={item.name || ""}>{item.name || "—"}</TableCell>
+                          <TableCell className="text-[11px] py-1 px-2 text-right tabular-nums">{item.quantity ?? 0}</TableCell>
+                          <TableCell className="text-[11px] py-1 px-2 text-right tabular-nums text-muted-foreground">{formatCurrency(item.unitPrice ?? 0)}</TableCell>
+                          <TableCell className="text-[11px] py-1 px-2 text-right tabular-nums font-semibold">{formatCurrency(item.totalAmount ?? 0)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               )}
             </div>

@@ -130,19 +130,6 @@ export default function APUnifiedPage() {
     setSelectedOrders(newSelected);
   };
 
-  const totals = (apSummaryData?.items?.reduce(
-    (acc, item) => ({
-      opening: (acc as any).opening + (item.openingBalance || 0),
-      increase: (acc as any).increase + (item.increase || 0),
-      decrease: (acc as any).decrease + (item.decrease || 0),
-      closing: (acc as any).closing + (item.closingBalance || 0),
-      overdue: (acc as any).overdue + (item.overdue || 0),
-    }),
-    { opening: 0, increase: 0, decrease: 0, closing: 0, overdue: 0 } as any
-  ) || { opening: 0, increase: 0, decrease: 0, closing: 0, overdue: 0 }) as {
-    opening: number; increase: number; decrease: number; closing: number; overdue: number;
-  };
-
   const reportTotals = (apReportData?.items?.reduce(
     (acc, item) => ({
       openingDebit: acc.openingDebit + (item.openingDebit || 0),
@@ -158,71 +145,7 @@ export default function APUnifiedPage() {
   return (
     <div className="flex flex-col h-full space-y-4">
       {/* Summary Cards */}
-      {!isReport ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-          <Card className="shadow-sm border-blue-100 bg-blue-50/30">
-            <CardHeader className="p-3 pb-0">
-              <CardTitle className="text-xs font-medium text-blue-600 uppercase tracking-wider">
-                Dư đầu kỳ
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-3 pt-1">
-              <div className="text-lg font-bold text-blue-700">
-                {formatCurrency(totals.opening)}
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="shadow-sm border-orange-100 bg-orange-50/30">
-            <CardHeader className="p-3 pb-0">
-              <CardTitle className="text-xs font-medium text-orange-600 uppercase tracking-wider">
-                Phát sinh
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-3 pt-1">
-              <div className="text-lg font-bold text-orange-700">
-                {formatCurrency(totals.increase)}
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="shadow-sm border-green-100 bg-green-50/30">
-            <CardHeader className="p-3 pb-0">
-              <CardTitle className="text-xs font-medium text-green-600 uppercase tracking-wider">
-                Thanh toán
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-3 pt-1">
-              <div className="text-lg font-bold text-green-700">
-                {formatCurrency(totals.decrease)}
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="shadow-sm border-slate-100 bg-slate-50/30">
-            <CardHeader className="p-3 pb-0">
-              <CardTitle className="text-xs font-medium text-slate-600 uppercase tracking-wider">
-                Dư cuối kỳ
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-3 pt-1">
-              <div className="text-lg font-bold text-slate-900">
-                {formatCurrency(totals.closing)}
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="shadow-sm border-red-100 bg-red-50/30">
-            <CardHeader className="p-3 pb-0">
-              <CardTitle className="text-xs font-medium text-red-600 uppercase tracking-wider">
-                Quá hạn
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-3 pt-1">
-              <div className="text-lg font-bold text-red-700">
-                {formatCurrency(totals.overdue)}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <Card className="shadow-sm border-blue-100 bg-blue-50/30">
             <CardHeader className="p-3 pb-0">
               <CardTitle className="text-xs font-medium text-blue-600 uppercase tracking-wider">
@@ -296,7 +219,6 @@ export default function APUnifiedPage() {
             </CardContent>
           </Card>
         </div>
-      )}
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-h-0 bg-background rounded-xl border shadow-sm overflow-hidden">
@@ -623,6 +545,11 @@ function VendorDetailRow({
     }
   };
 
+  const unpaidItems = useMemo(() => {
+    if (!detailData?.items) return [];
+    return detailData.items.filter((detail: any) => (detail.outstanding ?? 0) > 0);
+  }, [detailData?.items]);
+
   if (isLoadingDetail) {
     return (
       <TableRow className="bg-muted/10">
@@ -635,11 +562,6 @@ function VendorDetailRow({
       </TableRow>
     );
   }
-
-  const unpaidItems = useMemo(() => {
-    if (!detailData?.items) return [];
-    return detailData.items.filter((detail: any) => (detail.outstanding ?? 0) > 0);
-  }, [detailData?.items]);
 
   if (unpaidItems.length === 0) {
     return (
@@ -670,13 +592,36 @@ function VendorDetailRow({
               />
             )}
           </TableCell>
-          <TableCell colSpan={2} className="pl-12">
-            <div className="flex flex-col">
-              <span className="font-bold text-sm text-primary/80">{detail.documentNumber || "—"}</span>
-              <span className="text-[10px] text-muted-foreground uppercase">{detail.documentType || "Hóa đơn"}</span>
+          <TableCell colSpan={2} className="pl-12 py-3">
+            <div className="flex flex-col space-y-2">
+              <div>
+                <span className="font-bold text-sm text-primary/80">{detail.documentNumber || "—"}</span>
+                <span className="text-[10px] text-muted-foreground uppercase ml-2">({detail.documentType || "Hóa đơn"})</span>
+              </div>
               {detail.items && detail.items.length > 0 && (
-                <div className="text-[11px] text-slate-500 font-medium mt-1">
-                  Vật tư: {detail.items.map(item => `${item.name || "Vật tư"} (x${item.quantity})`).join(", ")}
+                <div className="max-w-md mt-1 border rounded-lg overflow-hidden bg-background/50 shadow-sm">
+                  <Table>
+                    <TableHeader className="bg-muted/40">
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2">Mã vật tư</TableHead>
+                        <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2">Tên vật tư</TableHead>
+                        <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2 text-right">SL</TableHead>
+                        <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2 text-right">Đơn giá</TableHead>
+                        <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2 text-right">Thành tiền</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {detail.items.map((item, idx) => (
+                        <TableRow key={idx} className="hover:bg-muted/10">
+                          <TableCell className="text-[11px] font-mono py-1 px-2">{item.code || "—"}</TableCell>
+                          <TableCell className="text-[11px] font-medium py-1 px-2 max-w-[120px] truncate" title={item.name || ""}>{item.name || "—"}</TableCell>
+                          <TableCell className="text-[11px] py-1 px-2 text-right tabular-nums">{item.quantity ?? 0}</TableCell>
+                          <TableCell className="text-[11px] py-1 px-2 text-right tabular-nums text-muted-foreground">{formatCurrency(item.unitPrice ?? 0)}</TableCell>
+                          <TableCell className="text-[11px] py-1 px-2 text-right tabular-nums font-semibold">{formatCurrency(item.totalAmount ?? 0)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               )}
             </div>

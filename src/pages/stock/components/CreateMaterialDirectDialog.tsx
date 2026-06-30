@@ -171,6 +171,27 @@ export function CreateMaterialDirectDialog({
     return ["INK", "GLUE", "SOLVENT", "ACCESSORY"].includes(codeUpper);
   }, [currentFamilyObj]);
 
+  const isRollType = useMemo(() => {
+    const unitLower = unit.toLowerCase().trim();
+    const isRollUnit = unitLower === "cuộn" || unitLower === "cuon" || unitLower === "mét" || unitLower === "met" || unitLower === "m";
+    if (isRollUnit) return true;
+
+    if (!currentTemplate) return false;
+    const nameLower = currentTemplate.name?.toLowerCase() || "";
+    const codeLower = currentTemplate.code?.toLowerCase() || "";
+    const familyCodeLower = currentFamilyObj?.code?.toLowerCase() || "";
+    return (
+      nameLower.includes("cuộn") ||
+      nameLower.includes("cuon") ||
+      nameLower.includes("màng") ||
+      nameLower.includes("mang") ||
+      codeLower.includes("cuon") ||
+      codeLower.includes("roll") ||
+      familyCodeLower.includes("roll") ||
+      familyCodeLower.includes("cuon")
+    );
+  }, [currentTemplate, currentFamilyObj, unit]);
+
   // Reset form when dialog opens
   useEffect(() => {
     if (open) {
@@ -272,14 +293,23 @@ export function CreateMaterialDirectDialog({
 
     // Filter values by allowedSpecValueIds
     if (currentCatalog.allowedSpecValueIds && currentCatalog.allowedSpecValueIds.length > 0) {
-      return values.filter((v) => currentCatalog.allowedSpecValueIds.includes(v.id));
+      const filtered = values.filter((v) => currentCatalog.allowedSpecValueIds.includes(v.id));
+      if (filtered.length > 0) {
+        return filtered;
+      }
     }
     return values;
   };
 
-  // Filter dynamic spec templates: exclude width and length templates from the dropdowns list
+  // Filter dynamic spec templates: exclude width, length, and grain templates from the dropdowns list
   const visibleSpecTemplates = useMemo(() => {
-    return specTemplates?.filter((t) => !isWidthSpec(t.name, t.key) && !isLengthSpec(t.name, t.key)) || [];
+    return specTemplates?.filter((t) => 
+      !isWidthSpec(t.name, t.key) && 
+      !isLengthSpec(t.name, t.key) &&
+      !t.name.toLowerCase().includes("thớ") &&
+      !t.name.toLowerCase().includes("grain") &&
+      !t.key.toLowerCase().includes("grain")
+    ) || [];
   }, [specTemplates]);
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
@@ -573,61 +603,66 @@ export function CreateMaterialDirectDialog({
               </div>
             )}
 
+            {/* Đơn vị tính */}
+            <div className="space-y-1.5 animate-in fade-in duration-200">
+              <Label className="font-semibold text-slate-700">Đơn vị tính</Label>
+              <Select value={unit} onValueChange={setUnit}>
+                <SelectTrigger className="h-10 text-xs">
+                  <SelectValue placeholder="Chọn đơn vị..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {unitsOptions.map((opt) => (
+                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Kích thước (Tầng 8) */}
             {!isGroup3 && (
               <div className="space-y-1.5 animate-in fade-in duration-200">
-                <Label className="font-semibold text-slate-700">Kích thước khổ vật tư</Label>
-                <div className="grid grid-cols-2 gap-3">
+                <Label className="font-semibold text-slate-700">
+                  {isRollType ? "Khổ cuộn vật tư" : "Kích thước khổ vật tư"}
+                </Label>
+                <div className={isRollType ? "grid grid-cols-1" : "grid grid-cols-2 gap-3"}>
                   <div className="space-y-1">
                     <Input
                       type="number"
-                      placeholder="Chiều rộng"
+                      placeholder={isRollType ? "Khổ cuộn / Chiều rộng" : "Chiều rộng"}
                       value={width || ""}
                       onChange={(e) => setWidth(parseFloat(e.target.value) || 0)}
                       className="h-10 text-xs font-mono text-center"
                     />
-                    <span className="text-[10px] text-slate-400 block text-center mt-0.5">Chiều rộng (cm/mm)</span>
+                    <span className="text-[10px] text-slate-400 block text-center mt-0.5">
+                      {isRollType ? "Khổ cuộn/Chiều rộng (cm/mm)" : "Chiều rộng (cm/mm)"}
+                    </span>
                   </div>
-                  <div className="space-y-1">
-                    <Input
-                      type="number"
-                      placeholder="Chiều dài"
-                      disabled={currentFamilyObj?.code?.includes("roll") || currentFamilyObj?.code?.includes("cuon")}
-                      value={currentFamilyObj?.code?.includes("roll") || currentFamilyObj?.code?.includes("cuon") ? 0 : (length || "")}
-                      onChange={(e) => setLength(parseFloat(e.target.value) || 0)}
-                      className="h-10 text-xs font-mono text-center"
-                    />
-                    <span className="text-[10px] text-slate-400 block text-center mt-0.5">Chiều dài (cm/mm)</span>
-                  </div>
+                  {!isRollType && (
+                    <div className="space-y-1">
+                      <Input
+                        type="number"
+                        placeholder="Chiều dài"
+                        value={length || ""}
+                        onChange={(e) => setLength(parseFloat(e.target.value) || 0)}
+                        className="h-10 text-xs font-mono text-center"
+                      />
+                      <span className="text-[10px] text-slate-400 block text-center mt-0.5">Chiều dài (cm/mm)</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Giá & Đơn vị tính */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="font-semibold text-slate-700">Đơn vị tính</Label>
-                <Select value={unit} onValueChange={setUnit}>
-                  <SelectTrigger className="h-10 text-xs">
-                    <SelectValue placeholder="Chọn đơn vị..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {unitsOptions.map((opt) => (
-                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="font-semibold text-slate-700">Đơn giá nhập (đ)</Label>
-                <Input
-                  type="number"
-                  placeholder="Nhập giá..."
-                  value={unitPrice || ""}
-                  onChange={(e) => setUnitPrice(parseFloat(e.target.value) || 0)}
-                  className="h-10 text-xs font-mono"
-                />
-              </div>
+            {/* Đơn giá nhập */}
+            <div className="space-y-1.5 animate-in fade-in duration-200">
+              <Label className="font-semibold text-slate-700">Đơn giá nhập (đ)</Label>
+              <Input
+                type="number"
+                placeholder="Nhập giá..."
+                value={unitPrice || ""}
+                onChange={(e) => setUnitPrice(parseFloat(e.target.value) || 0)}
+                className="h-10 text-xs font-mono"
+              />
             </div>
 
             {/* Số lượng ban đầu */}

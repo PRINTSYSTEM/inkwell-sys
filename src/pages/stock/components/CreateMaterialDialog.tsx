@@ -107,7 +107,10 @@ export function CreateMaterialDialog({
         .filter((v: any) => !isNaN(v));
         
       if (allowedValues.length > 0) {
-        return materialSpecs.filter((spec) => allowedValues.includes(spec.basisWeight ?? 0));
+        const filtered = materialSpecs.filter((spec) => allowedValues.includes(spec.basisWeight ?? 0));
+        if (filtered.length > 0) {
+          return filtered;
+        }
       }
     }
     return materialSpecs;
@@ -288,7 +291,10 @@ export function CreateMaterialDialog({
 
     // Filter values by allowedSpecValueIds
     if (currentCatalog.allowedSpecValueIds && currentCatalog.allowedSpecValueIds.length > 0) {
-      return values.filter((v) => currentCatalog.allowedSpecValueIds.includes(v.id));
+      const filtered = values.filter((v) => currentCatalog.allowedSpecValueIds.includes(v.id));
+      if (filtered.length > 0) {
+        return filtered;
+      }
     }
     return values;
   };
@@ -304,6 +310,14 @@ export function CreateMaterialDialog({
     if (allowedUnitsOptions && allowedUnitsOptions.length > 0) return allowedUnitsOptions;
     return ["tờ", "cuộn", "kg", "m", "hộp", "thùng", "cái"];
   }, [allowedUnitsOptions]);
+
+  const visibleSpecTemplates = useMemo(() => {
+    return specTemplates?.filter((t) => 
+      !t.name.toLowerCase().includes("thớ") &&
+      !t.name.toLowerCase().includes("grain") &&
+      !t.key.toLowerCase().includes("grain")
+    ) || [];
+  }, [specTemplates]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -479,11 +493,11 @@ export function CreateMaterialDialog({
             )}
 
             {/* Dynamic Spec values */}
-            {specTemplates && specTemplates.length > 0 && (
+            {visibleSpecTemplates && visibleSpecTemplates.length > 0 && (
               <div className="space-y-3 border border-slate-100 rounded-lg p-3 bg-slate-50/50">
                 <span className="font-semibold text-indigo-700 text-xs block mb-1">Thông số kỹ thuật</span>
                 <div className="grid grid-cols-2 gap-3">
-                  {specTemplates.map((t) => {
+                  {visibleSpecTemplates.map((t) => {
                     const values = getValuesForSpecTemplate(t.id);
                     return (
                       <div key={t.id} className="space-y-1.5">
@@ -512,32 +526,52 @@ export function CreateMaterialDialog({
               </div>
             )}
 
+            {/* Đơn vị tính */}
+            <div className="space-y-1.5 animate-in fade-in duration-200">
+              <Label className="font-semibold text-slate-700">Đơn vị tính</Label>
+              <Select value={unit} onValueChange={setUnit}>
+                <SelectTrigger className="h-10 text-xs">
+                  <SelectValue placeholder="Chọn đơn vị..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {unitsOptions.map((opt) => (
+                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             {/* Kích thước */}
             {!isGroup3 && (
               <div className="space-y-1.5 animate-in fade-in duration-200">
-                <Label className="font-semibold text-slate-700">Kích thước khổ vật tư</Label>
-                <div className="grid grid-cols-2 gap-3">
+                <Label className="font-semibold text-slate-700">
+                  {isRoll ? "Khổ cuộn vật tư" : "Kích thước khổ vật tư"}
+                </Label>
+                <div className={isRoll ? "grid grid-cols-1" : "grid grid-cols-2 gap-3"}>
                   <div className="space-y-1">
                     <Input
                       type="number"
-                      placeholder="Chiều rộng"
+                      placeholder={isRoll ? "Khổ cuộn / Chiều rộng" : "Chiều rộng"}
                       value={width || ""}
                       onChange={(e) => setWidth(parseFloat(e.target.value) || 0)}
                       className="h-10 text-xs font-mono text-center"
                     />
-                    <span className="text-[10px] text-slate-400 block text-center mt-0.5">Chiều rộng (cm/mm)</span>
+                    <span className="text-[10px] text-slate-400 block text-center mt-0.5">
+                      {isRoll ? "Khổ cuộn/Chiều rộng (cm/mm)" : "Chiều rộng (cm/mm)"}
+                    </span>
                   </div>
-                  <div className="space-y-1">
-                    <Input
-                      type="number"
-                      placeholder="Chiều dài"
-                      disabled={isRoll}
-                      value={isRoll ? 0 : (length || "")}
-                      onChange={(e) => setLength(parseFloat(e.target.value) || 0)}
-                      className="h-10 text-xs font-mono text-center"
-                    />
-                    <span className="text-[10px] text-slate-400 block text-center mt-0.5">Chiều dài (Tờ)</span>
-                  </div>
+                  {!isRoll && (
+                    <div className="space-y-1">
+                      <Input
+                        type="number"
+                        placeholder="Chiều dài"
+                        value={length || ""}
+                        onChange={(e) => setLength(parseFloat(e.target.value) || 0)}
+                        className="h-10 text-xs font-mono text-center"
+                      />
+                      <span className="text-[10px] text-slate-400 block text-center mt-0.5">Chiều dài (cm/mm)</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -550,31 +584,16 @@ export function CreateMaterialDialog({
               </div>
             </div>
 
-            {/* Giá & Đơn vị tính */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="font-semibold text-slate-700">Đơn vị tính</Label>
-                <Select value={unit} onValueChange={setUnit}>
-                  <SelectTrigger className="h-10 text-xs">
-                    <SelectValue placeholder="Chọn đơn vị..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {unitsOptions.map((opt) => (
-                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label className="font-semibold text-slate-700">Đơn giá nhập (đ)</Label>
-                <Input
-                  type="number"
-                  placeholder="Nhập giá..."
-                  value={unitPrice || ""}
-                  onChange={(e) => setUnitPrice(parseFloat(e.target.value) || 0)}
-                  className="h-10 text-xs font-mono"
-                />
-              </div>
+            {/* Đơn giá nhập */}
+            <div className="space-y-1.5 animate-in fade-in duration-200">
+              <Label className="font-semibold text-slate-700">Đơn giá nhập (đ)</Label>
+              <Input
+                type="number"
+                placeholder="Nhập giá..."
+                value={unitPrice || ""}
+                onChange={(e) => setUnitPrice(parseFloat(e.target.value) || 0)}
+                className="h-10 text-xs font-mono"
+              />
             </div>
           </div>
 
