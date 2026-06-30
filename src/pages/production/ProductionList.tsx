@@ -29,7 +29,7 @@ import { useListState } from "@/hooks/use-list-state";
 export default function ProductionListPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  
+
   const {
     currentPage,
     setCurrentPage,
@@ -323,10 +323,6 @@ export default function ProductionListPage() {
               }}
               className="w-fit"
             >
-              <TabsList className="grid grid-cols-2 w-[360px]">
-                <TabsTrigger value="all">Tất cả lệnh sản xuất</TabsTrigger>
-                <TabsTrigger value="pending-material">Chưa xuất vật tư</TabsTrigger>
-              </TabsList>
             </Tabs>
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-muted-foreground">Khoảng ngày:</span>

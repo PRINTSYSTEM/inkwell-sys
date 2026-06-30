@@ -2212,58 +2212,58 @@ export default function AccountingOrderDetail() {
                           placeholder="Nhập mã số thuế"
                         />
                       </div>
+                      <div className="space-y-2">
+                        <Label>Địa chỉ *</Label>
+                        <Textarea
+                          value={cardEditValues.customerAddress || ""}
+                          onChange={(e) =>
+                            setCardEditValues({
+                              ...cardEditValues,
+                              customerAddress: e.target.value,
+                            })
+                          }
+                          placeholder="Nhập địa chỉ"
+                          rows={3}
+                        />
+                      </div>
+
                       <div className="space-y-3 p-3 bg-muted/40 border border-border rounded-lg">
-                        {customerAddresses && customerAddresses.length > 0 && (
-                          <div className="space-y-1">
-                            <Select
-                              onValueChange={(val) => {
-                                const addr = customerAddresses.find((a) => a.id.toString() === val);
-                                if (addr) {
-                                  setCardEditValues({
-                                    ...cardEditValues,
-                                    customerAddress: addr.address || cardEditValues.customerAddress || "",
-                                    deliveryAddress: addr.address || cardEditValues.deliveryAddress || "",
-                                    customerName: addr.recipientName || cardEditValues.customerName || "",
-                                    customerPhone: addr.recipientPhone || cardEditValues.customerPhone || "",
-                                  });
-                                  toast.success(`Đã chọn địa chỉ: ${addr.label || "Địa chỉ"}`);
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="h-9 w-full bg-background text-xs border-border/80">
-                                <SelectValue placeholder="Chọn từ sổ địa chỉ..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {customerAddresses.map((addr) => (
-                                  <SelectItem key={addr.id} value={addr.id.toString()} className="text-xs">
-                                    <span className="font-semibold">{addr.label || "Địa chỉ"}:</span>{" "}
-                                    <span className="text-muted-foreground truncate max-w-[200px] inline-block vertical-align-middle">
-                                      {addr.address}
-                                    </span>
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center gap-2">
+                            <Label>Địa chỉ giao hàng</Label>
+                            {customerAddresses && customerAddresses.length > 0 && (
+                              <div className="w-[180px] sm:w-[220px]">
+                                <Select
+                                  onValueChange={(val) => {
+                                    const addr = customerAddresses.find((a) => a.id.toString() === val);
+                                    if (addr) {
+                                      setCardEditValues({
+                                        ...cardEditValues,
+                                        deliveryAddress: addr.address || cardEditValues.deliveryAddress || "",
+                                        customerName: addr.recipientName || cardEditValues.customerName || "",
+                                        customerPhone: addr.recipientPhone || cardEditValues.customerPhone || "",
+                                      });
+                                      toast.success(`Đã chọn địa chỉ: ${addr.label || "Địa chỉ"}`);
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger className="h-7 w-full bg-background text-[11px] border-border/80 py-0">
+                                    <SelectValue placeholder="Chọn từ sổ địa chỉ..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {customerAddresses.map((addr) => (
+                                      <SelectItem key={addr.id} value={addr.id.toString()} className="text-xs">
+                                        <span className="font-semibold">{addr.label || "Địa chỉ"}:</span>{" "}
+                                        <span className="text-muted-foreground truncate max-w-[120px] inline-block vertical-align-middle">
+                                          {addr.address}
+                                        </span>
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
                           </div>
-                        )}
-
-                        <div className="space-y-2">
-                          <Label>Địa chỉ *</Label>
-                          <Textarea
-                            value={cardEditValues.customerAddress || ""}
-                            onChange={(e) =>
-                              setCardEditValues({
-                                ...cardEditValues,
-                                customerAddress: e.target.value,
-                              })
-                            }
-                            placeholder="Nhập địa chỉ"
-                            rows={3}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Địa chỉ giao hàng</Label>
                           <Textarea
                             value={(cardEditValues.deliveryAddress as string) || ""}
                             onChange={(e) =>
