@@ -132,6 +132,27 @@ export const API_SUFFIX = {
   MATERIAL_BY_ID: (id: number) => `/materials/${id}`,
   MATERIAL_HISTORY: (id: number) => `/materials/${id}/history`,
 
+  // ========== MATERIAL SPECS ==========
+  MATERIAL_SPECS: "/material-specs",
+  MATERIAL_SPEC_BY_ID: (id: number) => `/material-specs/${id}`,
+  MATERIAL_SPECS_BY_MATERIAL_TYPE: (id: number) =>
+    `/material-specs/by-material-type/${id}`,
+  MATERIAL_SPECS_BY_VENDOR: (vendorId: number) =>
+    `/material-specs/by-vendor/${vendorId}`,
+
+  // ========== MATERIAL 8-LAYER MANAGEMENT SYSTEM ==========
+  SUPPLIER_TYPES: "/supplier-types",
+  SUPPLIER_TYPE_BY_ID: (id: number) => `/supplier-types/${id}`,
+  MATERIAL_FAMILIES: "/material-families",
+  MATERIAL_FAMILY_BY_ID: (id: number) => `/material-families/${id}`,
+  SPEC_TEMPLATES: "/spec-templates",
+  SPEC_TEMPLATE_BY_ID: (id: number) => `/spec-templates/${id}`,
+  SPEC_VALUES: "/spec-values",
+  SPEC_VALUE_BY_ID: (id: number) => `/spec-values/${id}`,
+  SUPPLIER_CATALOGS: "/supplier-catalogs",
+  SUPPLIER_CATALOG_BY_ID: (id: number) => `/supplier-catalogs/${id}`,
+
+
   // ========== DESIGNS ==========
   DESIGNS: "/designs",
   DESIGN_BY_ID: (id: number) => `/designs/${id}`,
@@ -211,6 +232,8 @@ export const API_SUFFIX = {
   // DIE_SEARCH: "/dies/search", // Endpoint removed - use regular DIES endpoint with q parameter
   DIES_BY_PROOFING_ORDER: (proofingOrderId: number) =>
     `/dies/proofing-order/${proofingOrderId}`,
+  DIE_PROOFING_ORDER_HISTORY: (proofingOrderId: number) =>
+    `/dies/proofing-order/${proofingOrderId}/history`,
   DIE_ASSIGN_TO_PROOFING_ORDER: (proofingOrderId: number) =>
     `/dies/proofing-order/${proofingOrderId}/assign`,
   DIE_REMOVE_FROM_PROOFING_ORDER: (proofingOrderId: number, dieId: number) =>
@@ -244,6 +267,7 @@ export const API_SUFFIX = {
   STOCK_OUT_COMPLETE: (id: number) => `/stock-outs/${id}/complete`,
   STOCK_OUT_PDF: (id: number) => `/stock-outs/${id}/pdf`,
   STOCK_OUT_FOR_PRODUCTION: "/stock-outs/for-production",
+  STOCK_OUT_MATERIAL_SUGGESTIONS: "/stock-outs/material-suggestions",
   STOCK_OUT_FOR_DELIVERY: "/stock-outs/for-delivery",
   STOCK_OUT_PROCESS_RETURN: "/stock-outs/process-return",
   STOCK_OUT_BY_DELIVERY_NOTE: (deliveryNoteId: number) =>
@@ -364,6 +388,7 @@ export const API_SUFFIX = {
   AR_UNDERDUE: "/debt-reports/ar-underdue",
   AP_SUMMARY: "/debt-reports/ap-summary",
   AP_SUMMARY_EXPORT: "/debt-reports/ap-summary/export",
+  AP_SUMMARY_REPORT: "/debt-reports/ap-summary-report",
   AP_DETAIL: "/debt-reports/ap-detail",
   AP_AGING: "/debt-reports/ap-aging",
   AP_AGING_EXPORT: "/debt-reports/ap-aging/export",
@@ -373,6 +398,7 @@ export const API_SUFFIX = {
   AP_DETAIL_LEDGER_EXPORT: (vendorId: number) =>
     `/debt-reports/ap-detail-ledger/${vendorId}/export`,
   AP_OVERDUE: "/debt-reports/ap-overdue",
+  AP_ITEMS: "/debt-reports/ap-items",
   CUSTOMER_RECONCILIATION_EXPORT: "/debt-reports/customer-reconciliation/export",
   CUSTOMER_RECONCILIATION_EXPORT_PDF:
     "/debt-reports/customer-reconciliation/export-pdf",

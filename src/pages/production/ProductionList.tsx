@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import {
   useProductionOrders,
   useCreateProductionOrder,
+  usePendingMaterialProductionOrders,
 } from "@/hooks/use-production";
 import { useProofingOrdersForProduction } from "@/hooks/use-proofing-order";
 import { useAuth } from "@/hooks/use-auth";
@@ -15,18 +16,20 @@ import {
   type ProofingOrderResponse,
 } from "@/Schema";
 import type { SortOrder } from "@/components/ui/sort-controls";
+import type { DateRange } from "react-day-picker";
+import { DateRangePicker } from "@/components/forms/DateRangePicker";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { ProductionListHeader } from "./components/ProductionListHeader";
 import { ProductionListFilter } from "./components/ProductionListFilter";
 import { ProductionListTable } from "./components/ProductionListTable";
-
 
 import { useListState } from "@/hooks/use-list-state";
 
 export default function ProductionListPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  
+
   const {
     currentPage,
     setCurrentPage,
@@ -46,10 +49,23 @@ export default function ProductionListPage() {
   const [itemsPerPage] = useState(10);
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
+  // Filter dates & View tab
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    const t = new Date();
+    return {
+      from: new Date(t.getFullYear(), t.getMonth(), t.getDate()),
+      to: new Date(t.getFullYear(), t.getMonth(), t.getDate(), 23, 59, 59, 999),
+    };
+  });
+  const [viewTab, setViewTab] = useState<"all" | "pending-material">("all");
+  const isPendingMaterialMode = viewTab === "pending-material";
+
   const queryParams = useMemo<ProductionListParams>(() => {
     const params: ProductionListParams = {
       pageNumber: currentPage,
       pageSize: itemsPerPage,
+      fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
+      toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
     };
     if (selectedStatus !== "all") {
       params.status = selectedStatus;
@@ -59,28 +75,35 @@ export default function ProductionListPage() {
       params.sortOrder = sortOrder;
     }
     return params;
-  }, [currentPage, itemsPerPage, selectedStatus, sortColumn, sortOrder]);
+  }, [currentPage, itemsPerPage, selectedStatus, sortColumn, sortOrder, dateRange]);
 
   const {
-    data: productionsResp,
-    isLoading,
-    error,
+    data: allProductionsResp,
+    isLoading: isLoadingAll,
+    error: errorAll,
   } = useProductionOrders(queryParams);
 
+  const {
+    data: pendingMaterialResp,
+    isLoading: isLoadingPending,
+    error: errorPending,
+  } = usePendingMaterialProductionOrders(queryParams);
+
+  const productionsResp = isPendingMaterialMode ? pendingMaterialResp : allProductionsResp;
+  const isLoading = isPendingMaterialMode ? isLoadingPending : isLoadingAll;
+  const error = isPendingMaterialMode ? errorPending : errorAll;
+
   // Try to parse with schema, but fallback to raw data if validation fails
-  // Similar to plate export issue - API returns 200 but schema validation might fail
   const parseProdResp = safeParseSchema(
     ProductionOrderResponsePaginateSchema,
     productionsResp
   );
 
   // Memoize productions to prevent dependency warnings
-  // Use raw data if schema validation fails (API returned 200 but schema is too strict)
   const productions = useMemo<ProductionOrderResponse[]>(() => {
     if (parseProdResp?.items) {
       return parseProdResp.items;
     }
-    // Fallback to raw data if parse failed but we have data
     if (
       productionsResp &&
       typeof productionsResp === "object" &&
@@ -139,8 +162,6 @@ export default function ProductionListPage() {
     }
   }, [currentPage]);
 
-  // Removed aggressive auto-adjust to prevent resetting on back navigation
-
   const { mutate: createProduction, isPending: creating } =
     useCreateProductionOrder();
 
@@ -158,6 +179,27 @@ export default function ProductionListPage() {
 
   // Unified List: Merged ProductionOrders and filtered ProofingOrders
   const displayProductions = useMemo<ProductionOrderResponse[]>(() => {
+    if (isPendingMaterialMode) {
+      // In pending-material mode, we only show productions fetched from the backend (which are pending material)
+      // and we just filter by search query.
+      return productions.filter((prod: any) => {
+        const search = debouncedSearch.toLowerCase().trim();
+        const cleanSearch = search.replace(/^bb0*/, "bb");
+        const cleanProdCode = (prod.proofingOrderCode || prod.proofingOrder?.code || "").toLowerCase().trim().replace(/^bb0*/, "bb");
+
+        return (
+          search.length === 0 ||
+          String(prod.id ?? "")
+            .toLowerCase()
+            .includes(search) ||
+          (prod.proofingOrder?.code ?? "").toLowerCase().includes(search) ||
+          (prod.proofingOrderCode ?? "").toLowerCase().includes(search) ||
+          cleanProdCode.includes(cleanSearch) ||
+          (prod.productionLeadName ?? "").toLowerCase().includes(search)
+        );
+      });
+    }
+
     const existingPoIds = new Set(productions.map((p) => p.proofingOrderId));
     const readyProofingAsProds: ProductionOrderResponse[] = proofingOrders
       .filter((po) => !existingPoIds.has(po.id))
@@ -193,7 +235,7 @@ export default function ProductionListPage() {
 
       return matchSearch && matchStatus;
     });
-  }, [productions, proofingOrders, debouncedSearch, selectedStatus]);
+  }, [productions, proofingOrders, debouncedSearch, selectedStatus, isPendingMaterialMode]);
 
   // Pagination handlers
   const handlePageChange = (newPage: number) => {
@@ -256,29 +298,18 @@ export default function ProductionListPage() {
     }
   };
 
-  const formatDateTime = (dateStr?: string | null) =>
-    dateStr
-      ? new Date(dateStr).toLocaleString("vi-VN", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      : "N/A";
-
   const stats = useMemo(
     () => ({
       total: totalCount,
       pending:
-        productions?.filter((p) => p.status === "WaitingForProduction")
+        displayProductions?.filter((p) => (p as any).status === "waiting_for_production")
           .length || 0,
       inProgress:
-        productions?.filter((p) => p.status === "InProduction").length || 0,
+        displayProductions?.filter((p) => (p as any).status === "in_production").length || 0,
       completed:
-        productions?.filter((p) => p.status === "Completed").length || 0,
+        displayProductions?.filter((p) => (p as any).status === "completed").length || 0,
     }),
-    [totalCount, productions]
+    [totalCount, displayProductions]
   );
 
   return (
@@ -288,6 +319,29 @@ export default function ProductionListPage() {
           <ProductionListHeader
             stats={stats}
           />
+
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 shrink-0">
+            <Tabs
+              value={viewTab}
+              onValueChange={(val) => {
+                setViewTab(val as "all" | "pending-material");
+                setCurrentPage(1);
+              }}
+              className="w-fit"
+            >
+            </Tabs>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-muted-foreground">Khoảng ngày:</span>
+              <DateRangePicker
+                value={dateRange}
+                onValueChange={(val) => {
+                  setDateRange(val);
+                  setCurrentPage(1);
+                }}
+                className="w-[280px]"
+              />
+            </div>
+          </div>
 
           <ProductionListFilter
             searchTerm={searchTerm}

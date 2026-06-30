@@ -15,12 +15,15 @@ import type {
   ARAgingResponseIPaginate,
   APSummaryResponse,
   APSummaryResponseIPaginate,
+  APSummaryReportResponseIPaginate,
   APDetailResponse,
   APDetailResponseIPaginate,
   APAgingResponse,
   APAgingResponseIPaginate,
   CollectionScheduleResponse,
   CollectionScheduleResponseIPaginate,
+  APItemResponse,
+  APItemResponseIPaginate,
 } from "@/Schema/accounting.schema";
 import {
   APByPurchaseInvoiceResponseIPaginateSchema,
@@ -36,6 +39,7 @@ import {
   DebtReconciliationAPRequestSchema,
   DebtReconciliationARRequestSchema,
   DebtReconciliationResponseSchema,
+  APItemResponseIPaginateSchema,
 } from "@/Schema/generated";
 
 type APByPurchaseInvoiceResponseIPaginate = z.infer<
@@ -64,6 +68,7 @@ import type {
   DebtReportArDetailParams,
   DebtReportArAgingParams,
   DebtReportApSummaryParams,
+  DebtReportApSummaryReportParams,
   DebtReportApDetailParams,
   DebtReportApAgingParams,
   DebtReportCollectionScheduleParams,
@@ -71,6 +76,7 @@ import type {
   DebtReportApDetailLedgerParams,
   DebtReportApDetailLedgerExportParams,
   DebtReportApOverdueParams,
+  DebtReportApItemsParams,
   DebtReportArAgingExportPdfParams,
   DebtReportArByItemParams,
   DebtReportArDetailByInvoiceParams,
@@ -255,6 +261,22 @@ export const useAPSummary = (params?: DebtReportApSummaryParams) => {
       );
       const res = await apiRequest.get<APSummaryResponseIPaginate>(
         API_SUFFIX.AP_SUMMARY,
+        { params: normalizedParams }
+      );
+      return res.data;
+    },
+  });
+};
+
+export const useAPSummaryReport = (params?: DebtReportApSummaryReportParams) => {
+  return useQuery({
+    queryKey: ["ap-summary-report", params],
+    queryFn: async () => {
+      const normalizedParams = normalizeParams(
+        (params ?? {}) as Record<string, unknown>
+      );
+      const res = await apiRequest.get<APSummaryReportResponseIPaginate>(
+        API_SUFFIX.AP_SUMMARY_REPORT,
         { params: normalizedParams }
       );
       return res.data;
@@ -1323,6 +1345,24 @@ export const useAPOverdue = (params?: DebtReportApOverdueParams) => {
       );
       const res = await apiRequest.get<APOverdueResponseIPaginate>(
         API_SUFFIX.AP_OVERDUE,
+        { params: normalizedParams }
+      );
+      return res.data;
+    },
+  });
+};
+
+// ===== GET /api/debt-reports/ap-items =====
+// Bảng kê chi phí
+export const useAPItems = (params?: DebtReportApItemsParams) => {
+  return useQuery({
+    queryKey: ["ap-items", params],
+    queryFn: async () => {
+      const normalizedParams = normalizeParams(
+        (params ?? {}) as Record<string, unknown>
+      );
+      const res = await apiRequest.get<APItemResponseIPaginate>(
+        API_SUFFIX.AP_ITEMS,
         { params: normalizedParams }
       );
       return res.data;

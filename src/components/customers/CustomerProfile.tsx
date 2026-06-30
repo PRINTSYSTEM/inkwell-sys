@@ -48,7 +48,7 @@ export function CustomerProfile({
     maxDebt: customer.maxDebt ?? 0,
   });
 
-  const { mutateAsync: updateCustomer, loading: isUpdating } =
+  const { mutateAsync: updateCustomer, isPending: isUpdating } =
     useUpdateCustomer();
 
   const handleSave = async () => {

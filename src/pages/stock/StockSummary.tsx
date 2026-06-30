@@ -39,7 +39,8 @@ import {
   Scissors,
   Boxes,
   Download,
-  Eye
+  Eye,
+  Layers
 } from "lucide-react";
 import { useMaterials } from "@/hooks/use-material";
 import { useActiveVendors } from "@/hooks/use-vendor";
@@ -49,6 +50,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { toast } from "sonner";
 import { CreateMaterialDirectDialog } from "./components/CreateMaterialDirectDialog";
 import { StockOutByVendorDialog } from "./components/StockOutByVendorDialog";
+import { PendingExportsDialog } from "./components/PendingExportsDialog";
 import { downloadBlob } from "@/lib/download-utils";
 import { apiRequest } from "@/lib/http";
 import { API_SUFFIX } from "@/apis";
@@ -68,8 +70,16 @@ export default function StockSummary() {
   const [sheetPage, setSheetPage] = useState(1);
   const [stockOutPage, setStockOutPage] = useState(1);
 
-  // Fetch Vendors (Material suppliers only)
-  const { data: vendorsData, isLoading: isLoadingVendors } = useActiveVendors("material");
+  // Fetch Vendors (All active suppliers)
+  const { data: vendorsData, isLoading: isLoadingVendors } = useActiveVendors();
+
+  const filteredVendors = useMemo(() => {
+    if (!vendorsData) return [];
+    return vendorsData.filter((v) => {
+      const type = v.vendorType?.toUpperCase();
+      return type !== "PLATE" && type !== "DIE" && type !== "PRINTING";
+    });
+  }, [vendorsData]);
 
   // Fetch ALL materials for the selected query (up to 1000 items)
   const { 
@@ -134,6 +144,10 @@ export default function StockSummary() {
 
   // Stock Out Dialog States
   const [isStockOutOpen, setIsStockOutOpen] = useState(false);
+
+  // Pending Production Exports Dialog States
+  const [isPendingExportsOpen, setIsPendingExportsOpen] = useState(false);
+  const [prefillStockOutItems, setPrefillStockOutItems] = useState<any[] | undefined>(undefined);
 
   // Vendor Reconciliation Excel Export States
   const [isExportingReconciliation, setIsExportingReconciliation] = useState(false);
@@ -273,6 +287,15 @@ export default function StockSummary() {
                 Xuất kho NCC
               </Button>
               <Button 
+                onClick={() => setIsPendingExportsOpen(true)}
+                variant="outline"
+                size="sm"
+                className="cursor-pointer border-rose-200 text-xs h-9 rounded-lg hover:bg-rose-50 text-rose-700 font-semibold"
+              >
+                <Layers className="h-3.5 w-3.5 mr-1.5 text-rose-500" />
+                Bài chưa xuất kho
+              </Button>
+              <Button 
                 onClick={handleRefreshAll}
                 disabled={isLoadingMaterials || isLoadingStockOuts}
                 variant="outline"
@@ -348,7 +371,7 @@ export default function StockSummary() {
                         <Loader2 className="h-4 w-4 animate-spin text-primary" />
                       </div>
                     ) : (
-                      vendorsData?.map((vendor) => (
+                      filteredVendors?.map((vendor) => (
                         <SelectItem key={vendor.id} value={String(vendor.id)}>
                           {vendor.name || vendor.code}
                         </SelectItem>
@@ -425,7 +448,7 @@ export default function StockSummary() {
                       <TableHeader>
                         <TableRow className="bg-slate-50/50 whitespace-nowrap text-xs border-b border-slate-200/60">
                           <TableHead className="w-[50px] font-bold py-2.5 pl-4">ID</TableHead>
-                          <TableHead className="min-w-[120px] font-bold py-2.5">Khổ cuộn</TableHead>
+                          <TableHead className="min-w-[120px] font-bold py-2.5">Tên vật tư / Quy cách</TableHead>
                           <TableHead className="w-[80px] text-right font-bold py-2.5 pr-4">Tồn kho</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -521,7 +544,7 @@ export default function StockSummary() {
                       <TableHeader>
                         <TableRow className="bg-slate-50/50 whitespace-nowrap text-xs border-b border-slate-200/60">
                           <TableHead className="w-[50px] font-bold py-2.5 pl-4">ID</TableHead>
-                          <TableHead className="min-w-[120px] font-bold py-2.5">Khổ tờ</TableHead>
+                          <TableHead className="min-w-[120px] font-bold py-2.5">Tên vật tư / Quy cách</TableHead>
                           <TableHead className="w-[80px] text-right font-bold py-2.5 pr-4">Tồn kho</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -748,10 +771,36 @@ export default function StockSummary() {
       {/* Dialog Xuất kho NCC */}
       <StockOutByVendorDialog
         open={isStockOutOpen}
-        onOpenChange={setIsStockOutOpen}
+        onOpenChange={(val) => {
+          setIsStockOutOpen(val);
+          if (!val) {
+            setPrefillStockOutItems(undefined);
+          }
+        }}
         selectedVendorId={selectedVendorId !== "all" ? Number(selectedVendorId) : null}
         vendors={vendorsData || []}
         refetch={refetch}
+        prefillItems={prefillStockOutItems}
+      />
+
+      {/* Dialog Bài chưa xuất kho */}
+      <PendingExportsDialog
+        open={isPendingExportsOpen}
+        onOpenChange={setIsPendingExportsOpen}
+        vendors={vendorsData || []}
+        onInitiateStockOut={(vendorId, jobCode, quantity, paperName) => {
+          const prefill = {
+            materialId: null,
+            jobCode,
+            quantity,
+            notes: `Xuất sản xuất cho bài ${jobCode}`,
+            prefillPaperName: paperName,
+          };
+          setPrefillStockOutItems([prefill]);
+          setSelectedVendorId(String(vendorId));
+          setIsPendingExportsOpen(false);
+          setIsStockOutOpen(true);
+        }}
       />
 
 

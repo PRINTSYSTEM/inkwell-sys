@@ -353,7 +353,7 @@ export default function PrepressList() {
     );
 
   const [materialSelected, setMaterialSelected] = useState<number | null>(null);
-  const { data: materialTypesData } = useMaterialTypeList({});
+  const { data: materialTypesData } = useMaterialTypeList({ status: "active", pageSize: 100 });
 
   // Material types for orders list filter
   const materialTypeOptionsForOrders = useMemo(() => {
@@ -632,6 +632,11 @@ export default function PrepressList() {
         request: { materialTypeId: currentMaterialTypeId, items },
       });
 
+      const firstDesignWithWeight = selectedDesigns.find(
+        (d) => d.basisWeight !== undefined && d.basisWeight !== null && d.basisWeight > 0
+      );
+      const basisWeightVal = firstDesignWithWeight?.basisWeight;
+
       // 3. Update order with configuration (Sheet Qty, Paper Size, Notes)
       await updateProofingOrder({
         id: orderId,
@@ -645,6 +650,7 @@ export default function PrepressList() {
           customPaperSize:
             paperSizeId === "custom" ? customPaperSize : undefined,
           notes: configNotes || undefined,
+          basisWeight: basisWeightVal || undefined,
         },
       });
 

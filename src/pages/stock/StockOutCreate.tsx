@@ -24,11 +24,15 @@ import {
   AlertCircle,
   Loader2,
   LogOut,
+  Sparkles,
+  Check,
 } from "lucide-react";
 import {
   useCreateStockOutForProduction,
   useCreateStockOutForDelivery,
+  useMaterialSuggestions,
 } from "@/hooks/use-stock";
+import { cn } from "@/lib/utils";
 import type { StockOutItemRequest } from "@/Schema/stock.schema";
 import { useCustomers } from "@/hooks/use-customer";
 import { useProductionOrders } from "@/hooks/use-production";
@@ -36,6 +40,7 @@ import { useDeliveryNotes } from "@/hooks/use-delivery-note";
 import { useMaterials } from "@/hooks/use-material";
 import { toast } from "sonner";
 import { Factory, Truck } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 // Utility function to generate material code from name
 // Example: "Hộp Duplex 350 - 20x15x10cm" -> "HOP-DUPLEX-350-20x15x10"
@@ -90,12 +95,10 @@ export default function StockOutCreatePage() {
   const { data: deliveryNotesData } = useDeliveryNotes({ pageSize: 100 });
   const deliveryNotes = deliveryNotesData?.items || [];
 
-  const { data: materialsData } = useMaterials({ size: 1000 });
-  const materials = materialsData?.items || [];
-
   const [stockOutType, setStockOutType] = useState<"production" | "delivery">(
     "production"
   );
+  const [filterByProduction, setFilterByProduction] = useState(true);
 
   const [formData, setFormData] = useState({
     itemType: "",
@@ -106,6 +109,20 @@ export default function StockOutCreatePage() {
     notes: "",
     stockOutDate: new Date().toISOString().slice(0, 16),
   });
+
+  const { data: materialsData } = useMaterials({
+    size: 1000,
+    productionOrderId:
+      stockOutType === "production" && filterByProduction
+        ? (formData.productionOrderId || undefined)
+        : undefined,
+  });
+  const materials = materialsData?.items || [];
+
+  const { data: suggestionsData, isLoading: isLoadingSuggestions } = useMaterialSuggestions(
+    formData.productionOrderId || undefined,
+    stockOutType === "production"
+  );
 
   const isPending = isPendingProduction || isPendingDelivery;
   const isSuccess = isSuccessProduction || isSuccessDelivery;
@@ -230,6 +247,38 @@ export default function StockOutCreatePage() {
         delete newErrors[index];
         setItemErrors(newErrors);
       }
+    }
+  };
+
+  const handleApplySuggestion = (suggestion: any) => {
+    const materialName = suggestion.name || suggestion.materialTypeName || "";
+    const generatedCode = generateMaterialCode(materialName);
+    
+    // Check if the first item is empty
+    if (items.length === 1 && items[0].itemName === "" && items[0].itemCode === "") {
+      const newItems = [...items];
+      newItems[0] = {
+        itemName: materialName,
+        itemCode: generatedCode,
+        unit: suggestion.unit || "tờ",
+        quantity: 1,
+        notes: `Sử dụng gợi ý (Match Score: ${suggestion.matchScore}%)`,
+        materialId: suggestion.id,
+      } as any;
+      setItems(newItems);
+      toast.success(`Đã chọn vật tư gợi ý: ${materialName}`);
+    } else {
+      // Append a new item
+      const newItem = {
+        itemName: materialName,
+        itemCode: generatedCode,
+        unit: suggestion.unit || "tờ",
+        quantity: 1,
+        notes: `Sử dụng gợi ý (Match Score: ${suggestion.matchScore}%)`,
+        materialId: suggestion.id,
+      } as any;
+      setItems([...items, newItem]);
+      toast.success(`Đã thêm vật tư gợi ý: ${materialName}`);
     }
   };
 
@@ -568,6 +617,18 @@ export default function StockOutCreatePage() {
                       )}
                     </SelectContent>
                   </Select>
+                  {formData.productionOrderId && (
+                    <div className="flex items-center space-x-2 pt-1 animate-in fade-in duration-200">
+                      <Switch
+                        id="filterByProduction"
+                        checked={filterByProduction}
+                        onCheckedChange={setFilterByProduction}
+                      />
+                      <Label htmlFor="filterByProduction" className="text-xs text-slate-500 cursor-pointer">
+                        Lọc danh sách vật tư theo lệnh sản xuất này
+                      </Label>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -713,6 +774,107 @@ export default function StockOutCreatePage() {
               </div>
             </div>
           </div>
+
+          {/* Optimization Suggestions Panel */}
+          {stockOutType === "production" && formData.productionOrderId && (
+            <div className="bg-white rounded-2xl shadow-lg shadow-slate-200/50 border border-slate-200/60 overflow-hidden flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="bg-gradient-to-r from-emerald-500/5 to-teal-500/5 px-6 py-4 border-b border-slate-200/60 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-emerald-50 dark:bg-emerald-950/20 flex items-center justify-center">
+                    <Sparkles className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-900 text-sm">Gợi ý vật tư tối ưu</h3>
+                    <p className="text-[11px] text-slate-500">Tự động đề xuất dựa trên lệnh sản xuất</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-5 flex-1 overflow-y-auto max-h-[380px] space-y-4">
+                {isLoadingSuggestions ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin text-emerald-500" />
+                  </div>
+                ) : !suggestionsData?.suggestions || suggestionsData.suggestions.length === 0 ? (
+                  <div className="text-center py-6 text-slate-400 text-xs">
+                    Không tìm thấy nguyên vật liệu phù hợp trong kho.
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="text-[11px] font-medium text-slate-500 bg-slate-50 border border-slate-100 rounded px-2.5 py-1.5 leading-relaxed">
+                      Lệnh sản xuất yêu cầu chất liệu <strong className="text-slate-800">{suggestionsData.materialTypeName}</strong>
+                      {suggestionsData.basisWeight ? (
+                        <> định lượng <strong className="text-slate-800">{suggestionsData.basisWeight} gsm</strong></>
+                      ) : null}
+                      {suggestionsData.rollWidth ? (
+                        <> khổ cuộn <strong className="text-slate-800">{suggestionsData.rollWidth} mm</strong></>
+                      ) : null}
+                      .
+                    </div>
+                    {suggestionsData.suggestions.map((suggestion: any) => {
+                      const isHigh = suggestion.matchScore >= 90;
+                      const isMedium = suggestion.matchScore >= 70 && suggestion.matchScore < 90;
+                      
+                      return (
+                        <div
+                          key={suggestion.id}
+                          className="p-3.5 rounded-xl border border-slate-150 bg-slate-50/50 hover:bg-slate-50 hover:border-slate-300 transition-all flex flex-col gap-2.5 group relative"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <span className="font-bold text-xs text-slate-800 block truncate group-hover:text-emerald-700 transition-colors">
+                                {suggestion.name || suggestion.materialTypeName}
+                              </span>
+                              <span className="text-[10px] font-mono text-slate-405 block mt-0.5">
+                                SKU: {suggestion.code || "—"}
+                              </span>
+                            </div>
+                            <span
+                              className={cn(
+                                "text-[9px] font-bold border rounded px-1.5 py-0.5 shrink-0 scale-90",
+                                isHigh
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800/50"
+                                  : isMedium
+                                  ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900/50"
+                                  : "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-900/50"
+                              )}
+                            >
+                              Khớp {suggestion.matchScore}%
+                            </span>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] text-slate-500 font-medium">
+                            <div>Định lượng: <strong className="text-slate-700">{suggestion.basisWeight ? `${suggestion.basisWeight} gsm` : "—"}</strong></div>
+                            <div>Tồn kho: <strong className="text-slate-700">{suggestion.currentStock?.toLocaleString("vi-VN") || 0} {suggestion.unit || "tờ"}</strong></div>
+                            {suggestion.width || suggestion.length ? (
+                              <div className="col-span-2 mt-0.5 text-slate-400">
+                                Kích thước: {suggestion.width || "—"} x {suggestion.length || "0"} cm
+                              </div>
+                            ) : null}
+                          </div>
+
+                          <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2 mt-1">
+                            <span className="text-[10px] text-slate-400 truncate max-w-[120px]">
+                              NCC: {suggestion.vendorName || "—"}
+                            </span>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleApplySuggestion(suggestion)}
+                              className="h-7 text-[10px] px-2.5 font-semibold text-emerald-700 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800 hover:border-emerald-300 transition-colors rounded-lg flex items-center gap-1 cursor-pointer"
+                            >
+                              <Check className="h-3 w-3" />
+                              Sử dụng gợi ý
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
           </div>
 
           <div className="xl:col-span-7 space-y-6 flex flex-col">

@@ -73,7 +73,7 @@ export function OrderAccountingUpdateDialog({
         depositAmount: order.depositAmount || null,
         deliveryDate: order.deliveryDate ? formatDateTimeForInput(order.deliveryDate) : null,
         note: order.note || null,
-        assignedToUserId: order.assignedTo || null,
+        assignedToUserId: (order.assignedTo as number | undefined) || null,
         customerName: order.customer?.name || null,
         customerCompanyName: order.customer?.companyName || null,
         customerPhone: order.customer?.phone || null,

@@ -330,7 +330,9 @@ export function DetailDesignsListCard({
                                 (s) => typeof s === "string" && s.trim(),
                               );
                             }
-                          } catch (e) { }
+                          } catch (e) {
+                            // Không phải JSON hợp lệ — fallback sang tách theo dấu phẩy bên dưới
+                          }
                         }
                         if (specs.length === 0) {
                           specs = trimmed

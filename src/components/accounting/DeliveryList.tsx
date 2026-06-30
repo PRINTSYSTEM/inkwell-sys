@@ -60,9 +60,9 @@ import { StatusBadge } from "../ui/status-badge";
 
 // Helper to derive customer type
 function deriveCustomerType(
-  customer: OrderResponse["customer"]
+  customerCompanyName: string | null | undefined
 ): "company" | "retail" {
-  return customer?.companyName ? "company" : "retail";
+  return customerCompanyName ? "company" : "retail";
 }
 
 // Check if order is ready for delivery (production completed)
@@ -280,8 +280,8 @@ export function DeliveryList() {
           }
 
           // Compare customer IDs
-          const firstCustomerId = firstSelectedOrder.customer?.id;
-          const newCustomerId = orderToToggle.customer?.id;
+          const firstCustomerId = firstSelectedOrder.customerId;
+          const newCustomerId = orderToToggle.customerId;
 
           if (
             firstCustomerId &&
@@ -312,12 +312,12 @@ export function DeliveryList() {
         const firstSelectedOrder = filteredOrders.find(
           (o) => o.id && selectedOrderIds.has(o.id)
         );
-        if (firstSelectedOrder?.customer?.id) {
-          const customerId = firstSelectedOrder.customer.id;
+        if (firstSelectedOrder?.customerId) {
+          const customerId = firstSelectedOrder.customerId;
           const sameCustomerOrders = filteredOrders
             .filter(
               (o) =>
-                o.customer?.id === customerId && o.id && isReadyForDelivery(o)
+                o.customerId === customerId && o.id && isReadyForDelivery(o)
             )
             .map((o) => o.id!)
             .filter((id): id is number => !!id);
@@ -325,12 +325,12 @@ export function DeliveryList() {
         }
       } else {
         // No selection yet - select all orders from the first customer on the page that are ready
-        if (filteredOrders.length > 0 && filteredOrders[0].customer?.id) {
-          const firstCustomerId = filteredOrders[0].customer.id;
+        if (filteredOrders.length > 0 && filteredOrders[0].customerId) {
+          const firstCustomerId = filteredOrders[0].customerId;
           const sameCustomerOrders = filteredOrders
             .filter(
               (o) =>
-                o.customer?.id === firstCustomerId &&
+                o.customerId === firstCustomerId &&
                 o.id &&
                 isReadyForDelivery(o)
             )
@@ -358,9 +358,9 @@ export function DeliveryList() {
       return;
     }
 
-    const firstCustomerId = selectedOrders[0].customer?.id;
+    const firstCustomerId = selectedOrders[0].customerId;
     const allSameCustomer = selectedOrders.every(
-      (o) => o.customer?.id === firstCustomerId
+      (o) => o.customerId === firstCustomerId
     );
 
     if (!allSameCustomer) {
@@ -385,10 +385,27 @@ export function DeliveryList() {
   const handleConfirmCreateDeliveryNote = async () => {
     if (selectedOrderIds.size === 0) return;
 
+    // Backend mới nhận lines[] (orderDetailId + deliveryQty) thay cho orderIds[].
+    // Dựng lines từ chi tiết của các đơn đã chọn, giao toàn bộ số lượng.
+    const ordersToDeliver = filteredOrders.filter(
+      (o) => o.id && selectedOrderIds.has(o.id)
+    );
+    const lines = ordersToDeliver.flatMap((o) =>
+      (o.orderDetails ?? [])
+        .filter((d) => d.id != null && (d.quantity ?? 0) > 0)
+        .map((d) => ({
+          orderDetailId: d.id!,
+          deliveryQty: d.quantity!,
+        }))
+    );
+
+    if (lines.length === 0) {
+      toast.error("Không có dòng hàng hợp lệ để tạo phiếu giao");
+      return;
+    }
+
     try {
-      await createDeliveryNoteMutation.mutateAsync({
-        orderIds: Array.from(selectedOrderIds),
-      });
+      await createDeliveryNoteMutation.mutateAsync({ lines });
       setSelectedOrderIds(new Set());
       setIsCreateDeliveryDialogOpen(false);
       refetch();
@@ -558,7 +575,9 @@ export function DeliveryList() {
                   </TableRow>
                 ) : (
                   filteredOrders.map((order) => {
-                    const customerType = deriveCustomerType(order.customer);
+                    const customerType = deriveCustomerType(
+                      order.customerCompanyName
+                    );
                     const isReady = isReadyForDelivery(order);
                     const hasDelivery = hasDeliveryNote(order);
                     const isSelected = order.id
@@ -610,15 +629,12 @@ export function DeliveryList() {
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
                               <div className="font-bold text-sm">
-                                {order.customer?.companyName ||
-                                  order.customer?.name ||
+                                {order.customerCompanyName ||
+                                  order.customerName ||
                                   "—"}
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-xs text-muted-foreground font-medium">
-                                {order.customer?.phone || "—"}
-                              </span>
                               <CustomerTypeBadge type={customerType} />
                             </div>
                           </div>
@@ -757,8 +773,8 @@ export function DeliveryList() {
                     <div className="flex-1">
                       <div className="font-medium text-sm">{order.code}</div>
                       <div className="text-xs text-muted-foreground mt-1">
-                        {order.customer?.companyName ||
-                          order.customer?.name ||
+                        {order.customerCompanyName ||
+                          order.customerName ||
                           "—"}
                       </div>
                     </div>

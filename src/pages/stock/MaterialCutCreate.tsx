@@ -131,6 +131,9 @@ export default function MaterialCutCreatePage() {
   const navigate = useNavigate();
   const { data: materialsData } = useMaterials({ page: 1, size: 1000 });
   const materials = materialsData?.items || [];
+  
+  const inputMaterials = materials.filter(m => m.type === "cuon");
+  const outputMaterials = materials.filter(m => m.type === "to");
 
   const { mutate: createMaterialCut, isPending } = useCreateMaterialCut();
 
@@ -247,11 +250,11 @@ export default function MaterialCutCreatePage() {
                 <CardContent className="p-4 space-y-4">
                   <div className="space-y-2">
                     <Label className="text-sm">Nguyên liệu đầu vào *</Label>
-                    <MaterialSelector
-                      value={formData.inputMaterialId || undefined}
-                      onSelect={(id) => setFormData({ ...formData, inputMaterialId: id })}
-                      materials={materials}
-                    />
+                     <MaterialSelector
+                       value={formData.inputMaterialId || undefined}
+                       onSelect={(id) => setFormData({ ...formData, inputMaterialId: id })}
+                       materials={inputMaterials}
+                     />
                     {selectedInputMaterial && (
                       <p className="text-xs text-blue-600 font-medium">Tồn hiện tại: {selectedInputMaterial.currentStock?.toLocaleString()} {selectedInputMaterial.unit}</p>
                     )}
@@ -308,7 +311,7 @@ export default function MaterialCutCreatePage() {
                               <MaterialSelector
                                 value={output.outputMaterialId || undefined}
                                 onSelect={(id) => handleOutputChange(index, "outputMaterialId", id)}
-                                materials={materials}
+                                materials={outputMaterials}
                                 className="flex-1"
                               />
                               <Button 

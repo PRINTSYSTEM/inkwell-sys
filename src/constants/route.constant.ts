@@ -63,6 +63,7 @@ export const ROUTE_PATHS = {
 
   MATERIALS: {
     ROOT: "/materials" as const,
+    SPECS: "/materials/specs" as const,
   },
 
   MATERIAL_TYPES: {
@@ -144,6 +145,7 @@ export const ROUTE_PATHS = {
     SETTINGS: "/admin/settings" as const,
     ANALYTICS: "/admin/analytics" as const,
     SHARED_ADDRESSES: "/admin/shared-addresses" as const,
+    MATERIAL_HIERARCHY: "/admin/material-hierarchy" as const,
   },
 
   MANAGER: {

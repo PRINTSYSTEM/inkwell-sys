@@ -83,7 +83,7 @@ export default function CurrentStockPage() {
       selectedMaterialType === "all" ? undefined : Number(selectedMaterialType),
   });
 
-  const { data: materialTypes } = useMaterialTypeList();
+  const { data: materialTypes } = useMaterialTypeList({ status: "active", pageSize: 100 });
 
   const totalItems = materialsData?.total || 0;
   const totalQuantity =

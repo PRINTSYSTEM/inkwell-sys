@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useRecordPlateExport, useUpdatePlateExport } from "@/hooks/use-proofing-order";
 import { useActivePlateVendors, useCreateVendor, useActivePrintingVendors } from "@/hooks/use-vendor";
+import { useSupplierTypes } from "@/hooks/use-supplier-type";
 import type { RecordPlateExportRequest, PlateExportResponse, UpdatePlateExportRequest } from "@/Schema";
 
 
@@ -69,6 +70,8 @@ export function PlateExportDialog({
 
   const { data: vendors, isLoading: loadingVendors } = useActivePlateVendors();
   const { data: printingVendors, isLoading: loadingPrintingVendors } = useActivePrintingVendors();
+  const { data: supplierTypesResp } = useSupplierTypes({ page: 1, size: 1000 });
+  const supplierTypes = supplierTypesResp?.items || [];
   const { mutate: createVendor, isPending: creatingVendor } = useCreateVendor();
   const { mutate: recordPlate, isPending: recordingPlate } =
     useRecordPlateExport();
@@ -174,6 +177,10 @@ export function PlateExportDialog({
       return;
     }
 
+    const plateSupplierType = supplierTypes.find(
+      (t) => t.code?.toUpperCase() === "PLATE"
+    );
+
     createVendor(
       {
         name: vendorName.trim(),
@@ -181,7 +188,8 @@ export function PlateExportDialog({
         email: null,
         address: null,
         note: null,
-        vendorType: "plate", // Specify vendor type as plate
+        vendorType: plateSupplierType?.code || "PLATE",
+        supplierTypeId: plateSupplierType?.id,
       },
       {
         onSuccess: (newVendor) => {
@@ -208,6 +216,10 @@ export function PlateExportDialog({
       return;
     }
 
+    const printingSupplierType = supplierTypes.find(
+      (t) => t.code?.toUpperCase() === "PRINTING"
+    );
+
     createVendor(
       {
         name: printingVendorName.trim(),
@@ -215,7 +227,8 @@ export function PlateExportDialog({
         email: null,
         address: null,
         note: null,
-        vendorType: "printing", // Specify vendor type as printing
+        vendorType: printingSupplierType?.code || "PRINTING",
+        supplierTypeId: printingSupplierType?.id,
       },
       {
         onSuccess: (newVendor) => {

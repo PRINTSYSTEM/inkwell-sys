@@ -409,6 +409,8 @@ export default function ProofingOrderDetailPage() {
   const [updateProofingFileUrl, setUpdateProofingFileUrl] =
     useState<string>("");
   const [updateTotalQuantity, setUpdateTotalQuantity] = useState<string>("");
+  const [updateBasisWeight, setUpdateBasisWeight] = useState<string>("");
+  const [updateRollWidth, setUpdateRollWidth] = useState<string>("");
   const [updateDesignQuantities, setUpdateDesignQuantities] = useState<
     Record<number, string>
   >({});
@@ -424,13 +426,15 @@ export default function ProofingOrderDetailPage() {
 
   // Inline editing state for order info
   const [editingField, setEditingField] = useState<
-    "totalQuantity" | "paperSize" | "notes" | "all" | null
+    "totalQuantity" | "paperSize" | "notes" | "basisWeight" | "rollWidth" | "all" | null
   >(null);
   const [inlineTotalQuantity, setInlineTotalQuantity] = useState<string>("");
   const [inlinePaperSizeId, setInlinePaperSizeId] = useState<string>("custom");
   const [inlineCustomPaperSize, setInlineCustomPaperSize] =
     useState<string>("");
   const [inlineNotes, setInlineNotes] = useState<string>("");
+  const [inlineBasisWeight, setInlineBasisWeight] = useState<string>("");
+  const [inlineRollWidth, setInlineRollWidth] = useState<string>("");
 
   // Related dies dialog state
   const [isRelatedDiesDialogOpen, setIsRelatedDiesDialogOpen] = useState(false);
@@ -1359,7 +1363,7 @@ export default function ProofingOrderDetailPage() {
 
   // Inline editing handlers
   const handleStartEditField = (
-    field: "totalQuantity" | "paperSize" | "notes",
+    field: "totalQuantity" | "paperSize" | "notes" | "basisWeight" | "rollWidth",
   ) => {
     if (!order || order.status === "completed") return;
     // If another field is being edited, cancel it first
@@ -1376,6 +1380,10 @@ export default function ProofingOrderDetailPage() {
       setInlineCustomPaperSize(order.customPaperSize || "");
     } else if (field === "notes") {
       setInlineNotes(order.notes || "");
+    } else if (field === "basisWeight") {
+      setInlineBasisWeight((order.basisWeight ?? "").toString());
+    } else if (field === "rollWidth") {
+      setInlineRollWidth((order.rollWidth ?? "").toString());
     }
   };
 
@@ -1388,6 +1396,8 @@ export default function ProofingOrderDetailPage() {
     );
     setInlineCustomPaperSize(order.customPaperSize || "");
     setInlineNotes(order.notes || "");
+    setInlineBasisWeight((order.basisWeight ?? "").toString());
+    setInlineRollWidth((order.rollWidth ?? "").toString());
   };
 
   const handleCancelEditField = () => {
@@ -1396,6 +1406,8 @@ export default function ProofingOrderDetailPage() {
     setInlinePaperSizeId("custom");
     setInlineCustomPaperSize("");
     setInlineNotes("");
+    setInlineBasisWeight("");
+    setInlineRollWidth("");
   };
 
   const handleSaveField = async () => {
@@ -1460,16 +1472,50 @@ export default function ProofingOrderDetailPage() {
       return true;
     };
 
+    const processBasisWeight = () => {
+      const gsm = inlineBasisWeight ? parseInt(inlineBasisWeight, 10) : null;
+      if (inlineBasisWeight && (isNaN(gsm as number) || (gsm as number) < 1)) {
+        toast.error("Lỗi", {
+          description: "Định lượng (GSM) phải là số nguyên lớn hơn 0",
+        });
+        return false;
+      }
+      if (gsm !== order.basisWeight) {
+        updateData.basisWeight = gsm;
+      }
+      return true;
+    };
+
+    const processRollWidth = () => {
+      const roll = inlineRollWidth ? parseInt(inlineRollWidth, 10) : null;
+      if (inlineRollWidth && (isNaN(roll as number) || (roll as number) < 1)) {
+        toast.error("Lỗi", {
+          description: "Khổ cuộn phải là số nguyên lớn hơn 0",
+        });
+        return false;
+      }
+      if (roll !== order.rollWidth) {
+        updateData.rollWidth = roll;
+      }
+      return true;
+    };
+
     if (editingField === "totalQuantity") {
       if (!processTotalQuantity()) return;
     } else if (editingField === "paperSize") {
       if (!(await processPaperSize())) return;
     } else if (editingField === "notes") {
       processNotes();
+    } else if (editingField === "basisWeight") {
+      if (!processBasisWeight()) return;
+    } else if (editingField === "rollWidth") {
+      if (!processRollWidth()) return;
     } else if (editingField === "all") {
       if (!processTotalQuantity()) return;
       if (!(await processPaperSize())) return;
       processNotes();
+      if (!processBasisWeight()) return;
+      if (!processRollWidth()) return;
     }
 
     // Only update if there are changes
@@ -1500,6 +1546,8 @@ export default function ProofingOrderDetailPage() {
     );
     setUpdateCustomPaperSize(order.customPaperSize || "");
     setUpdateTotalQuantity((order.totalQuantity ?? 0).toString());
+    setUpdateBasisWeight((order.basisWeight ?? "").toString());
+    setUpdateRollWidth((order.rollWidth ?? "").toString());
 
     // Không động tới file/ảnh và số lượng ở đây, flow này chỉ lo ghi chú + khổ giấy
     setIsUpdateInfoDialogOpen(true);
@@ -1510,12 +1558,26 @@ export default function ProofingOrderDetailPage() {
 
     const updateData: UpdateProofingOrderRequest = {};
 
-    // Status update is hidden from dialog, so skip it
-    // if (updateStatus && updateStatus !== order.status) {
-    //   updateData.status = updateStatus;
-    // }
     if (updateNotes !== order.notes) {
       updateData.notes = updateNotes || null;
+    }
+
+    const gsmNum = updateBasisWeight ? parseInt(updateBasisWeight, 10) : null;
+    if (updateBasisWeight && (isNaN(gsmNum as number) || (gsmNum as number) < 1)) {
+      toast.error("Lỗi", { description: "Định lượng (GSM) phải là số nguyên lớn hơn 0" });
+      return;
+    }
+    if (gsmNum !== order.basisWeight) {
+      updateData.basisWeight = gsmNum;
+    }
+
+    const rollNum = updateRollWidth ? parseInt(updateRollWidth, 10) : null;
+    if (updateRollWidth && (isNaN(rollNum as number) || (rollNum as number) < 1)) {
+      toast.error("Lỗi", { description: "Khổ cuộn phải là số nguyên lớn hơn 0" });
+      return;
+    }
+    if (rollNum !== order.rollWidth) {
+      updateData.rollWidth = rollNum;
     }
 
     // Create paper size if needed (for custom paper size)
@@ -2189,6 +2251,10 @@ export default function ProofingOrderDetailPage() {
                 setInlineCustomPaperSize={setInlineCustomPaperSize}
                 inlineNotes={inlineNotes}
                 setInlineNotes={setInlineNotes}
+                inlineBasisWeight={inlineBasisWeight}
+                setInlineBasisWeight={setInlineBasisWeight}
+                inlineRollWidth={inlineRollWidth}
+                setInlineRollWidth={setInlineRollWidth}
                 paperSizes={paperSizes}
                 uniqueProcessClassifications={uniqueProcessClassifications}
                 uniqueLaminationTypes={uniqueLaminationTypes}

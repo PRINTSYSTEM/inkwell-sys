@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-06-22T00:32:59.956Z */
+/* Generated at: 2026-06-30T21:43:28.856Z */
 
 import { z } from "zod";
 import { IdSchema, PagedParamsSchema } from "./Common";
@@ -200,10 +200,21 @@ export const DebtReportApDetailParamsSchema = PagedParamsSchema.extend({
   toDate: z.string().datetime({ offset: true }).nullable().optional(),
   vendorId: z.number().int().nullable().optional(),
   searchTerm: z.string().nullable().optional(),
+  paymentStatus: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });
 export type DebtReportApDetailParams = z.infer<typeof DebtReportApDetailParamsSchema>;
+
+// ==== DebtReportApItemsParams (GET /api/debt-reports/ap-items) ====
+export const DebtReportApItemsParamsSchema = PagedParamsSchema.extend({
+  vendorId: z.number().int().nullable().optional(),
+  vendorType: z.string().nullable().optional(),
+  documentType: z.string().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
+});
+export type DebtReportApItemsParams = z.infer<typeof DebtReportApItemsParamsSchema>;
 
 // ==== DebtReportApOverdueParams (GET /api/debt-reports/ap-overdue) ====
 export const DebtReportApOverdueParamsSchema = PagedParamsSchema.extend({
@@ -225,6 +236,17 @@ export const DebtReportApSummaryParamsSchema = PagedParamsSchema.extend({
   sortOrder: z.string().nullable().optional(),
 });
 export type DebtReportApSummaryParams = z.infer<typeof DebtReportApSummaryParamsSchema>;
+
+// ==== DebtReportApSummaryReportParams (GET /api/debt-reports/ap-summary-report) ====
+export const DebtReportApSummaryReportParamsSchema = PagedParamsSchema.extend({
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+  vendorId: z.number().int().nullable().optional(),
+  searchTerm: z.string().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
+});
+export type DebtReportApSummaryReportParams = z.infer<typeof DebtReportApSummaryReportParamsSchema>;
 
 // ==== DebtReportArAgingExportPdfParams (GET /api/debt-reports/ar-aging/export-pdf) ====
 export const DebtReportArAgingExportPdfParamsSchema = z.object({
@@ -799,6 +821,14 @@ export const MaterialCutListParamsSchema = PagedParamsSchema.extend({
 });
 export type MaterialCutListParams = z.infer<typeof MaterialCutListParamsSchema>;
 
+// ==== MaterialFamilieListParams (GET /api/material-families) ====
+export const MaterialFamilieListParamsSchema = z.object({
+  page: z.number().int().nullable().optional(),
+  size: z.number().int().nullable().optional(),
+  search: z.string().nullable().optional(),
+}).passthrough();
+export type MaterialFamilieListParams = z.infer<typeof MaterialFamilieListParamsSchema>;
+
 // ==== MaterialHistoryParams (GET /api/materials/:id/history) ====
 export const MaterialHistoryParamsSchema = PagedParamsSchema.extend({
   transactionType: z.string().nullable().optional(),
@@ -816,8 +846,20 @@ export const MaterialListParamsSchema = PagedParamsSchema.extend({
   type: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
+  designId: z.number().int().nullable().optional(),
+  designMaterialTypeId: z.number().int().nullable().optional(),
+  basisWeight: z.number().int().nullable().optional(),
+  proofingOrderId: z.number().int().nullable().optional(),
+  productionOrderId: z.number().int().nullable().optional(),
 });
 export type MaterialListParams = z.infer<typeof MaterialListParamsSchema>;
+
+// ==== MaterialSpecListParams (GET /api/material-specs) ====
+export const MaterialSpecListParamsSchema = PagedParamsSchema.extend({
+  materialTypeId: z.number().int().nullable().optional(),
+  search: z.string().nullable().optional(),
+});
+export type MaterialSpecListParams = z.infer<typeof MaterialSpecListParamsSchema>;
 
 // ==== MaterialTypeListParams (GET /api/designs/materials) ====
 export const MaterialTypeListParamsSchema = PagedParamsSchema.extend({
@@ -944,6 +986,7 @@ export const PlateExportListParamsSchema = PagedParamsSchema.extend({
   toDate: z.string().datetime({ offset: true }).nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
+  paymentStatus: z.string().nullable().optional(),
 });
 export type PlateExportListParams = z.infer<typeof PlateExportListParamsSchema>;
 
@@ -959,10 +1002,21 @@ export type ProductionByOrderParams = z.infer<typeof ProductionByOrderParamsSche
 export const ProductionListParamsSchema = PagedParamsSchema.extend({
   status: z.string().nullable().optional(),
   proofingOrderId: z.number().int().nullable().optional(),
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });
 export type ProductionListParams = z.infer<typeof ProductionListParamsSchema>;
+
+// ==== ProductionPendingMaterialParams (GET /api/production-orders/pending-material) ====
+export const ProductionPendingMaterialParamsSchema = PagedParamsSchema.extend({
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
+});
+export type ProductionPendingMaterialParams = z.infer<typeof ProductionPendingMaterialParamsSchema>;
 
 // ==== ProofingOrderAvailableOrderDetailsDesignTypeSummaryParams (GET /api/proofing-orders/available-order-details/design-type-summary) ====
 export const ProofingOrderAvailableOrderDetailsDesignTypeSummaryParamsSchema = z.object({
@@ -1292,6 +1346,18 @@ export const SharedAddresseListParamsSchema = PagedParamsSchema.extend({
 });
 export type SharedAddresseListParams = z.infer<typeof SharedAddresseListParamsSchema>;
 
+// ==== SpecTemplateListParams (GET /api/spec-templates) ====
+export const SpecTemplateListParamsSchema = z.object({
+  familyId: z.number().int().nullable().optional(),
+}).passthrough();
+export type SpecTemplateListParams = z.infer<typeof SpecTemplateListParamsSchema>;
+
+// ==== SpecValueListParams (GET /api/spec-values) ====
+export const SpecValueListParamsSchema = z.object({
+  specTemplateId: z.number().int().nullable().optional(),
+}).passthrough();
+export type SpecValueListParams = z.infer<typeof SpecValueListParamsSchema>;
+
 // ==== StockInByDeliveryNoteParams (GET /api/stock-ins/by-delivery-note/:deliveryNoteId) ====
 export const StockInByDeliveryNoteParamsSchema = PagedParamsSchema.extend({
 });
@@ -1347,6 +1413,20 @@ export const StockOutSummaryParamsSchema = z.object({
 }).passthrough();
 export type StockOutSummaryParams = z.infer<typeof StockOutSummaryParamsSchema>;
 
+// ==== SupplierCatalogListParams (GET /api/supplier-catalogs) ====
+export const SupplierCatalogListParamsSchema = z.object({
+  vendorId: z.number().int().nullable().optional(),
+}).passthrough();
+export type SupplierCatalogListParams = z.infer<typeof SupplierCatalogListParamsSchema>;
+
+// ==== SupplierTypeListParams (GET /api/supplier-types) ====
+export const SupplierTypeListParamsSchema = z.object({
+  page: z.number().int().nullable().optional(),
+  size: z.number().int().nullable().optional(),
+  search: z.string().nullable().optional(),
+}).passthrough();
+export type SupplierTypeListParams = z.infer<typeof SupplierTypeListParamsSchema>;
+
 // ==== UserDesignersListParams (GET /api/users/designers) ====
 export const UserDesignersListParamsSchema = PagedParamsSchema.extend({
   sortColumn: z.string().nullable().optional(),
@@ -1383,6 +1463,7 @@ export const VendorListParamsSchema = PagedParamsSchema.extend({
   search: z.string().nullable().optional(),
   isActive: z.boolean().nullable().optional(),
   vendorType: z.string().nullable().optional(),
+  supplierTypeId: z.number().int().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });

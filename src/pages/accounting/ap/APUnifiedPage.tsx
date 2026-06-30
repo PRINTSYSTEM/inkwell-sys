@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -33,12 +33,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useAPSummary, useAPDetail, useExportAPSummary, useExportAPDetailLedger } from "@/hooks/use-ar-ap";
+import { useAPSummary, useAPSummaryReport, useAPDetail, useExportAPSummary, useExportAPDetailLedger } from "@/hooks/use-ar-ap";
 import { APCreatePaymentDialog } from "./APCreatePaymentDialog";
 import { formatCurrency } from "@/lib/status-utils";
 import { cn } from "@/lib/utils";
 import { APVendorExportButton } from "./APVendorExportButton";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
@@ -53,21 +55,38 @@ export default function APUnifiedPage() {
   const [expandedVendors, setExpandedVendors] = useState<Set<number>>(new Set());
   const [selectedOrders, setSelectedOrders] = useState<Map<number, any>>(new Map());
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
-  const itemsPerPage = 10;
+  const itemsPerPage = 1000;
+  const isReport = true;
 
   const {
-    data: apData,
+    data: apReportData,
     isLoading,
     isError,
     error,
     refetch,
-  } = useAPSummary({
+  } = useAPSummaryReport({
     pageNumber: currentPage,
     pageSize: itemsPerPage,
     fromDate: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
     toDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
     searchTerm: searchQuery || undefined,
   });
+
+  const apData = apReportData;
+
+  const filteredAPItems = useMemo(() => {
+    if (!apData?.items) return [];
+    return apData.items.filter((item: any) => {
+      return (
+        (item.openingDebit ?? 0) !== 0 ||
+        (item.openingCredit ?? 0) !== 0 ||
+        (item.periodDebit ?? 0) !== 0 ||
+        (item.periodCredit ?? 0) !== 0 ||
+        (item.closingDebit ?? 0) !== 0 ||
+        (item.closingCredit ?? 0) !== 0
+      );
+    });
+  }, [apData?.items]);
 
   const { mutate: exportSummary, loading: isExportingSummary } = useExportAPSummary();
 
@@ -111,84 +130,95 @@ export default function APUnifiedPage() {
     setSelectedOrders(newSelected);
   };
 
-  const totals = (apData?.items?.reduce(
+  const reportTotals = (apReportData?.items?.reduce(
     (acc, item) => ({
-      opening: (acc as any).opening + (item.openingBalance || 0),
-      increase: (acc as any).increase + (item.increase || 0),
-      decrease: (acc as any).decrease + (item.decrease || 0),
-      closing: (acc as any).closing + (item.closingBalance || 0),
-      overdue: (acc as any).overdue + (item.overdue || 0),
+      openingDebit: acc.openingDebit + (item.openingDebit || 0),
+      openingCredit: acc.openingCredit + (item.openingCredit || 0),
+      periodDebit: acc.periodDebit + (item.periodDebit || 0),
+      periodCredit: acc.periodCredit + (item.periodCredit || 0),
+      closingDebit: acc.closingDebit + (item.closingDebit || 0),
+      closingCredit: acc.closingCredit + (item.closingCredit || 0),
     }),
-    { opening: 0, increase: 0, decrease: 0, closing: 0, overdue: 0 } as any
-  ) || { opening: 0, increase: 0, decrease: 0, closing: 0, overdue: 0 }) as {
-    opening: number; increase: number; decrease: number; closing: number; overdue: number;
-  };
+    { openingDebit: 0, openingCredit: 0, periodDebit: 0, periodCredit: 0, closingDebit: 0, closingCredit: 0 }
+  ) || { openingDebit: 0, openingCredit: 0, periodDebit: 0, periodCredit: 0, closingDebit: 0, closingCredit: 0 });
 
   return (
     <div className="flex flex-col h-full space-y-4">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-        <Card className="shadow-sm border-blue-100 bg-blue-50/30">
-          <CardHeader className="p-3 pb-0">
-            <CardTitle className="text-xs font-medium text-blue-600 uppercase tracking-wider">
-              Dư đầu kỳ
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 pt-1">
-            <div className="text-lg font-bold text-blue-700">
-              {formatCurrency(totals.opening)}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm border-orange-100 bg-orange-50/30">
-          <CardHeader className="p-3 pb-0">
-            <CardTitle className="text-xs font-medium text-orange-600 uppercase tracking-wider">
-              Phát sinh
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 pt-1">
-            <div className="text-lg font-bold text-orange-700">
-              {formatCurrency(totals.increase)}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm border-green-100 bg-green-50/30">
-          <CardHeader className="p-3 pb-0">
-            <CardTitle className="text-xs font-medium text-green-600 uppercase tracking-wider">
-              Thanh toán
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 pt-1">
-            <div className="text-lg font-bold text-green-700">
-              {formatCurrency(totals.decrease)}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm border-slate-100 bg-slate-50/30">
-          <CardHeader className="p-3 pb-0">
-            <CardTitle className="text-xs font-medium text-slate-600 uppercase tracking-wider">
-              Dư cuối kỳ
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 pt-1">
-            <div className="text-lg font-bold text-slate-900">
-              {formatCurrency(totals.closing)}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="shadow-sm border-red-100 bg-red-50/30">
-          <CardHeader className="p-3 pb-0">
-            <CardTitle className="text-xs font-medium text-red-600 uppercase tracking-wider">
-              Quá hạn
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 pt-1">
-            <div className="text-lg font-bold text-red-700">
-              {formatCurrency(totals.overdue)}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <Card className="shadow-sm border-blue-100 bg-blue-50/30">
+            <CardHeader className="p-3 pb-0">
+              <CardTitle className="text-xs font-medium text-blue-600 uppercase tracking-wider">
+                Dư đầu kỳ (Nợ)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 pt-1">
+              <div className="text-lg font-bold text-blue-700">
+                {formatCurrency(reportTotals.openingDebit)}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="shadow-sm border-blue-100 bg-blue-50/30">
+            <CardHeader className="p-3 pb-0">
+              <CardTitle className="text-xs font-medium text-blue-600 uppercase tracking-wider">
+                Dư đầu kỳ (Có)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 pt-1">
+              <div className="text-lg font-bold text-blue-700">
+                {formatCurrency(reportTotals.openingCredit)}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="shadow-sm border-orange-100 bg-orange-50/30">
+            <CardHeader className="p-3 pb-0">
+              <CardTitle className="text-xs font-medium text-orange-600 uppercase tracking-wider">
+                Phát sinh (Nợ)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 pt-1">
+              <div className="text-lg font-bold text-orange-700">
+                {formatCurrency(reportTotals.periodDebit)}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="shadow-sm border-orange-100 bg-orange-50/30">
+            <CardHeader className="p-3 pb-0">
+              <CardTitle className="text-xs font-medium text-orange-600 uppercase tracking-wider">
+                Phát sinh (Có)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 pt-1">
+              <div className="text-lg font-bold text-orange-700">
+                {formatCurrency(reportTotals.periodCredit)}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="shadow-sm border-slate-100 bg-slate-50/30">
+            <CardHeader className="p-3 pb-0">
+              <CardTitle className="text-xs font-medium text-slate-600 uppercase tracking-wider">
+                Dư cuối kỳ (Nợ)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 pt-1">
+              <div className="text-lg font-bold text-slate-900">
+                {formatCurrency(reportTotals.closingDebit)}
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="shadow-sm border-slate-100 bg-slate-50/30">
+            <CardHeader className="p-3 pb-0">
+              <CardTitle className="text-xs font-medium text-slate-600 uppercase tracking-wider">
+                Dư cuối kỳ (Có)
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 pt-1">
+              <div className="text-lg font-bold text-slate-900">
+                {formatCurrency(reportTotals.closingCredit)}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-h-0 bg-background rounded-xl border shadow-sm overflow-hidden">
@@ -209,6 +239,7 @@ export default function APUnifiedPage() {
               onValueChange={setDateRange}
               className="w-[280px]"
             />
+            
           </div>
           <div className="flex items-center gap-2 w-full md:w-auto justify-end">
             <Button
@@ -279,11 +310,24 @@ export default function APUnifiedPage() {
                 <TableHead className="w-[40px]"></TableHead>
                 <TableHead className="w-[120px]">Mã NCC</TableHead>
                 <TableHead>Tên nhà cung cấp</TableHead>
-                <TableHead className="text-right">Dư đầu kỳ</TableHead>
-                <TableHead className="text-right">Phát sinh</TableHead>
-                <TableHead className="text-right">Thanh toán</TableHead>
-                <TableHead className="text-right">Dư cuối kỳ</TableHead>
-                <TableHead className="text-right">Quá hạn</TableHead>
+                {!isReport ? (
+                  <>
+                    <TableHead className="text-right">Dư đầu kỳ</TableHead>
+                    <TableHead className="text-right">Phát sinh</TableHead>
+                    <TableHead className="text-right">Thanh toán</TableHead>
+                    <TableHead className="text-right">Dư cuối kỳ</TableHead>
+                    <TableHead className="text-right">Quá hạn</TableHead>
+                  </>
+                ) : (
+                  <>
+                    <TableHead className="text-right">Đầu kỳ (Nợ)</TableHead>
+                    <TableHead className="text-right">Đầu kỳ (Có)</TableHead>
+                    <TableHead className="text-right">Phát sinh (Nợ)</TableHead>
+                    <TableHead className="text-right">Phát sinh (Có)</TableHead>
+                    <TableHead className="text-right">Cuối kỳ (Nợ)</TableHead>
+                    <TableHead className="text-right">Cuối kỳ (Có)</TableHead>
+                  </>
+                )}
                 <TableHead className="text-center w-[80px]">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
@@ -291,16 +335,16 @@ export default function APUnifiedPage() {
               {isLoading ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 8 }).map((_, j) => (
+                    {Array.from({ length: isReport ? 10 : 9 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
                       </TableCell>
                     ))}
                   </TableRow>
                 ))
-              ) : !apData?.items || apData.items.length === 0 ? (
+              ) : !filteredAPItems || filteredAPItems.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-32 text-center">
+                  <TableCell colSpan={isReport ? 10 : 9} className="h-32 text-center">
                     <div className="flex flex-col items-center justify-center text-muted-foreground">
                       <Calendar className="h-8 w-8 mb-2 opacity-20" />
                       <p>Không tìm thấy dữ liệu công nợ trong khoảng thời gian này</p>
@@ -308,7 +352,7 @@ export default function APUnifiedPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                apData.items.map((item) => {
+                filteredAPItems.map((item: any) => {
                   const isExpanded = item.vendorId ? expandedVendors.has(item.vendorId) : false;
                   return (
                     <>
@@ -333,27 +377,52 @@ export default function APUnifiedPage() {
                         <TableCell className="font-semibold text-sm">
                           {item.vendorName || "—"}
                         </TableCell>
-                        <TableCell className="text-right tabular-nums text-sm text-muted-foreground">
-                          {item.openingBalance !== undefined ? formatCurrency(item.openingBalance) : "—"}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums text-sm text-orange-600 font-medium">
-                          {item.increase !== undefined ? formatCurrency(item.increase) : "—"}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums text-sm text-green-600 font-medium">
-                          {item.decrease !== undefined ? formatCurrency(item.decrease) : "—"}
-                        </TableCell>
-                        <TableCell className="text-right font-bold tabular-nums text-sm">
-                          {item.closingBalance !== undefined ? formatCurrency(item.closingBalance) : "—"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {item.overdue !== undefined && item.overdue > 0 ? (
-                            <Badge variant="destructive" className="font-medium">
-                              {formatCurrency(item.overdue)}
-                            </Badge>
-                          ) : (
-                            "—"
-                          )}
-                        </TableCell>
+                        {!isReport ? (
+                          <>
+                            <TableCell className="text-right tabular-nums text-sm text-muted-foreground">
+                              {item.openingBalance !== undefined ? formatCurrency(item.openingBalance) : "—"}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums text-sm text-orange-600 font-medium">
+                              {item.increase !== undefined ? formatCurrency(item.increase) : "—"}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums text-sm text-green-600 font-medium">
+                              {item.decrease !== undefined ? formatCurrency(item.decrease) : "—"}
+                            </TableCell>
+                            <TableCell className="text-right font-bold tabular-nums text-sm">
+                              {item.closingBalance !== undefined ? formatCurrency(item.closingBalance) : "—"}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {item.overdue !== undefined && item.overdue > 0 ? (
+                                <Badge variant="destructive" className="font-medium">
+                                  {formatCurrency(item.overdue)}
+                                </Badge>
+                              ) : (
+                                "—"
+                              )}
+                            </TableCell>
+                          </>
+                        ) : (
+                          <>
+                            <TableCell className="text-right tabular-nums text-sm text-muted-foreground">
+                              {item.openingDebit !== undefined ? formatCurrency(item.openingDebit) : "—"}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums text-sm text-muted-foreground">
+                              {item.openingCredit !== undefined ? formatCurrency(item.openingCredit) : "—"}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums text-sm text-orange-600 font-medium">
+                              {item.periodDebit !== undefined ? formatCurrency(item.periodDebit) : "—"}
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums text-sm text-green-600 font-medium">
+                              {item.periodCredit !== undefined ? formatCurrency(item.periodCredit) : "—"}
+                            </TableCell>
+                            <TableCell className="text-right font-bold tabular-nums text-sm">
+                              {item.closingDebit !== undefined ? formatCurrency(item.closingDebit) : "—"}
+                            </TableCell>
+                            <TableCell className="text-right font-bold tabular-nums text-sm">
+                              {item.closingCredit !== undefined ? formatCurrency(item.closingCredit) : "—"}
+                            </TableCell>
+                          </>
+                        )}
                         <TableCell className="text-center">
                           {(item.vendorId || (item as any).id) && (
                             <APVendorExportButton 
@@ -388,6 +457,7 @@ export default function APUnifiedPage() {
                             <TableHead className="text-right font-bold text-[10px] uppercase text-muted-foreground">
                               Còn nợ
                             </TableHead>
+                            <TableHead colSpan={isReport ? 3 : 2}></TableHead>
                           </TableRow>
                           <VendorDetailRow 
                             vendorId={item.vendorId}
@@ -395,6 +465,7 @@ export default function APUnifiedPage() {
                             dateRange={dateRange}
                             selectedOrders={selectedOrders}
                             onSelectOrder={(order) => handleSelectOrder(order, item)}
+                            colSpan={isReport ? 10 : 9}
                           />
                         </>
                       )}
@@ -407,10 +478,10 @@ export default function APUnifiedPage() {
         </div>
 
         {/* Pagination Container */}
-        {apData && apData.totalPages > 1 && (
+        {apData && filteredAPItems.length > 0 && (
           <div className="px-4 py-3 border-t bg-muted/5 flex items-center justify-between">
             <p className="text-xs text-muted-foreground">
-              Hiển thị {apData.items?.length || 0} / {apData.total} nhà cung cấp
+              Hiển thị {filteredAPItems.length} nhà cung cấp
             </p>
             <div className="flex items-center gap-2">
               <Button
@@ -449,12 +520,14 @@ function VendorDetailRow({
   dateRange,
   selectedOrders,
   onSelectOrder,
+  colSpan = 9,
 }: {
   vendorId: number;
   vendorName: string;
   dateRange: DateRange | undefined;
   selectedOrders: Map<number, any>;
   onSelectOrder: (order: any) => void;
+  colSpan?: number;
 }) {
   const navigate = useNavigate();
 
@@ -472,10 +545,15 @@ function VendorDetailRow({
     }
   };
 
+  const unpaidItems = useMemo(() => {
+    if (!detailData?.items) return [];
+    return detailData.items.filter((detail: any) => (detail.outstanding ?? 0) > 0);
+  }, [detailData?.items]);
+
   if (isLoadingDetail) {
     return (
       <TableRow className="bg-muted/10">
-        <TableCell colSpan={8}>
+        <TableCell colSpan={colSpan}>
           <div className="flex items-center justify-center py-4 gap-2 text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
             <span className="text-xs">Đang tải chi tiết giao dịch...</span>
@@ -485,11 +563,11 @@ function VendorDetailRow({
     );
   }
 
-  if (!detailData?.items || detailData.items.length === 0) {
+  if (unpaidItems.length === 0) {
     return (
       <TableRow className="bg-muted/10">
-        <TableCell colSpan={8} className="text-center py-4 text-xs text-muted-foreground italic">
-          Không có giao dịch chi tiết trong kỳ
+        <TableCell colSpan={colSpan} className="text-center py-4 text-xs text-muted-foreground italic">
+          Không có giao dịch chưa thanh toán trong kỳ
         </TableCell>
       </TableRow>
     );
@@ -497,7 +575,7 @@ function VendorDetailRow({
 
   return (
     <>
-      {detailData.items.map((detail, index) => (
+      {unpaidItems.map((detail, index) => (
         <TableRow
           key={detail.documentId || index}
           className={cn(
@@ -514,10 +592,38 @@ function VendorDetailRow({
               />
             )}
           </TableCell>
-          <TableCell colSpan={2} className="pl-12">
-            <div className="flex flex-col">
-              <span className="font-bold text-sm text-primary/80">{detail.documentNumber || "—"}</span>
-              <span className="text-[10px] text-muted-foreground uppercase">{detail.documentType || "Hóa đơn"}</span>
+          <TableCell colSpan={2} className="pl-12 py-3">
+            <div className="flex flex-col space-y-2">
+              <div>
+                <span className="font-bold text-sm text-primary/80">{detail.documentNumber || "—"}</span>
+                <span className="text-[10px] text-muted-foreground uppercase ml-2">({detail.documentType || "Hóa đơn"})</span>
+              </div>
+              {detail.items && detail.items.length > 0 && (
+                <div className="max-w-md mt-1 border rounded-lg overflow-hidden bg-background/50 shadow-sm">
+                  <Table>
+                    <TableHeader className="bg-muted/40">
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2">Mã vật tư</TableHead>
+                        <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2">Tên vật tư</TableHead>
+                        <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2 text-right">SL</TableHead>
+                        <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2 text-right">Đơn giá</TableHead>
+                        <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2 text-right">Thành tiền</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {detail.items.map((item, idx) => (
+                        <TableRow key={idx} className="hover:bg-muted/10">
+                          <TableCell className="text-[11px] font-mono py-1 px-2">{item.code || "—"}</TableCell>
+                          <TableCell className="text-[11px] font-medium py-1 px-2 max-w-[120px] truncate" title={item.name || ""}>{item.name || "—"}</TableCell>
+                          <TableCell className="text-[11px] py-1 px-2 text-right tabular-nums">{item.quantity ?? 0}</TableCell>
+                          <TableCell className="text-[11px] py-1 px-2 text-right tabular-nums text-muted-foreground">{formatCurrency(item.unitPrice ?? 0)}</TableCell>
+                          <TableCell className="text-[11px] py-1 px-2 text-right tabular-nums font-semibold">{formatCurrency(item.totalAmount ?? 0)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
             </div>
           </TableCell>
           <TableCell className="text-center text-xs font-medium">
@@ -541,6 +647,7 @@ function VendorDetailRow({
               "—"
             )}
           </TableCell>
+          <TableCell colSpan={colSpan - 8}></TableCell>
         </TableRow>
       ))}
     </>

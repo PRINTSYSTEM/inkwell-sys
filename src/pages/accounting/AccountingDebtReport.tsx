@@ -77,6 +77,7 @@ export default function AccountingDebtReport() {
     null
   );
   const [showDebtHistoryDialog, setShowDebtHistoryDialog] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
   const [debtHistoryDateRange, setDebtHistoryDateRange] = useState<
     DateRange | undefined
   >(undefined);
@@ -373,6 +374,10 @@ export default function AccountingDebtReport() {
             Theo dõi và quản lý công nợ khách hàng
           </p>
         </div>
+        <Button onClick={() => setShowExportDialog(true)} className="h-9">
+          <Download className="h-4 w-4 mr-2" />
+          Xuất báo cáo
+        </Button>
       </div>
 
       {/* Stats Cards */}
@@ -682,185 +687,202 @@ export default function AccountingDebtReport() {
         </CardContent>
       </Card>
 
-      {/* Export Debt Section */}
-
-      <Card className="border-0 shadow-sm">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileSpreadsheet className="h-5 w-5" />
+      {/* Export Debt Dialog */}
+      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-slate-800">
+              <FileSpreadsheet className="h-5 w-5 text-primary" />
               Xuất báo cáo công nợ
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Tabs value={exportTab} onValueChange={setExportTab} className="w-full">
-              <TabsList className="mb-4">
-                <TabsTrigger value="date">Theo ngày</TabsTrigger>
-                <TabsTrigger value="month">Theo tháng</TabsTrigger>
-                <TabsTrigger value="quarter">Theo quý</TabsTrigger>
-              </TabsList>
+            </DialogTitle>
+            <DialogDescription>
+              Chọn khoảng thời gian hoặc theo tháng/quý để xuất file excel báo cáo công nợ.
+            </DialogDescription>
+          </DialogHeader>
 
-              <TabsContent value="date">
-                <div className="flex gap-4 items-end">
-                  <div className="flex-1 max-w-sm">
-                    <Label>Khoảng thời gian</Label>
-                    <DateRangePicker
-                      value={exportDateRange}
-                      onValueChange={setExportDateRange}
-                      placeholder="Từ ngày - Đến ngày"
-                    />
-                  </div>
-                  <Button
-                    onClick={handleExportDebtByDate}
-                    disabled={exportingDebt}
-                  >
-                    {exportingDebt ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Đang xuất...
-                      </>
-                    ) : (
-                      <>
-                        <Download className="h-4 w-4 mr-2" />
-                        Xuất Excel
-                      </>
-                    )}
-                  </Button>
-                </div>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Xuất báo cáo công nợ từ ngày bắt đầu đến ngày kết thúc đã chọn (bao gồm nợ và thanh toán).
-                </p>
-              </TabsContent>
+          <Tabs value={exportTab} onValueChange={setExportTab} className="w-full">
+            <TabsList className="grid grid-cols-3 mb-4">
+              <TabsTrigger value="date">Theo ngày</TabsTrigger>
+              <TabsTrigger value="month">Theo tháng</TabsTrigger>
+              <TabsTrigger value="quarter">Theo quý</TabsTrigger>
+            </TabsList>
 
-              <TabsContent value="month">
-                <div className="flex gap-4 items-end">
-                  <div className="flex-1 max-w-[200px]">
-                    <Label>Tháng</Label>
-                    <Select
-                      value={exportMonth.toString()}
-                      onValueChange={(v) => setExportMonth(parseInt(v))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 12 }, (_, i) => i + 1).map(
-                          (month) => (
-                            <SelectItem key={month} value={month.toString()}>
-                              Tháng {month}
-                            </SelectItem>
-                          )
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex-1 max-w-[200px]">
-                    <Label>Năm</Label>
-                    <Select
-                      value={exportYear.toString()}
-                      onValueChange={(v) => setExportYear(parseInt(v))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from(
-                          { length: 5 },
-                          (_, i) => new Date().getFullYear() - 2 + i
-                        ).map((year) => (
-                          <SelectItem key={year} value={year.toString()}>
-                            {year}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button
-                    onClick={handleExportDebtByMonth}
-                    disabled={exportingDebt}
-                  >
-                    {exportingDebt ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Đang xuất...
-                      </>
-                    ) : (
-                      <>
-                        <Download className="h-4 w-4 mr-2" />
-                        Xuất Excel
-                      </>
-                    )}
-                  </Button>
-                </div>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Xuất báo cáo công nợ từ ngày 1 đến ngày cuối tháng (bao gồm nợ và thanh toán).
-                </p>
-              </TabsContent>
+            <TabsContent value="date" className="space-y-4 pt-2">
+              <div className="space-y-2">
+                <Label className="text-slate-700 font-semibold">Khoảng thời gian</Label>
+                <DateRangePicker
+                  value={exportDateRange}
+                  onValueChange={setExportDateRange}
+                  placeholder="Từ ngày - Đến ngày"
+                  className="w-full"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setShowExportDialog(false)}>
+                  Hủy
+                </Button>
+                <Button
+                  onClick={handleExportDebtByDate}
+                  disabled={exportingDebt}
+                >
+                  {exportingDebt ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Đang xuất...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Xuất Excel
+                    </>
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground italic">
+                Báo cáo công nợ từ ngày bắt đầu đến ngày kết thúc đã chọn (bao gồm nợ và thanh toán).
+              </p>
+            </TabsContent>
 
-              <TabsContent value="quarter">
-                <div className="flex gap-4 items-end">
-                  <div className="flex-1 max-w-[200px]">
-                    <Label>Quý</Label>
-                    <Select
-                      value={exportQuarter.toString()}
-                      onValueChange={(v) => setExportQuarter(parseInt(v))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[1, 2, 3, 4].map((quarter) => (
-                          <SelectItem key={quarter} value={quarter.toString()}>
-                            Quý {quarter}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex-1 max-w-[200px]">
-                    <Label>Năm</Label>
-                    <Select
-                      value={exportQuarterYear.toString()}
-                      onValueChange={(v) => setExportQuarterYear(parseInt(v))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from(
-                          { length: 5 },
-                          (_, i) => new Date().getFullYear() - 2 + i
-                        ).map((year) => (
-                          <SelectItem key={year} value={year.toString()}>
-                            {year}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button
-                    onClick={handleExportDebtByQuarter}
-                    disabled={exportingDebt}
+            <TabsContent value="month" className="space-y-4 pt-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-slate-700 font-semibold">Tháng</Label>
+                  <Select
+                    value={exportMonth.toString()}
+                    onValueChange={(v) => setExportMonth(parseInt(v))}
                   >
-                    {exportingDebt ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Đang xuất...
-                      </>
-                    ) : (
-                      <>
-                        <Download className="h-4 w-4 mr-2" />
-                        Xuất Excel
-                      </>
-                    )}
-                  </Button>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: 12 }, (_, i) => i + 1).map(
+                        (month) => (
+                          <SelectItem key={month} value={month.toString()}>
+                            Tháng {month}
+                          </SelectItem>
+                        )
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Xuất báo cáo công nợ trong suốt 3 tháng của quý đã chọn (bao gồm nợ và thanh toán).
-                </p>
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+                <div className="space-y-2">
+                  <Label className="text-slate-700 font-semibold">Năm</Label>
+                  <Select
+                    value={exportYear.toString()}
+                    onValueChange={(v) => setExportYear(parseInt(v))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from(
+                        { length: 5 },
+                        (_, i) => new Date().getFullYear() - 2 + i
+                      ).map((year) => (
+                        <SelectItem key={year} value={year.toString()}>
+                          {year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setShowExportDialog(false)}>
+                  Hủy
+                </Button>
+                <Button
+                  onClick={handleExportDebtByMonth}
+                  disabled={exportingDebt}
+                >
+                  {exportingDebt ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Đang xuất...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Xuất Excel
+                    </>
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground italic">
+                Báo cáo công nợ từ ngày 1 đến ngày cuối tháng (bao gồm nợ và thanh toán).
+              </p>
+            </TabsContent>
+
+            <TabsContent value="quarter" className="space-y-4 pt-2">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-slate-700 font-semibold">Quý</Label>
+                  <Select
+                    value={exportQuarter.toString()}
+                    onValueChange={(v) => setExportQuarter(parseInt(v))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[1, 2, 3, 4].map((quarter) => (
+                        <SelectItem key={quarter} value={quarter.toString()}>
+                          Quý {quarter}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-slate-700 font-semibold">Năm</Label>
+                  <Select
+                    value={exportQuarterYear.toString()}
+                    onValueChange={(v) => setExportQuarterYear(parseInt(v))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Array.from(
+                        { length: 5 },
+                        (_, i) => new Date().getFullYear() - 2 + i
+                      ).map((year) => (
+                        <SelectItem key={year} value={year.toString()}>
+                          {year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setShowExportDialog(false)}>
+                  Hủy
+                </Button>
+                <Button
+                  onClick={handleExportDebtByQuarter}
+                  disabled={exportingDebt}
+                >
+                  {exportingDebt ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Đang xuất...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4 mr-2" />
+                      Xuất Excel
+                    </>
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground italic">
+                Báo cáo công nợ trong suốt 3 tháng của quý đã chọn (bao gồm nợ và thanh toán).
+              </p>
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
 
         {/* Debt History Dialog */}
         <Dialog

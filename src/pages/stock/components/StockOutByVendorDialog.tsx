@@ -29,6 +29,7 @@ import {
   useCreateReturnVendorStockOut,
   useCreateAdjustmentStockOut,
 } from "@/hooks/use-stock";
+import { usePendingMaterialProductionOrders } from "@/hooks/use-production";
 import { cn } from "@/lib/utils";
 import {
   Popover,
@@ -50,6 +51,7 @@ interface StockOutByVendorDialogProps {
   selectedVendorId: number | null;
   vendors: any[];
   refetch: () => void;
+  prefillItems?: FormItem[];
 }
 
 interface FormItem {
@@ -57,6 +59,7 @@ interface FormItem {
   jobCode: string;
   quantity: number;
   notes: string;
+  prefillPaperName?: string;
 }
 
 interface MaterialSelectorProps {
@@ -136,12 +139,106 @@ function MaterialSelector({
   );
 }
 
+interface JobCodeSelectorProps {
+  value: string;
+  onSelect: (code: string) => void;
+  productionOrders: any[];
+  placeholder?: string;
+  className?: string;
+}
+
+function JobCodeSelector({
+  value,
+  onSelect,
+  productionOrders,
+  placeholder = "Mã bài...",
+  className,
+}: JobCodeSelectorProps) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className={cn(
+            "h-9 w-full justify-between text-xs bg-white border-slate-200 rounded-lg font-normal hover:bg-slate-50/50 cursor-pointer px-3",
+            className
+          )}
+        >
+          <span className="truncate font-mono">
+            {value || placeholder}
+          </span>
+          <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50 text-slate-500" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[300px] p-0" align="start">
+        <Command className="w-full">
+          <CommandInput
+            placeholder="Tìm mã bài..."
+            className="h-9 w-full bg-transparent text-xs border-none focus:ring-0 focus-visible:ring-0"
+          />
+          <CommandList className="max-h-[220px]">
+            <CommandEmpty>Không tìm thấy mã bài nào.</CommandEmpty>
+            <CommandGroup>
+              {productionOrders.map((po) => (
+                <CommandItem
+                  key={po.id}
+                  value={`${po.proofingOrderCode || ""} ${po.customerName || ""} ${po.id}`}
+                  onSelect={() => {
+                    onSelect(po.proofingOrderCode || "");
+                    setOpen(false);
+                  }}
+                  className="text-xs cursor-pointer flex flex-col items-start gap-1.5 py-2.5 px-3 hover:bg-slate-50 border-b border-slate-100 last:border-0"
+                >
+                  <div className="flex items-center w-full justify-between">
+                    <span className="font-bold font-mono text-slate-700 text-sm">
+                      {po.proofingOrderCode || "N/A"}
+                    </span>
+                    {value === po.proofingOrderCode && (
+                      <Check className="h-3.5 w-3.5 text-rose-600 shrink-0" />
+                    )}
+                  </div>
+                  {po.customerName && (
+                    <span className="text-[10px] text-slate-500 font-medium">
+                      KH: {po.customerName}
+                    </span>
+                  )}
+                  {po.items && po.items.length > 0 && (
+                    <div className="mt-1 w-full bg-slate-50 dark:bg-slate-900 rounded-lg p-1.5 space-y-1 text-[10px] text-slate-600 dark:text-slate-400 border border-slate-100 dark:border-slate-800">
+                      <div className="font-semibold text-slate-500 mb-0.5">Sản phẩm cần xuất:</div>
+                      {po.items.map((it: any, idx: number) => (
+                        <div key={idx} className="flex justify-between items-start gap-2">
+                          <span className="truncate max-w-[180px] font-medium text-slate-700 dark:text-slate-300">
+                            {it.designCode ? `[${it.designCode}] ` : ""}{it.designName || "Chưa đặt tên"}
+                          </span>
+                          <span className="font-bold text-rose-600 whitespace-nowrap shrink-0">
+                            {it.inputQty?.toLocaleString()} tờ
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function StockOutByVendorDialog({
   open,
   onOpenChange,
   selectedVendorId,
   vendors,
   refetch,
+  prefillItems,
 }: StockOutByVendorDialogProps) {
   const navigate = useNavigate();
   // Purpose: production, outsource, return_vendor, adjustment
@@ -207,6 +304,12 @@ export function StockOutByVendorDialog({
   });
   const vendorMaterials = materialsData?.items || [];
 
+  // Load pending material production orders for Mã bài selector
+  const { data: pendingProdOrdersData } = usePendingMaterialProductionOrders({
+    pageSize: 1000,
+  });
+  const pendingProdOrders = pendingProdOrdersData?.items || [];
+
   // Filter materials based on purpose
   // Xuất sản xuất: currently applied for sheet (tờ)
   const filteredMaterials = useMemo(() => {
@@ -225,6 +328,14 @@ export function StockOutByVendorDialog({
     return vendorMaterials;
   }, [vendorMaterials, purpose]);
 
+  const [hasResolvedPrefill, setHasResolvedPrefill] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setHasResolvedPrefill(false);
+    }
+  }, [open]);
+
   // Reset form when dialog opens/closes or vendor changes
   useEffect(() => {
     if (open) {
@@ -234,15 +345,45 @@ export function StockOutByVendorDialog({
       setWarehouseName("");
       setWarehouseAddress("");
       setNotes("");
-      setItems([{ materialId: null, jobCode: "", quantity: 1, notes: "" }]);
       setAdjMaterialId(null);
       setAdjQuantity(1);
       setAdjReason("");
       setAdjNotes("");
       setOutsourceVendorId(null);
       setReceiverPhone("");
+
+      if (prefillItems && prefillItems.length > 0) {
+        setItems(prefillItems);
+      } else {
+        setItems([{ materialId: null, jobCode: "", quantity: 1, notes: "" }]);
+      }
     }
-  }, [open, selectedVendorId]);
+  }, [open, selectedVendorId, prefillItems]);
+
+  // Auto-select material from vendorMaterials if prefillPaperName is present
+  useEffect(() => {
+    if (open && prefillItems && prefillItems.length > 0 && vendorMaterials.length > 0 && !hasResolvedPrefill) {
+      const newItems = items.map(item => {
+        if (item.materialId === null && item.prefillPaperName) {
+          const paperLower = item.prefillPaperName.toLowerCase().replace(/\s+/g, "");
+          const match = vendorMaterials.find(m => {
+            const mNameLower = (m.name || "").toLowerCase().replace(/\s+/g, "");
+            return mNameLower.includes(paperLower) || paperLower.includes(mNameLower);
+          });
+          if (match) {
+            return {
+              ...item,
+              materialId: match.id,
+              prefillPaperName: undefined
+            };
+          }
+        }
+        return item;
+      });
+      setItems(newItems);
+      setHasResolvedPrefill(true);
+    }
+  }, [vendorMaterials, open, prefillItems, hasResolvedPrefill]);
 
   // Prefill return_vendor fields when purpose is selected
   useEffect(() => {
@@ -738,11 +879,12 @@ export function StockOutByVendorDialog({
                           </td>
                           {purpose === "production" && (
                             <td className="py-2 px-3">
-                              <Input
-                                placeholder="Mã bài..."
+                              <JobCodeSelector
                                 value={item.jobCode}
-                                onChange={(e) => handleItemChange(index, "jobCode", e.target.value)}
-                                className="h-9 text-xs font-mono border-slate-200 focus-visible:ring-rose-500 rounded-lg bg-white"
+                                onSelect={(val) => handleItemChange(index, "jobCode", val)}
+                                productionOrders={pendingProdOrders}
+                                placeholder="Mã bài..."
+                                className="h-9"
                               />
                             </td>
                           )}

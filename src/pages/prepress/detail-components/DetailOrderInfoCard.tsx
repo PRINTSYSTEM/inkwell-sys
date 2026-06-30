@@ -30,10 +30,12 @@ import {
 import { downloadFile } from "@/lib/download-utils";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
+import { useMemo } from "react";
+import { cn } from "@/lib/utils";
 
 interface DetailOrderInfoCardProps {
   order: any;
-  editingField: "totalQuantity" | "paperSize" | "notes" | "all" | null;
+  editingField: "totalQuantity" | "paperSize" | "notes" | "basisWeight" | "rollWidth" | "all" | null;
   inlineTotalQuantity: string;
   setInlineTotalQuantity: (val: string) => void;
   inlinePaperSizeId: string;
@@ -42,13 +44,17 @@ interface DetailOrderInfoCardProps {
   setInlineCustomPaperSize: (val: string) => void;
   inlineNotes: string;
   setInlineNotes: (val: string) => void;
+  inlineBasisWeight?: string;
+  setInlineBasisWeight?: (val: string) => void;
+  inlineRollWidth?: string;
+  setInlineRollWidth?: (val: string) => void;
   paperSizes: any[];
   uniqueProcessClassifications: string[];
   uniqueLaminationTypes: string[];
   uniqueSpecifications: string[];
   isUpdatingInfo: boolean;
   handleStartEditField: (
-    field: "totalQuantity" | "paperSize" | "notes",
+    field: "totalQuantity" | "paperSize" | "notes" | "basisWeight" | "rollWidth",
   ) => void;
   handleStartEditAllFields: () => void;
   handleCancelEditField: () => void;
@@ -71,6 +77,10 @@ export function DetailOrderInfoCard({
   setInlineCustomPaperSize,
   inlineNotes,
   setInlineNotes,
+  inlineBasisWeight = "",
+  setInlineBasisWeight = () => {},
+  inlineRollWidth = "",
+  setInlineRollWidth = () => {},
   paperSizes,
   uniqueProcessClassifications,
   uniqueLaminationTypes,
@@ -122,6 +132,51 @@ export function DetailOrderInfoCard({
     order.createdBy?.fullName ||
     order.createdBy?.name ||
     "-";
+
+  const gsmWarnings = useMemo(() => {
+    if (!order?.basisWeight || !order?.proofingOrderDesigns || order.proofingOrderDesigns.length === 0) return [];
+    
+    const warnings: { type: "error" | "warning"; message: string }[] = [];
+    order.proofingOrderDesigns.forEach((pod: any) => {
+      const designGsm = pod.design?.basisWeight;
+      const designCode = pod.design?.code || `DES-${pod.design?.id}`;
+      if (designGsm) {
+        if (order.basisWeight < designGsm) {
+          warnings.push({
+            type: "error",
+            message: `GSM ${order.basisWeight} nhỏ hơn thiết kế ${designCode} (${designGsm} gsm)!`,
+          });
+        } else if (order.basisWeight > designGsm + 50) {
+          warnings.push({
+            type: "warning",
+            message: `GSM ${order.basisWeight} dày hơn thiết kế ${designCode} (${designGsm} gsm)!`,
+          });
+        }
+      }
+    });
+    return warnings;
+  }, [order?.basisWeight, order?.proofingOrderDesigns]);
+
+  const hasGrammage = useMemo(() => {
+    const familyName = order.materialType?.materialFamilyName?.toLowerCase() || "";
+    const typeName = order.materialType?.name?.toLowerCase() || "";
+    const typeCode = order.materialType?.code?.toLowerCase() || "";
+
+    return (
+      familyName.includes("giấy") ||
+      familyName.includes("giay") ||
+      familyName.includes("paper") ||
+      typeName.includes("giấy") ||
+      typeName.includes("giay") ||
+      typeName.includes("paper") ||
+      typeName.includes("ivory") ||
+      typeName.includes("bristol") ||
+      typeName.includes("couche") ||
+      typeName.includes("duplex") ||
+      typeName.includes("kraft") ||
+      typeCode.includes("paper")
+    );
+  }, [order.materialType]);
 
   return (
     <Card className="relative h-full flex flex-col">
@@ -217,6 +272,30 @@ export function DetailOrderInfoCard({
             </div>
           )}
         </div>
+
+        {gsmWarnings.length > 0 && (
+          <div className="flex flex-col gap-1.5 px-0.5 pt-1.5">
+            {gsmWarnings.map((w, idx) => (
+              <div
+                key={idx}
+                className={cn(
+                  "flex items-center gap-1.5 px-2.5 py-1.5 rounded text-[10px] font-semibold border",
+                  w.type === "error"
+                    ? "bg-red-50 border-red-200 text-red-700 dark:bg-red-950/30 dark:border-red-900/50 dark:text-red-400"
+                    : "bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-950/30 dark:border-amber-900/50 dark:text-amber-400"
+                )}
+              >
+                <div
+                  className={cn(
+                    "w-1.5 h-1.5 rounded-full shrink-0",
+                    w.type === "error" ? "bg-red-500" : "bg-amber-500"
+                  )}
+                />
+                <span className="leading-tight">{w.message}</span>
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="flex-1 flex flex-col gap-2 pt-2">
           {/* Key Metrics Row */}
@@ -382,6 +461,118 @@ export function DetailOrderInfoCard({
                 </p>
               </div>
             </div>
+
+            {hasGrammage && (
+              <div
+                className="flex items-center justify-between group cursor-pointer"
+                onClick={() =>
+                  order.status !== "completed" &&
+                  editingField !== "all" &&
+                  isProofer &&
+                  handleStartEditField("basisWeight")
+                }
+              >
+                <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">
+                  Định lượng (GSM)
+                </Label>
+                <div className="flex items-center gap-1">
+                  {(editingField === "basisWeight" || editingField === "all") ? (
+                    <div className="flex gap-1 items-center">
+                      <Input
+                        type="number"
+                        min="1"
+                        value={inlineBasisWeight}
+                        onChange={(e) => setInlineBasisWeight(e.target.value)}
+                        className="h-6 text-xs font-bold px-2 w-24"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSaveField();
+                          else if (e.key === "Escape") handleCancelEditField();
+                        }}
+                        autoFocus={editingField === "basisWeight"}
+                      />
+                      {editingField !== "all" && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-5 px-1.5 text-[10px] text-green-600"
+                          onClick={handleSaveField}
+                          disabled={isUpdatingInfo}
+                        >
+                          Lưu
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <p className="font-bold text-[12px]">
+                        {order.basisWeight ? `${order.basisWeight} gsm` : "Chưa nhập"}
+                      </p>
+                      {order.status !== "completed" && isProofer && (
+                        <Edit className="h-2.5 w-2.5 text-muted-foreground opacity-0 group-hover:opacity-100" />
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {((order.materialType?.name?.toLowerCase().includes("cuộn") ||
+              order.materialType?.name?.toLowerCase().includes("cuon") ||
+              order.materialType?.name?.toLowerCase().includes("pe") ||
+              order.materialType?.name?.toLowerCase().includes("pa") ||
+              order.rollWidth) ? (
+              <div
+                className="flex items-center justify-between group cursor-pointer"
+                onClick={() =>
+                  order.status !== "completed" &&
+                  editingField !== "all" &&
+                  isProofer &&
+                  handleStartEditField("rollWidth")
+                }
+              >
+                <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">
+                  Khổ cuộn (mm)
+                </Label>
+                <div className="flex items-center gap-1">
+                  {(editingField === "rollWidth" || editingField === "all") ? (
+                    <div className="flex gap-1 items-center">
+                      <Input
+                        type="number"
+                        min="1"
+                        value={inlineRollWidth}
+                        onChange={(e) => setInlineRollWidth(e.target.value)}
+                        className="h-6 text-xs font-bold px-2 w-24"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSaveField();
+                          else if (e.key === "Escape") handleCancelEditField();
+                        }}
+                        autoFocus={editingField === "rollWidth"}
+                      />
+                      {editingField !== "all" && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-5 px-1.5 text-[10px] text-green-600"
+                          onClick={handleSaveField}
+                          disabled={isUpdatingInfo}
+                        >
+                          Lưu
+                        </Button>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <p className="font-bold text-[12px]">
+                        {order.rollWidth ? `${order.rollWidth} mm` : "Chưa nhập"}
+                      </p>
+                      {order.status !== "completed" && isProofer && (
+                        <Edit className="h-2.5 w-2.5 text-muted-foreground opacity-0 group-hover:opacity-100" />
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            ) : null)}
           </div>
 
           <div className="h-px bg-muted-foreground/5" />

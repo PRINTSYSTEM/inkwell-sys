@@ -126,7 +126,10 @@ export function PaymentList({ listFilterType }: PaymentListProps) {
     const allFiltered = data.items.filter((order) => {
       const paymentStatus = derivePaymentStatus(order.totalAmount, order.depositAmount);
       const matchesPaymentStatus = paymentStatusFilter === "all" || paymentStatus === paymentStatusFilter;
-      return matchesPaymentStatus && order.isDebtApproved !== true;
+      return (
+        matchesPaymentStatus &&
+        (order as { isDebtApproved?: boolean }).isDebtApproved !== true
+      );
     });
 
     if (clientSideMode) {
@@ -147,30 +150,7 @@ export function PaymentList({ listFilterType }: PaymentListProps) {
     setPageInput(currentPage.toString());
   }, [currentPage]);
 
-  // Auto-adjust currentPage if it exceeds totalPages
-  // Only adjust when we have valid data (not loading) and totalPages actually decreased
-  useEffect(() => {
-    // Only adjust if:
-    // 1. Not loading (we have valid data)
-    // 2. Data exists
-    // 3. Current page exceeds total pages
-    // 4. Total pages is valid (> 0)
-    // 5. Total pages actually decreased from previous value (not just during initial load)
-    if (
-      !isLoading &&
-      !!data &&
-      currentPage > totalPages &&
-      totalPages > 0 &&
-      (previousTotalPagesRef.current === null || totalPages < previousTotalPagesRef.current)
-    ) {
-      setCurrentPage(totalPages);
-    }
-    
-    // Update previous totalPages ref only when we have valid data
-    if (!isLoading && !!data && totalPages > 0) {
-      previousTotalPagesRef.current = totalPages;
-    }
-  }, [currentPage, totalPages, isLoading, data]);
+
 
   // Reset to page 1 when filters change
   useEffect(() => {

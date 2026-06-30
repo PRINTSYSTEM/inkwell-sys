@@ -14,6 +14,9 @@ export type { AsyncSelectOption, AsyncSelectProps } from './AsyncSelect';
 export { DateRangePicker } from './DateRangePicker';
 export type { DateRangePickerProps } from './DateRangePicker';
 
+export { SearchableSelect } from './SearchableSelect';
+export type { SearchableSelectOption, SearchableSelectProps } from './SearchableSelect';
+
 // Example form
 export { ExampleForm } from './ExampleForm';
 

@@ -119,7 +119,8 @@ export default function VendorListPage() {
     }
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: number | undefined) => {
+    if (!id) return;
     if (confirm("Bạn có chắc chắn muốn xóa nhà cung cấp này?")) {
       deleteVendor(id);
     }
@@ -331,7 +332,7 @@ export default function VendorListPage() {
                           </div>
                         </TableCell>
                         <TableCell className="py-2 text-sm text-slate-600">
-                          {getVendorTypeLabel(vendor.vendorType)}
+                          {vendor.supplierTypeName || getVendorTypeLabel(vendor.vendorType)}
                         </TableCell>
                         <TableCell className="py-2 text-sm text-slate-600">{vendor.phone || "—"}</TableCell>
                         <TableCell className="py-2 max-w-xs truncate text-sm text-slate-600">
@@ -380,7 +381,7 @@ export default function VendorListPage() {
                               variant="ghost"
                               size="sm"
                               className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={() => handleDelete(vendor.id!)}
+                              onClick={() => handleDelete(vendor.id)}
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>

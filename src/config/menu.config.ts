@@ -512,6 +512,7 @@ export const MENU_ITEMS: MenuItem[] = [
       },
     ],
   },
+
   // ==== Quản lý hệ thống ====
   {
     id: "system",
@@ -533,6 +534,13 @@ export const MENU_ITEMS: MenuItem[] = [
         path: ROUTE_PATHS.ADMIN.SETTINGS,
         allowedRoles: [ROLE.ADMIN],
       },
+      {
+        id: "material-hierarchy",
+        title: "Cấu hình phân cấp vật tư",
+        icon: Layers,
+        path: ROUTE_PATHS.ADMIN.MATERIAL_HIERARCHY,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
+      },
 
       // {
       //   id: "admin-roles",
@@ -547,6 +555,13 @@ export const MENU_ITEMS: MenuItem[] = [
         icon: Settings,
         path: ROUTE_PATHS.DESIGN_TYPES.ROOT,
         allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
+      },
+      {
+        id: "materials-specs",
+        title: "Định mức chất liệu",
+        icon: FileSpreadsheet,
+        path: ROUTE_PATHS.MATERIALS.SPECS,
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PRODUCTION, ROLE.PRODUCTION_LEAD],
       },
     ],
   },

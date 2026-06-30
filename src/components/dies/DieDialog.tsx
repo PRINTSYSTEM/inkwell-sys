@@ -46,6 +46,7 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useActiveDieVendors, useCreateVendor } from "@/hooks/use-vendor";
+import { useSupplierTypes } from "@/hooks/use-supplier-type";
 import { useCreateDie, useUpdateDie, useUploadDieImage } from "@/hooks/use-die";
 import type { DieResponse } from "@/Schema";
 import { dieUsageTypeLabels, dieStatusLabels } from "@/lib/status-utils";
@@ -80,6 +81,8 @@ export function DieDialog({
   const [isReusable, setIsReusable] = useState<boolean>(true);
 
   const { data: vendors, isLoading: loadingVendors } = useActiveDieVendors();
+  const { data: supplierTypesResp } = useSupplierTypes({ page: 1, size: 1000 });
+  const supplierTypes = supplierTypesResp?.items || [];
   const { mutate: createVendor, isPending: creatingVendor } = useCreateVendor();
   const { mutate: createDie, isPending: creatingDie } = useCreateDie();
   const { mutate: updateDie, isPending: updatingDie } = useUpdateDie();
@@ -161,10 +164,15 @@ export function DieDialog({
       return;
     }
 
+    const dieSupplierType = supplierTypes.find(
+      (t) => t.code?.toUpperCase() === "DIE"
+    );
+
     createVendor(
       {
         name: vendorName.trim(),
-        vendorType: "die",
+        vendorType: dieSupplierType?.code || "DIE",
+        supplierTypeId: dieSupplierType?.id,
         isActive: true,
       },
       {

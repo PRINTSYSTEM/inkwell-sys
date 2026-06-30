@@ -84,7 +84,9 @@ export const AsyncSelect: React.FC<AsyncSelectProps> = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
+  const searchTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  // Cache labels for selected values so they display even when not in current filtered options
+  const [selectedLabelCache, setSelectedLabelCache] = useState<Record<string | number, string>>({});
 
   const selectedValues: (string | number)[] = React.useMemo(() => {
     if (multiple) {
@@ -99,9 +101,15 @@ export const AsyncSelect: React.FC<AsyncSelectProps> = ({
     return value !== undefined && !Array.isArray(value) ? [value as string | number] : [];
   }, [multiple, value]);
 
-  const selectedOptions = options.filter(option => 
-    selectedValues.includes(option.value)
-  );
+  const selectedOptions = selectedValues.map(val => {
+    const found = options.find(o => o.value === val || String(o.value) === String(val));
+    if (found) return found;
+    // Fallback to cached label if option not in current list (e.g., after search clears)
+    if (selectedLabelCache[val]) {
+      return { value: val, label: selectedLabelCache[val] };
+    }
+    return null;
+  }).filter((o): o is AsyncSelectOption => o !== null);
 
   const loadOptionsWithSearch = useCallback(async (search?: string) => {
     if (search !== undefined && search.length < minSearchLength) {
@@ -130,30 +138,34 @@ export const AsyncSelect: React.FC<AsyncSelectProps> = ({
 
   // Handle search with debounce
   useEffect(() => {
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
     }
 
-    const timeout = setTimeout(() => {
+    searchTimeoutRef.current = setTimeout(() => {
       if (searchTerm.length >= minSearchLength || searchTerm === "") {
         loadOptionsWithSearch(searchTerm);
         onSearch?.(searchTerm);
       }
     }, debounceMs);
 
-    setSearchTimeout(timeout);
-
     return () => {
-      if (timeout) {
-        clearTimeout(timeout);
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
       }
     };
-  }, [searchTerm, debounceMs, minSearchLength, loadOptionsWithSearch, onSearch, searchTimeout]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm]);
 
   const handleSelect = (optionValue: string | number) => {
+    // Cache the label for the selected value so it can be displayed even after options reload
+    const selectedOption = options.find(o => o.value === optionValue || String(o.value) === String(optionValue));
+    if (selectedOption) {
+      setSelectedLabelCache(prev => ({ ...prev, [optionValue]: selectedOption.label }));
+    }
     if (multiple) {
-      const newValues: (string | number)[] = selectedValues.includes(optionValue)
-        ? selectedValues.filter(v => v !== optionValue)
+      const newValues: (string | number)[] = selectedValues.some(v => String(v) === String(optionValue))
+        ? selectedValues.filter(v => String(v) !== String(optionValue))
         : [...selectedValues, optionValue];
       onValueChange?.(newValues);
     } else {

@@ -764,7 +764,7 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
         proofingOrderId={order?.id}
         proofingOrder={order}
         mode="replace"
-        replacingDieId={replacingDieExport?.dieId}
+        replacingDieId={replacingDieExport?.dieId || replacingDieExport?.die?.id || replacingDieExport?.id}
         onSuccess={() => {
           setIsReplaceDieDialogOpen(false);
           setReplacingDieExport(null);

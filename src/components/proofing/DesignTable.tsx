@@ -164,6 +164,7 @@ export function DesignTable({
                             </span>
                             <span className="font-medium">
                               {design.materialTypeName}
+                              {design.basisWeight && design.basisWeight > 0 ? ` (${design.basisWeight} gsm)` : ""}
                             </span>
                           </div>
                           <div className="flex justify-between text-xs">
@@ -173,6 +174,22 @@ export function DesignTable({
                             <span className="font-medium">
                               {design.length} × {design.height}
                               {design.width ? ` × ${design.width}` : ""} mm
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">
+                              Người thiết kế:
+                            </span>
+                            <span className="font-medium">
+                              {design.designerName || "—"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">
+                              Người chốt in:
+                            </span>
+                            <span className="font-medium">
+                              {design.createdBy || design.designerName || "—"}
                             </span>
                           </div>
                           <div className="flex justify-between text-xs pt-1 border-t">
@@ -361,6 +378,7 @@ export function DesignTable({
                         )}
                       >
                         {design.materialTypeName}
+                        {design.basisWeight && design.basisWeight > 0 ? ` (${design.basisWeight} gsm)` : ""}
                       </div>
                     </TableCell>
                     <TableCell>

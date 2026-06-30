@@ -1,5 +1,3 @@
-// src/Schema/die.schema.ts
-// Wrapper around generated schemas - keeps utilities and stable exports
 import { z } from "zod";
 import {
   DieResponseSchema as GenDieResponseSchema,
@@ -10,6 +8,7 @@ import {
   AssignDieToProofingOrderRequestSchema as GenAssignDieToProofingOrderRequestSchema,
   ReplaceDieRequestSchema as GenReplaceDieRequestSchema,
   UpdateDieStatusRequestSchema as GenUpdateDieStatusRequestSchema,
+  DieExportHistoryResponseSchema as GenDieExportHistoryResponseSchema,
 } from "./generated";
 
 // ===== DieResponse =====
@@ -48,6 +47,12 @@ export const UpdateDieStatusRequestSchema =
   GenUpdateDieStatusRequestSchema.passthrough();
 export type UpdateDieStatusRequest = z.infer<
   typeof UpdateDieStatusRequestSchema
+>;
+
+// ===== DieExportHistoryResponse =====
+export const DieExportHistoryResponseSchema = GenDieExportHistoryResponseSchema.passthrough();
+export type DieExportHistoryResponse = z.infer<
+  typeof DieExportHistoryResponseSchema
 >;
 
 

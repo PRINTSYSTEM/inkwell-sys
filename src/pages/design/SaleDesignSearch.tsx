@@ -85,6 +85,7 @@ export default function SaleDesignSearch() {
       if (selectedTypeId) {
         const res = await apiRequest.get(
           API_SUFFIX.MATERIAL_TYPES_BY_DESIGN_TYPE(selectedTypeId),
+          { params: { status: "active" } }
         );
         const payload = res.data;
         if (Array.isArray(payload)) return payload;
@@ -95,7 +96,7 @@ export default function SaleDesignSearch() {
 
       // fetch all materials - request a large pageSize to get full list
       const res = await apiRequest.get(API_SUFFIX.MATERIAL_TYPES, {
-        params: { pageNumber: 1, pageSize: 1000 },
+        params: { pageNumber: 1, pageSize: 100, status: "active" },
       });
       const payload = res.data;
       if (Array.isArray(payload)) return payload;
@@ -348,9 +349,10 @@ export default function SaleDesignSearch() {
                         {design.designType?.name || "—"}
                       </td>
                       <td className="px-4 py-3 align-top">
-                        {design.materialType?.name ||
-                          design.materialTypeName ||
-                          "—"}
+                        <span>
+                          {design.materialType?.name || design.materialTypeName || "—"}
+                          {design.basisWeight ? ` (${design.basisWeight} gsm)` : ""}
+                        </span>
                       </td>
                       <td className="px-4 py-3 align-top">
                         {design.dimensions ||

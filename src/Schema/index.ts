@@ -8,6 +8,7 @@ export * from "./design.schema";
 export * from "./design-type.schema";
 export * from "./material-type.schema";
 export * from "./material.schema";
+export * from "./material-spec.schema";
 export * from "./order.schema";
 export * from "./proofing-order.schema";
 export * from "./production.schema";
@@ -23,6 +24,13 @@ export * from "./die-export.schema";
 export * from "./die.schema";
 export * from "./vendor.schema";
 export * from "./stock.schema";
+
+// 8-Layer Material Hierarchy Schemas
+export * from "./supplier-type.schema";
+export * from "./material-family.schema";
+export * from "./spec-template.schema";
+export * from "./spec-value.schema";
+export * from "./supplier-catalog.schema";
 export * from "./shared-address.schema";
 export * from "./report.schema";
 export * from "./return-note.schema";

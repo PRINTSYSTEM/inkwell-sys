@@ -240,8 +240,8 @@ export default function CashBookPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-xl font-bold truncate">
-                  {bookType === "cash" 
-                    ? (displayData.cashFundName || "Tiền mặt") 
+                  {bookType === "cash"
+                    ? ((displayData.cashFundName as string | undefined) || "Tiền mặt")
                     : (bankAccounts.find(a => a.id?.toString() === bankAccountId)?.bankName || "Tài khoản")}
                 </div>
               </CardContent>

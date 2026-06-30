@@ -56,6 +56,7 @@ export type CreateDesignRequestUI = {
   laminationType?: string | null;
   sharedAddressId?: number | null;
   gusseted?: boolean;
+  basisWeight?: number;
 };
 
 type DesignCardProps = {
@@ -211,7 +212,14 @@ export const DesignCard: React.FC<DesignCardProps> = ({
                   <p className="text-xs text-muted-foreground mb-0.5">
                     Chất liệu
                   </p>
-                  <p className="font-medium">{materialToShow.name}</p>
+                  <p className="font-medium">
+                    {materialToShow.name}
+                    {design.basisWeight && (
+                      <span className="ml-1 text-slate-500 font-normal">
+                        ({design.basisWeight} gsm)
+                      </span>
+                    )}
+                  </p>
                   {materialToShow.description && (
                     <p className="text-xs text-muted-foreground truncate">{materialToShow.description}</p>
                   )}

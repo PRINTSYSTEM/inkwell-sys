@@ -1087,6 +1087,11 @@ export default function OrderDetailPage() {
                                 <p className="text-sm text-muted-foreground">
                                   {design?.designType?.name} •{" "}
                                   {design?.materialType?.name}
+                                  {design?.basisWeight && (
+                                    <span className="text-slate-500 font-normal">
+                                      {" "}({design.basisWeight} gsm)
+                                    </span>
+                                  )}
                                 </p>
                               </div>
                               {canEditOrderDetail && (

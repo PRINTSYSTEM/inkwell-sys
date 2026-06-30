@@ -1,5 +1,6 @@
-import { useMemo, useState, useRef } from "react";
-
+import { useMemo, useState, useRef, useEffect } from "react";
+import { cn } from "@/lib/utils";
+import { useMaterialSpecsByMaterialType } from "@/hooks/use-material-spec";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -144,6 +145,22 @@ const isTuiXepHongDesignType = (
   );
 };
 
+const isTuiDesignType = (designTypeName: string | undefined): boolean => {
+  if (!designTypeName) return false;
+  return (
+    designTypeName.toLowerCase().includes("túi") ||
+    designTypeName.toLowerCase().includes("tui")
+  );
+};
+
+const isTuiCuonDesignType = (designTypeName: string | undefined): boolean => {
+  if (!designTypeName) return false;
+  return (
+    designTypeName.toLowerCase().includes("cuộn") ||
+    designTypeName.toLowerCase().includes("cuon")
+  );
+};
+
 function getTimelineVisual(entry: DesignTimelineEntryResponse) {
   const description = (entry.description as string | undefined) || "";
   const normalized = description.toLowerCase();
@@ -259,6 +276,7 @@ export default function DesignDetailPage() {
   const [showTimelineDialog, setShowTimelineDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [gusseted, setGusseted] = useState<boolean>(false);
   const [editFormData, setEditFormData] = useState({
     designName: "",
     length: 0,
@@ -274,7 +292,48 @@ export default function DesignDetailPage() {
     sidesClassification: "" as string | undefined,
     processClassification: "" as string | undefined,
     laminationType: "" as string | undefined,
+    basisWeight: undefined as number | undefined,
   });
+
+  // Load material specifications for selected material type
+  const { data: materialSpecs = [] } = useMaterialSpecsByMaterialType(
+    editFormData.materialTypeId || null,
+    !!editFormData.materialTypeId
+  );
+
+  const hasSpecs = materialSpecs && materialSpecs.length > 0 && !(
+    materialSpecs.length === 1 &&
+    (materialSpecs[0].basisWeight === 0 || materialSpecs[0].basisWeight === null || materialSpecs[0].basisWeight === undefined)
+  );
+
+  // Auto-select default basis weight when material specs load during editing
+  useEffect(() => {
+    if (isEditing && editFormData.materialTypeId && materialSpecs.length > 0) {
+      if (!hasSpecs) {
+        setEditFormData((prev) => ({ ...prev, basisWeight: undefined }));
+      } else {
+        if (editFormData.basisWeight === undefined || editFormData.basisWeight === null || editFormData.basisWeight === 0) {
+          const defaultSpec = materialSpecs.find((spec) => spec.isDefault);
+          if (defaultSpec && defaultSpec.basisWeight !== undefined) {
+            setEditFormData((prev) => ({ ...prev, basisWeight: defaultSpec.basisWeight }));
+          } else if (materialSpecs.length === 1 && materialSpecs[0].basisWeight !== undefined) {
+            setEditFormData((prev) => ({ ...prev, basisWeight: materialSpecs[0].basisWeight }));
+          }
+        }
+      }
+    }
+  }, [editFormData.materialTypeId, materialSpecs, isEditing, hasSpecs, editFormData.basisWeight]);
+
+  // Reset basisWeight when materialTypeId changes during edit
+  useEffect(() => {
+    if (isEditing && design) {
+      const designMaterialId = (design.materialTypeId as number | undefined) ||
+        ((design.materialType as unknown as { id?: number })?.id as number | undefined);
+      if (editFormData.materialTypeId !== designMaterialId) {
+        setEditFormData((prev) => ({ ...prev, basisWeight: undefined }));
+      }
+    }
+  }, [editFormData.materialTypeId, isEditing, design]);
 
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
@@ -295,6 +354,20 @@ export default function DesignDetailPage() {
       ((design as unknown as { designType?: { id?: number } })?.designType
         ?.id as number | undefined)
     );
+
+  // Filter active materials or the currently selected material of this design (even if inactive)
+  const filteredDropdownMaterials = useMemo(() => {
+    const currentMaterialId =
+      (design?.materialTypeId as number | undefined) ||
+      ((design?.materialType as unknown as { id?: number })?.id as
+        | number
+        | undefined);
+
+    return (materialsByDesignType || []).filter(
+      (mt) => mt.status === "active" || mt.id === currentMaterialId
+    );
+  }, [materialsByDesignType, design]);
+
 
   // ==== ORDER BY DESIGN ====
   const { data: orderDetails } = useQuery<OrderDetailResponse[]>({
@@ -552,6 +625,7 @@ export default function DesignDetailPage() {
   // ==== HANDLERS - EDIT DESIGN ====
   const handleStartEdit = () => {
     if (!design) return;
+    setGusseted(design.width ? design.width > 0 : false);
     setEditFormData({
       designName: design.designName || "",
       length: design.length || 0,
@@ -580,6 +654,7 @@ export default function DesignDetailPage() {
         (design.laminationType as string | undefined) ||
         (orderDetails?.[0]?.laminationType as string | undefined) ||
         "",
+      basisWeight: design.basisWeight || undefined,
     });
     setIsEditing(true);
   };
@@ -601,6 +676,7 @@ export default function DesignDetailPage() {
       sidesClassification: "",
       processClassification: "",
       laminationType: "",
+      basisWeight: undefined,
     });
   };
 
@@ -629,6 +705,7 @@ export default function DesignDetailPage() {
           sidesClassification: editFormData.sidesClassification || null,
           processClassification: editFormData.processClassification || null,
           laminationType: editFormData.laminationType || null,
+          basisWeight: editFormData.basisWeight ?? null,
         },
       });
       toast.success("Thành công", {
@@ -742,9 +819,14 @@ export default function DesignDetailPage() {
   const designTypeName = d.designType?.name;
   const isNhan = isNhanDesignType(designTypeName);
   const isHop = isHopDesignType(designTypeName);
-  const isTuiXepHong = isTuiXepHongDesignType(designTypeName);
+  const isTui = isTuiDesignType(designTypeName);
+  const isTuiCuon = isTuiCuonDesignType(designTypeName);
+  const isTuiXepHong =
+    isTuiXepHongDesignType(designTypeName) ||
+    (isTui && (isEditing ? gusseted : (d.width ?? 0) > 0));
   const canEditWidth = isHop || isTuiXepHong; // Only box and side-fold bag can edit width
   const canEditAdhesiveOffset = isNhan; // Only label can edit adhesive offset
+  const showBasisWeight = !!(isEditing ? hasSpecs : (d.basisWeight && d.basisWeight > 0));
 
   // ==== MAIN LAYOUT ====
   return (
@@ -1192,7 +1274,14 @@ export default function DesignDetailPage() {
                     </Card>
 
                     {/* Chất liệu */}
-                    <Card className="col-span-12 md:col-span-8 border-amber-200 dark:border-amber-800 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/30 dark:to-amber-900/20">
+                    <Card
+                      className={cn(
+                        "border-amber-200 dark:border-amber-800 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/30 dark:to-amber-900/20",
+                        showBasisWeight
+                          ? "col-span-12 md:col-span-5"
+                          : "col-span-12 md:col-span-8"
+                      )}
+                    >
                       <CardContent className="p-2.5 space-y-1.5">
                         <p className="text-xs text-amber-700 dark:text-amber-300 uppercase mb-1.5 font-bold">
                           Chất liệu
@@ -1214,7 +1303,7 @@ export default function DesignDetailPage() {
                             }
                             disabled={materialsLoading}
                           >
-                            <SelectTrigger className="h-9 text-sm">
+                            <SelectTrigger className="h-9 text-sm bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700">
                               <SelectValue
                                 placeholder={
                                   materialsLoading
@@ -1224,7 +1313,7 @@ export default function DesignDetailPage() {
                               />
                             </SelectTrigger>
                             <SelectContent>
-                              {materialsByDesignType.map((mt) => (
+                              {filteredDropdownMaterials.map((mt) => (
                                 <SelectItem key={mt.id} value={String(mt.id)}>
                                   {mt.name}
                                 </SelectItem>
@@ -1238,6 +1327,56 @@ export default function DesignDetailPage() {
                         )}
                       </CardContent>
                     </Card>
+
+                    {/* Định lượng (GSM) */}
+                    {showBasisWeight && (
+                      <Card className="col-span-12 md:col-span-3 border-amber-200 dark:border-amber-800 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/30 dark:to-amber-900/20 animate-in fade-in duration-200">
+                        <CardContent className="p-2.5 space-y-1.5">
+                          <p className="text-xs text-amber-700 dark:text-amber-300 uppercase mb-1.5 font-bold">
+                            Định lượng (GSM)
+                          </p>
+                          {isEditing && canEditDesign ? (
+                            <Select
+                              value={
+                                editFormData.basisWeight
+                                  ? String(editFormData.basisWeight)
+                                  : ""
+                              }
+                              onValueChange={(value) =>
+                                setEditFormData((prev) => ({
+                                  ...prev,
+                                  basisWeight: value
+                                    ? Number(value)
+                                    : undefined,
+                                }))
+                              }
+                            >
+                              <SelectTrigger className="h-9 text-sm bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700">
+                                <SelectValue placeholder="Chọn định lượng..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {materialSpecs.map((spec) => (
+                                  <SelectItem key={spec.id} value={spec.basisWeight?.toString() || ""}>
+                                    <div className="flex items-center justify-between w-full">
+                                      <span>{spec.name || `${spec.basisWeight} ${spec.defaultUnit || "gsm"}`}</span>
+                                      {spec.isDefault && (
+                                        <Badge variant="outline" className="ml-2 border-amber-500 text-amber-500 bg-amber-50 text-[10px] scale-90 shrink-0">
+                                          Mặc định
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <p className="font-bold text-sm text-amber-900 dark:text-amber-100">
+                              {d.basisWeight} gsm
+                            </p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
 
                     {/* Requested Quantity */}
                     <Card className="col-span-12 md:col-span-4 border-blue-200 dark:border-blue-800 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20">
@@ -1272,177 +1411,219 @@ export default function DesignDetailPage() {
                         )}
                       </CardContent>
                     </Card>
-                  </div>
 
-                  {/* Process */}
-                  {(d.sidesClassification ||
-                    d.sidesClassificationOption ||
-                    d.processClassification ||
-                    d.processClassificationOption ||
-                    d.laminationType ||
-                    orderDetails?.[0]?.laminationType) && (
-                      <div className="flex gap-2">
-                        {(d.sidesClassification ||
-                          d.sidesClassificationOption) && (
-                            <Card className="flex-1 border-slate-200 dark:border-slate-800">
-                              <CardContent className="p-2.5">
-                                <p className="text-xs text-muted-foreground uppercase mb-1 font-bold">
-                                  {d.designType?.name?.toLowerCase().includes("decal") ? "Loại sản phẩm" : "Số mặt in"}
-                                </p>
-                                {isEditing && canEditDesign ? (
-                                  <div className="flex flex-wrap gap-2 mt-1">
-                                    {Object.entries(sidesClassificationLabels).map(
-                                      ([value, label]) => {
-                                        const displayLabel =
-                                          d.designType?.name?.toLowerCase().includes("decal")
-                                            ? value === "one_side"
-                                              ? "Decal lẻ"
-                                              : value === "two_side"
-                                                ? "Decal bộ"
-                                                : label
-                                            : label;
-                                        return (
-                                          <Button
-                                            key={value}
-                                            size="sm"
-                                            variant={
-                                              editFormData.sidesClassification ===
-                                                value
-                                                ? "default"
-                                                : "outline"
-                                            }
-                                            className="h-7 px-2 text-xs rounded-full"
-                                            onClick={() =>
-                                              setEditFormData((prev) => ({
-                                                ...prev,
-                                                sidesClassification: value,
-                                              }))
-                                            }
-                                          >
-                                            {displayLabel}
-                                          </Button>
-                                        );
+                    {/* Số mặt in */}
+                    {(d.sidesClassification || d.sidesClassificationOption) && (
+                      <Card className="col-span-12 md:col-span-3 border-slate-200 dark:border-slate-800">
+                        <CardContent className="p-2.5">
+                          <p className="text-xs text-muted-foreground uppercase mb-1 font-bold">
+                            {d.designType?.name?.toLowerCase().includes("decal") ? "Loại sản phẩm" : "Số mặt in"}
+                          </p>
+                          {isEditing && canEditDesign ? (
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              {Object.entries(sidesClassificationLabels).map(
+                                ([value, label]) => {
+                                  const displayLabel =
+                                    d.designType?.name?.toLowerCase().includes("decal")
+                                      ? value === "one_side"
+                                        ? "Decal lẻ"
+                                        : value === "two_side"
+                                          ? "Decal bộ"
+                                          : label
+                                      : label;
+                                  return (
+                                    <Button
+                                      key={value}
+                                      size="sm"
+                                      variant={
+                                        editFormData.sidesClassification ===
+                                          value
+                                          ? "default"
+                                          : "outline"
                                       }
-                                    )}
-                                  </div>
-                                ) : (
-                                  <p className="text-sm font-bold">
-                                    {d.sidesClassification
-                                      ? d.designType?.name?.toLowerCase().includes("decal")
-                                        ? d.sidesClassification === "one_side"
-                                          ? "Decal lẻ"
-                                          : d.sidesClassification === "two_side"
-                                            ? "Decal bộ"
-                                            : sidesClassificationLabels[
-                                            d.sidesClassification
-                                            ] || d.sidesClassification
-                                        : sidesClassificationLabels[
-                                        d.sidesClassification
-                                        ] || d.sidesClassification
-                                      : (
-                                        d.sidesClassificationOption as
-                                        | { value?: string }
-                                        | undefined
-                                      )?.value || "—"}
-                                  </p>
-                                )}
-                              </CardContent>
-                            </Card>
+                                      className="h-7 px-2 text-xs rounded-full"
+                                      onClick={() =>
+                                        setEditFormData((prev) => ({
+                                          ...prev,
+                                          sidesClassification: value,
+                                        }))
+                                      }
+                                    >
+                                      {displayLabel}
+                                    </Button>
+                                  );
+                                }
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-sm font-bold">
+                              {d.sidesClassification
+                                ? d.designType?.name?.toLowerCase().includes("decal")
+                                  ? d.sidesClassification === "one_side"
+                                    ? "Decal lẻ"
+                                    : d.sidesClassification === "two_side"
+                                      ? "Decal bộ"
+                                      : sidesClassificationLabels[
+                                      d.sidesClassification
+                                      ] || d.sidesClassification
+                                  : sidesClassificationLabels[
+                                  d.sidesClassification
+                                  ] || d.sidesClassification
+                                : (
+                                  d.sidesClassificationOption as
+                                  | { value?: string }
+                                  | undefined
+                                )?.value || "—"}
+                            </p>
                           )}
-                        {(d.processClassification ||
-                          d.processClassificationOption) && (
-                            <Card className="flex-1 border-slate-200 dark:border-slate-800">
-                              <CardContent className="p-2.5">
-                                <p className="text-xs text-muted-foreground uppercase mb-1 font-bold">
-                                  Quy cách sản xuất
-                                </p>
-                                {isEditing && canEditDesign ? (
-                                  <div className="flex flex-wrap gap-2 mt-1">
-                                    {Object.entries(
-                                      processClassificationLabels
-                                    ).map(([value, label]) => (
-                                      <Button
-                                        key={value}
-                                        size="sm"
-                                        variant={
-                                          editFormData.processClassification ===
-                                            value
-                                            ? "default"
-                                            : "outline"
-                                        }
-                                        className="h-7 px-2 text-xs rounded-full"
-                                        onClick={() =>
-                                          setEditFormData((prev) => ({
-                                            ...prev,
-                                            processClassification: value,
-                                          }))
-                                        }
-                                      >
-                                        {label}
-                                      </Button>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <p className="text-sm font-bold">
-                                    {d.processClassification
-                                      ? processClassificationLabels[
-                                      d.processClassification
-                                      ] || d.processClassification
-                                      : (
-                                        d.processClassificationOption as
-                                        | { value?: string }
-                                        | undefined
-                                      )?.value || "—"}
-                                  </p>
-                                )}
-                              </CardContent>
-                            </Card>
-                          )}
-                        {(d.laminationType ||
-                          orderDetails?.[0]?.laminationType) && (
-                            <Card className="flex-1 border-slate-200 dark:border-slate-800">
-                              <CardContent className="p-2.5">
-                                <p className="text-xs text-muted-foreground uppercase mb-1 font-bold">
-                                  Cán màng
-                                </p>
-                                {isEditing && canEditDesign ? (
-                                  <div className="flex flex-wrap gap-2 mt-1">
-                                    {Object.entries(laminationTypeLabels).map(
-                                      ([value, label]) => (
-                                        <Button
-                                          key={value}
-                                          size="sm"
-                                          variant={
-                                            editFormData.laminationType === value
-                                              ? "default"
-                                              : "outline"
-                                          }
-                                          className="h-7 px-2 text-xs rounded-full"
-                                          onClick={() =>
-                                            setEditFormData((prev) => ({
-                                              ...prev,
-                                              laminationType: value,
-                                            }))
-                                          }
-                                        >
-                                          {label}
-                                        </Button>
-                                      )
-                                    )}
-                                  </div>
-                                ) : (
-                                  <p className="text-sm font-bold">
-                                    {laminationTypeLabels[
-                                      (d.laminationType ||
-                                        orderDetails?.[0]?.laminationType) as string
-                                    ] || "—"}
-                                  </p>
-                                )}
-                              </CardContent>
-                            </Card>
-                          )}
-                      </div>
+                        </CardContent>
+                      </Card>
                     )}
+
+                    {/* Quy cách sản xuất */}
+                    {(d.processClassification || d.processClassificationOption) && (
+                      <Card className="col-span-12 md:col-span-3 border-slate-200 dark:border-slate-800">
+                        <CardContent className="p-2.5">
+                          <p className="text-xs text-muted-foreground uppercase mb-1 font-bold">
+                            Quy cách sản xuất
+                          </p>
+                          {isEditing && canEditDesign ? (
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              {Object.entries(
+                                processClassificationLabels
+                              ).map(([value, label]) => (
+                                <Button
+                                  key={value}
+                                  size="sm"
+                                  variant={
+                                    editFormData.processClassification ===
+                                      value
+                                      ? "default"
+                                      : "outline"
+                                  }
+                                  className="h-7 px-2 text-xs rounded-full"
+                                  onClick={() =>
+                                    setEditFormData((prev) => ({
+                                      ...prev,
+                                      processClassification: value,
+                                    }))
+                                  }
+                                >
+                                  {label}
+                                </Button>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-sm font-bold">
+                              {d.processClassification
+                                ? processClassificationLabels[
+                                d.processClassification
+                                ] || d.processClassification
+                                : (
+                                  d.processClassificationOption as
+                                  | { value?: string }
+                                  | undefined
+                                )?.value || "—"}
+                            </p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Cán màng */}
+                    {(d.laminationType || orderDetails?.[0]?.laminationType) && (
+                      <Card className="col-span-12 md:col-span-3 border-slate-200 dark:border-slate-800">
+                        <CardContent className="p-2.5">
+                          <p className="text-xs text-muted-foreground uppercase mb-1 font-bold">
+                            Cán màng
+                          </p>
+                          {isEditing && canEditDesign ? (
+                            <div className="flex flex-wrap gap-2 mt-1">
+                              {Object.entries(laminationTypeLabels).map(
+                                ([value, label]) => (
+                                  <Button
+                                    key={value}
+                                    size="sm"
+                                    variant={
+                                      editFormData.laminationType === value
+                                        ? "default"
+                                        : "outline"
+                                    }
+                                    className="h-7 px-2 text-xs rounded-full"
+                                    onClick={() =>
+                                      setEditFormData((prev) => ({
+                                        ...prev,
+                                        laminationType: value,
+                                      }))
+                                    }
+                                  >
+                                    {label}
+                                  </Button>
+                                )
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-sm font-bold">
+                              {laminationTypeLabels[
+                                (d.laminationType ||
+                                  orderDetails?.[0]?.laminationType) as string
+                              ] || "—"}
+                            </p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
+
+                    {/* Túi xếp hông */}
+                    {isTui && !isTuiCuon && (
+                      <Card className="col-span-12 md:col-span-3 border-slate-200 dark:border-slate-800">
+                        <CardContent className="p-2.5 space-y-1.5">
+                          <p className="text-xs text-muted-foreground uppercase mb-1.5 font-bold">
+                            Túi xếp hông
+                          </p>
+                          {isEditing && canEditDesign ? (
+                            <div className="flex gap-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant={gusseted ? "default" : "outline"}
+                                onClick={() => {
+                                  setGusseted(true);
+                                  setEditFormData((prev) => ({
+                                    ...prev,
+                                    processClassification: "die_cut",
+                                  }));
+                                }}
+                                className="h-8 px-3 text-xs"
+                              >
+                                Có
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant={!gusseted ? "default" : "outline"}
+                                onClick={() => {
+                                  setGusseted(false);
+                                  setEditFormData((prev) => ({
+                                    ...prev,
+                                    width: 0,
+                                    processClassification: "cut",
+                                  }));
+                                }}
+                                className="h-8 px-3 text-xs"
+                              >
+                                Không
+                              </Button>
+                            </div>
+                          ) : (
+                            <p className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                              {(d.width ?? 0) > 0 ? "Có" : "Không"}
+                            </p>
+                          )}
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
                 </div>
 
                 {/* Notes */}

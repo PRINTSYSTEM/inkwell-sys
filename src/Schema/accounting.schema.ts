@@ -13,6 +13,10 @@ import {
   APDetailResponseIPaginateSchema as GenAPDetailResponseIPaginateSchema,
   APSummaryResponseSchema as GenAPSummaryResponseSchema,
   APSummaryResponseIPaginateSchema as GenAPSummaryResponseIPaginateSchema,
+  APSummaryReportResponseSchema as GenAPSummaryReportResponseSchema,
+  APSummaryReportResponseIPaginateSchema as GenAPSummaryReportResponseIPaginateSchema,
+  APItemResponseSchema as GenAPItemResponseSchema,
+  APItemResponseIPaginateSchema as GenAPItemResponseIPaginateSchema,
   ARAgingResponseSchema as GenARAgingResponseSchema,
   ARAgingResponseIPaginateSchema as GenARAgingResponseIPaginateSchema,
   ARDetailResponseSchema as GenARDetailResponseSchema,
@@ -97,6 +101,16 @@ export const APSummaryResponseSchema = GenAPSummaryResponseSchema.passthrough();
 export type APSummaryResponse = z.infer<typeof APSummaryResponseSchema>;
 export const APSummaryResponseIPaginateSchema = GenAPSummaryResponseIPaginateSchema.passthrough();
 export type APSummaryResponseIPaginate = z.infer<typeof APSummaryResponseIPaginateSchema>;
+
+export const APSummaryReportResponseSchema = GenAPSummaryReportResponseSchema.passthrough();
+export type APSummaryReportResponse = z.infer<typeof APSummaryReportResponseSchema>;
+export const APSummaryReportResponseIPaginateSchema = GenAPSummaryReportResponseIPaginateSchema.passthrough();
+export type APSummaryReportResponseIPaginate = z.infer<typeof APSummaryReportResponseIPaginateSchema>;
+
+export const APItemResponseSchema = GenAPItemResponseSchema.passthrough();
+export type APItemResponse = z.infer<typeof APItemResponseSchema>;
+export const APItemResponseIPaginateSchema = GenAPItemResponseIPaginateSchema.passthrough();
+export type APItemResponseIPaginate = z.infer<typeof APItemResponseIPaginateSchema>;
 
 // AR (Accounts Receivable) Schemas
 export const ARAgingResponseSchema = GenARAgingResponseSchema.passthrough();

@@ -70,7 +70,7 @@ export function StockOutDialog({
 }: StockOutDialogProps) {
   const { mutateAsync: createStockOut } = useCreateStockOut();
   const { mutateAsync: updateStockOut } = useUpdateStockOut();
-  const { data: vendorsData } = useVendors({ pageNumber: 1, pageSize: 100 });
+  const { data: vendorsData } = useVendors({ pageNumber: 1, pageSize: 100, isActive: true });
   const vendorsList = vendorsData?.items || [];
   const { data: printingVendors } = useActivePrintingVendors();
 
