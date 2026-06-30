@@ -287,6 +287,11 @@ export const ExistingDesignModal: React.FC<ExistingDesignModalProps> = ({
                       </p>
                       <p className="text-sm font-medium">
                         {design.materialType.name}
+                        {design.basisWeight && (
+                          <span className="ml-1 text-slate-500 font-normal">
+                            ({design.basisWeight} gsm)
+                          </span>
+                        )}
                       </p>
                       {minQuantity && minQuantity > 0 && (
                         <p className="text-xs text-muted-foreground mt-1">

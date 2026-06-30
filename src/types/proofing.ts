@@ -36,6 +36,8 @@ export interface DesignItem {
   queueItemId?: string; // from BE queueItemId ("RD_xxx" or "OD_xxx")
   readyDesignId?: number; // from BE readyDesignId
   availableForProofing?: number; // from BE availableForProofing
+  basisWeight?: number; // from design.basisWeight
+  createdBy?: string;
 }
 
 export interface FilterOption {

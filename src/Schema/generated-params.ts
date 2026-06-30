@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-06-28T19:40:32.228Z */
+/* Generated at: 2026-06-29T22:42:16.521Z */
 
 import { z } from "zod";
 import { IdSchema, PagedParamsSchema } from "./Common";
@@ -846,6 +846,11 @@ export const MaterialListParamsSchema = PagedParamsSchema.extend({
   type: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
+  designId: z.number().int().nullable().optional(),
+  designMaterialTypeId: z.number().int().nullable().optional(),
+  basisWeight: z.number().int().nullable().optional(),
+  proofingOrderId: z.number().int().nullable().optional(),
+  productionOrderId: z.number().int().nullable().optional(),
 });
 export type MaterialListParams = z.infer<typeof MaterialListParamsSchema>;
 

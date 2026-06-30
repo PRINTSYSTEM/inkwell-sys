@@ -869,3 +869,20 @@ export const useCreateAdjustmentStockOut = () => {
     },
   });
 };
+
+export const useMaterialSuggestions = (productionOrderId?: number, enabled: boolean = true) => {
+  return useQuery<any, ApiError>({
+    queryKey: [...stockOutKeys.all, "suggestions", productionOrderId],
+    queryFn: async () => {
+      if (!productionOrderId) return null;
+      const res = await apiRequest.get<any>(
+        API_SUFFIX.STOCK_OUT_MATERIAL_SUGGESTIONS,
+        {
+          params: { productionOrderId },
+        }
+      );
+      return res.data;
+    },
+    enabled: !!productionOrderId && enabled,
+  });
+};

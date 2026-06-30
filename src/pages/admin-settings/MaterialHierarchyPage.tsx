@@ -51,6 +51,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { SimplePagination } from "@/components/ui/simple-pagination";
 import { SearchableSelect } from "@/components/forms";
+import { cn } from "@/lib/utils";
 
 // Import hooks
 import {
@@ -1331,7 +1332,7 @@ function SpecValuesTab() {
 // ==========================================
 function SupplierCatalogsTab() {
   const { data: vendorsData } = useVendors({ pageSize: 1000, isActive: true });
-  const { data: templatesResp } = useMaterialTypeList({ pageSize: 1000 });
+  const { data: templatesResp } = useMaterialTypeList({ pageSize: 100 });
   const { data: specValuesData } = useSpecValues();
 
   const [selectedVendorId, setSelectedVendorId] = useState<string>("");
@@ -1402,8 +1403,8 @@ function SupplierCatalogsTab() {
     if (linkedValues.length === 0) return <span className="text-slate-400 font-normal">—</span>;
 
     const grouped: Record<string, string[]> = {};
-    linkedValues.forEach((v) => {
-      const name = v.specTemplateName || "Thuộc tính";
+    linkedValues.forEach((v: any) => {
+      const name = String(v.specTemplateName || "Thuộc tính");
       if (!grouped[name]) grouped[name] = [];
       grouped[name].push(v.value);
     });

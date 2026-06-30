@@ -220,7 +220,7 @@ export function PrepressDesignTable({
                       {designs.map((design) => {
                         const isSelected = selectedIds.has(design.id);
                         const selectable = canSelect(design);
-                        const tooltipContent = `Mã hàng: ${design.code}\nTên: ${design.name}\nSố lượng: ${design.availableQuantity != null ? design.availableQuantity.toLocaleString("vi-VN") : design.quantity.toLocaleString("vi-VN")}\nQuy cách: ${formatDesignDimensions(design.length, design.width, design.height, 1, " × ")} ${design.unit}\nChất liệu: ${design.materialTypeName}`;
+                        const tooltipContent = `Mã hàng: ${design.code}\nTên: ${design.name}\nSố lượng: ${design.availableQuantity != null ? design.availableQuantity.toLocaleString("vi-VN") : design.quantity.toLocaleString("vi-VN")}\nQuy cách: ${formatDesignDimensions(design.length, design.width, design.height, 1, " × ")} ${design.unit}\nChất liệu: ${design.materialTypeName}${design.basisWeight ? ` (${design.basisWeight} gsm)` : ""}`;
 
 
                         return (
@@ -316,6 +316,11 @@ export function PrepressDesignTable({
                                 <TableCell className="py-3">
                                   <span className="text-sm font-medium">
                                     {design.materialTypeName}
+                                    {design.basisWeight && (
+                                      <span className="text-xs text-muted-foreground block mt-0.5">
+                                        {design.basisWeight} gsm
+                                      </span>
+                                    )}
                                   </span>
                                 </TableCell>
                                 <TableCell className="py-3">

@@ -74,7 +74,7 @@ export const useActiveVendors = (vendorType?: "plate" | "die" | "printing" | "ma
       };
 
       if (vendorType) {
-        params.vendorType = vendorType;
+        params.vendorType = vendorType.toUpperCase();
       }
 
       const normalizedParams = normalizeParams(params);

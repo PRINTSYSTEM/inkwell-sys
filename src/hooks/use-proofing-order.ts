@@ -157,6 +157,9 @@ export const useAvailableOrderDetailsForProofing = (
             orderCode: od.orderCode || undefined,
             customerName: (design as any).customer?.name || undefined,
             customerCompanyName: (design as any).customer?.companyName || undefined,
+            basisWeight: design.basisWeight ?? undefined,
+            designerName: design.designer?.fullName || design.designer?.username || undefined,
+            createdBy: (od as any).createdBy?.fullName || (od as any).createdBy?.username || undefined,
             specification: (() => {
               const rawSpec =
                 (od as any).specification ||

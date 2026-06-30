@@ -29,6 +29,7 @@ import { API_SUFFIX } from "@/apis";
 import { useMaterialFamilies } from "@/hooks/use-material-family";
 import { useMaterialTypeList } from "@/hooks/use-material-type";
 import { useSpecTemplates } from "@/hooks/use-spec-template";
+import { useMaterialSpecsByMaterialType } from "@/hooks/use-material-spec";
 import { useSpecValues } from "@/hooks/use-spec-value";
 import { useSupplierCatalogs } from "@/hooks/use-supplier-catalog";
 
@@ -57,7 +58,7 @@ export function CreateMaterialDirectDialog({
 
   // Master Data hooks
   const { data: familiesResp } = useMaterialFamilies({ page: 1, size: 1000 });
-  const { data: templatesResp } = useMaterialTypeList({ pageSize: 1000 });
+  const { data: templatesResp } = useMaterialTypeList({ pageSize: 100 });
 
   const [selectedFamilyId, setSelectedFamilyId] = useState<number | null>(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | null>(null);
@@ -84,6 +85,37 @@ export function CreateMaterialDirectDialog({
   const [unitPrice, setUnitPrice] = useState<number>(0);
   const [quantity, setQuantity] = useState<number>(0);
   const [notes, setNotes] = useState<string>("");
+  const [basisWeight, setBasisWeight] = useState<number | undefined>(undefined);
+
+  // Load material specifications for selected material type
+  const { data: materialSpecs = [], isLoading: isLoadingSpecs } = useMaterialSpecsByMaterialType(
+    selectedTemplateId || null,
+    !!selectedTemplateId
+  );
+
+  const hasSpecs = useMemo(() => {
+    if (!materialSpecs || materialSpecs.length === 0) return false;
+    if (materialSpecs.length === 1 && (materialSpecs[0].basisWeight === 0 || !materialSpecs[0].basisWeight)) {
+      return false;
+    }
+    return true;
+  }, [materialSpecs]);
+
+  // Auto-select default spec
+  useEffect(() => {
+    if (materialSpecs.length > 0) {
+      const defaultSpec = materialSpecs.find((s) => s.isDefault);
+      if (defaultSpec && defaultSpec.basisWeight) {
+        setBasisWeight(defaultSpec.basisWeight);
+      } else if (materialSpecs[0].basisWeight) {
+        setBasisWeight(materialSpecs[0].basisWeight);
+      } else {
+        setBasisWeight(undefined);
+      }
+    } else {
+      setBasisWeight(undefined);
+    }
+  }, [materialSpecs]);
 
   const families = familiesResp?.items || [];
   const templates = templatesResp?.items || [];
@@ -100,6 +132,7 @@ export function CreateMaterialDirectDialog({
       setUnitPrice(0);
       setQuantity(0);
       setNotes("");
+      setBasisWeight(undefined);
     }
   }, [open]);
 
@@ -115,17 +148,26 @@ export function CreateMaterialDirectDialog({
     }
   }, [selectedTemplateId, templates]);
 
-  // Default unit when selectedFamilyId changes
+  // Default unit when selectedTemplateId or selectedFamilyId changes
   useEffect(() => {
     if (selectedFamilyId) {
       const family = families.find((f) => f.id === selectedFamilyId);
       if (family?.allowedUnits && family.allowedUnits.length > 0) {
         setUnit(family.allowedUnits[0] || "");
+        return;
       }
+    }
+
+    if (selectedTemplateId) {
+      const template = templates.find((t) => t.id === selectedTemplateId);
+      const nameLower = template?.name?.toLowerCase() || "";
+      const codeLower = template?.code?.toLowerCase() || "";
+      const isRoll = nameLower.includes("cuộn") || codeLower.includes("cuon") || nameLower.includes("màng") || nameLower.includes("mang");
+      setUnit(isRoll ? "cuộn" : "tờ");
     } else {
       setUnit("");
     }
-  }, [selectedFamilyId, families]);
+  }, [selectedFamilyId, selectedTemplateId, families, templates]);
 
   // Filter templates: only show those linked to the selected Vendor in the catalogs
   const filteredTemplates = useMemo(() => {
@@ -149,6 +191,11 @@ export function CreateMaterialDirectDialog({
     if (!family?.allowedUnits) return [];
     return family.allowedUnits;
   }, [selectedFamilyId, families]);
+
+  const unitsOptions = useMemo(() => {
+    if (allowedUnitsOptions && allowedUnitsOptions.length > 0) return allowedUnitsOptions;
+    return ["tờ", "cuộn", "kg", "m", "hộp", "thùng", "cái"];
+  }, [allowedUnitsOptions]);
 
   // Find selected material template
   const currentTemplate = useMemo(() => {
@@ -181,8 +228,7 @@ export function CreateMaterialDirectDialog({
     if (!selectedVendor || !currentTemplate) return "APP - Couche - 150gsm - 79x109 (Xem trước)";
     
     // Get GSM if selected
-    const gsmSpec = specTemplates?.find(t => t.key?.toLowerCase() === "gsm");
-    const gsmVal = gsmSpec ? (specSelections[gsmSpec.id.toString()] || "...") : "";
+    const gsmVal = hasSpecs ? (basisWeight?.toString() || "") : "";
     
     let sizeStr = "";
     if (width > 0 && length > 0) {
@@ -195,7 +241,7 @@ export function CreateMaterialDirectDialog({
 
     const gsmStr = gsmVal ? ` - ${gsmVal}gsm` : "";
     return `${selectedVendor.name} - ${currentTemplate.name}${gsmStr} - ${sizeStr}`;
-  }, [selectedVendor, currentTemplate, specTemplates, specSelections, width, length]);
+  }, [selectedVendor, currentTemplate, hasSpecs, basisWeight, width, length]);
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -258,8 +304,15 @@ export function CreateMaterialDirectDialog({
         }
       });
     }
+    if (hasSpecs && basisWeight) {
+      specDict["gsm"] = basisWeight.toString();
+    }
 
-    const isRollType = currentFamilyObj?.code?.includes("roll") || currentFamilyObj?.code?.includes("cuon");
+    const isRollType =
+      currentFamilyObj?.code?.includes("roll") ||
+      currentFamilyObj?.code?.includes("cuon") ||
+      currentTemplate?.name?.toLowerCase().includes("cuộn") ||
+      currentTemplate?.code?.toLowerCase().includes("cuon");
 
     try {
       const payload = {
@@ -267,9 +320,9 @@ export function CreateMaterialDirectDialog({
         type: isRollType ? "cuon" : "to",
         length: isRollType ? 0 : length,
         width: width || 0,
-        unit: unit || allowedUnitsOptions[0] || (isRollType ? "m" : "tờ"),
+        unit: unit || unitsOptions[0] || (isRollType ? "m" : "tờ"),
         unitPrice: unitPrice || 0,
-        basisWeight: specDict["gsm"] ? Number(specDict["gsm"]) : undefined,
+        basisWeight: hasSpecs ? basisWeight : undefined,
         materialFamilyId: selectedFamilyId,
         materialTypeId: selectedTemplateId,
         specValues: JSON.stringify(specDict),
@@ -372,6 +425,39 @@ export function CreateMaterialDirectDialog({
               </Select>
             </div>
 
+            {/* Định lượng (GSM) */}
+            {selectedTemplateId && hasSpecs && (
+              <div className="space-y-1.5 animate-in fade-in duration-200">
+                <Label className="font-semibold text-slate-700">2. Định lượng (GSM) <span className="text-red-500">*</span></Label>
+                <Select
+                  value={basisWeight ? basisWeight.toString() : ""}
+                  onValueChange={(v) => setBasisWeight(Number(v))}
+                >
+                  <SelectTrigger className="h-10 text-xs">
+                    <SelectValue placeholder="Chọn định lượng..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {materialSpecs.map((spec) => (
+                      <SelectItem
+                        key={spec.id}
+                        value={spec.basisWeight?.toString() || ""}
+                        className="text-xs cursor-pointer"
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span>{spec.name || `${spec.basisWeight} ${spec.defaultUnit || "gsm"}`}</span>
+                          {spec.isDefault && (
+                            <span className="ml-2 text-[10px] bg-amber-50 text-amber-500 border border-amber-300 rounded px-1 scale-90 shrink-0">
+                              Mặc định
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             {/* 2. Điền các thuộc tính động (T5/T6) */}
             {specTemplates && specTemplates.length > 0 && (
               <div className="space-y-3 border border-slate-100 rounded-lg p-3 bg-slate-50/50">
@@ -451,7 +537,7 @@ export function CreateMaterialDirectDialog({
                     <SelectValue placeholder="Chọn đơn vị..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {allowedUnitsOptions.map((opt) => (
+                    {unitsOptions.map((opt) => (
                       <SelectItem key={opt} value={opt}>{opt}</SelectItem>
                     ))}
                   </SelectContent>

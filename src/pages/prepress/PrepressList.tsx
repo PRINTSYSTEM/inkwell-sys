@@ -353,7 +353,7 @@ export default function PrepressList() {
     );
 
   const [materialSelected, setMaterialSelected] = useState<number | null>(null);
-  const { data: materialTypesData } = useMaterialTypeList({});
+  const { data: materialTypesData } = useMaterialTypeList({ status: "active", pageSize: 100 });
 
   // Material types for orders list filter
   const materialTypeOptionsForOrders = useMemo(() => {

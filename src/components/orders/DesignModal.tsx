@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import type { CreateDesignRequestUI, DesignTypeResponse } from "./DesignCard";
 import { useMaterialTypeDetail } from "@/hooks/use-material-type";
+import { useMaterialSpecsByMaterialType } from "@/hooks/use-material-spec";
 import {
   useSharedAddresses,
   useCreateSharedAddress,
@@ -172,6 +173,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
     additionalNotes: "",
     laminationType: undefined,
     sharedAddressId: undefined,
+    basisWeight: undefined,
   });
 
   // Reset form when modal opens with design data
@@ -197,6 +199,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
         processClassification: undefined,
         sharedAddressId: undefined,
         gusseted: false,
+        basisWeight: undefined,
       });
       setCurrentStep(1);
     }
@@ -251,9 +254,39 @@ export const DesignModal: React.FC<DesignModalProps> = ({
         processClassificationOptionId: undefined,
         sidesClassification: isTui ? "two_side" : undefined, // Túi mặc định 2 mặt
         processClassification: undefined,
+        basisWeight: undefined,
       };
     });
   };
+
+  // Load material specifications for selected material type
+  const { data: materialSpecs = [], isLoading: isLoadingSpecs } = useMaterialSpecsByMaterialType(
+    formData.materialTypeId > 0 ? formData.materialTypeId : null,
+    formData.materialTypeId > 0
+  );
+
+  const hasSpecs = materialSpecs && materialSpecs.length > 0 && !(
+    materialSpecs.length === 1 &&
+    (materialSpecs[0].basisWeight === 0 || materialSpecs[0].basisWeight === null || materialSpecs[0].basisWeight === undefined)
+  );
+
+  // Auto-select default basis weight when material specs load
+  useEffect(() => {
+    if (open && formData.materialTypeId > 0 && materialSpecs.length > 0) {
+      if (!hasSpecs) {
+        updateField("basisWeight", undefined);
+      } else {
+        if (formData.basisWeight === undefined || formData.basisWeight === null || formData.basisWeight === 0) {
+          const defaultSpec = materialSpecs.find((spec) => spec.isDefault);
+          if (defaultSpec && defaultSpec.basisWeight !== undefined) {
+            updateField("basisWeight", defaultSpec.basisWeight);
+          } else if (materialSpecs.length === 1 && materialSpecs[0].basisWeight !== undefined) {
+            updateField("basisWeight", materialSpecs[0].basisWeight);
+          }
+        }
+      }
+    }
+  }, [formData.materialTypeId, materialSpecs, open, hasSpecs, formData.basisWeight]);
 
   // fetch shared addresses to allow selecting per-design delivery address
   const { data: sharedAddressesData, isLoading: loadingSharedAddresses } =
@@ -625,7 +658,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
           {currentStep === 1 && (
             <div className="space-y-6">
               {/* Loại thiết kế và Chất liệu - Cùng một hàng */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {/* Loại thiết kế */}
                 <div className="space-y-3">
                   <Label className="text-sm font-medium">
@@ -729,6 +762,42 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                     </Select>
                   )}
                 </div>
+
+                {/* Định lượng (GSM) */}
+                {formData.materialTypeId > 0 && hasSpecs && (
+                  <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <Label className="text-sm font-medium">
+                      Định lượng (GSM)
+                    </Label>
+                    <Select
+                      value={formData.basisWeight?.toString() || ""}
+                      onValueChange={(value) => updateField("basisWeight", value ? Number(value) : undefined)}
+                      disabled={!!isExistingDesign}
+                    >
+                      <SelectTrigger className="h-11 bg-background">
+                        <SelectValue placeholder="Chọn định lượng..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {materialSpecs.map((spec) => (
+                          <SelectItem
+                            key={spec.id}
+                            value={spec.basisWeight?.toString() || ""}
+                            className="text-sm cursor-pointer"
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span>{spec.name || `${spec.basisWeight} ${spec.defaultUnit || "gsm"}`}</span>
+                              {spec.isDefault && (
+                                <Badge variant="outline" className="ml-2 border-amber-500 text-amber-500 bg-amber-50 text-[10px] scale-90 shrink-0">
+                                  Mặc định
+                                </Badge>
+                              )}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
               {/* Tên thiết kế */}
               <div className="space-y-3">

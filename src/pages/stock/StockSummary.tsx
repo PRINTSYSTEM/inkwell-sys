@@ -68,8 +68,8 @@ export default function StockSummary() {
   const [sheetPage, setSheetPage] = useState(1);
   const [stockOutPage, setStockOutPage] = useState(1);
 
-  // Fetch Vendors (Material suppliers only)
-  const { data: vendorsData, isLoading: isLoadingVendors } = useActiveVendors("material");
+  // Fetch Vendors (All active suppliers)
+  const { data: vendorsData, isLoading: isLoadingVendors } = useActiveVendors();
 
   // Fetch ALL materials for the selected query (up to 1000 items)
   const { 

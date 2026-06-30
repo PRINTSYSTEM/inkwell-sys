@@ -41,6 +41,7 @@ import {
   useMaterialsByDesignType,
   useCreateDesign,
   getDesignTypeItems,
+  useMaterialSpecsByMaterialType,
 } from "@/hooks";
 import { ENTITY_CONFIG } from "@/config/entities.config";
 import type { CustomerSummaryResponse } from "@/Schema/customer.schema";
@@ -99,6 +100,8 @@ export default function DesignCreateDialog({
   const [processClassification, setProcessClassification] = useState<string | undefined>(undefined);
   const [laminationType, setLaminationType] = useState<string | undefined>(undefined);
   const [notes, setNotes] = useState<string>("");
+  const [basisWeight, setBasisWeight] = useState<number | undefined>(undefined);
+  const [gusseted, setGusseted] = useState<boolean>(false);
 
   // API query for customers
   const { data: customersData, isLoading: loadingCustomers } = useCustomers({
@@ -140,13 +143,55 @@ export default function DesignCreateDialog({
   const isTui = isTuiDesignType(designTypeName);
   const isHop = isHopDesignType(designTypeName);
   const isNhan = isNhanDesignType(designTypeName);
-  const isTuiXepHong = isTuiXepHongDesignType(designTypeName);
+  const isTuiXepHong = gusseted || isTuiXepHongDesignType(designTypeName);
   const isDecalCuon = isDecalCuonDesignType(designTypeName);
   const isTuiCuon = isTuiCuonDesignType(designTypeName);
+  const isPE_PA = useMemo(() => {
+    return designTypeName.toLowerCase().includes("pe") || designTypeName.toLowerCase().includes("pa");
+  }, [designTypeName]);
+
+  const handleGussetedChange = (isGusseted: boolean) => {
+    setGusseted(isGusseted);
+    if (isGusseted) {
+      setProcessClassification("die_cut");
+    } else {
+      setWidth(0);
+      setProcessClassification("cut");
+    }
+  };
 
   const selectedMaterial = useMemo(() => {
     return materials.find((m) => m.id === materialTypeId);
   }, [materials, materialTypeId]);
+
+  // Load material specifications for selected material type
+  const { data: materialSpecs = [], isLoading: isLoadingSpecs } = useMaterialSpecsByMaterialType(
+    materialTypeId || null,
+    !!materialTypeId
+  );
+
+  const hasSpecs = materialSpecs && materialSpecs.length > 0 && !(
+    materialSpecs.length === 1 &&
+    (materialSpecs[0].basisWeight === 0 || materialSpecs[0].basisWeight === null || materialSpecs[0].basisWeight === undefined)
+  );
+
+  // Auto-select default basis weight when material specs load
+  useEffect(() => {
+    if (open && materialTypeId && materialSpecs.length > 0) {
+      if (!hasSpecs) {
+        setBasisWeight(undefined);
+      } else {
+        if (basisWeight === undefined || basisWeight === null || basisWeight === 0) {
+          const defaultSpec = materialSpecs.find((spec) => spec.isDefault);
+          if (defaultSpec && defaultSpec.basisWeight !== undefined) {
+            setBasisWeight(defaultSpec.basisWeight);
+          } else if (materialSpecs.length === 1 && materialSpecs[0].basisWeight !== undefined) {
+            setBasisWeight(materialSpecs[0].basisWeight);
+          }
+        }
+      }
+    }
+  }, [materialTypeId, materialSpecs, open, hasSpecs, basisWeight]);
 
   const materialName = selectedMaterial?.name || "";
   const isTheTreo = materialName.toLowerCase().includes("thẻ treo") || materialName.toLowerCase().includes("the treo");
@@ -195,7 +240,14 @@ export default function DesignCreateDialog({
   useEffect(() => {
     setMaterialTypeId(null);
     setLaminationType(undefined);
+    setBasisWeight(undefined);
+    setGusseted(false);
   }, [designTypeId]);
+
+  // Reset basis weight if material type changes
+  useEffect(() => {
+    setBasisWeight(undefined);
+  }, [materialTypeId]);
 
   // Lamination types allowed
   const allowedLaminationOptions = useMemo(() => {
@@ -244,6 +296,8 @@ export default function DesignCreateDialog({
       return;
     }
 
+    const isPE_PA = designTypeName.toLowerCase().includes("pe") || designTypeName.toLowerCase().includes("pa");
+
     try {
       await createDesign({
         customerId: selectedCustomer.id!,
@@ -251,14 +305,15 @@ export default function DesignCreateDialog({
         materialTypeId: materialTypeId,
         quantity: quantity,
         designName: designName.trim(),
-        length: length || 0,
-        width: needsWidth ? width || 0 : undefined,
-        height: height || 0,
-        adhesiveOffset: needsAdhesiveOffset ? adhesiveOffset : undefined,
+        length: isPE_PA ? 0 : (length || 0),
+        width: isPE_PA ? undefined : (needsWidth ? width || 0 : undefined),
+        height: isPE_PA ? 0 : (height || 0),
+        adhesiveOffset: isPE_PA ? undefined : (needsAdhesiveOffset ? adhesiveOffset : undefined),
         sidesClassification: sidesClassification || null,
         processClassification: processClassification || null,
         laminationType: laminationType,
         notes: notes.trim() || undefined,
+        basisWeight: hasSpecs ? basisWeight : undefined,
       });
 
       // Clear state and close
@@ -275,6 +330,8 @@ export default function DesignCreateDialog({
       setProcessClassification(undefined);
       setLaminationType(undefined);
       setNotes("");
+      setBasisWeight(undefined);
+      setGusseted(false);
 
       onOpenChange(false);
       if (onSuccess) onSuccess();
@@ -360,7 +417,7 @@ export default function DesignCreateDialog({
             </Popover>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {/* 2. Design Type Selector */}
             <div className="space-y-2">
               <Label className="font-semibold text-foreground">
@@ -431,7 +488,73 @@ export default function DesignCreateDialog({
                 </SelectContent>
               </Select>
             </div>
+
+            {/* Định lượng (GSM) */}
+            {materialTypeId && hasSpecs && (
+              <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                <Label className="font-semibold text-foreground">
+                  Định lượng (GSM)
+                </Label>
+                <Select
+                  value={basisWeight ? basisWeight.toString() : ""}
+                  onValueChange={(v) => setBasisWeight(Number(v))}
+                >
+                  <SelectTrigger className="h-11 bg-background border-border/80">
+                    <SelectValue placeholder="Chọn định lượng..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {materialSpecs.map((spec) => (
+                      <SelectItem
+                        key={spec.id}
+                        value={spec.basisWeight?.toString() || ""}
+                        className="text-sm cursor-pointer"
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span>{spec.name || `${spec.basisWeight} ${spec.defaultUnit || "gsm"}`}</span>
+                          {spec.isDefault && (
+                            <Badge variant="outline" className="ml-2 border-amber-500 text-amber-500 bg-amber-50 text-[10px] scale-90 shrink-0">
+                              Mặc định
+                            </Badge>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
+
+          {/* Tùy chọn cho Túi: Túi xếp hông */}
+          {isTui && !isTuiCuon && (
+            <div className="space-y-2 animate-in fade-in duration-200">
+              <Label className="font-semibold text-foreground">Túi xếp hông</Label>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  onClick={() => handleGussetedChange(true)}
+                  className={`px-4 py-2 text-xs font-bold transition-all h-9 ${
+                    gusseted
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                      : "bg-background border border-border hover:border-primary/50 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Có
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => handleGussetedChange(false)}
+                  className={`px-4 py-2 text-xs font-bold transition-all h-9 ${
+                    !gusseted
+                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                      : "bg-background border border-border hover:border-primary/50 text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  Không
+                </Button>
+              </div>
+            </div>
+          )}
 
           {/* 4. Design Name */}
           <div className="space-y-2">
@@ -448,65 +571,67 @@ export default function DesignCreateDialog({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* 5. Dimensions */}
-            <div className="space-y-2">
-              <Label className="font-semibold text-foreground">Kích thước (Dài x Cao {needsWidth && "x Rộng"}) (mm)</Label>
-              <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <Label className="text-xs text-muted-foreground">Dài *</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    placeholder="Dài"
-                    value={length || ""}
-                    onChange={(e) => setLength(e.target.value === "" ? 0 : Number(e.target.value))}
-                    className="h-11 bg-background"
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs text-muted-foreground">Cao *</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    placeholder="Cao"
-                    value={height || ""}
-                    onChange={(e) => setHeight(e.target.value === "" ? 0 : Number(e.target.value))}
-                    className="h-11 bg-background"
-                  />
-                </div>
-                {needsWidth ? (
+            {!isPE_PA ? (
+              <div className="space-y-2">
+                <Label className="font-semibold text-foreground">Kích thước (Dài x Cao {needsWidth && "x Rộng"}) (mm)</Label>
+                <div className="grid grid-cols-3 gap-2">
                   <div>
-                    <Label className="text-xs text-muted-foreground">Rộng *</Label>
+                    <Label className="text-xs text-muted-foreground">Dài *</Label>
                     <Input
                       type="number"
                       min="0"
-                      placeholder="Rộng"
-                      value={width || ""}
-                      onChange={(e) => setWidth(e.target.value === "" ? 0 : Number(e.target.value))}
+                      placeholder="Dài"
+                      value={length || ""}
+                      onChange={(e) => setLength(e.target.value === "" ? 0 : Number(e.target.value))}
                       className="h-11 bg-background"
                     />
                   </div>
-                ) : needsAdhesiveOffset ? (
                   <div>
-                    <Label className="text-xs text-muted-foreground">Mép dán</Label>
+                    <Label className="text-xs text-muted-foreground">Cao *</Label>
                     <Input
                       type="number"
                       min="0"
-                      placeholder="Mép dán"
-                      value={adhesiveOffset !== undefined ? adhesiveOffset : ""}
-                      onChange={(e) =>
-                        setAdhesiveOffset(e.target.value === "" ? undefined : Number(e.target.value))
-                      }
+                      placeholder="Cao"
+                      value={height || ""}
+                      onChange={(e) => setHeight(e.target.value === "" ? 0 : Number(e.target.value))}
                       className="h-11 bg-background"
                     />
                   </div>
-                ) : (
-                  <div className="invisible" />
-                )}
+                  {needsWidth ? (
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Rộng *</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder="Rộng"
+                        value={width || ""}
+                        onChange={(e) => setWidth(e.target.value === "" ? 0 : Number(e.target.value))}
+                        className="h-11 bg-background"
+                      />
+                    </div>
+                  ) : needsAdhesiveOffset ? (
+                    <div>
+                      <Label className="text-xs text-muted-foreground">Mép dán</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder="Mép dán"
+                        value={adhesiveOffset !== undefined ? adhesiveOffset : ""}
+                        onChange={(e) =>
+                          setAdhesiveOffset(e.target.value === "" ? undefined : Number(e.target.value))
+                        }
+                        className="h-11 bg-background"
+                      />
+                    </div>
+                  ) : (
+                    <div className="invisible" />
+                  )}
+                </div>
               </div>
-            </div>
+            ) : null}
 
             {/* 6. Quantity */}
-            <div className="space-y-2 flex flex-col justify-between">
+            <div className={`space-y-2 flex flex-col justify-between ${isPE_PA ? "md:col-span-2" : ""}`}>
               <Label className="font-semibold text-foreground flex items-center justify-between">
                 <span>Số lượng *</span>
                 {selectedMaterial?.minimumQuantity ? (

@@ -213,7 +213,7 @@ export default function ReadyDesignListPage() {
         if (payload?.items && Array.isArray(payload.items)) return payload.items;
         return [];
       }
-      const res = await apiRequest.get(API_SUFFIX.MATERIAL_TYPES, { params: { pageNumber: 1, pageSize: 1000 } });
+      const res = await apiRequest.get(API_SUFFIX.MATERIAL_TYPES, { params: { pageNumber: 1, pageSize: 100 } });
       const payload = res.data;
       if (Array.isArray(payload)) return payload;
       if (payload?.items && Array.isArray(payload.items)) return payload.items;
@@ -726,6 +726,7 @@ export default function ReadyDesignListPage() {
                         </TableCell>
                         <TableCell className={`py-2 text-xs font-medium truncate max-w-[150px] ${design.isUrgent ? "text-red-650/80 dark:text-red-400/80" : "text-muted-foreground"}`} title={design.materialTypeName || ""}>
                           {design.materialTypeName}
+                          {(design as any).basisWeight ? ` (${(design as any).basisWeight} gsm)` : ""}
                         </TableCell>
                         <TableCell className={`py-2 text-xs break-words max-w-[280px] ${design.isUrgent ? "text-red-650/80 dark:text-red-400/80" : "text-muted-foreground"}`} title={design.notes || ""}>
                           {design.notes || "—"}

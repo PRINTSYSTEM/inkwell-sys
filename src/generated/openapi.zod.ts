@@ -1469,6 +1469,7 @@ const MaterialTypeResponse = z
     designTypeId: z.number().int().nullable(),
     materialFamilyId: z.number().int().nullable(),
     materialFamilyName: z.string().nullable(),
+    warehouseMaterialTypeId: z.number().int().nullable(),
     status: z.string().nullable(),
     statusType: z.string().nullable(),
     createdAt: z.string().datetime({ offset: true }),
@@ -1504,6 +1505,7 @@ const DesignResponse = z
     width: z.number().nullable(),
     height: z.number().nullable(),
     areaM2: z.number().nullable(),
+    basisWeight: z.number().int().nullable(),
     sidesClassification: z.string().nullable(),
     processClassification: z.string().nullable(),
     laminationType: z.string().nullable(),
@@ -1544,6 +1546,7 @@ const UpdateDesignRequest = z
     requirements: z.string().nullable(),
     additionalNotes: z.string().nullable(),
     isUrgent: z.boolean().nullable(),
+    basisWeight: z.number().int().nullable(),
   })
   .partial();
 const CreateDesignStandaloneRequest = z.object({
@@ -1560,6 +1563,7 @@ const CreateDesignStandaloneRequest = z.object({
   processClassification: z.string().nullish(),
   laminationType: z.string().min(0).max(20).nullish(),
   notes: z.string().nullish(),
+  basisWeight: z.number().int().nullish(),
 });
 const DesignResponsePaginate = z
   .object({
@@ -2365,6 +2369,7 @@ const MaterialSpecResponse = z
     defaultWidth: z.number().nullable(),
     defaultUnit: z.string().nullable(),
     isActive: z.boolean(),
+    isDefault: z.boolean(),
   })
   .partial();
 const MaterialSpecResponseIPaginate = z
@@ -2463,6 +2468,7 @@ const CreateDesignRequest = z.object({
   laminationType: z.string().min(0).max(20).nullish(),
   requirements: z.string().nullish(),
   additionalNotes: z.string().nullish(),
+  basisWeight: z.number().int().nullish(),
 });
 const CreateOrderRequest = z.object({
   customerId: z.number().int(),
@@ -3058,6 +3064,8 @@ const ProofingOrderResponse = z
     paperSizeId: z.number().int().nullable(),
     paperSize: PaperSizeResponse,
     customPaperSize: z.string().nullable(),
+    basisWeight: z.number().int().nullable(),
+    rollWidth: z.number().int().nullable(),
     processClassification: z.string().nullable(),
     laminationType: z.string().nullable(),
     laminationTypeName: z.string().nullable(),
@@ -3092,6 +3100,7 @@ const DesignSimpleResponse = z
     width: z.number().nullable(),
     height: z.number().nullable(),
     areaM2: z.number().nullable(),
+    basisWeight: z.number().int().nullable(),
     sidesClassification: z.string().nullable(),
     processClassification: z.string().nullable(),
     laminationType: z.string().nullable(),
@@ -3135,6 +3144,8 @@ const ProofingOrderListResponse = z
     paperSizeId: z.number().int().nullable(),
     paperSize: PaperSizeResponse,
     customPaperSize: z.string().nullable(),
+    basisWeight: z.number().int().nullable(),
+    rollWidth: z.number().int().nullable(),
     plateOutputCount: z.number().int(),
     createdAt: z.string().datetime({ offset: true }),
     updatedAt: z.string().datetime({ offset: true }),
@@ -3171,6 +3182,8 @@ const UpdateProofingOrderRequest = z
     notes: z.string().nullable(),
     paperSizeId: z.number().int().nullable(),
     customPaperSize: z.string().nullable(),
+    basisWeight: z.number().int().nullable(),
+    rollWidth: z.number().int().nullable(),
     totalQuantity: z.number().int().gte(1).lte(2147483647).nullable(),
     designUpdates: z.array(UpdateProofingDesignItem).nullable(),
   })
@@ -3899,6 +3912,33 @@ const UpdateStockOutRequest = z
     items: z.array(StockOutItemRequest).nullable(),
   })
   .partial();
+const MaterialSuggestionItem = z
+  .object({
+    materialId: z.number().int(),
+    materialName: z.string().nullable(),
+    materialCode: z.string().nullable(),
+    type: z.string().nullable(),
+    vendorId: z.number().int().nullable(),
+    vendorName: z.string().nullable(),
+    currentStock: z.number().int(),
+    basisWeight: z.number().int().nullable(),
+    width: z.number().nullable(),
+    length: z.number().nullable(),
+    matchScore: z.number().int(),
+    category: z.string().nullable(),
+  })
+  .partial();
+const MaterialSuggestionResponse = z
+  .object({
+    productionOrderId: z.number().int(),
+    proofingOrderId: z.number().int(),
+    designTypeName: z.string().nullable(),
+    materialTypeName: z.string().nullable(),
+    basisWeight: z.number().int().nullable(),
+    rollWidth: z.number().int().nullable(),
+    suggestions: z.array(MaterialSuggestionItem).nullable(),
+  })
+  .partial();
 const SupplierCatalogResponse = z
   .object({
     id: z.number().int(),
@@ -4444,6 +4484,8 @@ export const schemas = {
   ReturnItemRequest,
   ProcessDeliveryReturnRequest,
   UpdateStockOutRequest,
+  MaterialSuggestionItem,
+  MaterialSuggestionResponse,
   SupplierCatalogResponse,
   CreateSupplierCatalogRequest,
   UpdateSupplierCatalogRequest,
@@ -9978,6 +10020,31 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.string().optional(),
       },
+      {
+        name: "designId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "designMaterialTypeId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "basisWeight",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "proofingOrderId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "productionOrderId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
     ],
     response: MaterialResponseIPaginate,
   },
@@ -14002,6 +14069,36 @@ const endpoints = makeApi([
     response: z.void(),
   },
   {
+    method: "get",
+    path: "/api/stock-outs/material-suggestions/:productionOrderId",
+    alias: "getApistockOutsmaterialSuggestionsProductionOrderId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "productionOrderId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: MaterialSuggestionResponse,
+    errors: [
+      {
+        status: 404,
+        description: `Not Found`,
+        schema: z
+          .object({
+            type: z.string().nullable(),
+            title: z.string().nullable(),
+            status: z.number().int().nullable(),
+            detail: z.string().nullable(),
+            instance: z.string().nullable(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+  {
     method: "post",
     path: "/api/stock-outs/outsource",
     alias: "postApistockOutsoutsource",
@@ -14765,7 +14862,7 @@ const endpoints = makeApi([
       {
         name: "isActive",
         type: "Query",
-        schema: z.boolean().optional(),
+        schema: z.boolean().optional().default(true),
       },
       {
         name: "vendorType",

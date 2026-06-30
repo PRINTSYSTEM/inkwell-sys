@@ -267,6 +267,7 @@ export const API_SUFFIX = {
   STOCK_OUT_COMPLETE: (id: number) => `/stock-outs/${id}/complete`,
   STOCK_OUT_PDF: (id: number) => `/stock-outs/${id}/pdf`,
   STOCK_OUT_FOR_PRODUCTION: "/stock-outs/for-production",
+  STOCK_OUT_MATERIAL_SUGGESTIONS: "/stock-outs/material-suggestions",
   STOCK_OUT_FOR_DELIVERY: "/stock-outs/for-delivery",
   STOCK_OUT_PROCESS_RETURN: "/stock-outs/process-return",
   STOCK_OUT_BY_DELIVERY_NOTE: (deliveryNoteId: number) =>

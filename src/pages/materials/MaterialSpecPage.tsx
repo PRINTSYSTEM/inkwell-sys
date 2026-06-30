@@ -288,7 +288,14 @@ export default function MaterialSpecPage() {
                   specsData.items.map((spec) => (
                     <TableRow key={spec.id} className="hover:bg-muted/10">
                       <TableCell className="font-semibold text-sm">
-                        {spec.name || "—"}
+                        <div className="flex items-center gap-2">
+                          <span>{spec.name || "—"}</span>
+                          {spec.isDefault && (
+                            <Badge variant="outline" className="border-amber-500 text-amber-500 bg-amber-50 text-[10px] scale-90 shrink-0">
+                              Mặc định
+                            </Badge>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary" className="font-medium">

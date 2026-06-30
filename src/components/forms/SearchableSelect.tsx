@@ -32,6 +32,7 @@ export interface SearchableSelectProps {
   className?: string;
   align?: "start" | "end" | "center";
   popoverWidth?: string;
+  modal?: boolean;
 }
 
 export const SearchableSelect: React.FC<SearchableSelectProps> = ({
@@ -45,12 +46,13 @@ export const SearchableSelect: React.FC<SearchableSelectProps> = ({
   className,
   align = "start",
   popoverWidth = "w-[300px]",
+  modal = true,
 }) => {
   const [open, setOpen] = useState(false);
   const selectedOption = options.find((opt) => opt.value === value);
 
   return (
-    <Popover open={open} onOpenChange={setOpen} modal={false}>
+    <Popover open={open} onOpenChange={setOpen} modal={modal}>
       <PopoverTrigger asChild disabled={disabled}>
         <Button
           variant="outline"
