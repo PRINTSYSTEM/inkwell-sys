@@ -821,14 +821,14 @@ export const router = createBrowserRouter([
               </Suspense>
             ),
           },
-              {
-                path: "quote",
-                element: (
-                  <Suspense fallback={<PageLoadingFallback />}>
-                    <QuotePage />
-                  </Suspense>
-                ),
-              },
+          {
+            path: "quote",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <QuotePage />
+              </Suspense>
+            ),
+          },
           {
             path: "invoice",
             children: [

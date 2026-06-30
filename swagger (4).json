@@ -9146,13 +9146,13 @@
             "description": "OK",
             "content": {
               "text/plain": {
-                "schema": { }
+                "schema": {}
               },
               "application/json": {
-                "schema": { }
+                "schema": {}
               },
               "text/json": {
-                "schema": { }
+                "schema": {}
               }
             }
           }
@@ -14207,13 +14207,13 @@
             "description": "OK",
             "content": {
               "text/plain": {
-                "schema": { }
+                "schema": {}
               },
               "application/json": {
-                "schema": { }
+                "schema": {}
               },
               "text/json": {
-                "schema": { }
+                "schema": {}
               }
             }
           }
@@ -16671,13 +16671,13 @@
             "description": "OK",
             "content": {
               "text/plain": {
-                "schema": { }
+                "schema": {}
               },
               "application/json": {
-                "schema": { }
+                "schema": {}
               },
               "text/json": {
-                "schema": { }
+                "schema": {}
               }
             }
           }
@@ -30619,7 +30619,7 @@
           },
           "details": {
             "type": "object",
-            "additionalProperties": { },
+            "additionalProperties": {},
             "nullable": true
           }
         },
@@ -34060,7 +34060,7 @@
             "nullable": true
           }
         },
-        "additionalProperties": { }
+        "additionalProperties": {}
       },
       "ProcessDeliveryReturnRequest": {
         "required": [
@@ -39253,7 +39253,7 @@
   },
   "security": [
     {
-      "Bearer": [ ]
+      "Bearer": []
     }
   ]
 }
