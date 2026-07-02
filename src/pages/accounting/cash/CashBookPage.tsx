@@ -83,6 +83,7 @@ export default function CashBookPage() {
   } = useCashBook({
     fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
     toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
+    accountCode: "111",
   });
 
   const {
@@ -140,9 +141,21 @@ export default function CashBookPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Sổ quỹ</h1>
-            <p className="text-muted-foreground">
-              Xem sổ quỹ tiền mặt theo quỹ và khoảng thời gian
-            </p>
+            <div className="flex flex-wrap items-center gap-2 mt-1">
+              <p className="text-muted-foreground text-sm">
+                Xem sổ quỹ tiền mặt theo quỹ và khoảng thời gian
+              </p>
+              {bookType === "cash" && (displayData as any)?.accountCode && (
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300 border border-emerald-100/80 dark:border-emerald-900/40">
+                  TK hạch toán: {(displayData as any).accountCode} - {(displayData as any).accountName}
+                </span>
+              )}
+              {bookType === "bank" && (displayData as any)?.bankNumber && (
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-blue-50 dark:bg-blue-950/20 text-blue-700 dark:text-blue-300 border border-blue-100/80 dark:border-blue-900/40">
+                  Tài khoản: {(displayData as any).bankNumber} - {(displayData as any).bankAccountName}
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" onClick={() => setBankAccountsOpen(true)}>

@@ -77,6 +77,25 @@ import { apiRequest } from "@/lib/http";
 import { AsyncSelect } from "@/components/forms/AsyncSelect";
 import { useDefectRecordsByProductionOrder, defectRecordKeys } from "@/hooks/use-defect-record";
 
+function highlightText(text: string, search: string) {
+  if (!search || !search.trim()) return text;
+  const cleanSearch = search.trim();
+  const parts = text.split(new RegExp(`(${cleanSearch.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&")})`, "gi"));
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.toLowerCase() === cleanSearch.toLowerCase() ? (
+          <mark key={i} className="bg-yellow-200 text-yellow-900 font-semibold px-0.5 rounded border border-yellow-300">
+            {part}
+          </mark>
+        ) : (
+          part
+        )
+      )}
+    </>
+  );
+}
+
 interface ProductionListTableProps {
   isLoading: boolean;
   productions: ProductionOrderResponse[];
@@ -645,10 +664,12 @@ function StepCell({
 // Inner component to render each row and fetch proofing details
 function ProductionTableRow({
   prod,
+  searchTerm,
   onProductionClick,
   onStartProduction,
 }: {
   prod: ProductionOrderResponse;
+  searchTerm: string;
   onProductionClick: (id: number) => void;
   onStartProduction: (proofingOrderId: number) => void;
 }) {
@@ -1616,9 +1637,10 @@ function ProductionTableRow({
                         <div key={`${pod.id}-${matchingStep.id}`} className="grid grid-cols-[1fr_auto] gap-3 py-2 first:pt-0 border-b border-dashed last:border-0">
                           <div className="bg-muted/20 p-2.5 rounded-md text-xs">
                             <p className="font-bold text-[13px] text-foreground mb-1.5 break-all">
-                              {pod.design?.designName ||
-                                pod.design?.code ||
-                                "—"}
+                              {highlightText(
+                                pod.design?.designName || pod.design?.code || "—",
+                                searchTerm
+                              )}
                             </p>
                             <div className="flex flex-col gap-1 text-[11px]">
                               <div className="flex justify-between items-center gap-1 border-b border-muted/50 pb-1">
@@ -1635,7 +1657,9 @@ function ProductionTableRow({
                                   Mã:
                                 </span>
                                 <span className="font-bold text-foreground text-right truncate">
-                                  {pod.design?.code || "—"}
+                                  {pod.design?.code
+                                    ? highlightText(pod.design.code, searchTerm)
+                                    : "—"}
                                 </span>
                               </div>
 
@@ -2022,6 +2046,7 @@ export function ProductionListTable({
                 <ProductionTableRow
                   key={prod.id || `draft-${prod.proofingOrderId}`}
                   prod={prod}
+                  searchTerm={searchTerm}
                   onProductionClick={onProductionClick}
                   onStartProduction={onStartProduction}
                 />

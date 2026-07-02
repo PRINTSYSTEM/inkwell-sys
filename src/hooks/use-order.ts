@@ -17,6 +17,7 @@ import type {
   OrderExportResponse,
   CashReceiptResponseIPaginate,
   CreateOrderFromReadyDesignsRequest,
+  SalesDashboardResponse,
 } from "@/Schema";
 import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async";
@@ -340,6 +341,22 @@ export const useOrdersForSale = (
       return res.data;
     },
     staleTime: 5 * 60 * 1000,
+  });
+};
+
+// ================== ORDER: SALES DASHBOARD ==================
+// GET /orders/sales-dashboard
+export const useSalesDashboard = (enabled = true) => {
+  return useQuery<SalesDashboardResponse>({
+    queryKey: [orderKeys.all[0], "sales-dashboard"],
+    enabled,
+    queryFn: async () => {
+      const res = await apiRequest.get<SalesDashboardResponse>(
+        API_SUFFIX.ORDERS_SALES_DASHBOARD
+      );
+      return res.data;
+    },
+    staleTime: 1 * 60 * 1000, // 1 minute
   });
 };
 

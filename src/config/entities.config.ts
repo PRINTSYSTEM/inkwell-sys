@@ -103,6 +103,7 @@ export const ENTITY_CONFIG = {
       in_production: "Đang sản xuất",
       completed: "Hoàn thành",
       paused: "Tạm dừng",
+      cancelled: "Đã hủy",
     },
   },
   paymentStatuses: {

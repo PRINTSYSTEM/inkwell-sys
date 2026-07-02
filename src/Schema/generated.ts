@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-06-30T21:43:28.787Z */
+/* Generated at: 2026-07-02T00:40:39.926Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -281,6 +281,7 @@ export const SalesByDimensionResponseSchema = schemas.SalesByDimensionResponse;
 export const SalesByDimensionResponseIPaginateSchema = schemas.SalesByDimensionResponseIPaginate;
 export const SalesByPeriodResponseSchema = schemas.SalesByPeriodResponse;
 export const SalesByPeriodResponseIPaginateSchema = schemas.SalesByPeriodResponseIPaginate;
+export const SalesDashboardResponseSchema = schemas.SalesDashboardResponse;
 export const SalesDetailLedgerRowSchema = schemas.SalesDetailLedgerRow;
 export const SalesDetailLedgerRowIPaginateSchema = schemas.SalesDetailLedgerRowIPaginate;
 export const SalesSummaryRowSchema = schemas.SalesSummaryRow;

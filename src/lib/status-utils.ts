@@ -56,6 +56,7 @@ export const productionStatusDescription: Record<string, string> = {
   in_production: "Lệnh sản xuất đang được xử lý tại xưởng.",
   completed: "Lệnh sản xuất đã hoàn thành.",
   paused: "Lệnh sản xuất đang tạm dừng.",
+  cancelled: "Lệnh sản xuất đã bị hủy.",
 };
 
 // Trạng thái mục chi tiết đơn hàng (OrderDetail)

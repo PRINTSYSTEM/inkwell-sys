@@ -94,12 +94,12 @@ export function PaymentList({ listFilterType }: PaymentListProps) {
   // can't rely on server filtering by `isDebtApproved`, so fetch a larger
   // page and perform client-side filtering + pagination.
   const clientSideMode = listFilterType === "";
-  const apiPageSize = clientSideMode ? 200 : itemsPerPage;
+  const apiPageSize = clientSideMode ? 1000 : itemsPerPage;
 
   // Build params for API
   const listParams = useMemo(() => {
     return {
-      pageNumber: currentPage,
+      pageNumber: clientSideMode ? 1 : currentPage,
       pageSize: apiPageSize,
       filterType: listFilterType ?? "payment",
       status: "",
@@ -109,7 +109,7 @@ export function PaymentList({ listFilterType }: PaymentListProps) {
       sortColumn: "",
       sortOrder: "",
     };
-  }, [currentPage, apiPageSize, debouncedSearchQuery, listFilterType]);
+  }, [clientSideMode, clientSideMode ? null : currentPage, apiPageSize, debouncedSearchQuery, listFilterType]);
 
   // Fetch orders from API
   // If parent passed empty string (QuotePage) treat as "sale/quotes" and

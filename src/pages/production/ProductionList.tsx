@@ -16,8 +16,6 @@ import {
   type ProofingOrderResponse,
 } from "@/Schema";
 import type { SortOrder } from "@/components/ui/sort-controls";
-import type { DateRange } from "react-day-picker";
-import { DateRangePicker } from "@/components/forms/DateRangePicker";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { ProductionListHeader } from "./components/ProductionListHeader";
@@ -49,24 +47,75 @@ export default function ProductionListPage() {
   const [itemsPerPage] = useState(10);
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
-  // Filter dates & View tab
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+  // View tab
+  type ProductionTab = "all" | "pending_material" | "in_production" | "pending_qc" | "completed";
+  const [viewTab, setViewTab] = useState<ProductionTab>("all");
+
+  // Stats queries (All-time & Today)
+  const todayStart = useMemo(() => {
     const t = new Date();
-    return {
-      from: new Date(t.getFullYear(), t.getMonth(), t.getDate()),
-      to: new Date(t.getFullYear(), t.getMonth(), t.getDate(), 23, 59, 59, 999),
-    };
+    return new Date(t.getFullYear(), t.getMonth(), t.getDate()).toISOString();
+  }, []);
+
+  const todayEnd = useMemo(() => {
+    const t = new Date();
+    return new Date(t.getFullYear(), t.getMonth(), t.getDate(), 23, 59, 59, 999).toISOString();
+  }, []);
+
+  // 1. Pending material (All time)
+  const { data: qPendingMaterial } = useProductionOrders({
+    pageNumber: 1,
+    pageSize: 1,
+    tab: "pending_material",
   });
-  const [viewTab, setViewTab] = useState<"all" | "pending-material">("all");
-  const isPendingMaterialMode = viewTab === "pending-material";
+
+  // 2. In production (All time)
+  const { data: qInProduction } = useProductionOrders({
+    pageNumber: 1,
+    pageSize: 1,
+    tab: "in_production",
+  });
+
+  // 3. In production (Today)
+  const { data: qInProductionToday } = useProductionOrders({
+    pageNumber: 1,
+    pageSize: 1,
+    tab: "in_production",
+    fromDate: todayStart,
+    toDate: todayEnd,
+  });
+
+  // 4. Pending QC (All time)
+  const { data: qPendingQc } = useProductionOrders({
+    pageNumber: 1,
+    pageSize: 1,
+    tab: "pending_qc",
+  });
+
+  // 5. Completed (All time)
+  const { data: qCompleted } = useProductionOrders({
+    pageNumber: 1,
+    pageSize: 1,
+    tab: "completed",
+  });
+
+  // 6. Completed (Today)
+  const { data: qCompletedToday } = useProductionOrders({
+    pageNumber: 1,
+    pageSize: 1,
+    tab: "completed",
+    fromDate: todayStart,
+    toDate: todayEnd,
+  });
 
   const queryParams = useMemo<ProductionListParams>(() => {
     const params: ProductionListParams = {
       pageNumber: currentPage,
       pageSize: itemsPerPage,
-      fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
-      toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
     };
+    if (viewTab !== "all") {
+      params.tab = viewTab;
+    }
     if (selectedStatus !== "all") {
       params.status = selectedStatus;
     }
@@ -74,24 +123,17 @@ export default function ProductionListPage() {
       params.sortColumn = sortColumn.trim();
       params.sortOrder = sortOrder;
     }
+    if (debouncedSearch.trim()) {
+      params.search = debouncedSearch.trim();
+    }
     return params;
-  }, [currentPage, itemsPerPage, selectedStatus, sortColumn, sortOrder, dateRange]);
+  }, [currentPage, itemsPerPage, selectedStatus, sortColumn, sortOrder, viewTab, debouncedSearch]);
 
   const {
-    data: allProductionsResp,
-    isLoading: isLoadingAll,
-    error: errorAll,
+    data: productionsResp,
+    isLoading,
+    error,
   } = useProductionOrders(queryParams);
-
-  const {
-    data: pendingMaterialResp,
-    isLoading: isLoadingPending,
-    error: errorPending,
-  } = usePendingMaterialProductionOrders(queryParams);
-
-  const productionsResp = isPendingMaterialMode ? pendingMaterialResp : allProductionsResp;
-  const isLoading = isPendingMaterialMode ? isLoadingPending : isLoadingAll;
-  const error = isPendingMaterialMode ? errorPending : errorAll;
 
   // Try to parse with schema, but fallback to raw data if validation fails
   const parseProdResp = safeParseSchema(
@@ -170,6 +212,7 @@ export default function ProductionListPage() {
     useProofingOrdersForProduction({
       pageNumber: 1,
       pageSize: 100,
+      search: debouncedSearch.trim() || undefined,
     });
 
   const proofingOrders = useMemo<ProofingOrderResponse[]>(
@@ -179,13 +222,19 @@ export default function ProductionListPage() {
 
   // Unified List: Merged ProductionOrders and filtered ProofingOrders
   const displayProductions = useMemo<ProductionOrderResponse[]>(() => {
-    if (isPendingMaterialMode) {
-      // In pending-material mode, we only show productions fetched from the backend (which are pending material)
-      // and we just filter by search query.
+    if (viewTab !== "all") {
+      // In specific tabs, we only show productions fetched from the backend (which matches tab condition)
+      // and we just filter by search query. No drafts shown.
       return productions.filter((prod: any) => {
         const search = debouncedSearch.toLowerCase().trim();
         const cleanSearch = search.replace(/^bb0*/, "bb");
         const cleanProdCode = (prod.proofingOrderCode || prod.proofingOrder?.code || "").toLowerCase().trim().replace(/^bb0*/, "bb");
+
+        const matchDesign = (prod.proofingOrder?.proofingOrderDesigns || []).some((pod: any) => {
+          const dName = (pod.design?.designName || pod.design?.name || "").toLowerCase();
+          const dCode = (pod.design?.code || "").toLowerCase();
+          return dName.includes(search) || dCode.includes(search);
+        });
 
         return (
           search.length === 0 ||
@@ -194,15 +243,16 @@ export default function ProductionListPage() {
             .includes(search) ||
           (prod.proofingOrder?.code ?? "").toLowerCase().includes(search) ||
           (prod.proofingOrderCode ?? "").toLowerCase().includes(search) ||
-          cleanProdCode.includes(cleanSearch) ||
-          (prod.productionLeadName ?? "").toLowerCase().includes(search)
+          (cleanSearch.startsWith("bb") && cleanProdCode.includes(cleanSearch)) ||
+          (prod.productionLeadName ?? "").toLowerCase().includes(search) ||
+          matchDesign
         );
       });
     }
 
     const existingPoIds = new Set(productions.map((p) => p.proofingOrderId));
     const readyProofingAsProds: ProductionOrderResponse[] = proofingOrders
-      .filter((po) => !existingPoIds.has(po.id))
+      .filter((po) => !existingPoIds.has(po.id) && (!po.productions || (po.productions as any[]).length === 0))
       .map((po) => ({
         proofingOrderId: po.id,
         proofingOrder: po,
@@ -219,6 +269,12 @@ export default function ProductionListPage() {
       const cleanSearch = search.replace(/^bb0*/, "bb");
       const cleanProdCode = (prod.proofingOrderCode || prod.proofingOrder?.code || "").toLowerCase().trim().replace(/^bb0*/, "bb");
 
+      const matchDesign = (prod.proofingOrder?.proofingOrderDesigns || []).some((pod: any) => {
+        const dName = (pod.design?.designName || pod.design?.name || "").toLowerCase();
+        const dCode = (pod.design?.code || "").toLowerCase();
+        return dName.includes(search) || dCode.includes(search);
+      });
+
       const matchSearch =
         search.length === 0 ||
         String(prod.id ?? "")
@@ -226,8 +282,9 @@ export default function ProductionListPage() {
           .includes(search) ||
         (prod.proofingOrder?.code ?? "").toLowerCase().includes(search) ||
         (prod.proofingOrderCode ?? "").toLowerCase().includes(search) ||
-        cleanProdCode.includes(cleanSearch) ||
-        (prod.productionLeadName ?? "").toLowerCase().includes(search);
+        (cleanSearch.startsWith("bb") && cleanProdCode.includes(cleanSearch)) ||
+        (prod.productionLeadName ?? "").toLowerCase().includes(search) ||
+        matchDesign;
 
       const matchStatus =
         selectedStatus === "all" ||
@@ -235,7 +292,7 @@ export default function ProductionListPage() {
 
       return matchSearch && matchStatus;
     });
-  }, [productions, proofingOrders, debouncedSearch, selectedStatus, isPendingMaterialMode]);
+  }, [productions, proofingOrders, debouncedSearch, selectedStatus, viewTab]);
 
   // Pagination handlers
   const handlePageChange = (newPage: number) => {
@@ -300,63 +357,62 @@ export default function ProductionListPage() {
 
   const stats = useMemo(
     () => ({
-      total: totalCount,
-      pending:
-        displayProductions?.filter((p) => (p as any).status === "waiting_for_production")
-          .length || 0,
-      inProgress:
-        displayProductions?.filter((p) => (p as any).status === "in_production").length || 0,
-      completed:
-        displayProductions?.filter((p) => (p as any).status === "completed").length || 0,
+      pendingMaterial: qPendingMaterial?.total ?? 0,
+      inProduction: qInProduction?.total ?? 0,
+      inProductionToday: qInProductionToday?.total ?? 0,
+      pendingQc: qPendingQc?.total ?? 0,
+      completed: qCompleted?.total ?? 0,
+      completedToday: qCompletedToday?.total ?? 0,
     }),
-    [totalCount, displayProductions]
+    [
+      qPendingMaterial?.total,
+      qInProduction?.total,
+      qInProductionToday?.total,
+      qPendingQc?.total,
+      qCompleted?.total,
+      qCompletedToday?.total,
+    ]
   );
 
   return (
     <div className="h-full">
       <div className="h-full flex flex-col overflow-hidden bg-background relative">
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden px-4 py-4">
-          <ProductionListHeader
-            stats={stats}
-          />
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden px-3 pb-3 pt-0">
+          <ProductionListHeader stats={stats} />
 
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 shrink-0">
+          <div className="flex flex-wrap flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 shrink-0 bg-muted/20 p-1.5 rounded-lg border border-border/50">
             <Tabs
               value={viewTab}
               onValueChange={(val) => {
-                setViewTab(val as "all" | "pending-material");
+                setViewTab(val as any);
                 setCurrentPage(1);
               }}
-              className="w-fit"
+              className="w-fit shrink-0"
             >
+              <TabsList className="h-8 p-0.5">
+                <TabsTrigger value="all" className="h-7 text-xs px-2.5">Tất cả</TabsTrigger>
+                <TabsTrigger value="pending_material" className="h-7 text-xs px-2.5">Chưa xuất vật tư</TabsTrigger>
+                <TabsTrigger value="in_production" className="h-7 text-xs px-2.5">Đang sản xuất</TabsTrigger>
+                <TabsTrigger value="pending_qc" className="h-7 text-xs px-2.5">Chờ kiểm hàng</TabsTrigger>
+                <TabsTrigger value="completed" className="h-7 text-xs px-2.5">Hoàn thành</TabsTrigger>
+              </TabsList>
             </Tabs>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-muted-foreground">Khoảng ngày:</span>
-              <DateRangePicker
-                value={dateRange}
-                onValueChange={(val) => {
-                  setDateRange(val);
-                  setCurrentPage(1);
-                }}
-                className="w-[280px]"
-              />
-            </div>
-          </div>
 
-          <ProductionListFilter
-            searchTerm={searchTerm}
-            onSearchChange={setSearchTerm}
-            selectedStatus={selectedStatus}
-            onStatusChange={setSelectedStatus}
-            sortColumn={sortColumn}
-            sortOrder={sortOrder}
-            onSortColumnChange={setSortColumn}
-            onSortOrderChange={setSortOrder}
-            onClearSort={() => {
-              setSortColumn("");
-              setSortOrder("desc");
-            }}
-          />
+            <ProductionListFilter
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+              selectedStatus={selectedStatus}
+              onStatusChange={setSelectedStatus}
+              sortColumn={sortColumn}
+              sortOrder={sortOrder}
+              onSortColumnChange={setSortColumn}
+              onSortOrderChange={setSortOrder}
+              onClearSort={() => {
+                setSortColumn("");
+                setSortOrder("desc");
+              }}
+            />
+          </div>
 
           <ProductionListTable
             isLoading={isLoading}
