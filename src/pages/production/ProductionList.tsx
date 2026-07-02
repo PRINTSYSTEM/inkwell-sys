@@ -1,6 +1,10 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/http";
+import { API_SUFFIX } from "@/apis";
+import { normalizeParams } from "@/apis/util.api";
 import {
   useProductionOrders,
   useCreateProductionOrder,
@@ -62,50 +66,59 @@ export default function ProductionListPage() {
     return new Date(t.getFullYear(), t.getMonth(), t.getDate(), 23, 59, 59, 999).toISOString();
   }, []);
 
-  // 1. Pending material (All time)
-  const { data: qPendingMaterial } = useProductionOrders({
-    pageNumber: 1,
-    pageSize: 1,
-    tab: "pending_material",
-  });
+  // Single query to fetch all production list stats in parallel (cached & no refetch on mount)
+  const { data: statsData } = useQuery({
+    queryKey: ["production-orders", "summary-stats", todayStart, todayEnd],
+    queryFn: async () => {
+      const fetchCount = async (tab?: string, fromDate?: string, toDate?: string) => {
+        try {
+          const res = await apiRequest.get<any>(
+            API_SUFFIX.PRODUCTION_ORDERS,
+            {
+              params: normalizeParams({
+                pageNumber: 1,
+                pageSize: 1,
+                tab,
+                fromDate,
+                toDate,
+              }),
+            }
+          );
+          return res.data?.total ?? 0;
+        } catch (e) {
+          console.error(`Failed to fetch count for tab: ${tab}`, e);
+          return 0;
+        }
+      };
 
-  // 2. In production (All time)
-  const { data: qInProduction } = useProductionOrders({
-    pageNumber: 1,
-    pageSize: 1,
-    tab: "in_production",
-  });
+      const [
+        pendingMaterial,
+        inProduction,
+        inProductionToday,
+        pendingQc,
+        completed,
+        completedToday,
+      ] = await Promise.all([
+        fetchCount("pending_material"),
+        fetchCount("in_production"),
+        fetchCount("in_production", todayStart, todayEnd),
+        fetchCount("pending_qc"),
+        fetchCount("completed"),
+        fetchCount("completed", todayStart, todayEnd),
+      ]);
 
-  // 3. In production (Today)
-  const { data: qInProductionToday } = useProductionOrders({
-    pageNumber: 1,
-    pageSize: 1,
-    tab: "in_production",
-    fromDate: todayStart,
-    toDate: todayEnd,
-  });
-
-  // 4. Pending QC (All time)
-  const { data: qPendingQc } = useProductionOrders({
-    pageNumber: 1,
-    pageSize: 1,
-    tab: "pending_qc",
-  });
-
-  // 5. Completed (All time)
-  const { data: qCompleted } = useProductionOrders({
-    pageNumber: 1,
-    pageSize: 1,
-    tab: "completed",
-  });
-
-  // 6. Completed (Today)
-  const { data: qCompletedToday } = useProductionOrders({
-    pageNumber: 1,
-    pageSize: 1,
-    tab: "completed",
-    fromDate: todayStart,
-    toDate: todayEnd,
+      return {
+        pendingMaterial,
+        inProduction,
+        inProductionToday,
+        pendingQc,
+        completed,
+        completedToday,
+      };
+    },
+    staleTime: 5 * 60 * 1000, // cache for 5 minutes
+    refetchOnMount: false, // do not refetch when returning to page
+    refetchOnWindowFocus: false, // do not refetch on focus
   });
 
   const queryParams = useMemo<ProductionListParams>(() => {
@@ -357,21 +370,14 @@ export default function ProductionListPage() {
 
   const stats = useMemo(
     () => ({
-      pendingMaterial: qPendingMaterial?.total ?? 0,
-      inProduction: qInProduction?.total ?? 0,
-      inProductionToday: qInProductionToday?.total ?? 0,
-      pendingQc: qPendingQc?.total ?? 0,
-      completed: qCompleted?.total ?? 0,
-      completedToday: qCompletedToday?.total ?? 0,
+      pendingMaterial: statsData?.pendingMaterial ?? 0,
+      inProduction: statsData?.inProduction ?? 0,
+      inProductionToday: statsData?.inProductionToday ?? 0,
+      pendingQc: statsData?.pendingQc ?? 0,
+      completed: statsData?.completed ?? 0,
+      completedToday: statsData?.completedToday ?? 0,
     }),
-    [
-      qPendingMaterial?.total,
-      qInProduction?.total,
-      qInProductionToday?.total,
-      qPendingQc?.total,
-      qCompleted?.total,
-      qCompletedToday?.total,
-    ]
+    [statsData]
   );
 
   return (
