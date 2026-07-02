@@ -180,6 +180,7 @@ function renderGroup(
                     <CollapsibleTrigger asChild>
                       <SidebarMenuSubButton
                         type="button"
+                        size="sm"
                         className={`w-full justify-between min-w-0 ${
                           nestedHasActiveChild
                             ? "bg-sidebar-accent/50 text-sidebar-accent-foreground"
@@ -201,7 +202,7 @@ function renderGroup(
                       <SidebarMenuSub>
                         {nestedVisibleChildren.map((nestedChild) => (
                           <SidebarMenuSubItem key={nestedChild.id}>
-                            <SidebarMenuSubButton asChild>
+                            <SidebarMenuSubButton asChild size="sm">
                               <NavLink
                                 to={nestedChild.path}
                                 className={() => {
@@ -228,7 +229,7 @@ function renderGroup(
             if (isLeaf && "path" in child && child.path) {
               return (
                 <SidebarMenuSubItem key={child.id}>
-                  <SidebarMenuSubButton asChild>
+                  <SidebarMenuSubButton asChild size="sm">
                     <NavLink
                       to={child.path}
                       className={() => {

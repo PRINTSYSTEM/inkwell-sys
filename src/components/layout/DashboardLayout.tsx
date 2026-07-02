@@ -60,7 +60,7 @@ export default function DashboardLayout() {
         <AppSidebar />
         <div className="relative flex flex-1 flex-col overflow-hidden">
           <AppHeader />
-          <main className="relative flex-1 bg-muted/30 p-6 mt-20 h-[calc(100vh-5rem)] overflow-y-auto">
+          <main className="relative flex-1 bg-muted/30 p-4 pt-2 mt-20 h-[calc(100vh-5rem)] overflow-y-auto">
             {isLoading && <RouteLoadingOverlay />}
             <Outlet />
           </main>

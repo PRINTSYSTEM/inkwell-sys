@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-06-30T21:43:28.856Z */
+/* Generated at: 2026-07-02T00:40:40.008Z */
 
 import { z } from "zod";
 import { IdSchema, PagedParamsSchema } from "./Common";
@@ -34,6 +34,7 @@ export type BankLedgerListParams = z.infer<typeof BankLedgerListParamsSchema>;
 export const CashBookListParamsSchema = z.object({
   fromDate: z.string().datetime({ offset: true }).nullable().optional(),
   toDate: z.string().datetime({ offset: true }).nullable().optional(),
+  accountCode: z.string().nullable().optional(),
 }).passthrough();
 export type CashBookListParams = z.infer<typeof CashBookListParamsSchema>;
 
@@ -463,6 +464,17 @@ export type DebtReportsCustomerReconciliationExportParams = z.infer<typeof DebtR
 export const DefectRecordByProductionOrderParamsSchema = PagedParamsSchema.extend({
 });
 export type DefectRecordByProductionOrderParams = z.infer<typeof DefectRecordByProductionOrderParamsSchema>;
+
+// ==== DefectRecordExportExcelParams (GET /api/defect-records/export-excel) ====
+export const DefectRecordExportExcelParamsSchema = z.object({
+  assignedToUserId: z.number().int().nullable().optional(),
+  defectSource: z.string().nullable().optional(),
+  productionOrderId: z.number().int().nullable().optional(),
+  designId: z.number().int().nullable().optional(),
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+}).passthrough();
+export type DefectRecordExportExcelParams = z.infer<typeof DefectRecordExportExcelParamsSchema>;
 
 // ==== DefectRecordListParams (GET /api/defect-records) ====
 export const DefectRecordListParamsSchema = PagedParamsSchema.extend({
@@ -1006,6 +1018,7 @@ export const ProductionListParamsSchema = PagedParamsSchema.extend({
   toDate: z.string().datetime({ offset: true }).nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
+  tab: z.string().nullable().optional(),
 });
 export type ProductionListParams = z.infer<typeof ProductionListParamsSchema>;
 
@@ -1042,6 +1055,7 @@ export type ProofingOrderByOrderParams = z.infer<typeof ProofingOrderByOrderPara
 
 // ==== ProofingOrderForProductionListParams (GET /api/proofing-orders/for-production) ====
 export const ProofingOrderForProductionListParamsSchema = PagedParamsSchema.extend({
+  search: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });

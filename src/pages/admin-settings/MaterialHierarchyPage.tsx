@@ -104,7 +104,7 @@ export default function MaterialHierarchyPage() {
   return (
     <>
       <Helmet>
-        <title>Cấu hình Phân cấp Vật tư | ERP</title>
+        <title>Cấu hình  Vật tư </title>
       </Helmet>
 
       <div className="h-full flex flex-col space-y-4 p-6 bg-slate-50/50 min-h-screen">
@@ -113,7 +113,7 @@ export default function MaterialHierarchyPage() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-800 flex items-center gap-2">
               <Layers className="h-6 w-6 text-indigo-600" />
-              Cấu hình Phân cấp Vật tư (8 Tầng)
+              Cấu hình  Vật tư
             </h1>
           </div>
         </div>
@@ -1891,8 +1891,8 @@ function MaterialsTab() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-slate-600">
-                        {m.type === "cuon" 
-                          ? `Khổ ${m.width || 0} cm` 
+                        {m.type === "cuon"
+                          ? `Khổ ${m.width || 0} cm`
                           : `${m.width || 0} x ${m.length || 0} cm`}
                       </TableCell>
                       <TableCell className="font-semibold text-slate-700">
@@ -1925,9 +1925,9 @@ function MaterialsTab() {
         )}
       </CardContent>
 
-      <CreateMaterialDialog 
-        open={isOpen} 
-        onOpenChange={setIsOpen} 
+      <CreateMaterialDialog
+        open={isOpen}
+        onOpenChange={setIsOpen}
         onSuccess={() => {
           refetch();
           toast.success("Tạo SKU vật tư thành công!");

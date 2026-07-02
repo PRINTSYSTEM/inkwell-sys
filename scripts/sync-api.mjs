@@ -16,7 +16,7 @@ import { glob } from "glob";
 
 const execAsync = promisify(exec);
 
-dotenv.config({ path: ".env.development" });
+dotenv.config({ path: ".env" });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);

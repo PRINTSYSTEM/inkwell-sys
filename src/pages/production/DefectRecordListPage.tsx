@@ -40,6 +40,7 @@ import {
   AlertCircle,
   AlertTriangle,
   Calendar,
+  Download,
   Edit,
   FileText,
   Filter,
@@ -61,6 +62,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { ROLE } from "@/constants";
 import { AsyncSelect } from "@/components/forms/AsyncSelect";
 import { apiRequest } from "@/lib/http";
+import { productionStepTypeLabels } from "@/lib/status-utils";
 import type {
   DefectRecordResponse,
   UserResponsePaginate,
@@ -76,7 +78,7 @@ const DEFECT_SOURCES = [
 
 export default function DefectRecordListPage() {
   const { user } = useAuth();
-  
+
   // Table state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
@@ -92,6 +94,7 @@ export default function DefectRecordListPage() {
   // Edit / Delete dialog states
   const [editingRecord, setEditingRecord] = useState<DefectRecordResponse | null>(null);
   const [deletingRecordId, setDeletingRecordId] = useState<number | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Role permissions
   const userRole = user?.role;
@@ -158,6 +161,44 @@ export default function DefectRecordListPage() {
     setCurrentPage(1);
   };
 
+  // Export Excel handler
+  const handleExportExcel = async () => {
+    try {
+      setIsExporting(true);
+      const params: Record<string, any> = {};
+      if (assignedToUserId) params.assignedToUserId = assignedToUserId;
+      if (defectSource && defectSource !== "all") params.defectSource = defectSource;
+      if (productionOrderId) params.productionOrderId = parseInt(productionOrderId, 10);
+      if (fromDate) params.fromDate = new Date(fromDate).toISOString();
+      if (toDate) params.toDate = new Date(toDate).toISOString();
+
+      const response = await apiRequest.get<ArrayBuffer>("/defect-records/export-excel", {
+        params,
+        responseType: "arraybuffer",
+      });
+
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `nhat-ky-loi-san-xuat-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Xuất báo cáo Excel thành công");
+    } catch (err) {
+      console.error("Export Excel error:", err);
+      toast.error("Không thể xuất báo cáo Excel");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   // Delete handler
   const handleDeleteConfirm = () => {
     if (!deletingRecordId) return;
@@ -222,6 +263,23 @@ export default function DefectRecordListPage() {
     }
   };
 
+  const getProductionStatusBadge = (status?: string | null, display?: string | null) => {
+    if (!status) return null;
+    const label = display || status;
+    switch (status) {
+      case "waiting_for_production":
+        return <Badge variant="outline" className="bg-yellow-50 text-yellow-800 border-yellow-200 hover:bg-yellow-100 text-[10px] py-0 px-1.5 h-5">{label}</Badge>;
+      case "in_production":
+        return <Badge variant="outline" className="bg-orange-50 text-orange-800 border-orange-200 hover:bg-orange-100 text-[10px] py-0 px-1.5 h-5">{label}</Badge>;
+      case "completed":
+        return <Badge variant="outline" className="bg-green-50 text-green-800 border-green-200 hover:bg-green-100 text-[10px] py-0 px-1.5 h-5">{label}</Badge>;
+      case "paused":
+        return <Badge variant="outline" className="bg-red-50 text-red-800 border-red-200 hover:bg-red-100 text-[10px] py-0 px-1.5 h-5">{label}</Badge>;
+      default:
+        return <Badge variant="outline" className="text-[10px] py-0 px-1.5 h-5">{label}</Badge>;
+    }
+  };
+
   return (
     <div className="h-full flex flex-col overflow-hidden bg-background">
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden px-4 py-4 space-y-4">
@@ -229,20 +287,33 @@ export default function DefectRecordListPage() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between shrink-0 gap-3">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Nhật ký lỗi sản xuất</h1>
-            <p className="text-sm text-muted-foreground">
-              Quản lý các bản ghi lỗi phát sinh trong quá trình sản xuất của nhân viên.
-            </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            disabled={isLoading || isRefetching}
-            className="self-start md:self-auto gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${isRefetching ? "animate-spin" : ""}`} />
-            Tải lại
-          </Button>
+          <div className="flex items-center gap-2 self-start md:self-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportExcel}
+              disabled={isExporting}
+              className="gap-2"
+            >
+              {isExporting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              Xuất Excel
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => refetch()}
+              disabled={isLoading || isRefetching}
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefetching ? "animate-spin" : ""}`} />
+              Tải lại
+            </Button>
+          </div>
         </div>
 
         {/* Filters Card */}
@@ -374,7 +445,6 @@ export default function DefectRecordListPage() {
               <Table>
                 <TableHeader className="bg-muted/50 sticky top-0 z-10">
                   <TableRow>
-                    <TableHead className="w-[60px] text-center font-bold">ID</TableHead>
                     <TableHead className="w-[120px] font-bold">Lệnh sản xuất</TableHead>
                     <TableHead className="font-bold">Mã hàng/Thiết kế</TableHead>
                     <TableHead className="w-[140px] font-bold">Công đoạn lỗi</TableHead>
@@ -391,18 +461,27 @@ export default function DefectRecordListPage() {
                 <TableBody>
                   {items.map((record) => (
                     <TableRow key={record.id} className="hover:bg-muted/30">
-                      <TableCell className="text-center font-mono text-xs">{record.id}</TableCell>
                       <TableCell>
-                        {record.productionOrderId ? (
-                          <Link
-                            to={`/productions/${record.productionOrderId}`}
-                            className="text-primary hover:underline font-semibold"
-                          >
-                            #{record.productionOrderId}
-                          </Link>
-                        ) : (
-                          <span className="text-muted-foreground">N/A</span>
-                        )}
+                        <div className="flex flex-col gap-1">
+                          {record.productionOrderId ? (
+                            <Link
+                              to={`/productions/${record.productionOrderId}`}
+                              className="text-primary hover:underline font-semibold"
+                            >
+                              {record.productionOrderCode || `#${record.productionOrderId}`}
+                            </Link>
+                          ) : (
+                            <span className="text-muted-foreground">N/A</span>
+                          )}
+                          {record.productionOrderStatus && (
+                            <div className="flex">
+                              {getProductionStatusBadge(
+                                record.productionOrderStatus,
+                                record.productionOrderStatusDisplay
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="font-medium text-xs sm:text-sm">
@@ -417,7 +496,7 @@ export default function DefectRecordListPage() {
                       <TableCell>
                         {record.productionStepType ? (
                           <span className="text-xs font-medium">
-                            {record.productionStepType}
+                            {productionStepTypeLabels[record.productionStepType] || record.productionStepType}
                           </span>
                         ) : (
                           <span className="text-xs text-muted-foreground italic">Khác / QC</span>

@@ -111,7 +111,7 @@ export const MENU_ITEMS: MenuItem[] = [
     children: [
       {
         id: "sale-orders",
-        title: "Đơn hàng( Báo giá)",
+        title: "Đơn hàng báo giá",
         icon: FileText,
         path: ROUTE_PATHS.ORDERS.SALE_ORDERS,
         allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.SALE],
@@ -216,6 +216,8 @@ export const MENU_ITEMS: MenuItem[] = [
       ROLE.MANAGER,
       ROLE.PRODUCTION,
       ROLE.PRODUCTION_LEAD,
+      ROLE.ACCOUNTING,
+      ROLE.ACCOUNTING_LEAD,
     ],
     children: [
       {
@@ -228,6 +230,8 @@ export const MENU_ITEMS: MenuItem[] = [
           ROLE.MANAGER,
           ROLE.PRODUCTION,
           ROLE.PRODUCTION_LEAD,
+          ROLE.ACCOUNTING,
+          ROLE.ACCOUNTING_LEAD,
         ],
       },
     ],
@@ -261,7 +265,7 @@ export const MENU_ITEMS: MenuItem[] = [
     children: [
       {
         id: "accounting-vendors",
-        title: "Danh sách nhà cung cấp",
+        title: "Danh sách NCC",
         icon: Building2,
         path: ROUTE_PATHS.VENDORS.ROOT,
         allowedRoles: [
@@ -273,7 +277,7 @@ export const MENU_ITEMS: MenuItem[] = [
       },
       {
         id: "accounting-cost-pricing",
-        title: "Chi phí nhà cung cấp",
+        title: "Chi phí NCC",
         icon: Calculator,
         path: ROUTE_PATHS.ACCOUNTING.COST_PRICING,
         allowedRoles: [ROLE.ADMIN, ROLE.ACCOUNTING, ROLE.ACCOUNTING_LEAD],
@@ -499,7 +503,7 @@ export const MENU_ITEMS: MenuItem[] = [
       },
       {
         id: "outside-printing-orders",
-        title: "Quản lý in gia công",
+        title: "In gia công ngoài",
         icon: Package,
         path: ROUTE_PATHS.PLATE_EXPORTS.ROOT + "?type=outsource",
         allowedRoles: [
@@ -536,7 +540,7 @@ export const MENU_ITEMS: MenuItem[] = [
       },
       {
         id: "material-hierarchy",
-        title: "Cấu hình phân cấp vật tư",
+        title: "Cấu hình vật tư",
         icon: Layers,
         path: ROUTE_PATHS.ADMIN.MATERIAL_HIERARCHY,
         allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],

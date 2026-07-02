@@ -1,14 +1,13 @@
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Plus, Package, Clock, Factory, CheckCircle } from "lucide-react";
 
 interface ProductionListHeaderProps {
   stats: {
-    total: number;
-    pending: number;
-    inProgress: number;
+    pendingMaterial: number;
+    inProduction: number;
+    inProductionToday: number;
+    pendingQc: number;
     completed: number;
+    completedToday: number;
   };
 }
 
@@ -16,70 +15,47 @@ export function ProductionListHeader({
   stats,
 }: ProductionListHeaderProps) {
   return (
-    <div className="relative">
-      <div className="flex items-center justify-between mb-3 shrink-0">
-        <div>
-          <h1 className="text-lg font-bold text-balance">Quản lý Sản xuất</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Theo dõi và quản lý tiến độ sản xuất
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-        </div>
+    <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 shrink-0 border-b pb-2">
+      <div>
+        <h1 className="text-lg font-bold text-balance whitespace-nowrap text-slate-800 dark:text-slate-100">
+          Quản lý Sản xuất
+        </h1>
       </div>
 
-      <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-4 mb-3 shrink-0">
-        <Card className="shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0 pt-2 px-3">
-            <CardTitle className="text-[13px] font-bold uppercase text-foreground/80">Tổng đơn</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground/70" />
-          </CardHeader>
-          <CardContent className="px-3 pb-2 pt-1">
-            <div className="text-base font-bold">{stats?.total}</div>
-            <p className="text-[10px] text-muted-foreground">
-              Tất cả đơn sản xuất
-            </p>
-          </CardContent>
-        </Card>
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Chỉ số 1: Chưa xuất vật tư */}
+        <div className="flex items-center gap-1.5 bg-orange-50/60 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-900/40 rounded-md px-2 py-1 text-xs">
+          <span className="font-semibold text-orange-600 dark:text-orange-400">Chưa xuất vật tư:</span>
+          <span className="font-extrabold text-orange-700 dark:text-orange-300 text-[13px]">{stats?.pendingMaterial || 0}</span>
+        </div>
 
-        <Card className="shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0 pt-2 px-3">
-            <CardTitle className="text-[13px] font-bold uppercase text-foreground/80">
-              Chưa thực hiện
-            </CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground/70" />
-          </CardHeader>
-          <CardContent className="px-3 pb-2 pt-1">
-            <div className="text-base font-bold">{stats?.pending || 0}</div>
-            <p className="text-[10px] text-muted-foreground">Chưa bắt đầu</p>
-          </CardContent>
-        </Card>
+        {/* Chỉ số 2: Đang sản xuất */}
+        <div className="flex items-center gap-1.5 bg-blue-50/60 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-md px-2 py-1 text-xs">
+          <span className="font-semibold text-blue-600 dark:text-blue-400">Đang sản xuất:</span>
+          <span className="font-extrabold text-blue-700 dark:text-blue-300 text-[13px]">{stats?.inProduction || 0}</span>
+          {stats?.inProductionToday > 0 && (
+            <span className="text-[10px] font-bold text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-950/40 px-1 py-0.2 rounded border border-green-200 dark:border-green-900/50">
+              +{stats.inProductionToday}
+            </span>
+          )}
+        </div>
 
-        <Card className="shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0 pt-2 px-3">
-            <CardTitle className="text-[13px] font-bold uppercase text-foreground/80">
-              Đang thực hiện
-            </CardTitle>
-            <Factory className="h-4 w-4 text-muted-foreground/70" />
-          </CardHeader>
-          <CardContent className="px-3 pb-2 pt-1">
-            <div className="text-base font-bold">{stats.inProgress}</div>
-            <p className="text-[10px] text-muted-foreground">Đang sản xuất</p>
-          </CardContent>
-        </Card>
+        {/* Chỉ số 3: Chờ kiểm hàng */}
+        <div className="flex items-center gap-1.5 bg-amber-50/60 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/40 rounded-md px-2 py-1 text-xs">
+          <span className="font-semibold text-amber-600 dark:text-amber-400">Chờ kiểm hàng:</span>
+          <span className="font-extrabold text-amber-700 dark:text-amber-300 text-[13px]">{stats?.pendingQc || 0}</span>
+        </div>
 
-        <Card className="shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0 pt-2 px-3">
-            <CardTitle className="text-[13px] font-bold uppercase text-foreground/80">
-              Đã hoàn thành
-            </CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground/70" />
-          </CardHeader>
-          <CardContent className="px-3 pb-2 pt-1">
-            <div className="text-base font-bold">{stats.completed}</div>
-            <p className="text-[10px] text-muted-foreground">Đã sản xuất xong</p>
-          </CardContent>
-        </Card>
+        {/* Chỉ số 4: Đã hoàn thành */}
+        <div className="flex items-center gap-1.5 bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40 rounded-md px-2 py-1 text-xs">
+          <span className="font-semibold text-emerald-600 dark:text-emerald-400">Đã hoàn thành:</span>
+          <span className="font-extrabold text-emerald-700 dark:text-emerald-300 text-[13px]">{stats?.completed || 0}</span>
+          {stats?.completedToday > 0 && (
+            <span className="text-[10px] font-bold text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-950/40 px-1 py-0.2 rounded border border-green-200 dark:border-green-900/50">
+              +{stats.completedToday}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );
