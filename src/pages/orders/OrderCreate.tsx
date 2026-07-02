@@ -186,10 +186,15 @@ export default function OrderCreatePage() {
   const [customerComboOpen, setCustomerComboOpen] = useState(false);
 
   // Form state
-  const [formData, setFormData] = useState({
-    notes: "",
-    deliveryDate: "",
-    deliveryAddress: "",
+  const [formData, setFormData] = useState(() => {
+    const oneWeekLater = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const defaultDeliveryDate = `${oneWeekLater.getFullYear()}-${pad(oneWeekLater.getMonth() + 1)}-${pad(oneWeekLater.getDate())}`;
+    return {
+      notes: "",
+      deliveryDate: defaultDeliveryDate,
+      deliveryAddress: "",
+    };
   });
 
   // Designs state

@@ -310,7 +310,10 @@ export function CreateMaterialDirectDialog({
       !isLengthSpec(t.name, t.key) &&
       !t.name.toLowerCase().includes("thớ") &&
       !t.name.toLowerCase().includes("grain") &&
-      !t.key.toLowerCase().includes("grain")
+      !t.key.toLowerCase().includes("grain") &&
+      !t.key.toLowerCase().includes("gsm") &&
+      !t.name.toLowerCase().includes("định lượng") &&
+      !t.name.toLowerCase().includes("dinh luong")
     ) || [];
   }, [specTemplates]);
 
@@ -491,7 +494,7 @@ export function CreateMaterialDirectDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md rounded-xl border-slate-200">
+      <DialogContent className="max-w-3xl rounded-xl border-slate-200">
         <form onSubmit={handleCreateSubmit} className="space-y-4">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-indigo-700 flex items-center gap-2">
@@ -503,191 +506,197 @@ export function CreateMaterialDirectDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3.5 text-xs max-h-[380px] overflow-y-auto px-1">
-            {/* Chọn loại chất liệu */}
-            <div className="space-y-1.5">
-              <Label className="font-semibold text-slate-700">Chọn loại chất liệu</Label>
-              <Select value={selectedTemplateId?.toString() || ""} onValueChange={(val) => setSelectedTemplateId(Number(val))}>
-                <SelectTrigger className="h-10 text-xs" disabled={filteredTemplates.length === 0}>
-                  <SelectValue placeholder={filteredTemplates.length === 0 ? "Nhà cung cấp chưa có chất liệu liên kết nào" : "Chọn định mức chất liệu..."} />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredTemplates.map((t: any) => (
-                    <SelectItem key={t.id} value={t.id.toString()}>{t.name} ({t.code})</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Tên vật tư (SKU) */}
-            <div className="space-y-1.5">
-              <Label className="font-semibold text-slate-700">Tên vật tư (SKU) <span className="text-red-500">*</span></Label>
-              <Input
-                type="text"
-                placeholder="Nhập tên vật tư..."
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="h-10 text-xs font-bold text-slate-900 dark:text-slate-100"
-                required
-              />
-            </div>
-
-            {/* Định lượng (GSM) */}
-            {selectedTemplateId && hasSpecs && (
-              <div className="space-y-1.5 animate-in fade-in duration-200">
-                <Label className="font-semibold text-slate-700">Định lượng (GSM) <span className="text-red-500">*</span></Label>
-                <Select
-                  value={basisWeight ? basisWeight.toString() : ""}
-                  onValueChange={(v) => setBasisWeight(Number(v))}
-                >
-                  <SelectTrigger className="h-10 text-xs">
-                    <SelectValue placeholder="Chọn định lượng..." />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs max-h-[75vh] overflow-y-auto px-1 py-1">
+            {/* COLUMN 1: Basic specifications */}
+            <div className="space-y-3.5">
+              {/* Chọn loại chất liệu */}
+              <div className="space-y-1.5">
+                <Label className="font-semibold text-slate-700">Chọn loại chất liệu</Label>
+                <Select value={selectedTemplateId?.toString() || ""} onValueChange={(val) => setSelectedTemplateId(Number(val))}>
+                  <SelectTrigger className="h-10 text-xs" disabled={filteredTemplates.length === 0}>
+                    <SelectValue placeholder={filteredTemplates.length === 0 ? "Nhà cung cấp chưa có chất liệu liên kết nào" : "Chọn định mức chất liệu..."} />
                   </SelectTrigger>
                   <SelectContent>
-                    {materialSpecs.map((spec) => (
-                      <SelectItem
-                        key={spec.id}
-                        value={spec.basisWeight?.toString() || ""}
-                        className="text-xs cursor-pointer"
-                      >
-                        <div className="flex items-center justify-between w-full">
-                          <span>{spec.name || `${spec.basisWeight} ${spec.defaultUnit || "gsm"}`}</span>
-                          {spec.isDefault && (
-                            <span className="ml-2 text-[10px] bg-amber-50 text-amber-500 border border-amber-300 rounded px-1 scale-90 shrink-0">
-                              Mặc định
-                            </span>
-                          )}
-                        </div>
-                      </SelectItem>
+                    {filteredTemplates.map((t: any) => (
+                      <SelectItem key={t.id} value={t.id.toString()}>{t.name} ({t.code})</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-            )}
 
-            {/* Điền các thuộc tính động (T5/T6) */}
-            {visibleSpecTemplates && visibleSpecTemplates.length > 0 && (
-              <div className="space-y-3 border border-slate-100 rounded-lg p-3 bg-slate-50/50 animate-in fade-in duration-200">
-                <span className="font-semibold text-indigo-700 text-xs block mb-1">Thông số kỹ thuật của nhóm</span>
-                <div className="grid grid-cols-2 gap-3">
-                  {visibleSpecTemplates.map((t) => {
-                    const values = getValuesForSpecTemplate(t.id);
-                    return (
-                      <div key={t.id} className="space-y-1.5">
-                        <Label className="text-slate-600 font-medium">
-                          {t.name} {t.isRequired && <span className="text-red-500">*</span>}
-                        </Label>
-                        <Select
-                          value={specSelections[t.id.toString()] || ""}
-                          onValueChange={(val) => {
-                            setSpecSelections((prev) => ({ ...prev, [t.id.toString()]: val }));
-                            if (t.key.toLowerCase().includes("gsm") || t.name.toLowerCase().includes("định lượng") || t.name.toLowerCase().includes("dinh luong")) {
-                              const numericVal = parseFloat(val);
-                              if (!isNaN(numericVal)) {
-                                setBasisWeight(numericVal);
-                              }
-                            }
-                          }}
-                        >
-                          <SelectTrigger className="h-9 text-xs bg-white">
-                            <SelectValue placeholder={`Chọn ${t.name}...`} />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {values.map((v: any) => (
-                              <SelectItem key={v.id} value={v.value}>{v.value}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    );
-                  })}
-                </div>
+              {/* Tên vật tư (SKU) */}
+              <div className="space-y-1.5">
+                <Label className="font-semibold text-slate-700">Tên vật tư (SKU) <span className="text-red-500">*</span></Label>
+                <Input
+                  type="text"
+                  placeholder="Nhập tên vật tư..."
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="h-10 text-xs font-bold text-slate-900 dark:text-slate-100"
+                  required
+                />
               </div>
-            )}
 
-            {/* Đơn vị tính */}
-            <div className="space-y-1.5 animate-in fade-in duration-200">
-              <Label className="font-semibold text-slate-700">Đơn vị tính</Label>
-              <Select value={unit} onValueChange={setUnit}>
-                <SelectTrigger className="h-10 text-xs">
-                  <SelectValue placeholder="Chọn đơn vị..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {unitsOptions.map((opt) => (
-                    <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {/* Định lượng (GSM) */}
+              {selectedTemplateId && hasSpecs && (
+                <div className="space-y-1.5 animate-in fade-in duration-200">
+                  <Label className="font-semibold text-slate-700">Định lượng (GSM) <span className="text-red-500">*</span></Label>
+                  <Select
+                    value={basisWeight ? basisWeight.toString() : ""}
+                    onValueChange={(v) => setBasisWeight(Number(v))}
+                  >
+                    <SelectTrigger className="h-10 text-xs">
+                      <SelectValue placeholder="Chọn định lượng..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {materialSpecs.map((spec) => (
+                        <SelectItem
+                          key={spec.id}
+                          value={spec.basisWeight?.toString() || ""}
+                          className="text-xs cursor-pointer"
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <span>{spec.name || `${spec.basisWeight} ${spec.defaultUnit || "gsm"}`}</span>
+                            {spec.isDefault && (
+                              <span className="ml-2 text-[10px] bg-amber-50 text-amber-500 border border-amber-300 rounded px-1 scale-90 shrink-0">
+                                Mặc định
+                              </span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Điền các thuộc tính động (T5/T6) */}
+              {visibleSpecTemplates && visibleSpecTemplates.length > 0 && (
+                <div className="space-y-3 border border-slate-100 rounded-lg p-3 bg-slate-50/50 animate-in fade-in duration-200">
+                  <span className="font-semibold text-indigo-700 text-xs block mb-1">Thông số kỹ thuật của nhóm</span>
+                  <div className="grid grid-cols-2 gap-3">
+                    {visibleSpecTemplates.map((t) => {
+                      const values = getValuesForSpecTemplate(t.id);
+                      return (
+                        <div key={t.id} className="space-y-1.5">
+                          <Label className="text-slate-600 font-medium">
+                            {t.name} {t.isRequired && <span className="text-red-500">*</span>}
+                          </Label>
+                          <Select
+                            value={specSelections[t.id.toString()] || ""}
+                            onValueChange={(val) => {
+                              setSpecSelections((prev) => ({ ...prev, [t.id.toString()]: val }));
+                              if (t.key.toLowerCase().includes("gsm") || t.name.toLowerCase().includes("định lượng") || t.name.toLowerCase().includes("dinh luong")) {
+                                const numericVal = parseFloat(val);
+                                if (!isNaN(numericVal)) {
+                                  setBasisWeight(numericVal);
+                                }
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="h-9 text-xs bg-white">
+                              <SelectValue placeholder={`Chọn ${t.name}...`} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {values.map((v: any) => (
+                                <SelectItem key={v.id} value={v.value}>{v.value}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Đơn vị tính */}
+              <div className="space-y-1.5 animate-in fade-in duration-200">
+                <Label className="font-semibold text-slate-700">Đơn vị tính</Label>
+                <Select value={unit} onValueChange={setUnit}>
+                  <SelectTrigger className="h-10 text-xs">
+                    <SelectValue placeholder="Chọn đơn vị..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {unitsOptions.map((opt) => (
+                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            {/* Kích thước (Tầng 8) */}
-            {!isGroup3 && (
-              <div className="space-y-1.5 animate-in fade-in duration-200">
-                <Label className="font-semibold text-slate-700">
-                  {isRollType ? "Khổ cuộn vật tư" : "Kích thước khổ vật tư"}
-                </Label>
-                <div className={isRollType ? "grid grid-cols-1" : "grid grid-cols-2 gap-3"}>
-                  <div className="space-y-1">
-                    <Input
-                      type="number"
-                      placeholder={isRollType ? "Khổ cuộn / Chiều rộng" : "Chiều rộng"}
-                      value={width || ""}
-                      onChange={(e) => setWidth(parseFloat(e.target.value) || 0)}
-                      className="h-10 text-xs font-mono text-center"
-                    />
-                    <span className="text-[10px] text-slate-400 block text-center mt-0.5">
-                      {isRollType ? "Khổ cuộn/Chiều rộng (cm/mm)" : "Chiều rộng (cm/mm)"}
-                    </span>
-                  </div>
-                  {!isRollType && (
+            {/* COLUMN 2: Pricing, Quantities and Sizes */}
+            <div className="space-y-3.5">
+              {/* Kích thước (Tầng 8) */}
+              {!isGroup3 && (
+                <div className="space-y-1.5 animate-in fade-in duration-200">
+                  <Label className="font-semibold text-slate-700">
+                    {isRollType ? "Khổ cuộn vật tư" : "Kích thước khổ vật tư"}
+                  </Label>
+                  <div className={isRollType ? "grid grid-cols-1" : "grid grid-cols-2 gap-3"}>
                     <div className="space-y-1">
                       <Input
                         type="number"
-                        placeholder="Chiều dài"
-                        value={length || ""}
-                        onChange={(e) => setLength(parseFloat(e.target.value) || 0)}
+                        placeholder={isRollType ? "Khổ cuộn / Chiều rộng" : "Chiều rộng"}
+                        value={width || ""}
+                        onChange={(e) => setWidth(parseFloat(e.target.value) || 0)}
                         className="h-10 text-xs font-mono text-center"
                       />
-                      <span className="text-[10px] text-slate-400 block text-center mt-0.5">Chiều dài (cm/mm)</span>
+                      <span className="text-[10px] text-slate-400 block text-center mt-0.5">
+                        {isRollType ? "Khổ cuộn/Chiều rộng (cm/mm)" : "Chiều rộng (cm/mm)"}
+                      </span>
                     </div>
-                  )}
+                    {!isRollType && (
+                      <div className="space-y-1">
+                        <Input
+                          type="number"
+                          placeholder="Chiều dài"
+                          value={length || ""}
+                          onChange={(e) => setLength(parseFloat(e.target.value) || 0)}
+                          className="h-10 text-xs font-mono text-center"
+                        />
+                        <span className="text-[10px] text-slate-400 block text-center mt-0.5">Chiều dài (cm/mm)</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
+              )}
+
+              {/* Đơn giá nhập */}
+              <div className="space-y-1.5 animate-in fade-in duration-200">
+                <Label className="font-semibold text-slate-700">Đơn giá nhập (đ)</Label>
+                <Input
+                  type="number"
+                  placeholder="Nhập giá..."
+                  value={unitPrice || ""}
+                  onChange={(e) => setUnitPrice(parseFloat(e.target.value) || 0)}
+                  className="h-10 text-xs font-mono"
+                />
               </div>
-            )}
 
-            {/* Đơn giá nhập */}
-            <div className="space-y-1.5 animate-in fade-in duration-200">
-              <Label className="font-semibold text-slate-700">Đơn giá nhập (đ)</Label>
-              <Input
-                type="number"
-                placeholder="Nhập giá..."
-                value={unitPrice || ""}
-                onChange={(e) => setUnitPrice(parseFloat(e.target.value) || 0)}
-                className="h-10 text-xs font-mono"
-              />
-            </div>
+              {/* Số lượng ban đầu */}
+              <div className="space-y-1.5">
+                <Label className="font-semibold text-slate-700">Số lượng nhập kho đầu kỳ</Label>
+                <Input
+                  type="number"
+                  placeholder="Để trống nếu không có tồn kho ban đầu..."
+                  value={quantity || ""}
+                  onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
+                  className="h-10 text-xs font-mono font-bold text-indigo-600 focus-visible:ring-indigo-500"
+                />
+              </div>
 
-            {/* Số lượng ban đầu */}
-            <div className="space-y-1.5">
-              <Label className="font-semibold text-slate-700">Số lượng nhập kho đầu kỳ</Label>
-              <Input
-                type="number"
-                placeholder="Để trống nếu không có tồn kho ban đầu..."
-                value={quantity || ""}
-                onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
-                className="h-10 text-xs font-mono font-bold text-indigo-600 focus-visible:ring-indigo-500"
-              />
-            </div>
-
-            {/* Ghi chú */}
-            <div className="space-y-1.5">
-              <Label className="font-semibold text-slate-700">Ghi chú phiếu nhập</Label>
-              <Textarea
-                placeholder="Diễn giải thêm..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="text-xs min-h-[50px]"
-              />
+              {/* Ghi chú */}
+              <div className="space-y-1.5">
+                <Label className="font-semibold text-slate-700">Ghi chú phiếu nhập</Label>
+                <Textarea
+                  placeholder="Diễn giải thêm..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="text-xs min-h-[90px]"
+                />
+              </div>
             </div>
           </div>
 

@@ -154,7 +154,8 @@ export function PlateExportDialog({
         setVendorName("");
         setIsCreatingVendor(false);
         setVendorSearchOpen(false);
-        setReceivedAtManual("");
+        const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        setReceivedAtManual(convertISOToLocalDateTime(tomorrow.toISOString()));
         setNotes("");
         setProductionMethod("in_house");
         setPrintingVendorId(null);
@@ -262,7 +263,12 @@ export function PlateExportDialog({
     }
 
     // estimatedReceiveAt is same as receivedAt for now
-    const estimatedReceiveAt = receivedAt;
+    let finalReceivedAt = receivedAt;
+    if (!finalReceivedAt) {
+      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      finalReceivedAt = formatLocalDateTimeWithOffset(tomorrow);
+    }
+    const estimatedReceiveAt = finalReceivedAt;
 
     if (plateExport?.id) {
       // UPDATE EXISTING
@@ -271,7 +277,7 @@ export function PlateExportDialog({
         plateVendorId: vendorId || undefined,
         vendorName: vendorId ? undefined : vendorName.trim() || undefined,
         estimatedReceiveAt: estimatedReceiveAt || undefined,
-        receivedAt: receivedAt || undefined,
+        receivedAt: finalReceivedAt || undefined,
         notes: notes.trim() || undefined,
         productionMethod,
         printingVendorId: productionMethod === "outsource" ? (printingVendorId || undefined) : undefined,
@@ -292,7 +298,7 @@ export function PlateExportDialog({
         vendorName: vendorId ? undefined : vendorName.trim() || undefined,
         sentAt,
         estimatedReceiveAt: estimatedReceiveAt || undefined,
-        receivedAt: receivedAt || undefined,
+        receivedAt: finalReceivedAt || undefined,
         notes: notes.trim() || undefined,
         productionMethod,
         printingVendorId: productionMethod === "outsource" ? (printingVendorId || undefined) : undefined,

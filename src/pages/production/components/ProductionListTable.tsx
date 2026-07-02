@@ -858,6 +858,45 @@ function ProductionTableRow({
     (proofingOrder as any)?.totalQuantity ||
     0;
 
+  const displayDesignType = React.useMemo(() => {
+    if (!proofingOrder) return "";
+    
+    // 1. Check if designType or designTypeName is directly on production order (prod) or proofingOrder
+    const directName = (prod as any).designTypeName || 
+                       (prod as any).designType?.name || 
+                       proofingOrder.designTypeName || 
+                       proofingOrder.designType?.name;
+    if (directName) return directName;
+    
+    // 2. Extract from proofingOrderDesigns
+    const designs = proofingOrder.proofingOrderDesigns || [];
+    const names = Array.from(
+      new Set(
+        designs.map((pod: any) => pod.design?.designType?.name).filter(Boolean)
+      )
+    );
+    return names.join(", ");
+  }, [proofingOrder, prod]);
+
+  const displayBasisWeight = React.useMemo(() => {
+    if (!proofingOrder) return "";
+    
+    // 1. Direct basisWeight from proofingOrder
+    if (proofingOrder.basisWeight) return `${proofingOrder.basisWeight}gsm`;
+    
+    // 2. Extract from proofingOrderDesigns
+    const designs = proofingOrder.proofingOrderDesigns || [];
+    const weights = Array.from(
+      new Set(
+        designs.map((pod: any) => pod.design?.basisWeight).filter(Boolean)
+      )
+    );
+    if (weights.length > 0) {
+      return `${weights.join("/")}gsm`;
+    }
+    return "";
+  }, [proofingOrder]);
+
   const startEditingPackaging = () => {
     if (!proofingOrder?.proofingOrderDesigns) return;
 
@@ -1109,6 +1148,23 @@ function ProductionTableRow({
     }
   };
 
+  const formatDateTimeWithSeconds = (dateString: string | undefined | null) => {
+    if (!dateString) return null;
+    try {
+      const date = new Date(dateString);
+      return new Intl.DateTimeFormat("vi-VN", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      }).format(date);
+    } catch (e) {
+      return null;
+    }
+  };
+
   return (
     <>
       <TableRow
@@ -1214,6 +1270,19 @@ function ProductionTableRow({
                   Hủy SX
                 </button>
               )}
+
+              {/* Hiển thị thời gian bình bài xong bên dưới hình/mã */}
+              {(() => {
+                const finishedTime = proofingOrder?.completedAt || proofingOrder?.updatedAt;
+                const formatted = formatDateTimeWithSeconds(finishedTime);
+                if (!formatted) return null;
+                return (
+                  <div className="text-[9px] text-muted-foreground text-center leading-tight font-medium max-w-[90px] whitespace-normal break-words mt-1 border-t border-dashed border-slate-200 dark:border-slate-800 pt-1 w-full">
+                    <span className="block font-bold text-slate-500 uppercase tracking-tighter text-[8px] mb-0.5">Xong BB:</span>
+                    <span className="tabular-nums font-semibold text-slate-600 dark:text-slate-400">{formatted}</span>
+                  </div>
+                );
+              })()}
             </div>
           ) : (
             <div className="flex justify-center mt-2 text-muted-foreground font-normal">
@@ -1258,6 +1327,8 @@ function ProductionTableRow({
                     </span>
                     <span className="font-bold text-foreground leading-tight text-[11px]">
                       {proofingOrder?.materialType?.name || "—"}
+                      {displayBasisWeight ? ` ${displayBasisWeight}` : ""}
+                      {displayDesignType ? ` (${displayDesignType})` : ""}
                     </span>
                   </div>
 

@@ -412,7 +412,8 @@ export function DieExportDialog({
       setVendorSearchOpen(false);
       setDieFiles([]);
       setImagePreviews([]);
-      setReceivedAtManual("");
+      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      setReceivedAtManual(convertISOToLocalDateTime(tomorrow.toISOString()));
       setDieNotes({});
       setNewDieNote("");
       setDieAction("select");
@@ -661,7 +662,7 @@ export function DieExportDialog({
 
         const estimatedReceiveAt = receivedAtManual
           ? convertLocalDateTimeToISO(receivedAtManual)
-          : undefined;
+          : formatLocalDateTimeWithOffset(new Date(Date.now() + 24 * 60 * 60 * 1000));
 
         const newDie = await createDie({
           vendorId: finalVendorId || undefined,

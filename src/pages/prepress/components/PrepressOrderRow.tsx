@@ -280,11 +280,16 @@ export function PrepressOrderRow({
         <div className="flex flex-col gap-1">
           {Array.from(
             new Set(
-              designs.map((pod: any) => pod.design?.materialType?.name || "—")
+              designs.map((pod: any) => {
+                const materialName = pod.design?.materialType?.name || "—";
+                const basisWeight = pod.design?.basisWeight;
+                const designType = pod.design?.designType?.name;
+                return `${materialName}${basisWeight ? ` ${basisWeight}gsm` : ""}${designType ? ` (${designType})` : ""}`;
+              })
             )
-          ).map((materialName: any, idx: number) => (
-            <span key={idx} className="text-muted-foreground">
-              {materialName}
+          ).map((text: any, idx: number) => (
+            <span key={idx} className="text-muted-foreground block">
+              {text}
             </span>
           ))}
         </div>
@@ -361,9 +366,9 @@ export function PrepressOrderRow({
             <div>
               <span className="font-semibold text-slate-500">Hoàn thành: </span>
               {order.completedAt
-                ? new Date(order.completedAt).toLocaleDateString("vi-VN")
+                ? format(new Date(order.completedAt), "HH:mm:ss dd/MM/yyyy")
                 : order.updatedAt
-                  ? new Date(order.updatedAt).toLocaleDateString("vi-VN")
+                  ? format(new Date(order.updatedAt), "HH:mm:ss dd/MM/yyyy")
                   : "—"}
             </div>
           ) : (
