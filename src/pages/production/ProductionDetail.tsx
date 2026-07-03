@@ -1228,12 +1228,24 @@ export default function ProductionDetailPage() {
                         </Label>
                         <p className="text-sm font-medium">
                           {proofingOrder.materialType?.name || "N/A"}
+                          {(production?.basisWeight || proofingOrder.basisWeight) ? ` ${production?.basisWeight || proofingOrder.basisWeight}gsm` : ""}
                         </p>
                         {proofingOrder.materialType?.code && (
                           <p className="text-xs text-muted-foreground">
                             {proofingOrder.materialType.code}
                           </p>
                         )}
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">
+                          Loại thiết kế
+                        </Label>
+                        <p className="text-sm font-medium">
+                          {production?.designType?.name || 
+                           proofingOrder?.designType?.name || 
+                           proofingOrder?.proofingOrderDesigns?.map((d: any) => d.design?.designType?.name).filter(Boolean)[0] || 
+                           "N/A"}
+                        </p>
                       </div>
                       <div className="space-y-1">
                         <Label className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -1689,12 +1701,24 @@ export default function ProductionDetailPage() {
                         </Label>
                         <p className="text-sm font-medium">
                           {proofingOrder.materialType?.name || "N/A"}
+                          {(production?.basisWeight || proofingOrder.basisWeight) ? ` ${production?.basisWeight || proofingOrder.basisWeight}gsm` : ""}
                         </p>
                         {proofingOrder.materialType?.code && (
                           <p className="text-xs text-muted-foreground">
                             {proofingOrder.materialType.code}
                           </p>
                         )}
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">
+                          Loại thiết kế
+                        </Label>
+                        <p className="text-sm font-medium">
+                          {production?.designType?.name || 
+                           proofingOrder?.designType?.name || 
+                           proofingOrder?.proofingOrderDesigns?.map((d: any) => d.design?.designType?.name).filter(Boolean)[0] || 
+                           "N/A"}
+                        </p>
                       </div>
                       <div className="space-y-1">
                         <Label className="flex items-center gap-1 text-xs text-muted-foreground">

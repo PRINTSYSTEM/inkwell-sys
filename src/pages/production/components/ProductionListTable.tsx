@@ -1378,95 +1378,106 @@ function ProductionTableRow({
               {/* 4. Thông tin khuôn bế & Kẽm (Buttons + Popovers) */}
               <div className="flex flex-row gap-2 mt-1">
                 {(proofingOrder as any).plateExport && (
-                  <HoverCard>
-                    <HoverCardTrigger asChild>
-                      <div className="cursor-help text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase flex items-center justify-center gap-1.5 border border-blue-200/50 dark:border-blue-800/50 rounded bg-blue-50/50 dark:bg-blue-950/20 p-1 mt-2 w-full hover:bg-blue-100/50 dark:hover:bg-blue-900/50 transition-colors">
-                        <FileText className="w-3 h-3" /> Thông tin kẽm
-                      </div>
-                    </HoverCardTrigger>
-                    <HoverCardContent className="w-[250px] p-2 bg-blue-50/95 dark:bg-blue-950/95 border-blue-200/50 dark:border-blue-800/50" align="start">
-                      {[(proofingOrder as any).plateExport]
-                        .filter(Boolean)
-                        .map((plateExport: any, i: number) => {
-                          const isInHouse = plateExport.productionMethod === "in_house";
-                          const partnerName = plateExport.printingVendorName || plateExport.printingVendor?.name;
-                          const receiveTime = plateExport.receivedAt 
-                            ? formatDate(plateExport.receivedAt)
-                            : plateExport.estimatedReceiveAt
-                              ? `${formatDate(plateExport.estimatedReceiveAt)} (Dự kiến)`
-                              : "—";
+                  <div className="flex flex-col items-center flex-1">
+                    <HoverCard>
+                      <HoverCardTrigger asChild>
+                        <div className="cursor-help text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase flex items-center justify-center gap-1.5 border border-blue-200/50 dark:border-blue-800/50 rounded bg-blue-50/50 dark:bg-blue-950/20 p-1 mt-2 w-full hover:bg-blue-100/50 dark:hover:bg-blue-900/50 transition-colors">
+                          <FileText className="w-3 h-3" /> Thông tin kẽm
+                        </div>
+                      </HoverCardTrigger>
+                      <HoverCardContent className="w-[250px] p-2 bg-blue-50/95 dark:bg-blue-950/95 border-blue-200/50 dark:border-blue-800/50" align="start">
+                        {[(proofingOrder as any).plateExport]
+                          .filter(Boolean)
+                          .map((plateExport: any, i: number) => {
+                            const isInHouse = plateExport.productionMethod === "in_house";
+                            const partnerName = plateExport.printingVendorName || plateExport.printingVendor?.name;
+                            const receiveTime = plateExport.isReceived && plateExport.receivedAt 
+                              ? formatDate(plateExport.receivedAt)
+                              : plateExport.estimatedReceiveAt
+                                ? `${formatDate(plateExport.estimatedReceiveAt)} (Dự kiến)`
+                                : "—";
 
-                          return (
-                            <div
-                              key={plateExport.id || i}
-                              className="flex flex-col gap-1 text-[11px]"
-                            >
-                              <div className="flex justify-between items-center">
-                                <span className="text-muted-foreground font-medium">
-                                  Mã kẽm:
-                                </span>
-                                <span className="font-bold text-foreground">
-                                  {plateExport.id ? `ZK${plateExport.id}` : "—"}
-                                </span>
-                              </div>
-                              <div className="flex justify-between items-center">
-                                <span className="text-muted-foreground font-medium">
-                                  Số lượng:
-                                </span>
-                                <span className="font-bold text-amber-700 dark:text-amber-500">
-                                  {plateExport.plateCount || "—"} bản
-                                </span>
-                              </div>
-                              <div className="flex justify-between items-center border-t border-blue-100/50 dark:border-blue-900/30 pt-0.5">
-                                <span className="text-muted-foreground font-medium">
-                                  Hình thức in:
-                                </span>
-                                <span className="font-bold text-foreground">
-                                  {isInHouse ? "In tại xưởng" : "In gia công"}
-                                </span>
-                              </div>
-                              {!isInHouse && partnerName && (
-                                <div className="flex flex-col pt-0.5 border-t border-blue-100/50 dark:border-blue-900/30">
+                            return (
+                              <div
+                                key={plateExport.id || i}
+                                className="flex flex-col gap-1 text-[11px]"
+                              >
+                                <div className="flex justify-between items-center">
                                   <span className="text-muted-foreground font-medium">
-                                    Đơn vị gia công:
+                                    Mã kẽm:
+                                  </span>
+                                  <span className="font-bold text-foreground">
+                                    {plateExport.id ? `ZK${plateExport.id}` : "—"}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                  <span className="text-muted-foreground font-medium">
+                                    Số lượng:
+                                  </span>
+                                  <span className="font-bold text-amber-700 dark:text-amber-500">
+                                    {plateExport.plateCount || "—"} bản
+                                  </span>
+                                </div>
+                                <div className="flex justify-between items-center border-t border-blue-100/50 dark:border-blue-900/30 pt-0.5">
+                                  <span className="text-muted-foreground font-medium">
+                                    Hình thức in:
+                                  </span>
+                                  <span className="font-bold text-foreground">
+                                    {isInHouse ? "In tại xưởng" : "In gia công"}
+                                  </span>
+                                </div>
+                                {!isInHouse && partnerName && (
+                                  <div className="flex flex-col pt-0.5 border-t border-blue-100/50 dark:border-blue-900/30">
+                                    <span className="text-muted-foreground font-medium">
+                                      Đơn vị gia công:
+                                    </span>
+                                    <span className="font-semibold text-foreground">
+                                      {partnerName}
+                                    </span>
+                                  </div>
+                                )}
+                                <div className="flex justify-between items-center border-t border-blue-100/50 dark:border-blue-900/30 pt-0.5">
+                                  <span className="text-muted-foreground font-medium">
+                                    Thời gian nhận:
                                   </span>
                                   <span className="font-semibold text-foreground">
-                                    {partnerName}
+                                    {receiveTime}
                                   </span>
                                 </div>
-                              )}
-                              <div className="flex justify-between items-center border-t border-blue-100/50 dark:border-blue-900/30 pt-0.5">
-                                <span className="text-muted-foreground font-medium">
-                                  Thời gian nhận:
-                                </span>
-                                <span className="font-semibold text-foreground">
-                                  {receiveTime}
-                                </span>
-                              </div>
-                              <div className="flex justify-between items-center">
-                                <span className="text-muted-foreground font-medium">
-                                  Tình trạng:
-                                </span>
-                                <span className="font-semibold text-blue-600 dark:text-blue-400">
-                                  {plateExport.receivedAt ? "Đã nhận" : "Chưa nhận"}
-                                </span>
-                              </div>
-                              {/* Ghi chú Kẽm */}
-                              {(plateExport.notes || plateExport.plate?.notes) && (
-                                <div className="flex flex-col pt-0.5 border-t border-blue-100/50 dark:border-blue-900/30 mt-0.5">
-                                  <span className="text-muted-foreground font-medium text-[10px]">
-                                    Ghi chú:
+                                <div className="flex justify-between items-center">
+                                  <span className="text-muted-foreground font-medium">
+                                    Tình trạng:
                                   </span>
-                                  <span className="italic text-amber-700 dark:text-amber-500 break-words font-medium whitespace-pre-wrap">
-                                    {plateExport.notes || plateExport.plate?.notes}
+                                  <span className={cn(
+                                    "font-semibold",
+                                    plateExport.isReceived ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"
+                                  )}>
+                                    {plateExport.isReceived ? "Đã nhận" : "Chưa nhận"}
                                   </span>
                                 </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                    </HoverCardContent>
-                  </HoverCard>
+                                {/* Ghi chú Kẽm */}
+                                {(plateExport.notes || plateExport.plate?.notes) && (
+                                  <div className="flex flex-col pt-0.5 border-t border-blue-100/50 dark:border-blue-900/30 mt-0.5">
+                                    <span className="text-muted-foreground font-medium text-[10px]">
+                                      Ghi chú:
+                                    </span>
+                                    <span className="italic text-amber-700 dark:text-amber-500 break-words font-medium whitespace-pre-wrap">
+                                      {plateExport.notes || plateExport.plate?.notes}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                      </HoverCardContent>
+                    </HoverCard>
+                    <span className={cn(
+                      "text-[9px] font-bold mt-1 text-center leading-none",
+                      (proofingOrder as any).plateExport.isReceived ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"
+                    )}>
+                      {(proofingOrder as any).plateExport.isReceived ? "Đã nhận kẽm" : "Chưa nhận kẽm"}
+                    </span>
+                  </div>
                 )}
               </div>
             </div>
@@ -1529,114 +1540,158 @@ function ProductionTableRow({
 
               if (uniqueDies.length === 0) return null;
 
+              const allReceived = uniqueDies.every((d: any) => {
+                const dieCode = (d.code || d.die?.code || "").trim();
+                const pCode = (proofingOrder?.code || "").trim();
+                const isNewDie = !!(dieCode && pCode && dieCode.toLowerCase() === pCode.toLowerCase());
+                return d.isReceived || !isNewDie;
+              });
+
               return (
-                <HoverCard>
-                  <HoverCardTrigger asChild>
-                    <div className="cursor-help text-[10px] font-bold text-slate-500 uppercase flex items-center justify-center gap-1.5 mt-1 border border-slate-200 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-900/50 p-1 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors w-full">
-                      <Box className="w-3 h-3" /> khuôn bế
-                    </div>
-                  </HoverCardTrigger>
-                  <HoverCardContent className="w-[250px] p-2 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800" align="center">
-                    <div className="flex flex-col gap-1.5 w-full">
-                      {uniqueDies.map((dieExport: any, i: number) => {
-                        const dieImg = dieExport.die?.imageUrl || dieExport.imageUrl;
-                        const locationKey = dieExport.die?.location;
-                        const displayLocation = locationKey 
-                          ? (dieLocationLabels[locationKey] || 
-                             dieLocationLabels[Object.keys(dieLocationLabels).find(k => k.toLowerCase() === locationKey.toLowerCase()) || ""] || 
-                             locationKey)
-                          : "Trong kho";
+                <div className="flex flex-col items-center w-full">
+                  <HoverCard>
+                    <HoverCardTrigger asChild>
+                      <div className="cursor-help text-[10px] font-bold text-slate-500 uppercase flex items-center justify-center gap-1.5 mt-1 border border-slate-200 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-900/50 p-1 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors w-full">
+                        <Box className="w-3 h-3" /> khuôn bế
+                      </div>
+                    </HoverCardTrigger>
+                    <HoverCardContent className="w-[250px] p-2 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800" align="center">
+                      <div className="flex flex-col gap-1.5 w-full">
+                        {uniqueDies.map((dieExport: any, i: number) => {
+                          const dieImg = dieExport.die?.imageUrl || dieExport.imageUrl;
+                          const locationKey = dieExport.die?.location;
+                          const displayLocation = locationKey 
+                            ? (dieLocationLabels[locationKey] || 
+                               dieLocationLabels[Object.keys(dieLocationLabels).find(k => k.toLowerCase() === locationKey.toLowerCase()) || ""] || 
+                               locationKey)
+                            : "Trong kho";
 
-                        const dieCode = (dieExport.code || dieExport.die?.code || "").trim();
-                        const pCode = (proofingOrder?.code || "").trim();
-                        const isNewDie = dieCode && pCode && dieCode.toLowerCase() === pCode.toLowerCase();
+                          const dieCode = (dieExport.code || dieExport.die?.code || "").trim();
+                          const pCode = (proofingOrder?.code || "").trim();
+                          const isNewDie = dieCode && pCode && dieCode.toLowerCase() === pCode.toLowerCase();
 
-                        return (
-                          <div
-                            key={dieExport.id || i}
-                            className="flex flex-col gap-1 text-left text-[11px] border-b border-slate-100 dark:border-slate-800 last:border-0 pb-1.5 last:pb-0"
-                          >
-                            {dieImg && (
-                              <div 
-                                className="relative w-full aspect-video rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 overflow-hidden mb-1.5 cursor-zoom-in hover:brightness-95 transition-all"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setViewingImageUrl(dieImg);
-                                }}
-                                title="Nhấp để phóng to hình khuôn bế"
-                              >
-                                <img
-                                  src={dieImg}
-                                  alt="Hình ảnh khuôn"
-                                  className="w-full h-full object-contain select-none"
-                                />
-                              </div>
-                            )}
-                            <div className="flex flex-col">
-                              <span className="text-[9px] text-muted-foreground font-medium uppercase">
-                                Mã khuôn:
-                              </span>
-                              <span className="font-bold text-foreground">
-                                {dieExport.code || dieExport.die?.code || "—"}
-                              </span>
-                            </div>
-                            <div className="flex flex-col">
-                              <span className="text-[9px] text-muted-foreground font-medium uppercase">
-                                Kích thước:
-                              </span>
-                              <span className="font-bold text-amber-700 dark:text-amber-500">
-                                {dieExport.size ||
-                                  (dieExport.die
-                                    ? formatDieSize(dieExport.die)
-                                    : "—")}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center border-t border-slate-200 dark:border-slate-700 pt-0.5">
-                              <span className="text-[9px] text-muted-foreground font-medium uppercase">
-                                Tình trạng:
-                              </span>
-                              <span className="font-bold text-green-600 dark:text-green-400">
-                                {displayLocation}
-                              </span>
-                            </div>
-                            
-                            <div className="flex flex-col border-t border-slate-200 dark:border-slate-700 pt-0.5">
-                              <span className="text-[9px] text-muted-foreground font-medium uppercase">
-                                Loại khuôn:
-                              </span>
-                              <span className="font-semibold text-foreground">
-                                {isNewDie ? "Sử dụng khuôn bế mới" : "Sử dụng khuôn bế cũ"}
-                              </span>
-                            </div>
-
-                            {isNewDie && dieExport.die?.estimatedReceiveAt && (
+                          return (
+                            <div
+                              key={dieExport.id || i}
+                              className="flex flex-col gap-1 text-left text-[11px] border-b border-slate-100 dark:border-slate-800 last:border-0 pb-1.5 last:pb-0"
+                            >
+                              {dieImg && (
+                                <div 
+                                  className="relative w-full aspect-video rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 overflow-hidden mb-1.5 cursor-zoom-in hover:brightness-95 transition-all"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setViewingImageUrl(dieImg);
+                                  }}
+                                  title="Nhấp để phóng to hình khuôn bế"
+                                >
+                                  <img
+                                    src={dieImg}
+                                    alt="Hình ảnh khuôn"
+                                    className="w-full h-full object-contain select-none"
+                                  />
+                                </div>
+                              )}
                               <div className="flex flex-col">
                                 <span className="text-[9px] text-muted-foreground font-medium uppercase">
-                                  Thời gian nhận dự kiến:
+                                  Mã khuôn:
+                                </span>
+                                <span className="font-bold text-foreground">
+                                  {dieExport.code || dieExport.die?.code || "—"}
+                                </span>
+                              </div>
+                              <div className="flex flex-col">
+                                <span className="text-[9px] text-muted-foreground font-medium uppercase">
+                                  Kích thước:
+                                </span>
+                                <span className="font-bold text-amber-700 dark:text-amber-500">
+                                  {dieExport.size ||
+                                    (dieExport.die
+                                      ? formatDieSize(dieExport.die)
+                                      : "—")}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center border-t border-slate-200 dark:border-slate-700 pt-0.5">
+                                <span className="text-[9px] text-muted-foreground font-medium uppercase">
+                                  Tình trạng:
+                                </span>
+                                <span className="font-bold text-green-600 dark:text-green-400">
+                                  {displayLocation}
+                                </span>
+                              </div>
+                              
+                              <div className="flex flex-col border-t border-slate-200 dark:border-slate-700 pt-0.5">
+                                <span className="text-[9px] text-muted-foreground font-medium uppercase">
+                                  Loại khuôn:
                                 </span>
                                 <span className="font-semibold text-foreground">
-                                  {formatDate(dieExport.die.estimatedReceiveAt)}
+                                  {isNewDie ? "Sử dụng khuôn bế mới" : "Sử dụng khuôn bế cũ"}
                                 </span>
                               </div>
-                            )}
-                            
-                            {/* Ghi chú Khuôn */}
-                            {(dieExport.notes || dieExport.die?.notes || dieExport.dieExportNotes) && (
-                              <div className="flex flex-col pt-0.5 border-t border-slate-200 dark:border-slate-700 mt-0.5">
-                                <span className="text-[9px] text-muted-foreground font-medium uppercase">
-                                  Ghi chú:
-                                </span>
-                                <span className="italic text-amber-700 dark:text-amber-500 break-words font-medium whitespace-pre-wrap">
-                                  {dieExport.notes || dieExport.die?.notes || dieExport.dieExportNotes}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </HoverCardContent>
-                </HoverCard>
+
+                              {isNewDie && (
+                                <>
+                                  <div className="flex justify-between items-center border-t border-slate-200 dark:border-slate-700 pt-0.5">
+                                    <span className="text-[9px] text-muted-foreground font-medium uppercase">
+                                      Trạng thái nhận:
+                                    </span>
+                                    <span className={cn(
+                                      "font-bold",
+                                      dieExport.isReceived ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"
+                                    )}>
+                                      {dieExport.isReceived ? "Đã nhận" : "Chưa nhận"}
+                                    </span>
+                                  </div>
+                                  
+                                  {dieExport.isReceived ? (
+                                    dieExport.receivedAt && (
+                                      <div className="flex flex-col border-t border-slate-200 dark:border-slate-700 pt-0.5">
+                                        <span className="text-[9px] text-muted-foreground font-medium uppercase">
+                                          Thời gian nhận:
+                                        </span>
+                                        <span className="font-semibold text-foreground">
+                                          {formatDate(dieExport.receivedAt)}
+                                        </span>
+                                      </div>
+                                    )
+                                  ) : (
+                                    dieExport.estimatedReceiveAt && (
+                                      <div className="flex flex-col border-t border-slate-200 dark:border-slate-700 pt-0.5">
+                                        <span className="text-[9px] text-muted-foreground font-medium uppercase">
+                                          Hẹn có khuôn:
+                                        </span>
+                                        <span className="font-semibold text-foreground">
+                                          {formatDate(dieExport.estimatedReceiveAt)}
+                                        </span>
+                                      </div>
+                                    )
+                                  )}
+                                </>
+                              )}
+                              
+                              {/* Ghi chú Khuôn */}
+                              {(dieExport.notes || dieExport.die?.notes || dieExport.dieExportNotes) && (
+                                <div className="flex flex-col pt-0.5 border-t border-slate-200 dark:border-slate-700 mt-0.5">
+                                  <span className="text-[9px] text-muted-foreground font-medium uppercase">
+                                    Ghi chú:
+                                  </span>
+                                  <span className="italic text-amber-700 dark:text-amber-500 break-words font-medium whitespace-pre-wrap">
+                                    {dieExport.notes || dieExport.die?.notes || dieExport.dieExportNotes}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </HoverCardContent>
+                  </HoverCard>
+                  <span className={cn(
+                    "text-[9px] font-bold mt-1 text-center leading-none",
+                    allReceived ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"
+                  )}>
+                    {allReceived ? "Đã nhận khuôn" : "Chưa nhận khuôn"}
+                  </span>
+                </div>
               );
             })()}
               </div>

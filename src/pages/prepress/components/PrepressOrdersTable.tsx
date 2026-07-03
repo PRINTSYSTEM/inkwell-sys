@@ -48,7 +48,7 @@ export function PrepressOrdersTable({
           <ScrollArea className="h-full">
             <div ref={tableRef} className="w-full">
               <div className="w-full overflow-x-auto p-4">
-                <Table className="min-w-[980px]">
+                <Table className="min-w-[1200px]">
                   <TableHeader>
                     <TableRow>
                       {shouldShowExpand && (
@@ -62,6 +62,15 @@ export function PrepressOrdersTable({
                       </TableHead>
                       <TableHead className="h-10 text-sm font-bold">
                         Mã hàng
+                      </TableHead>
+                      <TableHead className="h-10 text-sm font-bold">
+                        Vật tư bài
+                      </TableHead>
+                      <TableHead className="h-10 text-sm font-bold">
+                        Kích thước bài
+                      </TableHead>
+                      <TableHead className="h-10 text-sm font-bold text-right">
+                        Số lượng bài
                       </TableHead>
 
                       <TableHead className="h-10 text-sm font-bold">
@@ -87,14 +96,14 @@ export function PrepressOrdersTable({
                   <TableBody>
                     {loading ? (
                       <TableSkeleton
-                        cols={shouldShowExpand ? 10 : 9}
+                        cols={shouldShowExpand ? 13 : 12}
                         rows={5}
                         rowHeight="h-14"
                       />
                     ) : orders.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={shouldShowExpand ? 10 : 9}
+                          colSpan={shouldShowExpand ? 13 : 12}
                           className="py-10"
                         >
                           <div className="flex flex-col items-center justify-center gap-2 text-center">

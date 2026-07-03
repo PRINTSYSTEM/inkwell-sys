@@ -461,6 +461,7 @@ export default function ProofingOrderDetailPage() {
     data: orderResp,
     isLoading,
     error,
+    refetch: refetchOrder,
   } = useProofingOrder(idValid ? idValue : null, idValid);
 
   // Check for production orders for cancellation logic
@@ -1782,6 +1783,8 @@ export default function ProofingOrderDetailPage() {
 
   const { mutate: cancelProofing, isPending: isCanceling } =
     useCancelProofingOrder();
+
+
 
   const handleCancelProofingOrder = () => {
     if (isLoadingProductions) {

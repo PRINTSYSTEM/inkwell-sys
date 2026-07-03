@@ -134,132 +134,170 @@ export function DetailDieExportCard({
                       <p>Không có khuôn bế nào đang sử dụng</p>
                     </div>
                   ) : (
-                    activeDies.map((dieExport: any, index: number) => (
-                      <div
-                        key={dieExport.id || index}
-                        className="p-2.5 rounded-md border text-[11px] leading-tight space-y-1.5 relative group bg-emerald-50/20 dark:bg-emerald-950/5 border-emerald-200/80 shadow-sm"
-                      >
-                        {/* Header: Code & Action Buttons */}
-                        <div className="flex items-center justify-between border-b border-muted-foreground/5 pb-1.5 mb-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded uppercase tracking-tighter border border-emerald-200">
-                              Đang dùng
-                            </span>
-                            <p className="font-bold text-xs uppercase tracking-tight text-foreground">
-                              {dieExport.die?.code || `Khuôn #${dieExport.dieId}`}
-                            </p>
-                          </div>
+                    activeDies.map((dieExport: any, index: number) => {
+                      const dieCode = (dieExport.die?.code || "").trim();
+                      const orderCode = (order?.code || "").trim();
+                      const isNewDie = !!(dieCode && orderCode && dieCode.toLowerCase() === orderCode.toLowerCase());
 
-                          {order.status !== "completed" && isProofer && (
-                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 text-destructive hover:bg-destructive/5 animate-in fade-in duration-200"
-                                onClick={() => handleRemoveDie(dieExport.dieId!)}
-                                disabled={isRemovingDie}
-                                title="Gỡ khuôn khỏi bài"
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
+                      return (
+                        <div
+                          key={dieExport.id || index}
+                          className="p-2.5 rounded-md border text-[11px] leading-tight space-y-1.5 relative group bg-emerald-50/20 dark:bg-emerald-950/5 border-emerald-200/80 shadow-sm"
+                        >
+                          {/* Header: Code & Action Buttons */}
+                          <div className="flex items-center justify-between border-b border-muted-foreground/5 pb-1.5 mb-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded uppercase tracking-tighter border border-emerald-200">
+                                Đang dùng
+                              </span>
+                              <p className="font-bold text-xs uppercase tracking-tight text-foreground">
+                                {dieExport.die?.code || `Khuôn #${dieExport.dieId}`}
+                              </p>
                             </div>
-                          )}
-                        </div>
 
-                        {/* Image and Info Section */}
-                        <div className="flex gap-3">
-                          {/* Image Thumbnail */}
-                          <div
-                            className="w-12 h-12 shrink-0 rounded border bg-muted flex items-center justify-center overflow-hidden relative group/img cursor-zoom-in"
-                            onClick={() => {
-                              if (dieExport.die?.imageUrl) {
-                                setViewingImageUrl(dieExport.die.imageUrl);
-                                setImageViewerOpen(true);
-                              }
-                            }}
-                          >
-                            {dieExport.die?.imageUrl ? (
-                              <>
-                                <img
-                                  src={dieExport.die.imageUrl}
-                                  alt={dieExport.die?.code || "Khuôn bế"}
-                                  className="w-full h-full object-cover transition-transform duration-300 group-hover/img:scale-110"
-                                />
-                                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
-                                  <Maximize2 className="h-3.5 w-3.5 text-white" />
-                                </div>
-                              </>
-                            ) : (
-                              <FileImage className="h-4.5 w-4.5 text-muted-foreground/40" />
+                            {order.status !== "completed" && isProofer && (
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 text-destructive hover:bg-destructive/5 animate-in fade-in duration-200"
+                                  onClick={() => handleRemoveDie(dieExport.dieId!)}
+                                  disabled={isRemovingDie}
+                                  title="Gỡ khuôn khỏi bài"
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
                             )}
                           </div>
 
-                          {/* Info list */}
-                          <div className="flex-1 flex flex-col gap-1 min-w-0">
-                            <div className="flex items-center justify-between text-[10px]">
-                              <span className="text-slate-400 dark:text-slate-500">Kích thước</span>
-                              <p className="font-semibold truncate ml-2 text-foreground">
-                                {formatDieSize(dieExport.die)}
-                              </p>
+                          {/* Image and Info Section */}
+                          <div className="flex gap-3">
+                            {/* Image Thumbnail */}
+                            <div
+                              className="w-12 h-12 shrink-0 rounded border bg-muted flex items-center justify-center overflow-hidden relative group/img cursor-zoom-in"
+                              onClick={() => {
+                                if (dieExport.die?.imageUrl) {
+                                  setViewingImageUrl(dieExport.die.imageUrl);
+                                  setImageViewerOpen(true);
+                                }
+                              }}
+                            >
+                              {dieExport.die?.imageUrl ? (
+                                <>
+                                  <img
+                                    src={dieExport.die.imageUrl}
+                                    alt={dieExport.die?.code || "Khuôn bế"}
+                                    className="w-full h-full object-cover transition-transform duration-300 group-hover/img:scale-110"
+                                  />
+                                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                                    <Maximize2 className="h-3.5 w-3.5 text-white" />
+                                  </div>
+                                </>
+                              ) : (
+                                <FileImage className="h-4.5 w-4.5 text-muted-foreground/40" />
+                              )}
                             </div>
-                            <div className="flex items-center justify-between text-[10px]">
-                              <span className="text-slate-400 dark:text-slate-500">Vị trí</span>
-                              <p className="font-semibold truncate ml-2 text-green-600">
-                                {dieLocationLabels[dieExport.die?.location || ""] ||
-                                  dieExport.die?.location ||
-                                  "Đang sử dụng"}
-                              </p>
-                            </div>
-                            <div className="flex items-center justify-between text-[10px]">
-                              <span className="text-slate-400 dark:text-slate-500">NCC</span>
-                              <p className="font-semibold truncate ml-2 text-foreground">
-                                {dieExport.die?.vendorName ||
-                                  dieExport.die?.vendor?.name ||
-                                  "An Tâm"}
-                              </p>
-                            </div>
-                            <div className="flex items-center justify-between text-[10px]">
-                              <span className="text-slate-400 dark:text-slate-500">Ngày xuất</span>
-                              <p className="text-slate-500 font-medium truncate ml-2">
-                                {dieExport.createdAt
-                                  ? format(new Date(dieExport.createdAt), "dd/MM/yyyy HH:mm")
-                                  : "—"}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
 
-                        {dieExport.notes && (
-                          <div className="p-2 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900 rounded text-xs mt-0.5">
-                            <div className="flex items-start gap-1.5">
-                              <Info className="h-3 w-3 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <p className="font-bold text-blue-900 dark:text-blue-100 text-[9px] mb-0.5 uppercase tracking-wider">
-                                  Ghi chú
-                                </p>
-                                <p className="leading-relaxed text-[11px] italic text-foreground/80">
-                                  {dieExport.notes}
+                            {/* Info list */}
+                            <div className="flex-1 flex flex-col gap-1 min-w-0">
+                              <div className="flex items-center justify-between text-[10px]">
+                                <span className="text-slate-400 dark:text-slate-500">Kích thước</span>
+                                <p className="font-semibold truncate ml-2 text-foreground">
+                                  {formatDieSize(dieExport.die)}
                                 </p>
                               </div>
+                              <div className="flex items-center justify-between text-[10px]">
+                                <span className="text-slate-400 dark:text-slate-500">Vị trí</span>
+                                <p className="font-semibold truncate ml-2 text-green-600">
+                                  {dieLocationLabels[dieExport.die?.location || ""] ||
+                                    dieExport.die?.location ||
+                                    "Đang sử dụng"}
+                                </p>
+                              </div>
+                              <div className="flex items-center justify-between text-[10px]">
+                                <span className="text-slate-400 dark:text-slate-500">NCC</span>
+                                <p className="font-semibold truncate ml-2 text-foreground">
+                                  {dieExport.die?.vendorName ||
+                                    dieExport.die?.vendor?.name ||
+                                    "An Tâm"}
+                                </p>
+                              </div>
+                              <div className="flex items-center justify-between text-[10px]">
+                                <span className="text-slate-400 dark:text-slate-500">Ngày xuất</span>
+                                <p className="text-slate-500 font-medium truncate ml-2">
+                                  {dieExport.createdAt
+                                    ? format(new Date(dieExport.createdAt), "dd/MM/yyyy HH:mm")
+                                    : "—"}
+                                </p>
+                              </div>
+                              {isNewDie && (
+                                <>
+                                  <div className="flex items-center justify-between text-[10px]">
+                                    <span className="text-slate-400 dark:text-slate-500">Trạng thái nhận</span>
+                                    <p className={cn(
+                                      "font-semibold truncate ml-2",
+                                      dieExport.isReceived ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"
+                                    )}>
+                                      {dieExport.isReceived ? "Đã nhận" : "Chưa nhận"}
+                                    </p>
+                                  </div>
+                                  {dieExport.isReceived ? (
+                                    dieExport.receivedAt && (
+                                      <div className="flex items-center justify-between text-[10px]">
+                                        <span className="text-slate-400 dark:text-slate-500">Ngày nhận</span>
+                                        <p className="text-slate-500 font-medium truncate ml-2">
+                                          {format(new Date(dieExport.receivedAt), "dd/MM/yyyy HH:mm")}
+                                        </p>
+                                      </div>
+                                    )
+                                  ) : (
+                                    dieExport.estimatedReceiveAt && (
+                                      <div className="flex items-center justify-between text-[10px]">
+                                        <span className="text-slate-400 dark:text-slate-500">Hẹn có khuôn</span>
+                                        <p className="text-slate-500 font-medium truncate ml-2">
+                                          {format(new Date(dieExport.estimatedReceiveAt), "dd/MM/yyyy HH:mm")}
+                                        </p>
+                                      </div>
+                                    )
+                                  )}
+                                </>
+                              )}
                             </div>
                           </div>
-                        )}
 
-                        {isProofer && order.status !== "completed" && (
-                          <div className="flex flex-wrap items-center justify-center gap-2 pt-2 mt-2 border-t border-muted-foreground/10">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 gap-1.5 text-amber-600 bg-amber-50 hover:bg-amber-100/50 text-[11px] px-3 font-semibold rounded-md border border-amber-200 flex-1 transition-all"
-                              onClick={() => handleOpenReplaceDieDialog(dieExport)}
-                            >
-                              <RefreshCcw className="h-3 w-3" />
-                              Xuất lại khuôn
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                    ))
+                          {dieExport.notes && (
+                            <div className="p-2 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900 rounded text-xs mt-0.5">
+                              <div className="flex items-start gap-1.5">
+                                <Info className="h-3 w-3 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-bold text-blue-900 dark:text-blue-100 text-[9px] mb-0.5 uppercase tracking-wider">
+                                    Ghi chú
+                                  </p>
+                                  <p className="leading-relaxed text-[11px] italic text-foreground/80">
+                                    {dieExport.notes}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {isProofer && order.status !== "completed" && (
+                             <div className="flex flex-wrap items-center justify-center gap-2 pt-2 mt-2 border-t border-muted-foreground/10">
+                               <Button
+                                 variant="ghost"
+                                 size="sm"
+                                 className="h-7 gap-1.5 text-amber-600 bg-amber-50 hover:bg-amber-100/50 text-[11px] px-3 font-semibold rounded-md border border-amber-200 flex-1 transition-all"
+                                 onClick={() => handleOpenReplaceDieDialog(dieExport)}
+                                >
+                                 <RefreshCcw className="h-3 w-3" />
+                                 Xuất lại khuôn
+                               </Button>
+                             </div>
+                           )}
+                        </div>
+                      );
+                    })
                   )}
                 </TabsContent>
 

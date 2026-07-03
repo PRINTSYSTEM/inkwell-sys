@@ -69,5 +69,33 @@ export const useUpdatePlateExport = () => {
   });
 };
 
+// ===== Receive Plate Export =====
+// PUT /api/proofing-orders/plates/:plateExportId/receive
+export const useReceivePlate = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (plateExportId: number) => {
+      const response = await apiRequest.put<PlateExportResponse>(
+        API_SUFFIX.PROOFING_PLATE_RECEIVE(plateExportId)
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: plateExportKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["proofing-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["production-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["productions"] });
+      toast.success("Đã xác nhận nhận kẽm thành công");
+    },
+    onError: (error: { response?: { data?: { message?: string } }; message?: string }) => {
+      toast.error("Không thể xác nhận nhận kẽm", {
+        description: error.response?.data?.message || error.message,
+      });
+    },
+  });
+};
+
 // Export for custom usage
 export { plateExportCrudApi, plateExportKeys };
+

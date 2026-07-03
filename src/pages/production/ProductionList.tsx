@@ -13,6 +13,7 @@ import {
 } from "@/hooks/use-production";
 import { useProofingOrdersForProduction } from "@/hooks/use-proofing-order";
 import { useAuth } from "@/hooks/use-auth";
+import { useDesignTypeList } from "@/hooks/use-design-type";
 import {
   ProductionOrderResponse,
   ProductionOrderResponsePaginateSchema,
@@ -51,15 +52,28 @@ export default function ProductionListPage() {
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [pageInput, setPageInput] = useState<string>("1");
-  const [itemsPerPage] = useState(10);
+  const [dateFilterType, setDateFilterType] = useState<string>("all");
+  const [customDate, setCustomDate] = useState<string>("");
+  const itemsPerPage = dateFilterType === "all" ? 10 : 1000;
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
   // View tab
   type ProductionTab = "all" | "pending_material" | "in_production" | "pending_qc" | "completed";
   const [viewTab, setViewTab] = useState<ProductionTab>("all");
 
-  const [dateFilterType, setDateFilterType] = useState<string>("all");
-  const [customDate, setCustomDate] = useState<string>("");
+  // Design Type Filter State & Data Fetching
+  const [selectedDesignTypeId, setSelectedDesignTypeId] = useState<number | null>(null);
+  const { data: designTypesData } = useDesignTypeList({ status: "active" });
+  const designTypes = useMemo(() => {
+    return Array.isArray(designTypesData)
+      ? designTypesData
+      : (designTypesData as any)?.items || [];
+  }, [designTypesData]);
+
+  // Reset selectedDesignTypeId when date filter, view tab, or status changes
+  useEffect(() => {
+    setSelectedDesignTypeId(null);
+  }, [dateFilterType, viewTab, selectedStatus]);
 
   // Stats queries (All-time & Today)
   const todayStart = useMemo(() => {
@@ -386,6 +400,47 @@ export default function ProductionListPage() {
     });
   }, [productions, proofingOrders, debouncedSearch, selectedStatus, viewTab]);
 
+  // Helper to extract design type ID from a display production order
+  const getProdDesignTypeId = (prod: any) => {
+    if (prod.designTypeId) return prod.designTypeId;
+    if (prod.designType?.id) return prod.designType.id;
+    
+    // Fallback to nested proofingOrder
+    const proofing = prod.proofingOrder;
+    if (proofing?.designTypeId) return proofing.designTypeId;
+    if (proofing?.designType?.id) return proofing.designType.id;
+    
+    // Fallback to designs in proofingOrder
+    const designs = proofing?.proofingOrderDesigns || [];
+    if (designs.length > 0) {
+      const typeId = designs[0]?.design?.designType?.id || designs[0]?.design?.designTypeId;
+      if (typeId) return typeId;
+    }
+
+    return null;
+  };
+
+  // Compute design type counts based on displayProductions *before* design type filtering
+  const designTypeCounts = useMemo(() => {
+    const counts: Record<number, number> = {};
+    displayProductions.forEach((prod) => {
+      const typeId = getProdDesignTypeId(prod);
+      if (typeId) {
+        counts[typeId] = (counts[typeId] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [displayProductions]);
+
+  // Finally filtered list to render in the table
+  const finalDisplayProductions = useMemo(() => {
+    if (selectedDesignTypeId === null) return displayProductions;
+    return displayProductions.filter((prod) => {
+      const typeId = getProdDesignTypeId(prod);
+      return typeId === selectedDesignTypeId;
+    });
+  }, [displayProductions, selectedDesignTypeId]);
+
   // Pagination handlers
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {
@@ -648,11 +703,58 @@ export default function ProductionListPage() {
                 )}
               </div>
             </div>
+
+            {/* ROW 3: Design Type Tabs (below date filters) */}
+            <div className="flex flex-wrap items-center gap-1.5 bg-background dark:bg-muted/10 p-1 rounded-md border border-border/40 w-fit mt-1.5">
+              <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 px-2 select-none">Loại thiết kế:</span>
+              <Button
+                variant={selectedDesignTypeId === null ? "default" : "ghost"}
+                size="sm"
+                type="button"
+                className={cn(
+                  "h-7 text-xs px-2.5 rounded-sm font-medium transition-all",
+                  selectedDesignTypeId === null 
+                    ? "bg-slate-700 text-white shadow-sm" 
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-muted"
+                )}
+                onClick={() => setSelectedDesignTypeId(null)}
+              >
+                Tất cả ({displayProductions.length})
+              </Button>
+              {designTypes.map((type: any) => {
+                const count = designTypeCounts[type.id] || 0;
+                return (
+                  <Button
+                    key={type.id}
+                    variant={selectedDesignTypeId === type.id ? "default" : "ghost"}
+                    size="sm"
+                    type="button"
+                    className={cn(
+                      "h-7 text-xs px-2.5 rounded-sm font-medium transition-all",
+                      selectedDesignTypeId === type.id 
+                        ? "bg-slate-700 text-white shadow-sm" 
+                        : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-muted"
+                    )}
+                    onClick={() => setSelectedDesignTypeId(type.id)}
+                  >
+                    <span>{type.name}</span>
+                    <span className={cn(
+                      "ml-1.5 px-1 py-0.2 rounded-full text-[9px] font-extrabold",
+                      selectedDesignTypeId === type.id
+                        ? "bg-white/20 text-white"
+                        : "bg-slate-100 text-slate-705 dark:bg-slate-800 dark:text-slate-350"
+                    )}>
+                      {count}
+                    </span>
+                  </Button>
+                );
+              })}
+            </div>
           </div>
 
           <ProductionListTable
             isLoading={isLoading}
-            productions={displayProductions}
+            productions={finalDisplayProductions}
             searchTerm={searchTerm}
             totalCount={totalCount}
             currentPage={currentPage}

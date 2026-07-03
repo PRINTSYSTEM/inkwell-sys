@@ -99,6 +99,12 @@ export function PrepressOrderRow({
             <span className="font-semibold text-foreground">Người tạo đơn hàng:</span>{" "}
             {order.order?.creator?.fullName || order.order?.creator?.username || order.creator?.fullName || order.creator?.username || "—"}
           </div>
+          {order.designType?.name && (
+            <div>
+              <span className="font-semibold text-foreground">Loại thiết kế:</span>{" "}
+              {order.designType.name}
+            </div>
+          )}
           {order.notes && (
             <div>
               <span className="font-semibold text-foreground">Ghi chú lệnh:</span>{" "}
@@ -274,6 +280,16 @@ export function PrepressOrderRow({
             {tooltipContent}
           </HoverCardContent>
         </HoverCard>
+      </TableCell>
+
+      <TableCell className="py-3 font-medium text-xs align-top max-w-[150px] truncate">
+        {order.materialType?.name || "—"}
+      </TableCell>
+      <TableCell className="py-3 font-medium text-xs align-top max-w-[150px] truncate">
+        {order.paperSize?.name || order.customPaperSize || (order.rollWidth ? `Cuộn (Rộng: ${order.rollWidth} mm)` : "—")}
+      </TableCell>
+      <TableCell className="py-3 font-bold text-xs align-top text-right text-rose-600 font-mono">
+        {order.totalQuantity ? order.totalQuantity.toLocaleString("vi-VN") : "0"}
       </TableCell>
 
       <TableCell className="py-3 font-semibold text-xs align-top">

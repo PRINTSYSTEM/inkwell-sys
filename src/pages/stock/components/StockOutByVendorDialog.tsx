@@ -243,6 +243,14 @@ export function StockOutByVendorDialog({
   const navigate = useNavigate();
   // Purpose: production, outsource, return_vendor, adjustment
   const [purpose, setPurpose] = useState<string>("production");
+  const [activeVendorId, setActiveVendorId] = useState<number | null>(null);
+
+  // Sync activeVendorId when dialog opens or selectedVendorId changes
+  useEffect(() => {
+    if (open) {
+      setActiveVendorId(selectedVendorId);
+    }
+  }, [open, selectedVendorId]);
 
   // General fields
   const [receiverName, setReceiverName] = useState("");
@@ -299,7 +307,7 @@ export function StockOutByVendorDialog({
 
   // Fetch materials for selected vendor (limit 1000)
   const { data: materialsData, isLoading: isLoadingMaterials } = useMaterials({
-    vendorId: selectedVendorId || undefined,
+    vendorId: activeVendorId || undefined,
     size: 1000,
   });
   const vendorMaterials = materialsData?.items || [];
@@ -336,7 +344,7 @@ export function StockOutByVendorDialog({
     }
   }, [open]);
 
-  // Reset form when dialog opens/closes or vendor changes
+  // Reset form when dialog opens/closes
   useEffect(() => {
     if (open) {
       setPurpose("production");
@@ -358,7 +366,7 @@ export function StockOutByVendorDialog({
         setItems([{ materialId: null, jobCode: "", quantity: 1, notes: "" }]);
       }
     }
-  }, [open, selectedVendorId, prefillItems]);
+  }, [open, prefillItems]);
 
   // Auto-select material from vendorMaterials if prefillPaperName is present
   useEffect(() => {
@@ -374,7 +382,6 @@ export function StockOutByVendorDialog({
             return {
               ...item,
               materialId: match.id,
-              prefillPaperName: undefined
             };
           }
         }
@@ -387,20 +394,20 @@ export function StockOutByVendorDialog({
 
   // Prefill return_vendor fields when purpose is selected
   useEffect(() => {
-    if (purpose === "return_vendor" && selectedVendorId) {
-      const supplier = vendors.find((v) => v.id === selectedVendorId);
+    if (purpose === "return_vendor" && activeVendorId) {
+      const supplier = vendors.find((v) => v.id === activeVendorId);
       if (supplier) {
         setWarehouseName(supplier.name || "");
         setWarehouseAddress(supplier.address || "");
       }
     }
-  }, [purpose, selectedVendorId, vendors]);
+  }, [purpose, activeVendorId, vendors]);
 
   const vendorName = useMemo(() => {
-    if (!selectedVendorId) return "";
-    const vendor = vendors.find((v) => v.id === selectedVendorId);
-    return vendor?.name || `NCC #${selectedVendorId}`;
-  }, [selectedVendorId, vendors]);
+    if (!activeVendorId) return "";
+    const vendor = vendors.find((v) => v.id === activeVendorId);
+    return vendor?.name || `NCC #${activeVendorId}`;
+  }, [activeVendorId, vendors]);
 
   const handleAddItem = () => {
     setItems([...items, { materialId: null, jobCode: "", quantity: 1, notes: "" }]);
@@ -434,7 +441,7 @@ export function StockOutByVendorDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedVendorId) return;
+    if (!activeVendorId) return;
 
     // 1. Validate based on purpose
     if (purpose === "production") {
@@ -465,7 +472,7 @@ export function StockOutByVendorDialog({
 
       // Prepare payload
       const payload = {
-        vendorId: selectedVendorId,
+        vendorId: activeVendorId,
         receiverName: receiverName.trim(),
         exportReason: exportReason.trim(),
         stockOutDate: new Date().toISOString(),
@@ -518,7 +525,7 @@ export function StockOutByVendorDialog({
       }
 
       const payload = {
-        vendorId: purpose === "outsource" ? outsourceVendorId : selectedVendorId,
+        vendorId: purpose === "outsource" ? outsourceVendorId : activeVendorId,
         exportReason: exportReason.trim(),
         warehouseName: warehouseName.trim() || undefined,
         warehouseAddress: warehouseAddress.trim() || undefined,
@@ -594,7 +601,7 @@ export function StockOutByVendorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl rounded-xl border-slate-200 shadow-xl overflow-hidden flex flex-col max-h-[90vh] p-0">
+      <DialogContent className="max-w-6xl w-[95vw] rounded-xl border-slate-200 shadow-xl overflow-hidden flex flex-col max-h-[90vh] p-0">
         <DialogHeader className="bg-slate-50 border-b border-slate-100 p-5 shrink-0">
           <DialogTitle className="text-base font-bold text-rose-700 flex items-center gap-2">
             <Minus className="h-5 w-5 text-rose-600" />
@@ -607,8 +614,38 @@ export function StockOutByVendorDialog({
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
           <div className="flex-1 overflow-y-auto p-5 space-y-4">
-            {/* 1. Chọn loại nghiệp vụ xuất kho */}
-            <div className="grid grid-cols-1 gap-4">
+            {/* 1. Chọn nhà cung cấp & nghiệp vụ xuất kho */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Nhà cung cấp vật tư <span className="text-red-500">*</span></Label>
+                <Select
+                  value={String(activeVendorId || "")}
+                  onValueChange={(val) => {
+                    const newVendorId = val ? Number(val) : null;
+                    setActiveVendorId(newVendorId);
+                    // Keep jobCode, quantity, and notes but reset materialId
+                    const resetItems = items.map((item) => ({
+                      ...item,
+                      materialId: null,
+                    }));
+                    setItems(resetItems);
+                    setAdjMaterialId(null);
+                    setHasResolvedPrefill(false);
+                  }}
+                >
+                  <SelectTrigger className="h-10 text-xs border-slate-200 rounded-lg cursor-pointer bg-white">
+                    <SelectValue placeholder="Chọn nhà cung cấp" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-lg">
+                    {vendors.map((v) => (
+                      <SelectItem key={v.id} value={String(v.id)} className="text-xs cursor-pointer">
+                        {v.name || v.code}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-slate-700">Lý do xuất kho (Loại nghiệp vụ)</Label>
                 <Select

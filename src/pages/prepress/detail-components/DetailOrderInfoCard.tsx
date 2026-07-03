@@ -462,6 +462,17 @@ export function DetailOrderInfoCard({
               </div>
             </div>
 
+            <div className="flex items-start justify-between gap-4">
+              <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0 mt-0.5">
+                Loại thiết kế
+              </Label>
+              <div className="text-right min-w-0">
+                <p className="font-bold text-[12px] leading-tight truncate">
+                  {order.designType?.name || "—"}
+                </p>
+              </div>
+            </div>
+
             {hasGrammage && (
               <div
                 className="flex items-center justify-between group cursor-pointer"

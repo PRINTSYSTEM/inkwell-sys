@@ -51,6 +51,7 @@ import { toast } from "sonner";
 import { CreateMaterialDirectDialog } from "./components/CreateMaterialDirectDialog";
 import { StockOutByVendorDialog } from "./components/StockOutByVendorDialog";
 import { PendingExportsDialog } from "./components/PendingExportsDialog";
+import { RecentStockOutsDialog } from "./components/RecentStockOutsDialog";
 import { downloadBlob } from "@/lib/download-utils";
 import { apiRequest } from "@/lib/http";
 import { API_SUFFIX } from "@/apis";
@@ -148,6 +149,9 @@ export default function StockSummary() {
   // Pending Production Exports Dialog States
   const [isPendingExportsOpen, setIsPendingExportsOpen] = useState(false);
   const [prefillStockOutItems, setPrefillStockOutItems] = useState<any[] | undefined>(undefined);
+
+  // Recent Stock Outs Dialog States
+  const [isRecentStockOutsOpen, setIsRecentStockOutsOpen] = useState(false);
 
   // Vendor Reconciliation Excel Export States
   const [isExportingReconciliation, setIsExportingReconciliation] = useState(false);
@@ -274,7 +278,7 @@ export default function StockSummary() {
               <Button 
                 onClick={() => {
                   if (selectedVendorId === "all") {
-                    toast.error("Vui lòng chọn một Nhà cung cấp ở bộ lọc trước khi thực hiện xuất kho!");
+                    setIsPendingExportsOpen(true);
                     return;
                   }
                   setIsStockOutOpen(true);
@@ -307,7 +311,7 @@ export default function StockSummary() {
               </Button>
 
               <Button 
-                onClick={() => navigate("/stock/stock-outs")}
+                onClick={() => setIsRecentStockOutsOpen(true)}
                 variant="outline"
                 size="sm"
                 className="cursor-pointer border-slate-200 text-xs h-9 rounded-lg hover:bg-slate-50 text-foreground"
@@ -608,153 +612,7 @@ export default function StockSummary() {
             </Card>
           </div>
 
-          {/* Recent Stock-Outs List (Vertical Layout) */}
-          <Card className="border-slate-200/60 shadow-sm rounded-xl overflow-hidden">
-            <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-3.5 px-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <div className="h-7.5 w-7.5 rounded-md bg-slate-100 flex items-center justify-center text-slate-600">
-                  <FileText className="h-4 w-4" />
-                </div>
-                <CardTitle className="text-sm font-bold text-foreground">
-                  PHIẾU XUẤT KHO THEO NGÀY
-                </CardTitle>
-              </div>
-              
-              <div className="flex items-center gap-2 w-full sm:w-auto self-stretch sm:self-auto justify-end">
-                <div className="relative">
-                  <Input
-                    type="date"
-                    value={stockOutDate}
-                    onChange={(e) => {
-                      setStockOutDate(e.target.value);
-                      setStockOutPage(1);
-                    }}
-                    className="h-8 text-xs bg-white border-slate-200 rounded-lg pr-2 cursor-pointer focus-visible:ring-[#93631F]"
-                  />
-                </div>
-                {stockOutDate && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setStockOutDate("");
-                      setStockOutPage(1);
-                    }}
-                    className="text-xs text-muted-foreground hover:text-foreground cursor-pointer h-8 rounded-lg px-2"
-                  >
-                    Xóa ngày
-                  </Button>
-                )}
-                <div className="h-6 w-px bg-slate-200 hidden sm:block mx-1" />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => navigate("/stock/stock-outs")}
-                  className="text-xs text-[#93631F] font-semibold hover:bg-slate-100 cursor-pointer h-8 rounded-lg"
-                >
-                  Xem tất cả
-                </Button>
-              </div>
-            </CardHeader>
 
-            <CardContent className="p-0">
-              {isLoadingStockOuts ? (
-                <TableSkeletonRows cols={7} />
-              ) : stockOuts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 text-slate-400 text-xs">
-                  <Info className="h-6 w-6 mb-2 text-slate-300" />
-                  <p className="font-medium">Chưa có phiếu xuất kho nào được ghi nhận</p>
-                </div>
-              ) : (
-                <>
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow className="bg-slate-50/50 whitespace-nowrap text-xs border-b border-slate-200/60">
-                          <TableHead className="w-[120px] font-bold py-2.5 pl-4">Số phiếu</TableHead>
-                          <TableHead className="w-[120px] font-bold py-2.5">Ngày xuất</TableHead>
-                          <TableHead className="min-w-[140px] font-bold py-2.5">Loại Phiếu</TableHead>
-                          <TableHead className="min-w-[200px] font-bold py-2.5">Khách hàng / Đối tác</TableHead>
-                          <TableHead className="w-[150px] font-bold py-2.5">Kho xuất</TableHead>
-                          <TableHead className="w-[120px] text-center font-bold py-2.5">Trạng thái</TableHead>
-                          <TableHead className="w-[60px] text-center font-bold py-2.5 pr-4">Xem</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {stockOuts.map((item: any) => (
-                          <TableRow
-                            key={item.id}
-                            className="hover:bg-slate-50 border-b border-slate-100 text-xs cursor-pointer transition-colors duration-150"
-                            onClick={() => navigate(`/stock/stock-outs/${item.id}`)}
-                          >
-                            <TableCell className="font-mono font-bold py-3 pl-4 text-slate-800">
-                              {item.code || `PXK-${item.id}`}
-                            </TableCell>
-                            <TableCell className="py-3 text-slate-600">
-                              {item.stockOutDate ? formatDate(item.stockOutDate) : "—"}
-                            </TableCell>
-                            <TableCell className="py-3 font-semibold text-slate-700">
-                              {translatePurpose(item.purposeName || item.purpose || item.type)}
-                            </TableCell>
-                            <TableCell className="py-3 text-slate-600 truncate max-w-[200px]" title={item.customer?.name || item.vendorName || item.vendor?.name || item.supplier?.name || "—"}>
-                              {item.customer?.name || item.vendorName || item.vendor?.name || item.supplier?.name || "—"}
-                            </TableCell>
-                            <TableCell className="py-3 text-slate-600">
-                              {item.warehouse || item.warehouseName || "—"}
-                            </TableCell>
-                            <TableCell className="py-3 text-center">
-                              <div className="inline-flex justify-center w-full">
-                                {getStatusBadge(item.status)}
-                              </div>
-                            </TableCell>
-                            <TableCell className="py-3 text-center pr-4" onClick={(e) => e.stopPropagation()}>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 rounded-lg hover:bg-slate-100 text-slate-500 cursor-pointer"
-                                onClick={() => navigate(`/stock/stock-outs/${item.id}`)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-
-                  {/* Stock Out Specific Pagination */}
-                  {totalStockOutPages > 1 && (
-                    <div className="flex items-center justify-between p-3 border-t border-slate-100 bg-slate-50/50">
-                      <span className="text-[11px] font-medium text-slate-500">
-                        Trang {stockOutPage} / {totalStockOutPages} ({stockOutsData?.total || 0} phiếu)
-                      </span>
-                      <div className="flex gap-1.5">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-[10px] px-2.5 cursor-pointer font-semibold"
-                          onClick={() => setStockOutPage(p => Math.max(1, p - 1))}
-                          disabled={stockOutPage === 1 || isLoadingStockOuts}
-                        >
-                          Trước
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-[10px] px-2.5 cursor-pointer font-semibold"
-                          onClick={() => setStockOutPage(p => Math.min(totalStockOutPages, p + 1))}
-                          disabled={stockOutPage === totalStockOutPages || isLoadingStockOuts}
-                        >
-                          Sau
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </CardContent>
-          </Card>
 
         </div>
       </div>
@@ -788,21 +646,59 @@ export default function StockSummary() {
         open={isPendingExportsOpen}
         onOpenChange={setIsPendingExportsOpen}
         vendors={vendorsData || []}
-        onInitiateStockOut={(vendorId, jobCode, quantity, paperName) => {
-          const prefill = {
+        onInitiateStockOut={(vendorId, jobCode, quantity, paperName, isBoxCarton) => {
+          const prefillItems = [];
+          
+          // Row 1: The paper (e.g. Duplex/D)
+          prefillItems.push({
             materialId: null,
             jobCode,
             quantity,
-            notes: `Xuất sản xuất cho bài ${jobCode}`,
+            notes: jobCode,
             prefillPaperName: paperName,
-          };
-          setPrefillStockOutItems([prefill]);
+          });
+
+          // Row 2: Carton if it's Box-Carton
+          if (isBoxCarton) {
+            prefillItems.push({
+              materialId: null,
+              jobCode,
+              quantity,
+              notes: jobCode,
+              prefillPaperName: "Carton",
+            });
+          }
+
+          setPrefillStockOutItems(prefillItems);
           setSelectedVendorId(String(vendorId));
           setIsPendingExportsOpen(false);
           setIsStockOutOpen(true);
         }}
       />
 
+      {/* Dialog Danh sách phiếu xuất kho theo ngày */}
+      <RecentStockOutsDialog
+        open={isRecentStockOutsOpen}
+        onOpenChange={setIsRecentStockOutsOpen}
+        stockOuts={stockOuts}
+        isLoading={isLoadingStockOuts}
+        stockOutDate={stockOutDate}
+        onStockOutDateChange={setStockOutDate}
+        stockOutPage={stockOutPage}
+        onStockOutPageChange={setStockOutPage}
+        totalStockOutPages={totalStockOutPages}
+        totalCount={stockOutsData?.total || 0}
+        onViewDetails={(id) => {
+          setIsRecentStockOutsOpen(false);
+          navigate(`/stock/stock-outs/${id}`);
+        }}
+        onViewAll={() => {
+          setIsRecentStockOutsOpen(false);
+          navigate("/stock/stock-outs");
+        }}
+        translatePurpose={translatePurpose}
+        getStatusBadge={getStatusBadge}
+      />
 
     </>
   );
