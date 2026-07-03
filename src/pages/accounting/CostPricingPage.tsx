@@ -41,7 +41,7 @@ import {
   CircleDollarSign,
   Printer,
 } from "lucide-react";
-import { usePlateExports, useUpdatePlateExport } from "@/hooks/use-plate-export";
+import { usePlateExports, useUpdatePlateExport, useReceivePlate } from "@/hooks/use-plate-export";
 import { useDies, useUpdateDie } from "@/hooks/use-die";
 import { useActiveVendors } from "@/hooks/use-vendor";
 import type { PlateExportResponse } from "@/Schema";
@@ -204,6 +204,7 @@ interface PrinterFilterState {
 function PlateTab({ filter }: { filter: PlateFilterState }) {
   const [page, setPage] = useState(1);
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [receivingPlateId, setReceivingPlateId] = useState<number | null>(null);
 
   // Reset page to 1 when filters change
   useEffect(() => {
@@ -219,6 +220,22 @@ function PlateTab({ filter }: { filter: PlateFilterState }) {
     toDate: filter.toDate || undefined,
   } as any);
   const { mutateAsync: updatePlate } = useUpdatePlateExport();
+  const { mutateAsync: receivePlate } = useReceivePlate();
+
+  const handleReceivePlate = async (id: number) => {
+    setReceivingPlateId(id);
+    try {
+      await receivePlate(id);
+      toast.success("Đã xác nhận nhận kẽm thành công!");
+      refetch();
+    } catch (e: any) {
+      toast.error("Nhận kẽm thất bại", {
+        description: e.response?.data?.message || e.message
+      });
+    } finally {
+      setReceivingPlateId(null);
+    }
+  };
 
   const allItems = data?.items ?? [];
 
@@ -334,7 +351,34 @@ function PlateTab({ filter }: { filter: PlateFilterState }) {
                             {formatDateTime(plate.sentAt)}
                           </TableCell>
                           <TableCell className="text-sm text-slate-600">
-                            {formatDateTime(plate.receivedAt)}
+                            {plate.isReceived ? (
+                              <div className="flex flex-col gap-0.5">
+                                <span className="font-semibold text-green-700 dark:text-green-400">Đã nhận</span>
+                                <span className="text-xs text-slate-500">{formatDateTime(plate.receivedAt)}</span>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col gap-1.5 items-start">
+                                <span className="text-xs text-slate-500 font-medium">
+                                  {plate.estimatedReceiveAt 
+                                    ? `Dự kiến: ${formatDateTime(plate.estimatedReceiveAt)}` 
+                                    : "Chưa hẹn ngày"}
+                                </span>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-[11px] font-semibold text-green-700 bg-green-50 hover:bg-green-100 hover:text-green-800 border-green-200"
+                                  onClick={() => handleReceivePlate(plate.id!)}
+                                  disabled={receivingPlateId === plate.id}
+                                >
+                                  {receivingPlateId === plate.id ? (
+                                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                  ) : (
+                                    <Check className="h-3 w-3 mr-1" />
+                                  )}
+                                  Nhận kẽm
+                                </Button>
+                              </div>
+                            )}
                           </TableCell>
                           <TableCell>
                             <InlinePriceCell
@@ -409,6 +453,7 @@ function PlateTab({ filter }: { filter: PlateFilterState }) {
 function DieTab({ filter }: { filter: DieFilterState }) {
   const [page, setPage] = useState(1);
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [receivingDieId, setReceivingDieId] = useState<number | null>(null);
 
   // Reset page to 1 when filters change
   useEffect(() => {
@@ -416,13 +461,33 @@ function DieTab({ filter }: { filter: DieFilterState }) {
   }, [filter.search, filter.vendorId, filter.priceFilter]);
 
   const { data: vendorsData } = useActiveVendors();
-  const { data, isLoading } = useDies({
+  const { data, isLoading, refetch } = useDies({
     pageNumber: 1,
     pageSize: 1000,
     q: filter.search || undefined,
     vendorName: filter.vendorId ? vendorsData?.find(v => v.id.toString() === filter.vendorId)?.name : undefined,
   });
   const { mutateAsync: updateDie } = useUpdateDie();
+
+  const handleReceiveDie = async (id: number) => {
+    setReceivingDieId(id);
+    try {
+      await updateDie({
+        id,
+        data: {
+          receivedAt: new Date().toISOString(),
+        },
+      });
+      toast.success("Đã xác nhận nhận khuôn thành công!");
+      refetch();
+    } catch (e: any) {
+      toast.error("Nhận khuôn thất bại", {
+        description: e.response?.data?.message || e.message
+      });
+    } finally {
+      setReceivingDieId(null);
+    }
+  };
 
   const allItems = data?.items ?? [];
   const filteredItems =
@@ -553,10 +618,35 @@ function DieTab({ filter }: { filter: DieFilterState }) {
                           })()}
                         </TableCell>
                         <TableCell className="text-sm text-slate-600">
-                          {die.receivedAt ? formatDateTime(die.receivedAt) : (
-                            <span className="text-slate-400 italic">
-                              {formatDateTime((die as any).estimatedReceiveAt || die.createdAt)}
-                            </span>
+                          {die.receivedAt ? (
+                            <div className="flex flex-col gap-0.5">
+                              <span className="font-semibold text-green-700 dark:text-green-400">Đã nhận</span>
+                              <span className="text-xs text-slate-500">{formatDateTime(die.receivedAt)}</span>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col gap-1.5 items-start">
+                              <span className="text-xs text-slate-500 font-medium">
+                                {die.estimatedReceiveAt 
+                                  ? `Dự kiến: ${formatDateTime(die.estimatedReceiveAt)}` 
+                                  : `Tạo lúc: ${formatDateTime(die.createdAt)}`}
+                              </span>
+                              {die.usageType === "new" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-[11px] font-semibold text-green-700 bg-green-50 hover:bg-green-100 hover:text-green-800 border-green-200"
+                                  onClick={() => handleReceiveDie(die.id!)}
+                                  disabled={receivingDieId === die.id}
+                                >
+                                  {receivingDieId === die.id ? (
+                                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                  ) : (
+                                    <Check className="h-3 w-3 mr-1" />
+                                  )}
+                                  Nhận khuôn
+                                </Button>
+                              )}
+                            </div>
                           )}
                         </TableCell>
                         <TableCell className="text-center font-semibold text-slate-700">

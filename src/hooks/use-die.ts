@@ -637,5 +637,36 @@ export const useDieExportHistory = (
   });
 };
 
+// ===== Receive Die Export =====
+// PUT /api/proofing-orders/dies/:dieExportId/receive
+export const useReceiveDie = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (dieExportId: number) => {
+      const response = await apiRequest.put<DieExportResponse>(
+        API_SUFFIX.PROOFING_DIE_RECEIVE(dieExportId)
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: dieKeys.all });
+      queryClient.invalidateQueries({
+        queryKey: [dieKeys.all[0], "proofing-order-history"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["proofing-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["production-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["productions"] });
+      toast.success("Đã xác nhận nhận khuôn bế thành công");
+    },
+    onError: (error: ApiError) => {
+      toast.error("Không thể xác nhận nhận khuôn bế", {
+        description: error.response?.data?.message || error.message,
+      });
+    },
+  });
+};
+
 // Export for custom usage
 export { dieCrudApi, dieKeys };
+

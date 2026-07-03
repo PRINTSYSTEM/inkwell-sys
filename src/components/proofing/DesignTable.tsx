@@ -457,7 +457,7 @@ export function DesignTable({
                               onReject(design);
                             }}
                           >
-                            Hoàn hàng
+                            Trả về cho TK
                           </Button>
                         )}
 

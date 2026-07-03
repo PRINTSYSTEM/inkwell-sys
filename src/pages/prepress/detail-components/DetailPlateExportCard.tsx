@@ -217,6 +217,20 @@ export function DetailPlateExportCard({
                               : "—"}
                           </span>
                         </div>
+
+                        <div className="flex items-center gap-1 col-span-2">
+                          <span className="text-slate-400 dark:text-slate-500">Nhận kẽm:</span>
+                          <span className={cn(
+                            "font-semibold",
+                            exportItem.isReceived ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"
+                          )}>
+                            {exportItem.isReceived ? (
+                              `Đã nhận${exportItem.receivedAt ? ` lúc ${format(new Date(exportItem.receivedAt), "dd/MM/yyyy HH:mm")}` : ""}`
+                            ) : (
+                              `Chưa nhận${exportItem.estimatedReceiveAt ? ` (Hẹn: ${format(new Date(exportItem.estimatedReceiveAt), "dd/MM/yyyy HH:mm")})` : ""}`
+                            )}
+                          </span>
+                        </div>
                       </div>
 
                       {exportItem?.notes && (

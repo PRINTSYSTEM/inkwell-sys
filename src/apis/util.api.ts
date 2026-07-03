@@ -190,6 +190,10 @@ export const API_SUFFIX = {
   PAPER_SIZES: "/paper-sizes",
   PROOFING_RECORD_PLATE: (id: number) => `/proofing-orders/${id}/plate-export`,
   PROOFING_RECORD_DIE: (id: number) => `/proofing-orders/${id}/die-export`,
+  PROOFING_DIE_RECEIVE: (dieExportId: number) =>
+    `/proofing-orders/dies/${dieExportId}/receive`,
+  PROOFING_PLATE_RECEIVE: (plateExportId: number) =>
+    `/proofing-orders/plates/${plateExportId}/receive`,
 
   // ========== PLATE EXPORTS ==========
   PLATE_EXPORTS: "/plate-exports",
