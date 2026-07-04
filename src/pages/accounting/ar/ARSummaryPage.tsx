@@ -32,7 +32,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useARSummary, useARDetail, useExportARSummary } from "@/hooks/use-ar-ap";
+import { useARSummary } from "@/hooks/use-ar-ap";
+import { useArLedgerSummary } from "@/hooks/use-ar-ledger";
+import { useExportDebt } from "@/hooks/use-accounting";
 import { useExportDebtComparison } from "@/hooks/use-customer";
 import { ARCreateReceiptDialog } from "./ARCreateReceiptDialog";
 import { formatCurrency } from "@/lib/status-utils";
@@ -81,7 +83,7 @@ export default function ARSummaryPage() {
     });
   }, [arData?.items]);
 
-  const { mutate: exportSummary, loading: isExporting } = useExportARSummary();
+  const { mutate: exportDebt, loading: isExporting } = useExportDebt();
   const { mutate: exportCustomerDebt } = useExportDebtComparison();
   const [exportingCustomerId, setExportingCustomerId] = useState<number | null>(null);
 
@@ -98,7 +100,7 @@ export default function ARSummaryPage() {
   };
 
   const handleExportExcel = async () => {
-    await exportSummary({
+    await exportDebt({
       fromDate: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
       toDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
       searchTerm: searchQuery || undefined,
@@ -303,22 +305,21 @@ export default function ARSummaryPage() {
           <Table>
             <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
               <TableRow className="bg-muted/30 hover:bg-muted/30">
-                <TableHead className="w-[40px]"></TableHead>
-                <TableHead className="w-[120px]">Mã KH</TableHead>
-                <TableHead>Tên khách hàng</TableHead>
-                <TableHead className="text-right">Dư đầu kỳ</TableHead>
-                <TableHead className="text-right">Phát sinh</TableHead>
-                <TableHead className="text-right">Thanh toán</TableHead>
-                <TableHead className="text-right">Dư cuối kỳ</TableHead>
-                <TableHead className="text-right w-[150px]">Quá hạn</TableHead>
-                <TableHead className="text-center w-[80px]">Thao tác</TableHead>
-              </TableRow>
+                  <TableHead className="w-[40px]"></TableHead>
+                  <TableHead className="w-[120px]">Mã KH</TableHead>
+                  <TableHead>Tên khách hàng</TableHead>
+                  <TableHead className="text-right">Dư đầu kỳ</TableHead>
+                  <TableHead className="text-right">Phát sinh</TableHead>
+                  <TableHead className="text-right">Thanh toán</TableHead>
+                  <TableHead className="text-right">Dư cuối kỳ</TableHead>
+                  <TableHead className="text-center w-[80px]">Thao tác</TableHead>
+                </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 9 }).map((_, j) => (
+                    {Array.from({ length: 8 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
                       </TableCell>
@@ -327,7 +328,7 @@ export default function ARSummaryPage() {
                 ))
               ) : !filteredARItems || filteredARItems.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-32 text-center">
+                  <TableCell colSpan={8} className="h-32 text-center">
                     <div className="flex flex-col items-center justify-center text-muted-foreground">
                       <Calendar className="h-8 w-8 mb-2 opacity-20" />
                       <p>Không tìm thấy dữ liệu công nợ trong khoảng thời gian này</p>
@@ -400,7 +401,7 @@ export default function ARSummaryPage() {
                       </TableRow>
                       {isExpanded && item.customerId && (
                         <TableRow className="bg-muted/10 hover:bg-muted/10 border-t-0 select-none">
-                          <TableCell colSpan={9} className="p-3 pl-8 md:pl-12 bg-stone-50/50 dark:bg-stone-900/10">
+                          <TableCell colSpan={8} className="p-3 pl-8 md:pl-12 bg-stone-50/50 dark:bg-stone-900/10">
                             <CustomerDetailRow 
                               customerId={item.customerId}
                               customerName={item.customerName || item.companyName || ""}
@@ -471,11 +472,7 @@ function CustomerDetailRow({
 }) {
   const navigate = useNavigate();
 
-  const { data: detailData, isLoading: isLoadingDetail } = useARDetail({
-    customerId: customerId,
-    fromDate: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
-    toDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
-  });
+  const { data: ledgerSummary, isLoading: isLoadingDetail } = useArLedgerSummary(customerId);
 
   const handleOrderClick = (documentId: number | null | undefined) => {
     if (documentId) {
@@ -484,9 +481,35 @@ function CustomerDetailRow({
   };
 
   const unpaidItems = useMemo(() => {
-    if (!detailData?.items) return [];
-    return detailData.items.filter((detail: any) => (detail.outstanding ?? 0) > 0);
-  }, [detailData?.items]);
+    // ledgerSummary.details is an array of ArLedgerResponse
+    if (!ledgerSummary?.details) return [];
+    return (ledgerSummary.details || []).filter((d: any) => (d.remainingAmount ?? 0) > 0);
+  }, [ledgerSummary?.details]);
+  // Flatten items so that each item becomes a row in the ledger
+  const flatRows = useMemo(() => {
+    const rows: Array<{
+      key: string;
+      detail: any;
+      item?: any;
+    }> = [];
+
+    // Each ledger row represents a delivered line; normalize to { detail, item }
+    unpaidItems.forEach((detail: any) => {
+      rows.push({
+        key: `${detail.orderId || detail.deliveryNoteId || detail.id}`,
+        detail,
+        item: {
+          code: detail.designCode || detail.deliveryNoteLineId || detail.id,
+          name: detail.designName || detail.materialTypeName || "—",
+          quantity: detail.deliveredQuantity,
+          unitPrice: detail.unitPriceSnapshot,
+          totalAmount: detail.lineAmount,
+        },
+      });
+    });
+
+    return rows;
+  }, [unpaidItems]);
 
   if (isLoadingDetail) {
     return (
@@ -505,33 +528,6 @@ function CustomerDetailRow({
     );
   }
 
-  // Flatten items so that each item becomes a row in the ledger
-  const flatRows = useMemo(() => {
-    const rows: Array<{
-      key: string;
-      detail: any;
-      item?: any;
-    }> = [];
-
-    unpaidItems.forEach((detail: any) => {
-      if (Array.isArray(detail.items) && detail.items.length > 0) {
-        detail.items.forEach((item: any, idx: number) => {
-          rows.push({
-            key: `${detail.documentId || detail.id}-${item.code || idx}`,
-            detail,
-            item,
-          });
-        });
-      } else {
-        rows.push({
-          key: `${detail.documentId || detail.id}-fallback`,
-          detail,
-        });
-      }
-    });
-
-    return rows;
-  }, [unpaidItems]);
 
   return (
     <div className="border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden bg-background shadow-sm select-none">
@@ -556,17 +552,15 @@ function CustomerDetailRow({
         <TableBody className="divide-y divide-stone-100 dark:divide-stone-900">
           {flatRows.map((row, index) => {
             const { detail, item } = row;
-            const isSelected = selectedOrders.has(detail.documentId);
-            
-            // Calculate proportional values
-            const totalAmount = item?.totalAmount ?? detail.amountDue ?? 0;
-            const proportion = detail.amountDue ? (totalAmount / detail.amountDue) : 1;
-            const paid = (detail.amountPaid || 0) * proportion;
-            const outstanding = (detail.outstanding || 0) * proportion;
+            const docKey = detail.orderId ?? detail.deliveryNoteId ?? detail.id;
+            const isSelected = selectedOrders.has(docKey);
 
-            const isOrder = detail.documentType?.toLowerCase() === "order";
-            const orderCode = isOrder ? detail.documentNumber : "—";
-            const deliveryNoteCode = !isOrder ? detail.documentNumber : "—";
+            const totalAmount = item?.totalAmount ?? detail.lineAmount ?? 0;
+            const paid = detail.paidAmount ?? 0;
+            const outstanding = detail.remainingAmount ?? 0;
+
+            const orderCode = detail.orderCode ?? "—";
+            const deliveryNoteCode = detail.deliveryNoteCode ?? "—";
 
             return (
               <TableRow
@@ -578,10 +572,14 @@ function CustomerDetailRow({
                 onClick={() => handleOrderClick(detail.documentId)}
               >
                 <TableCell className="text-center py-2.5" onClick={(e) => e.stopPropagation()}>
-                  {detail.documentId && (
+                  {docKey && (
                     <Checkbox 
                       checked={isSelected}
-                      onCheckedChange={() => onSelectOrder(detail)}
+                      onCheckedChange={() => onSelectOrder({
+                        documentId: docKey,
+                        documentNumber: orderCode !== "—" ? orderCode : deliveryNoteCode,
+                        outstanding: outstanding,
+                      })}
                     />
                   )}
                 </TableCell>

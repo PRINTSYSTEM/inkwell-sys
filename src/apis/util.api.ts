@@ -95,6 +95,10 @@ export const API_SUFFIX = {
   ACCOUNTING_APPROVE_DEBT: (orderId: number) =>
     `/accounting/order/${orderId}/approve-debt`,
   ACCOUNTING_EXPORT_DEBT: "/accounting/export-debt",
+  // ========== AR LEDGER (NEW) ==========
+  AR_LEDGER: "/ar-ledger",
+  AR_LEDGER_BY_ID: (id: number) => `/ar-ledger/${id}`,
+  AR_LEDGER_SUMMARY: (customerId: number) => `/ar-ledger/summary/${customerId}`,
 
   // ========== CUSTOMERS ==========
   CUSTOMERS: "/customers",

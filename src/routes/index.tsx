@@ -161,6 +161,7 @@ const BankAccountList = lazy(
 
 // AR/AP
 const AR = lazy(() => import("@/pages/accounting/ar/ARPage"));
+const ARLedger = lazy(() => import("@/pages/accounting/ar/ArLedgerPage"));
 const ARByItem = lazy(() => import("@/pages/accounting/ar/ARByItemPage"));
 const ARUnderdue = lazy(() => import("@/pages/accounting/ar/ARUnderduePage"));
 const ARSummaryByCustomerGroup = lazy(
@@ -971,6 +972,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
                 <AR />
+              </Suspense>
+            ),
+          },
+          {
+            path: "ar/ledger",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <ARLedger />
               </Suspense>
             ),
           },
