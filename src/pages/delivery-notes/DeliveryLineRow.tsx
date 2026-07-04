@@ -22,9 +22,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronRight, XCircle, Loader2, Image as ImageIcon, RotateCcw } from "lucide-react";
+import { ChevronRight, XCircle, Loader2, Image as ImageIcon, RotateCcw, FileEdit, Check, X } from "lucide-react";
 import { useUpdateDeliveryLineResult, useFailureReasons } from "@/hooks/use-delivery-note";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
+import { Input } from "@/components/ui/input";
 
 // ── Status display ──────────────────────────────────────────────────────────
 
@@ -82,6 +83,28 @@ export default function DeliveryLineRow({
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
   const updateLineResultMutation = useUpdateDeliveryLineResult();
+  const [isEditingNote, setIsEditingNote] = useState(false);
+  const [tempNote, setTempNote] = useState(line.note || "");
+
+  React.useEffect(() => {
+    setTempNote(line.note || "");
+  }, [line.note]);
+
+  const handleSaveNote = async () => {
+    if (!line?.id) return;
+    try {
+      await updateLineResultMutation.mutateAsync({
+        lineId: Number(line.id),
+        data: {
+          status: line.status || "pending",
+          note: tempNote,
+        },
+      });
+      setIsEditingNote(false);
+    } catch {
+      // handled by hook
+    }
+  };
   const { data: failureReasonsApi } = useFailureReasons();
   const reasonsList = failureReasonsApi || FAILURE_REASONS;
 
@@ -210,9 +233,56 @@ export default function DeliveryLineRow({
           <div className="text-sm font-medium line-clamp-2">
             {line.designName || "—"}
           </div>
-          {line.note && (
-            <div className="text-[11px] text-orange-600 font-medium mt-1 italic">
-              Ghi chú: {line.note}
+        </TableCell>
+
+        {/* Ghi chú */}
+        <TableCell className="max-w-[200px]">
+          {isEditingNote ? (
+            <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+              <Input
+                value={tempNote}
+                onChange={(e) => setTempNote(e.target.value)}
+                className="h-8 text-xs flex-1"
+                placeholder="Nhập ghi chú..."
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSaveNote();
+                  if (e.key === "Escape") {
+                    setTempNote(line.note || "");
+                    setIsEditingNote(false);
+                  }
+                }}
+              />
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 shrink-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                onClick={handleSaveNote}
+              >
+                <Check className="w-4 h-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-8 w-8 shrink-0 text-red-500 hover:text-red-600 hover:bg-red-50"
+                onClick={() => {
+                  setTempNote(line.note || "");
+                  setIsEditingNote(false);
+                }}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+          ) : (
+            <div
+              className="flex items-center gap-1 group cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 p-1.5 rounded transition-all min-h-8"
+              onClick={() => setIsEditingNote(true)}
+              title="Click để sửa ghi chú"
+            >
+              <span className="text-xs text-orange-600 dark:text-orange-400 font-medium break-words whitespace-pre-wrap flex-1">
+                {line.note || <span className="text-stone-300 dark:text-stone-700 italic">Thêm ghi chú...</span>}
+              </span>
+              <FileEdit className="w-3.5 h-3.5 text-stone-400 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
           )}
         </TableCell>

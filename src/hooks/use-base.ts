@@ -171,9 +171,12 @@ export function createCrudHooks<
   const useCreate = () => {
     const queryClient = useQueryClient();
 
-    return useMutation<TEntity, ServiceError | Error, TCreate>({
-      mutationFn: (data) => api.create(data),
-      onSuccess: (created) => {
+    return useMutation<TEntity, ServiceError | Error, TCreate & { suppressToast?: boolean }>({
+      mutationFn: (variables) => {
+        const { suppressToast, ...payload } = variables as any;
+        return api.create(payload);
+      },
+      onSuccess: (created, variables) => {
         // Cache detail ngay lập tức
         const entityId = resolveId(created);
         if (entityId !== undefined) {
@@ -183,9 +186,11 @@ export function createCrudHooks<
         // Invalidate related queries
         invalidateEntityQueries(queryClient, rootKey);
 
-        toast.success("Thành công", {
-          description: messages?.createSuccess ?? "Đã tạo mới thành công",
-        });
+        if (!(variables as any)?.suppressToast) {
+          toast.success("Thành công", {
+            description: messages?.createSuccess ?? "Đã tạo mới thành công",
+          });
+        }
       },
       onError: (error) => {
         console.log("🚀 ~ useCreate ~ error:", error);
@@ -206,10 +211,10 @@ export function createCrudHooks<
     return useMutation<
       TEntity,
       ServiceError | Error,
-      { id: TId; data: TUpdate }
+      { id: TId; data: TUpdate; suppressToast?: boolean }
     >({
       mutationFn: ({ id, data }) => api.update(id, data),
-      onSuccess: (updated) => {
+      onSuccess: (updated, variables) => {
         // Cache detail ngay lập tức
         const entityId = resolveId(updated);
         if (entityId !== undefined) {
@@ -219,9 +224,11 @@ export function createCrudHooks<
         // Invalidate related queries
         invalidateEntityQueries(queryClient, rootKey);
 
-        toast.success("Thành công", {
-          description: messages?.updateSuccess ?? "Đã cập nhật thành công",
-        });
+        if (!variables?.suppressToast) {
+          toast.success("Thành công", {
+            description: messages?.updateSuccess ?? "Đã cập nhật thành công",
+          });
+        }
       },
       onError: (error) => {
         toast.error("Lỗi", {
@@ -237,20 +244,28 @@ export function createCrudHooks<
   const useDelete = () => {
     const queryClient = useQueryClient();
 
-    return useMutation<void, ServiceError | Error, TId>({
-      mutationFn: (id) => api.delete(id),
-      onSuccess: (_, deletedId) => {
+    return useMutation<void, ServiceError | Error, TId | { id: TId; suppressToast?: boolean }>({
+      mutationFn: (variables) => {
+        const id = typeof variables === "object" && variables !== null && "id" in variables ? (variables as any).id : variables;
+        return api.delete(id);
+      },
+      onSuccess: (_, variables) => {
+        const id = typeof variables === "object" && variables !== null && "id" in variables ? (variables as any).id : variables;
+        const suppressToast = typeof variables === "object" && variables !== null && "suppressToast" in variables ? (variables as any).suppressToast : false;
+
         // Xóa cache detail
         queryClient.removeQueries({
-          queryKey: keys.detail(deletedId),
+          queryKey: keys.detail(id),
         });
 
         // Invalidate related queries
         invalidateEntityQueries(queryClient, rootKey);
 
-        toast.success("Thành công", {
-          description: messages?.deleteSuccess ?? "Đã xoá thành công",
-        });
+        if (!suppressToast) {
+          toast.success("Thành công", {
+            description: messages?.deleteSuccess ?? "Đã xoá thành công",
+          });
+        }
       },
       onError: (error) => {
         toast.error("Lỗi", {

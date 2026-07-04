@@ -18,6 +18,7 @@ import type {
   ProductionListParams,
   AssignProductionStepRequest,
   ProductionPendingMaterialParams,
+  BulkUpdateProductionOrderItemsRequest,
 } from "@/Schema";
 import { useAsyncCallback } from "@/hooks/use-async";
 import { API_SUFFIX } from "@/apis";
@@ -235,6 +236,65 @@ export const useUpdateProductionOrderItem = () => {
     isPending: loading,
     error,
     mutate,
+    reset,
+  };
+};
+
+// PUT /api/production-orders/:productionOrderId/items/bulk - Bulk update production order items (designs)
+export const useBulkUpdateProductionOrderItems = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    any,
+    [
+      {
+        productionOrderId: number;
+        data: BulkUpdateProductionOrderItemsRequest;
+      },
+    ]
+  >(async ({ productionOrderId, data }) => {
+    const res = await apiRequest.put<any>(
+      `/production-orders/${productionOrderId}/items/bulk`,
+      data,
+    );
+    return res.data;
+  });
+
+  const mutate = async (payload: {
+    productionOrderId: number;
+    data: BulkUpdateProductionOrderItemsRequest;
+  }) => {
+    try {
+      const result = await execute(payload);
+
+      // Invalidate production order queries to refresh data
+      queryClient.invalidateQueries({
+        queryKey: productionOrderKeys.all,
+      });
+
+      toast.success("Thành công", {
+        description: "Đã cập nhật số lượng thiết kế hàng loạt",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as ApiError;
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể cập nhật số lượng thiết kế hàng loạt",
+      });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    isPending: loading,
+    error,
+    mutate,
+    mutateAsync: mutate,
     reset,
   };
 };

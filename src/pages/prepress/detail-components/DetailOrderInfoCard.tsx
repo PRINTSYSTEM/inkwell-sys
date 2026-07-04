@@ -32,10 +32,16 @@ import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface DetailOrderInfoCardProps {
   order: any;
-  editingField: "totalQuantity" | "paperSize" | "notes" | "basisWeight" | "rollWidth" | "all" | null;
+  editingField: "totalQuantity" | "paperSize" | "notes" | "basisWeight" | "rollWidth" | "code" | "all" | null;
   inlineTotalQuantity: string;
   setInlineTotalQuantity: (val: string) => void;
   inlinePaperSizeId: string;
@@ -54,7 +60,7 @@ interface DetailOrderInfoCardProps {
   uniqueSpecifications: string[];
   isUpdatingInfo: boolean;
   handleStartEditField: (
-    field: "totalQuantity" | "paperSize" | "notes" | "basisWeight" | "rollWidth",
+    field: "totalQuantity" | "paperSize" | "notes" | "basisWeight" | "rollWidth" | "code",
   ) => void;
   handleStartEditAllFields: () => void;
   handleCancelEditField: () => void;
@@ -188,12 +194,13 @@ export function DetailOrderInfoCard({
         {order.status !== "completed" && editingField !== "all" && isProofer && (
           <Button
             variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-primary hover:bg-primary/5 shrink-0"
+            size="sm"
+            className="h-7 px-2 text-xs font-bold text-primary hover:bg-primary/5 shrink-0 flex items-center gap-1"
             onClick={handleStartEditAllFields}
-            title="Cập nhật thông tin"
+            title="Sửa tất cả thông tin"
           >
             <Edit className="h-3.5 w-3.5" />
+            Sửa
           </Button>
         )}
       </CardHeader>
@@ -300,57 +307,34 @@ export function DetailOrderInfoCard({
         <div className="flex-1 flex flex-col gap-2 pt-2">
           {/* Key Metrics Row */}
           <div className="flex flex-col gap-1.5">
-            <div
-              className="flex items-center justify-between group cursor-pointer"
-              onClick={() =>
-                order.status !== "completed" &&
-                editingField !== "all" &&
-                isProofer &&
-                handleStartEditField("totalQuantity")
-              }
-            >
+            <div className="flex items-center justify-between">
               <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">
                 Số giấy in
-                {!(editingField === "totalQuantity" || editingField === "all") && !order.totalQuantity && (
+                {editingField !== "all" && !order.totalQuantity && (
                   <span title="Chưa chọn số giấy" className="ml-2 inline-flex items-center justify-center w-4 h-4 bg-red-600 text-white text-[10px] font-bold rounded-full">!</span>
                 )}
               </Label>
               <div className="flex items-center gap-1">
-                {(editingField === "totalQuantity" || editingField === "all") ? (
+                {editingField === "all" ? (
                   <div className="flex gap-1 items-center">
                     <Input
                       type="number"
                       min="1"
                       value={inlineTotalQuantity}
                       onChange={(e) => setInlineTotalQuantity(e.target.value)}
+                      onWheel={(e) => (e.target as HTMLInputElement).blur()}
                       className="h-6 text-xs font-bold px-2 w-24"
                       onKeyDown={(e) => {
                         if (e.key === "Enter") handleSaveField();
                         else if (e.key === "Escape") handleCancelEditField();
                       }}
-                      autoFocus={editingField === "totalQuantity"}
+                      autoFocus={false}
                     />
-                    {editingField !== "all" && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-5 px-1.5 text-[10px] text-green-600"
-                        onClick={handleSaveField}
-                        disabled={isUpdatingInfo}
-                      >
-                        Lưu
-                      </Button>
-                    )}
                   </div>
                 ) : (
-                  <>
-                    <p className="font-bold text-[12px]">
-                      {(order.totalQuantity ?? 0).toLocaleString()}
-                    </p>
-                    {order.status !== "completed" && (
-                      <Edit className="h-2.5 w-2.5 text-muted-foreground opacity-0 group-hover:opacity-100" />
-                    )}
-                  </>
+                  <p className="font-bold text-[12px]">
+                    {(order.totalQuantity ?? 0).toLocaleString()}
+                  </p>
                 )}
               </div>
             </div>
@@ -369,23 +353,15 @@ export function DetailOrderInfoCard({
 
           {/* Paper and Material */}
           <div className="flex flex-col gap-1.5">
-            <div
-              className="flex items-center justify-between group cursor-pointer"
-              onClick={() =>
-                order.status !== "completed" &&
-                editingField !== "all" &&
-                isProofer &&
-                handleStartEditField("paperSize")
-              }
-            >
+            <div className="flex items-center justify-between">
               <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">
                 Khổ giấy
-                {!(editingField === "paperSize" || editingField === "all") && !(order.paperSize?.name || inlinePaperSizeId) && (
+                {editingField !== "all" && !(order.paperSize?.name || order.customPaperSize) && (
                   <span title="Chưa chọn khổ giấy" className="ml-2 inline-flex items-center justify-center w-4 h-4 bg-red-600 text-white text-[10px] font-bold rounded-full">!</span>
                 )}
               </Label>
               <div className="flex items-center gap-1">
-                {(editingField === "paperSize" || editingField === "all") ? (
+                {editingField === "all" ? (
                   <div className="flex gap-1.5 items-center">
                     <Select
                       value={inlinePaperSizeId}
@@ -418,32 +394,16 @@ export function DetailOrderInfoCard({
                           else if (e.key === "Escape")
                             handleCancelEditField();
                         }}
-                        autoFocus={editingField === "paperSize"}
+                        autoFocus={false}
                       />
-                    )}
-                    {editingField !== "all" && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-5 px-1.5 text-[10px] text-green-600"
-                        onClick={handleSaveField}
-                        disabled={isUpdatingInfo}
-                      >
-                        Lưu
-                      </Button>
                     )}
                   </div>
                 ) : (
-                  <>
-                    <p className="font-bold text-[12px]">
-                      {order.paperSize?.name ||
-                        order.customPaperSize ||
-                        "Chưa chọn"} cm
-                    </p>
-                    {order.status !== "completed" && isProofer && (
-                      <Edit className="h-2.5 w-2.5 text-muted-foreground opacity-0 group-hover:opacity-100" />
-                    )}
-                  </>
+                  <p className="font-bold text-[12px]">
+                    {order.paperSize?.name ||
+                      order.customPaperSize ||
+                      "Chưa chọn"} cm
+                  </p>
                 )}
               </div>
             </div>
@@ -474,54 +434,31 @@ export function DetailOrderInfoCard({
             </div>
 
             {hasGrammage && (
-              <div
-                className="flex items-center justify-between group cursor-pointer"
-                onClick={() =>
-                  order.status !== "completed" &&
-                  editingField !== "all" &&
-                  isProofer &&
-                  handleStartEditField("basisWeight")
-                }
-              >
+              <div className="flex items-center justify-between">
                 <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">
                   Định lượng (GSM)
                 </Label>
                 <div className="flex items-center gap-1">
-                  {(editingField === "basisWeight" || editingField === "all") ? (
+                  {editingField === "all" ? (
                     <div className="flex gap-1 items-center">
                       <Input
                         type="number"
                         min="1"
                         value={inlineBasisWeight}
                         onChange={(e) => setInlineBasisWeight(e.target.value)}
+                        onWheel={(e) => (e.target as HTMLInputElement).blur()}
                         className="h-6 text-xs font-bold px-2 w-24"
                         onKeyDown={(e) => {
                           if (e.key === "Enter") handleSaveField();
                           else if (e.key === "Escape") handleCancelEditField();
                         }}
-                        autoFocus={editingField === "basisWeight"}
+                        autoFocus={false}
                       />
-                      {editingField !== "all" && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-5 px-1.5 text-[10px] text-green-600"
-                          onClick={handleSaveField}
-                          disabled={isUpdatingInfo}
-                        >
-                          Lưu
-                        </Button>
-                      )}
                     </div>
                   ) : (
-                    <>
-                      <p className="font-bold text-[12px]">
-                        {order.basisWeight ? `${order.basisWeight} gsm` : "Chưa nhập"}
-                      </p>
-                      {order.status !== "completed" && isProofer && (
-                        <Edit className="h-2.5 w-2.5 text-muted-foreground opacity-0 group-hover:opacity-100" />
-                      )}
-                    </>
+                    <p className="font-bold text-[12px]">
+                      {order.basisWeight ? `${order.basisWeight} gsm` : "Chưa nhập"}
+                    </p>
                   )}
                 </div>
               </div>
@@ -532,54 +469,31 @@ export function DetailOrderInfoCard({
               order.materialType?.name?.toLowerCase().includes("pe") ||
               order.materialType?.name?.toLowerCase().includes("pa") ||
               order.rollWidth) ? (
-              <div
-                className="flex items-center justify-between group cursor-pointer"
-                onClick={() =>
-                  order.status !== "completed" &&
-                  editingField !== "all" &&
-                  isProofer &&
-                  handleStartEditField("rollWidth")
-                }
-              >
+              <div className="flex items-center justify-between">
                 <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">
                   Khổ cuộn (mm)
                 </Label>
                 <div className="flex items-center gap-1">
-                  {(editingField === "rollWidth" || editingField === "all") ? (
+                  {editingField === "all" ? (
                     <div className="flex gap-1 items-center">
                       <Input
                         type="number"
                         min="1"
                         value={inlineRollWidth}
                         onChange={(e) => setInlineRollWidth(e.target.value)}
+                        onWheel={(e) => (e.target as HTMLInputElement).blur()}
                         className="h-6 text-xs font-bold px-2 w-24"
                         onKeyDown={(e) => {
                           if (e.key === "Enter") handleSaveField();
                           else if (e.key === "Escape") handleCancelEditField();
                         }}
-                        autoFocus={editingField === "rollWidth"}
+                        autoFocus={false}
                       />
-                      {editingField !== "all" && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-5 px-1.5 text-[10px] text-green-600"
-                          onClick={handleSaveField}
-                          disabled={isUpdatingInfo}
-                        >
-                          Lưu
-                        </Button>
-                      )}
                     </div>
                   ) : (
-                    <>
-                      <p className="font-bold text-[12px]">
-                        {order.rollWidth ? `${order.rollWidth} mm` : "Chưa nhập"}
-                      </p>
-                      {order.status !== "completed" && isProofer && (
-                        <Edit className="h-2.5 w-2.5 text-muted-foreground opacity-0 group-hover:opacity-100" />
-                      )}
-                    </>
+                    <p className="font-bold text-[12px]">
+                      {order.rollWidth ? `${order.rollWidth} mm` : "Chưa nhập"}
+                    </p>
                   )}
                 </div>
               </div>
@@ -669,9 +583,24 @@ export function DetailOrderInfoCard({
               <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">
                 Thiết kế
               </Label>
-              <p className="font-bold text-[12px] truncate">
-                {designerDisplay}
-              </p>
+              {designDesignerNames.length > 2 ? (
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <p className="font-bold text-[12px] truncate cursor-help border-b border-dotted border-slate-400 dark:border-slate-600">
+                        {designDesignerNames.slice(0, 2).join(", ")}...
+                      </p>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[280px] text-xs font-semibold text-slate-800 bg-white border border-slate-200 shadow-lg p-2.5 rounded-lg">
+                      {designDesignerNames.join(", ")}
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                <p className="font-bold text-[12px] truncate">
+                  {designerDisplay}
+                </p>
+              )}
             </div>
             <div className="flex items-center justify-between">
               <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">
@@ -691,46 +620,16 @@ export function DetailOrderInfoCard({
               <span className="text-[9px] font-bold uppercase tracking-widest text-amber-800/60 font-sans">
                 Ghi chú
               </span>
-              {order.status !== "completed" && editingField !== "notes" && editingField !== "all" && isProofer && (
-                <button
-                  onClick={() => handleStartEditField("notes")}
-                  className="text-amber-800/40 hover:text-amber-800 transition-colors"
-                >
-                  <Edit className="h-2.5 w-2.5" />
-                </button>
-              )}
             </div>
-            {(editingField === "notes" || editingField === "all") ? (
+            {editingField === "all" ? (
               <div className="space-y-1 mt-1">
                 <Textarea
                   value={inlineNotes}
                   onChange={(e) => setInlineNotes(e.target.value)}
                   rows={2}
                   className="text-[12px] p-1.5 h-auto min-h-[40px] not-italic"
-                  autoFocus={editingField === "notes"}
+                  autoFocus={false}
                 />
-                {editingField !== "all" && (
-                  <div className="flex gap-1 justify-end">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-5 px-1.5 text-[10px]"
-                      onClick={handleSaveField}
-                      disabled={isUpdatingInfo}
-                    >
-                      Lưu
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-5 px-1.5 text-[10px]"
-                      onClick={handleCancelEditField}
-                      disabled={isUpdatingInfo}
-                    >
-                      Hủy
-                    </Button>
-                  </div>
-                )}
               </div>
             ) : (
               <p className="line-clamp-3">

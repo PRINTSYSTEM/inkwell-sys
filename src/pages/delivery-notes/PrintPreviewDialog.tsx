@@ -1,0 +1,397 @@
+import React, { useState } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Printer, X, FileText, Check } from "lucide-react";
+import type { DeliveryNoteResponse } from "@/Schema/delivery-note.schema";
+import { format } from "date-fns";
+import { vi } from "date-fns/locale";
+
+interface PrintPreviewDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  deliveryNote: DeliveryNoteResponse;
+}
+
+export default function PrintPreviewDialog({
+  open,
+  onOpenChange,
+  deliveryNote,
+}: PrintPreviewDialogProps) {
+  const [printType, setPrintType] = useState<"A4" | "A5">("A4");
+
+  const lines = deliveryNote.lines || [];
+  const today = new Date();
+  const dateFormatted = format(today, "'Ngày' dd 'Tháng' MM 'Năm' yyyy", { locale: vi });
+
+  const totalDeliveryQty = lines.reduce((sum, l) => sum + (l.deliveryQty || 0), 0);
+  const totalScrapQty = lines.reduce((sum, l) => {
+    const scrap = typeof l.scrapQty === "number"
+      ? l.scrapQty
+      : typeof l.orderedQty === "number" && typeof l.netQtyTotal === "number"
+        ? l.orderedQty - l.netQtyTotal
+        : 0;
+    return sum + scrap;
+  }, 0);
+  const totalNetQty = lines.reduce((sum, l) => sum + (l.netQtyTotal || l.deliveryQty || 0), 0);
+
+  const handlePrint = () => {
+    const printContent = document.getElementById("delivery-note-print-area")?.innerHTML;
+    if (!printContent) return;
+
+    const iframe = document.createElement("iframe");
+    iframe.style.position = "absolute";
+    iframe.style.width = "0px";
+    iframe.style.height = "0px";
+    iframe.style.border = "none";
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (!doc) return;
+
+    const printStyles = `
+      @page {
+        size: ${printType === "A4" ? "A4 portrait" : "A5 landscape"};
+        margin: 8mm 12mm;
+      }
+      body {
+        font-family: "Times New Roman", Times, serif, Arial, sans-serif;
+        color: #000;
+        background: #fff;
+        margin: 0;
+        padding: 0;
+        -webkit-print-color-adjust: exact;
+      }
+      .print-container {
+        width: 100%;
+        box-sizing: border-box;
+      }
+      .header-container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 2px solid #000;
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+      }
+      .logo-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 120px;
+        flex-shrink: 0;
+      }
+      .logo-image {
+        height: 55px;
+        width: auto;
+        object-fit: contain;
+      }
+      .company-info {
+        text-align: center;
+        flex: 1;
+        padding-right: 40px;
+        font-size: 11px;
+        line-height: 1.45;
+      }
+      .company-name {
+        font-size: 13.5px;
+        font-weight: bold;
+        text-transform: uppercase;
+        margin-bottom: 3px;
+      }
+      .title-container {
+        text-align: center;
+        margin-top: 15px;
+        margin-bottom: 15px;
+        position: relative;
+      }
+      .print-title {
+        font-size: 20px;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin: 0;
+      }
+      .print-subtitle {
+        font-size: 12px;
+        margin-top: 5px;
+        display: flex;
+        justify-content: space-between;
+        padding: 0 10px;
+      }
+      .info-section {
+        font-size: 13px;
+        line-height: 1.5;
+        margin-bottom: 15px;
+      }
+      .info-grid {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 2px 10px;
+      }
+      .info-label {
+        font-weight: bold;
+        white-space: nowrap;
+      }
+      table.print-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+        margin-bottom: 15px;
+      }
+      table.print-table th, table.print-table td {
+        border: 1px solid #000;
+        padding: 5px 6px;
+        font-size: 12px;
+        color: #000;
+      }
+      table.print-table th {
+        background-color: #eaeaea !important;
+        font-weight: bold;
+        text-align: center;
+      }
+      .text-center { text-align: center !important; }
+      .text-right { text-align: right !important; }
+      .font-bold { font-weight: bold; }
+      .disclaimer {
+        font-size: 10.5px;
+        font-style: italic;
+        color: #000;
+        margin-top: 8px;
+        line-height: 1.35;
+      }
+      .signatures {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 35px;
+        padding: 0 40px;
+        font-size: 13px;
+        font-weight: bold;
+      }
+    `;
+
+    doc.open();
+    doc.write(`
+      <html>
+        <head>
+          <title>Phiếu Giao Hàng - ${deliveryNote.code || deliveryNote.id}</title>
+          <style>${printStyles}</style>
+        </head>
+        <body>
+          <div class="print-container">
+            ${printContent}
+          </div>
+        </body>
+      </html>
+    `);
+    doc.close();
+
+    // Trigger printing after styles are parsed
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      document.body.removeChild(iframe);
+    }, 300);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl w-[94vw] h-[85vh] flex flex-col p-6 bg-stone-50 dark:bg-stone-900 border-stone-200 dark:border-stone-850">
+        <DialogHeader className="flex-shrink-0 flex flex-row items-center justify-between border-b pb-4">
+          <div>
+            <DialogTitle className="text-lg font-bold text-stone-900 dark:text-stone-50 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-primary" />
+              Xem trước Bản in Phiếu giao hàng
+            </DialogTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              Xem và kiểm tra nội dung trước khi xuất lệnh in trực tiếp ra máy in.
+            </p>
+          </div>
+          <div className="flex gap-1.5 bg-muted p-1 rounded-md text-xs font-semibold mr-8">
+            <Button
+              size="sm"
+              variant={printType === "A4" ? "secondary" : "ghost"}
+              onClick={() => setPrintType("A4")}
+              className="h-7 px-3 text-xs"
+            >
+              Mẫu A4 (Dọc)
+            </Button>
+            <Button
+              size="sm"
+              variant={printType === "A5" ? "secondary" : "ghost"}
+              onClick={() => setPrintType("A5")}
+              className="h-7 px-3 text-xs"
+            >
+              Mẫu A5 (Ngang)
+            </Button>
+          </div>
+        </DialogHeader>
+
+        {/* Paper Area wrapper */}
+        <div className="flex-1 overflow-auto py-6 flex justify-center bg-stone-200/50 dark:bg-stone-950/40 rounded-lg border border-inner">
+          <div
+            className={`bg-white text-black p-8 shadow-md border border-stone-300 transition-all duration-300 origin-top ${
+              printType === "A4"
+                ? "w-[210mm] min-h-[297mm] aspect-[1/1.414]"
+                : "w-[210mm] min-h-[148mm] aspect-[1.414/1]"
+            }`}
+            style={{
+              fontFamily: '"Times New Roman", Times, serif',
+            }}
+          >
+            {/* The Print Area */}
+            <div id="delivery-note-print-area">
+              {/* Logo & Company info */}
+              <div className="header-container flex items-center justify-between border-b-2 border-black pb-3">
+                <div className="logo-container flex flex-col items-center justify-center w-[120px] shrink-0">
+                  <img
+                    src="/images/logo.png"
+                    alt="QUANG DAT LOGO"
+                    className="logo-image h-14 w-auto object-contain"
+                  />
+                </div>
+                <div className="company-info text-center flex-1 pr-10 text-[11px] leading-relaxed">
+                  <div className="company-name text-[13.5px] font-bold uppercase text-stone-900">
+                    CÔNG TY TNHH SẢN XUẤT THƯƠNG MẠI DỊCH VỤ QUỐC TẾ QUANG ĐẠT
+                  </div>
+                  <div>43D Ao Đôi, P. Bình Trị Đông A, Q. Bình Tân, TP. Hồ Chí Minh</div>
+                  <div>MST: 0317703989 - Điện thoại: 0906 649 812</div>
+                </div>
+              </div>
+
+              {/* Title Section */}
+              <div className="title-container text-center my-4 relative">
+                <h1 className="print-title text-xl font-bold uppercase tracking-wider">
+                  PHIẾU GIAO HÀNG
+                </h1>
+                <div className="print-subtitle text-[12px] flex justify-between px-2 mt-1">
+                  <span>{dateFormatted}</span>
+                  <span className="font-bold">Số phiếu: {deliveryNote.code || deliveryNote.id}</span>
+                </div>
+              </div>
+
+              {/* Client & Address Info */}
+              <div className="info-section text-[13px] leading-normal space-y-1 mb-3">
+                <div className="grid grid-cols-[100px_1fr] gap-x-2">
+                  <span className="font-bold">Khách hàng:</span>
+                  <span className="uppercase font-bold">{deliveryNote.orders?.[0]?.customerName || "—"}</span>
+                </div>
+                <div className="grid grid-cols-[100px_1fr] gap-x-2">
+                  <span className="font-bold">Địa chỉ:</span>
+                  <span>{deliveryNote.deliveryAddress || "—"}</span>
+                </div>
+                <div className="grid grid-cols-[100px_1fr] gap-x-2">
+                  <span className="font-bold">Người nhận:</span>
+                  <span>{deliveryNote.recipientName || "—"}</span>
+                </div>
+                <div className="grid grid-cols-[100px_1fr] gap-x-2">
+                  <span className="font-bold">Số điện thoại:</span>
+                  <span>{deliveryNote.recipientPhone || "—"}</span>
+                </div>
+              </div>
+
+              {/* Line Items Table */}
+              <table className="print-table w-full border-collapse border border-black text-xs mt-3">
+                <thead>
+                  <tr className="bg-stone-100">
+                    <th className="border border-black text-center p-1 w-10">STT</th>
+                    <th className="border border-black text-left p-1">TÊN HÀNG HÓA</th>
+                    <th className="border border-black text-center p-1 w-16">ĐVT</th>
+                    <th className="border border-black text-right p-1 w-24">SỐ LƯỢNG</th>
+                    <th className="border border-black text-right p-1 w-20">PHỤ HAO</th>
+                    <th className="border border-black text-right p-1 w-24">SỐ LƯỢNG THỰC</th>
+                    <th className="border border-black text-left p-1 w-36">GHI CHÚ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {lines.map((l, index) => {
+                    const scrap = typeof l.scrapQty === "number"
+                      ? l.scrapQty
+                      : typeof l.orderedQty === "number" && typeof l.netQtyTotal === "number"
+                        ? l.orderedQty - l.netQtyTotal
+                        : 0;
+                    return (
+                      <tr key={l.id || index}>
+                        <td className="border border-black text-center p-1.5">{index + 1}</td>
+                        <td className="border border-black p-1.5 font-medium">{l.designName || "—"}</td>
+                        <td className="border border-black text-center p-1.5">Cái</td>
+                        <td className="border border-black text-right p-1.5 font-medium">
+                          {(l.deliveryQty || 0).toLocaleString("vi-VN")}
+                        </td>
+                        <td className="border border-black text-right p-1.5">
+                          {scrap.toLocaleString("vi-VN")}
+                        </td>
+                        <td className="border border-black text-right p-1.5 font-bold">
+                          {(l.netQtyTotal || l.deliveryQty || 0).toLocaleString("vi-VN")}
+                        </td>
+                        <td className="border border-black p-1.5 italic text-stone-700">
+                          {l.note || "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  <tr className="font-bold bg-stone-50">
+                    <td className="border border-black text-center p-1.5" colSpan={3}>Cộng</td>
+                    <td className="border border-black text-right p-1.5">
+                      {totalDeliveryQty.toLocaleString("vi-VN")}
+                    </td>
+                    <td className="border border-black text-right p-1.5">
+                      {totalScrapQty.toLocaleString("vi-VN")}
+                    </td>
+                    <td className="border border-black text-right p-1.5">
+                      {totalNetQty.toLocaleString("vi-VN")}
+                    </td>
+                    <td className="border border-black p-1.5"></td>
+                  </tr>
+                </tbody>
+              </table>
+
+              {/* Disclaimer Notice */}
+              <div className="disclaimer text-[10.5px] italic text-black mt-2 leading-relaxed">
+                *Quý khách vui lòng kiểm tra kỹ hàng trước khi ký nhận. Quý khách hàng có thắc mắc về lô hàng đã nhận vui lòng liên hệ với chúng tôi trong vòng 7 ngày kể từ ngày nhận hàng.
+              </div>
+
+              {/* Signatures Row */}
+              <div className="signatures flex justify-between mt-12 px-10 text-[13px] font-bold text-center">
+                <div className="w-40">
+                  <div>Người giao hàng</div>
+                  <div className="text-[10px] text-stone-400 font-normal italic mt-1">(Ký, ghi rõ họ tên)</div>
+                </div>
+                <div className="w-40">
+                  <div>Người nhận hàng</div>
+                  <div className="text-[10px] text-stone-400 font-normal italic mt-1">(Ký, ghi rõ họ tên)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter className="flex-shrink-0 border-t pt-4 flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            size="sm"
+            className="gap-1.5"
+          >
+            <X className="w-4 h-4" />
+            Đóng
+          </Button>
+          <Button
+            onClick={handlePrint}
+            size="sm"
+            className="gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+          >
+            <Printer className="w-4 h-4" />
+            In Phiếu
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -1071,6 +1071,7 @@ export const useAddDesignsToProofingOrder = () => {
     }: {
       id: number;
       request: AddDesignsToProofingOrderRequest;
+      suppressToast?: boolean;
     }) => {
       const response = await apiRequest.post<ProofingOrderResponse>(
         API_SUFFIX.PROOFING_ADD_DESIGNS(id),
@@ -1088,7 +1089,7 @@ export const useAddDesignsToProofingOrder = () => {
         return response.data as ProofingOrderResponse;
       }
     },
-    onSuccess: (_, { id, request }) => {
+    onSuccess: (_, { id, request, suppressToast }) => {
       queryClient.invalidateQueries({ queryKey: proofingKeys.all });
       queryClient.invalidateQueries({ queryKey: proofingKeys.detail(id) });
       // Invalidate available-order-details query to refresh the list
@@ -1099,9 +1100,11 @@ export const useAddDesignsToProofingOrder = () => {
           request.materialTypeId ?? null,
         ],
       });
-      toast.success("Thành công", {
-        description: "Đã Thêm thiết kế vào Bình Bài",
-      });
+      if (!suppressToast) {
+        toast.success("Thành công", {
+          description: "Đã Thêm thiết kế vào Bình Bài",
+        });
+      }
     },
     onError: (error: ApiError) => {
       // Specific handling for HTTP 409 Conflict – another operator allocated the design

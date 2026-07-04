@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-07-02T23:05:22.282Z */
+/* Generated at: 2026-07-03T23:49:29.180Z */
 
 import { z } from "zod";
 import { schemas } from "./generated";

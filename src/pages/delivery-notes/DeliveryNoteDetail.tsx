@@ -28,7 +28,10 @@ import {
   MoreHorizontal,
   RotateCcw,
   History,
+  Printer,
 } from "lucide-react";
+
+import PrintPreviewDialog from "./PrintPreviewDialog";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -150,6 +153,7 @@ export default function DeliveryNoteDetailPage() {
   const { user } = useAuth();
 
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
+  const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false);
   const [status, setStatus] = useState<UIStatus>("ok");
   const [cancelReason, setCancelReason] = useState("");
   const [failureReason, setFailureReason] = useState("");
@@ -631,6 +635,14 @@ export default function DeliveryNoteDetailPage() {
 
           <div className="flex items-center gap-2 flex-wrap lg:justify-end">
             <Button
+              onClick={() => setIsPrintPreviewOpen(true)}
+              size="sm"
+              className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm font-semibold"
+            >
+              <Printer className="w-4 h-4" />
+              In Phiếu Giao Hàng
+            </Button>
+            <Button
               variant="outline"
               size="sm"
               onClick={() => handleExportPDF("A4")}
@@ -760,180 +772,173 @@ export default function DeliveryNoteDetailPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Lines Table */}
-          <DeliveryLinesCard
-            lines={lines}
-            currentStatus={currentStatus}
-            isDelivered={isDelivered}
-            returnableLinesMap={returnableLinesMap}
-            openReturnDialog={openReturnDialog}
-          />
+      <div className="space-y-6">
+        {/* Horizontal Delivery Info Panel */}
+        <DeliveryInfoSidebar
+          deliveryNote={deliveryNote}
+          uniqueAddresses={uniqueAddresses}
+          formatDateTime={formatDateTime}
+        />
 
-          {/* Notes */}
-          {deliveryNote.notes && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Ghi chú</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm whitespace-pre-wrap">
-                  {deliveryNote.notes}
-                </p>
-              </CardContent>
-            </Card>
-          )}
+        {/* Lines Table */}
+        <DeliveryLinesCard
+          lines={lines}
+          currentStatus={currentStatus}
+          isDelivered={isDelivered}
+          returnableLinesMap={returnableLinesMap}
+          openReturnDialog={openReturnDialog}
+        />
 
-          {/* Return History - always show, even if empty */}
-          <Card className="border-amber-200/60 bg-amber-50/10">
-            <CardHeader className="pb-3 border-b border-border/40">
-              <CardTitle className="flex items-center gap-2 text-amber-700">
-                <History className="w-5 h-5 text-amber-600" />
-                Lịch sử trả hàng lỗi
-                {returnNotes && returnNotes.length > 0 && (
-                  <Badge variant="secondary" className="ml-auto text-amber-700 bg-amber-100">
-                    {returnNotes.length} phiếu
-                  </Badge>
-                )}
-              </CardTitle>
+        {/* Notes */}
+        {deliveryNote.notes && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Ghi chú</CardTitle>
             </CardHeader>
-            <CardContent className="p-0">
-              {!returnNotes || returnNotes.length === 0 ? (
-                <div className="py-8 text-center text-sm text-muted-foreground">
-                  <RotateCcw className="h-8 w-8 mx-auto mb-2 opacity-20" />
-                  Chưa có trả hàng nào
-                </div>
-              ) : (
-                <div className="overflow-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted/30">
-                        <TableHead className="pl-4">Phiếu trả</TableHead>
-                        <TableHead>Trạng thái</TableHead>
-                        <TableHead>Ngày tạo / Xử lý</TableHead>
-                        <TableHead>Sản phẩm</TableHead>
-                        <TableHead className="text-right">Số lượng trả</TableHead>
-                        <TableHead>Lý do</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {returnNotes.flatMap((note) =>
-                        (note.lines ?? []).map((l, idx) => (
-                          <TableRow key={`${note.id}-${l.id}`} className="hover:bg-muted/30 transition-colors">
-                            {idx === 0 ? (
-                              <>
-                                <TableCell className="pl-4" rowSpan={(note.lines ?? []).length}>
-                                  <div className="font-mono font-semibold text-sm text-amber-800">
-                                    {note.code || `#${note.id}`}
-                                  </div>
-                                </TableCell>
-                                <TableCell rowSpan={(note.lines ?? []).length}>
-                                  {note.statusLabel && (
-                                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs whitespace-nowrap">
-                                      {note.statusLabel}
-                                    </Badge>
-                                  )}
-                                </TableCell>
-                                <TableCell rowSpan={(note.lines ?? []).length}>
-                                  <div className="text-xs text-muted-foreground space-y-0.5">
-                                    <div>Tạo: {formatDateTime(note.createdAt)}</div>
-                                    {note.createdByName && <div className="text-foreground/60">{note.createdByName}</div>}
-                                    {note.processedAt && (
-                                      <div className="mt-1">
-                                        <div>Xử lý: {formatDateTime(note.processedAt)}</div>
-                                        {note.processedByName && <div className="text-foreground/60">{note.processedByName}</div>}
-                                      </div>
-                                    )}
-                                  </div>
-                                </TableCell>
-                              </>
-                            ) : null}
-                            <TableCell>
-                              <div className="space-y-0.5">
-                                <div className="font-medium text-sm">
-                                  {l.productName || l.productCode || "Sản phẩm"}
-                                </div>
-                                {l.productCode && (
-                                  <div className="font-mono text-xs text-muted-foreground">{l.productCode}</div>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <span className="font-bold text-amber-700">
-                                {l.returnQty.toLocaleString("vi-VN")}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <span className="text-sm text-muted-foreground italic">
-                                {l.reason || "—"}
-                              </span>
-                            </TableCell>
-                          </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
+            <CardContent>
+              <p className="text-sm whitespace-pre-wrap">
+                {deliveryNote.notes}
+              </p>
             </CardContent>
           </Card>
-        </div>
+        )}
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          <DeliveryInfoSidebar
-            deliveryNote={deliveryNote}
-            uniqueAddresses={uniqueAddresses}
-            formatDateTime={formatDateTime}
-          />
+        {/* Return History - always show, even if empty */}
+        <Card className="border-amber-200/60 bg-amber-50/10">
+          <CardHeader className="pb-3 border-b border-border/40">
+            <CardTitle className="flex items-center gap-2 text-amber-700">
+              <History className="w-5 h-5 text-amber-600" />
+              Lịch sử trả hàng lỗi
+              {returnNotes && returnNotes.length > 0 && (
+                <Badge variant="secondary" className="ml-auto text-amber-700 bg-amber-100">
+                  {returnNotes.length} phiếu
+                </Badge>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {!returnNotes || returnNotes.length === 0 ? (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                <RotateCcw className="h-8 w-8 mx-auto mb-2 opacity-20" />
+                Chưa có trả hàng nào
+              </div>
+            ) : (
+              <div className="overflow-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/30">
+                      <TableHead className="pl-4">Phiếu trả</TableHead>
+                      <TableHead>Trạng thái</TableHead>
+                      <TableHead>Ngày tạo / Xử lý</TableHead>
+                      <TableHead>Sản phẩm</TableHead>
+                      <TableHead className="text-right">Số lượng trả</TableHead>
+                      <TableHead>Lý do</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {returnNotes.flatMap((note) =>
+                      (note.lines ?? []).map((l, idx) => (
+                        <TableRow key={`${note.id}-${l.id}`} className="hover:bg-muted/30 transition-colors">
+                          {idx === 0 ? (
+                            <>
+                              <TableCell className="pl-4" rowSpan={(note.lines ?? []).length}>
+                                <div className="font-mono font-semibold text-sm text-amber-800">
+                                  {note.code || `#${note.id}`}
+                                </div>
+                              </TableCell>
+                              <TableCell rowSpan={(note.lines ?? []).length}>
+                                {note.statusLabel && (
+                                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs whitespace-nowrap">
+                                    {note.statusLabel}
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell rowSpan={(note.lines ?? []).length}>
+                                <div className="text-xs text-muted-foreground space-y-0.5">
+                                  <div>Tạo: {formatDateTime(note.createdAt)}</div>
+                                  {note.createdByName && <div className="text-foreground/60">{note.createdByName}</div>}
+                                  {note.processedAt && (
+                                    <div className="mt-1">
+                                      <div>Xử lý: {formatDateTime(note.processedAt)}</div>
+                                      {note.processedByName && <div className="text-foreground/60">{note.processedByName}</div>}
+                                    </div>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </>
+                          ) : null}
+                          <TableCell>
+                            <div className="space-y-0.5">
+                              <div className="font-medium text-sm">
+                                {l.productName || l.productCode || "Sản phẩm"}
+                              </div>
+                              {l.productCode && (
+                                <div className="font-mono text-xs text-muted-foreground">{l.productCode}</div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <span className="font-bold text-amber-700">
+                              {l.returnQty.toLocaleString("vi-VN")}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm text-muted-foreground italic">
+                              {l.reason || "—"}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-          {/* Line summary (groups by order) */}
-          {hasLines && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-sm">
-                  <Hash className="w-4 h-4" />
-                  Đơn hàng liên quan
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {Array.from(
-                  new Map(
-                    lines.map((l) => [(l as any).orderCode || l.id, l]),
-                  ).values(),
+        {/* Related Orders (Horizontal pills layout) */}
+        {hasLines && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Hash className="w-4 h-4" />
+                Đơn hàng liên quan
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pb-3 flex flex-wrap gap-2">
+              {Array.from(
+                new Map(
+                  lines.map((l) => [(l as any).orderCode || l.id, l]),
+                ).values(),
+              )
+                .reduce<{ orderCode: string | null; count: number }[]>(
+                  (acc, l) => {
+                    const code = (l as any).orderCode as string | null;
+                    const existing = acc.find((a) => a.orderCode === code);
+                    if (existing) {
+                      existing.count++;
+                    } else {
+                      acc.push({ orderCode: code, count: 1 });
+                    }
+                    return acc;
+                  },
+                  [],
                 )
-                  .reduce<{ orderCode: string | null; count: number }[]>(
-                    (acc, l) => {
-                      const code = (l as any).orderCode as string | null;
-                      const existing = acc.find((a) => a.orderCode === code);
-                      if (existing) {
-                        existing.count++;
-                      } else {
-                        acc.push({ orderCode: code, count: 1 });
-                      }
-                      return acc;
-                    },
-                    [],
-                  )
-                  .map(({ orderCode, count }) => (
-                    <div
-                      key={orderCode}
-                      className="flex items-center justify-between text-sm"
-                    >
-                      <span className="font-mono text-muted-foreground">
-                        {orderCode || "—"}
-                      </span>
-                      <Badge variant="secondary" className="text-xs">
-                        {count} đơn
-                      </Badge>
-                    </div>
-                  ))}
-              </CardContent>
-            </Card>
-          )}
-        </div>
+                .map(({ orderCode, count }) => (
+                  <div
+                    key={orderCode}
+                    className="flex items-center gap-2 text-sm px-3 py-1 bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-850 rounded-md font-mono"
+                  >
+                    <span className="text-stone-800 dark:text-stone-200 font-semibold">{orderCode || "—"}</span>
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                      {count} mặt hàng
+                    </Badge>
+                  </div>
+                ))}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Update Status Dialog (extracted) */}
@@ -952,6 +957,13 @@ export default function DeliveryNoteDetailPage() {
         setNotes={setNotes}
         onConfirm={() => handleUpdateStatus()}
         isPending={updateStatusMutation.isPending}
+      />
+
+      {/* Print Preview Dialog */}
+      <PrintPreviewDialog
+        open={isPrintPreviewOpen}
+        onOpenChange={setIsPrintPreviewOpen}
+        deliveryNote={deliveryNote}
       />
 
       {/* Recreate Dialog */}

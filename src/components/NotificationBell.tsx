@@ -21,7 +21,6 @@ function NotificationBell() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"all" | "unread">("all");
-  const [lastNotifId, setLastNotifId] = useState<number | null>(null);
 
   const { data, isLoading, refetch } = useDebtNotifications({ 
     pageSize: 10,
@@ -55,25 +54,6 @@ function NotificationBell() {
       connection.off("ReceiveNotification", handleNewNotification);
     };
   }, [connection, refetch, refetchUnreadCount]);
-
-  // Real-time toast logic (Facebook style)
-  useEffect(() => {
-    if (notifications.length > 0) {
-      const latest = notifications[0];
-      
-      // Nếu là lần đầu load hoặc có ID mới hơn ID cũ
-      if (lastNotifId !== null && latest.id !== lastNotifId) {
-        toast(latest.subject || "Thông báo mới", {
-          description: latest.body,
-          duration: 5000,
-          icon: <Bell className="h-4 w-4 text-primary" />,
-          className: "rounded-xl shadow-2xl border border-slate-800 bg-slate-900/95 text-white backdrop-blur-md p-4",
-          descriptionClassName: "text-slate-400",
-        });
-      }
-      setLastNotifId(latest.id);
-    }
-  }, [notifications, lastNotifId, navigate]);
 
   const handleDoubleClick = async (e: React.MouseEvent) => {
     e.preventDefault();
