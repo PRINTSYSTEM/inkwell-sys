@@ -98,6 +98,7 @@ export function DesignTable({
               </TableHead>
               <TableHead className="h-10 text-sm font-bold">Số mặt</TableHead>
               <TableHead className="h-10 text-sm font-bold">Quy cách</TableHead>
+                <TableHead className="h-10 text-sm font-bold">Giao hàng</TableHead>
               <TableHead className="h-10 text-sm font-bold">Ngày tạo</TableHead>
               <TableHead className="h-10 text-sm font-bold text-right sticky right-0 bg-background z-20">
                 Thao tác
@@ -108,6 +109,18 @@ export function DesignTable({
             {designs.map((design) => {
               const isSelected = selectedIds.has(design.id);
               const selectable = canSelect(design);
+              const isUrgent = Boolean(
+                (design as any).urgent ||
+                  (design as any).isUrgent ||
+                  (design as any).rush ||
+                  (design as any).isRushDelivery ||
+                  (design as any).urgentDelivery,
+              );
+              const deliveryInfo =
+                (design as any).deliveryPerson ||
+                (design as any).deliveryNote ||
+                (design as any).delivery ||
+                null;
 
               // Build full info for tooltip
               const fullInfo = (
@@ -318,25 +331,32 @@ export function DesignTable({
                       )}
                     </TableCell>
                     <TableCell className="py-3">
-                      {design.queueItemId?.startsWith("RD_") ? (
-                        <Badge
-                          variant="secondary"
-                          className="bg-gray-100 text-gray-600 border-none font-normal text-xs py-0.5 px-2 hover:bg-gray-100"
-                        >
-                          Chưa lên đơn
-                        </Badge>
-                      ) : design.orderCode ? (
-                        <div className="flex items-center gap-1.5">
-                          <FileText className="h-3 w-3 text-muted-foreground" />
-                          <span className="font-semibold text-sm text-primary">
-                            {design.orderCode}
+                      <div className="flex items-center gap-1.5">
+                        {isUrgent && (
+                          <Badge variant="destructive" className="text-xs">
+                            GẤP
+                          </Badge>
+                        )}
+                        {design.queueItemId?.startsWith("RD_") ? (
+                          <Badge
+                            variant="secondary"
+                            className="bg-gray-100 text-gray-600 border-none font-normal text-xs py-0.5 px-2 hover:bg-gray-100"
+                          >
+                            Chưa lên đơn
+                          </Badge>
+                        ) : design.orderCode ? (
+                          <div className="flex items-center gap-1.5">
+                            <FileText className="h-3 w-3 text-muted-foreground" />
+                            <span className="font-semibold text-sm text-primary">
+                              {design.orderCode}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-sm font-semibold">
+                            -
                           </span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground text-sm font-semibold">
-                          -
-                        </span>
-                      )}
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="py-3 font-mono text-sm font-semibold">
                       <div className="flex items-center gap-1.5">
@@ -437,6 +457,15 @@ export function DesignTable({
                           );
                         })()}
                       </div>
+                    </TableCell>
+                    <TableCell className="py-3 text-sm">
+                      {deliveryInfo ? (
+                        <div className="text-sm text-muted-foreground">
+                          {deliveryInfo}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="py-3 text-[11px] text-muted-foreground whitespace-nowrap">
                       {design.createdAt ? (
