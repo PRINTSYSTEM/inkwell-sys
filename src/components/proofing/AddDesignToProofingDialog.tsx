@@ -31,6 +31,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
+import { sidesClassificationLabels } from "@/lib/status-utils";
 
 interface AddDesignToProofingDialogProps {
   open: boolean;
@@ -64,6 +66,10 @@ export function AddDesignToProofingDialog({
     new Set()
   );
   const [searchTerm, setSearchTerm] = useState("");
+  const [viewingImage, setViewingImage] = useState<{
+    url: string;
+    title: string;
+  } | null>(null);
 
   // Helper functions to check design type
   const isNhanDesignType = (designTypeName: string): boolean => {
@@ -230,7 +236,7 @@ export function AddDesignToProofingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] p-0 gap-0 overflow-hidden flex flex-col">
+      <DialogContent className="max-w-7xl max-h-[90vh] p-0 gap-0 overflow-hidden flex flex-col">
         {/* Compact Header */}
         <DialogHeader className="px-5 py-3 border-b shrink-0">
           <div className="flex items-center justify-between">
@@ -314,12 +320,16 @@ export function AddDesignToProofingDialog({
                   />
                 </TableHead>
                 <TableHead className="w-12 text-center">#</TableHead>
+                <TableHead className="w-16 text-center">Ảnh</TableHead>
                 <TableHead className="min-w-[200px]">mã hàng</TableHead>
                 <TableHead className="w-32">Kích thước</TableHead>
                 <TableHead className="w-24 text-right">Đặt hàng</TableHead>
                 <TableHead className="w-24 text-right">Còn lại</TableHead>
+                <TableHead className="w-40">Chất liệu</TableHead>
+                <TableHead className="w-24">Số mặt</TableHead>
                 <TableHead className="w-48">Số lượng lấy</TableHead>
                 <TableHead className="w-28 text-right">Sau khi lấy</TableHead>
+                <TableHead className="w-40 text-center">Thời gian tạo</TableHead>
                 <TableHead className="w-16 text-center">Trạng thái</TableHead>
               </TableRow>
             </TableHeader>
@@ -327,7 +337,7 @@ export function AddDesignToProofingDialog({
               {filteredDesigns.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={8}
+                    colSpan={12}
                     className="text-center text-muted-foreground py-8"
                   >
                     {currentDesign
@@ -339,13 +349,13 @@ export function AddDesignToProofingDialog({
                 filteredDesigns.map((design, index) => {
                   const currentQty = designQuantities[design.id] || 0;
                   const isSelected = selectedDesignIds.has(design.id);
-
+ 
                   const baseAvailableQty =
                     design.availableQuantity !== undefined &&
                     design.availableQuantity >= 0
                       ? design.availableQuantity
                       : design.quantity;
-
+ 
                   const maxQty = baseAvailableQty;
                   const remainingQty = Math.max(
                     0,
@@ -355,7 +365,7 @@ export function AddDesignToProofingDialog({
                   const isExceeded = currentQty > maxQty;
                   const hasAvailableQuantity =
                     design.availableQuantity !== undefined;
-
+ 
                   return (
                     <TableRow
                       key={design.id}
@@ -373,6 +383,28 @@ export function AddDesignToProofingDialog({
                       </TableCell>
                       <TableCell className="text-center text-xs text-muted-foreground font-medium">
                         {index + 1}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {design.thumbnailUrl ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setViewingImage({
+                                url: design.thumbnailUrl,
+                                title: design.name,
+                              });
+                            }}
+                            className="w-10 h-10 rounded object-cover bg-muted overflow-hidden hover:opacity-80 transition-opacity mx-auto block"
+                          >
+                            <img
+                              src={design.thumbnailUrl}
+                              alt={design.name}
+                              className="w-full h-full object-cover"
+                            />
+                          </button>
+                        ) : (
+                          <div className="w-10 h-10 rounded bg-muted mx-auto" />
+                        )}
                       </TableCell>
                       <TableCell>
                         <div>
@@ -421,6 +453,21 @@ export function AddDesignToProofingDialog({
                         )}
                       </TableCell>
                       <TableCell>
+                        <div className="text-sm text-muted-foreground max-w-[150px] truncate" title={design.materialTypeName}>
+                          {design.materialTypeName || "—"}
+                          {design.basisWeight && design.basisWeight > 0 ? ` (${design.basisWeight} gsm)` : ""}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {design.sidesClassification ? (
+                          <Badge variant="outline" className="text-xs font-normal">
+                            {sidesClassificationLabels[design.sidesClassification] || design.sidesClassification}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
                         <div className="flex items-center gap-2">
                           <Input
                             type="number"
@@ -463,6 +510,23 @@ export function AddDesignToProofingDialog({
                           {remainingQty.toLocaleString()}
                         </span>
                       </TableCell>
+                      <TableCell className="text-center text-xs text-muted-foreground whitespace-nowrap">
+                        {design.createdAt ? (
+                          (() => {
+                            const date = new Date(design.createdAt);
+                            if (isNaN(date.getTime())) return "—";
+                            const day = String(date.getDate()).padStart(2, "0");
+                            const month = String(date.getMonth() + 1).padStart(2, "0");
+                            const year = date.getFullYear();
+                            const hours = String(date.getHours()).padStart(2, "0");
+                            const minutes = String(date.getMinutes()).padStart(2, "0");
+                            const seconds = String(date.getSeconds()).padStart(2, "0");
+                            return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+                          })()
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
                       <TableCell className="text-center">
                         {isExceeded ? (
                           <AlertCircle className="h-4 w-4 text-destructive mx-auto" />
@@ -481,7 +545,7 @@ export function AddDesignToProofingDialog({
             </TableBody>
           </Table>
         </div>
-
+ 
         {/* Footer */}
         <DialogFooter className="px-5 py-3 border-t shrink-0 gap-2">
           <div className="flex-1 text-xs text-muted-foreground">
@@ -525,6 +589,16 @@ export function AddDesignToProofingDialog({
           </Button>
         </DialogFooter>
       </DialogContent>
+      {viewingImage && (
+        <ImageViewerDialog
+          open={!!viewingImage}
+          onOpenChange={(open) => {
+            if (!open) setViewingImage(null);
+          }}
+          imageUrl={viewingImage.url}
+          title={viewingImage.title}
+        />
+      )}
     </Dialog>
   );
 }

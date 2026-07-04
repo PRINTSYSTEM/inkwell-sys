@@ -154,6 +154,7 @@ export default function DeliveryNoteDetailPage() {
 
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
   const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false);
+  const [printWithPrice, setPrintWithPrice] = useState(false);
   const [status, setStatus] = useState<UIStatus>("ok");
   const [cancelReason, setCancelReason] = useState("");
   const [failureReason, setFailureReason] = useState("");
@@ -635,12 +636,26 @@ export default function DeliveryNoteDetailPage() {
 
           <div className="flex items-center gap-2 flex-wrap lg:justify-end">
             <Button
-              onClick={() => setIsPrintPreviewOpen(true)}
+              onClick={() => {
+                setPrintWithPrice(false);
+                setIsPrintPreviewOpen(true);
+              }}
               size="sm"
               className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm font-semibold"
             >
               <Printer className="w-4 h-4" />
               In Phiếu Giao Hàng
+            </Button>
+            <Button
+              onClick={() => {
+                setPrintWithPrice(true);
+                setIsPrintPreviewOpen(true);
+              }}
+              size="sm"
+              className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm font-semibold"
+            >
+              <Printer className="w-4 h-4" />
+              In Phiếu (Có Tiền)
             </Button>
             <Button
               variant="outline"
@@ -964,6 +979,7 @@ export default function DeliveryNoteDetailPage() {
         open={isPrintPreviewOpen}
         onOpenChange={setIsPrintPreviewOpen}
         deliveryNote={deliveryNote}
+        showPrice={printWithPrice}
       />
 
       {/* Recreate Dialog */}

@@ -121,6 +121,8 @@ import {
   CommandList,
 } from "@/components/ui/command";
 
+import { apiRequest } from "@/lib/http";
+
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
@@ -1143,6 +1145,18 @@ export default function DeliveryNoteListPage() {
     setIsRecreateDialogOpen(false);
     setRecreateNoteId(null);
     if (res && res.id) {
+      try {
+        await apiRequest.put(`/delivery-notes/${res.id}/status`, {
+          status: "in_transit",
+          cancelReason: null,
+          failureReason: null,
+          failureType: null,
+          affectsDebt: false,
+          notes: null,
+        });
+      } catch (statusErr) {
+        console.error("Lỗi tự động cập nhật trạng thái Đang giao:", statusErr);
+      }
       navigate(`/delivery-notes/${res.id}`);
     }
   };
@@ -1267,6 +1281,18 @@ export default function DeliveryNoteListPage() {
       refetchDeliveryNotes();
       setViewMode("delivery-notes");
       if (res && res.id) {
+        try {
+          await apiRequest.put(`/delivery-notes/${res.id}/status`, {
+            status: "in_transit",
+            cancelReason: null,
+            failureReason: null,
+            failureType: null,
+            affectsDebt: false,
+            notes: null,
+          });
+        } catch (statusErr) {
+          console.error("Lỗi tự động cập nhật trạng thái Đang giao:", statusErr);
+        }
         navigate(`/delivery-notes/${res.id}`);
       }
     } catch (error) {
@@ -1696,22 +1722,6 @@ function OrdersView({
                           {group.details.length} thiết kế
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-1 text-xs text-stone-500 mt-1">
-                        <User className="h-3.5 w-3.5 text-stone-400 shrink-0" />
-                        <span className="text-stone-400 mr-1 shrink-0">Khách hàng :</span>
-                        <span className="truncate font-semibold text-stone-850 dark:text-stone-200">
-                          {uniqueCustomerNames.join(", ") || "—"}
-                        </span>
-                      </div>
-                      {uniqueAddresses.length > 0 && (
-                        <div className="flex items-center gap-1 text-xs text-stone-500 mt-1">
-                          <MapPin className="h-3.5 w-3.5 text-stone-400 shrink-0" />
-                          <span className="text-stone-400 mr-1 shrink-0">Địa chỉ giao hàng :</span>
-                          <span className="truncate text-stone-700 dark:text-stone-300" title={uniqueAddresses.join("; ")}>
-                            {uniqueAddresses.join("; ")}
-                          </span>
-                        </div>
-                      )}
                     </div>
                   </div>
 
