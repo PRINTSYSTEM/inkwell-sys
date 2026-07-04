@@ -268,8 +268,13 @@ export function DetailDesignsListCard({
                         <span className="text-muted-foreground">
                           Thiết kế:
                         </span>
-                        <span className="ml-2">
+                        <span className="ml-2 font-medium">
                           {pod.design?.designer?.fullName || "—"}
+                          { (pod.design?.customer?.companyName || pod.design?.customer?.name) && (
+                            <span className="text-muted-foreground font-normal">
+                              {" - "}{pod.design.customer.companyName || pod.design.customer.name}
+                            </span>
+                          )}
                         </span>
                       </div>
                     </div>
