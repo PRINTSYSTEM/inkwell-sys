@@ -170,9 +170,11 @@ export default function PrintPreviewDialog({
       }
       .text-center { text-align: center !important; }
       .text-right { text-align: right !important; }
+      .text-left { text-align: left !important; }
       .font-bold { font-weight: bold; }
       .disclaimer {
-        font-size: 10.5px;
+        font-size: 12.5px;
+        font-weight: bold;
         font-style: italic;
         color: #000;
         margin-top: 8px;
@@ -248,11 +250,10 @@ export default function PrintPreviewDialog({
         {/* Paper Area wrapper */}
         <div className="flex-1 overflow-auto py-6 flex justify-center bg-stone-200/50 dark:bg-stone-950/40 rounded-lg border border-inner">
           <div
-            className={`bg-white text-black p-8 shadow-md border border-stone-300 transition-all duration-300 origin-top ${
-              printType === "A4"
-                ? "w-[210mm] min-h-[297mm] aspect-[1/1.414]"
-                : "w-[210mm] min-h-[148mm] aspect-[1.414/1]"
-            }`}
+            className={`bg-white text-black p-8 shadow-md border border-stone-300 transition-all duration-300 origin-top ${printType === "A4"
+              ? "w-[210mm] min-h-[297mm] aspect-[1/1.414]"
+              : "w-[210mm] min-h-[148mm] aspect-[1.414/1]"
+              }`}
             style={{
               fontFamily: '"Times New Roman", Times, serif',
             }}
@@ -315,16 +316,16 @@ export default function PrintPreviewDialog({
                     <th className="border border-black text-center p-1 w-10">STT</th>
                     <th className="border border-black text-center p-1">TÊN SẢN PHẨM</th>
                     <th className="border border-black text-center p-1 w-12">ĐVT</th>
-                    <th className="border border-black text-center p-1 w-16 leading-tight">SỐ<br/>LƯỢNG</th>
-                    <th className="border border-black text-center p-1 w-14 leading-tight">PHỤ<br/>HAO</th>
-                    <th className="border border-black text-center p-1 w-16 leading-tight">SL<br/>THỰC</th>
+                    <th className="border border-black text-center p-1 w-16 leading-tight">SỐ<br />LƯỢNG</th>
+                    <th className="border border-black text-center p-1 w-14 leading-tight">PHỤ<br />HAO</th>
+                    <th className="border border-black text-center p-1 w-16 leading-tight">SL<br />THỰC</th>
                     {showPrice && (
                       <>
-                        <th className="border border-black text-center p-1 w-18 leading-tight">ĐƠN<br/>GIÁ</th>
-                        <th className="border border-black text-center p-1 w-22 leading-tight">THÀNH<br/>TIỀN</th>
+                        <th className="border border-black text-center p-1 w-18 leading-tight">ĐƠN<br />GIÁ</th>
+                        <th className="border border-black text-center p-1 w-22 leading-tight">THÀNH<br />TIỀN</th>
                       </>
                     )}
-                    <th className="border border-black text-center p-1 w-20 leading-tight">GHI<br/>CHÚ</th>
+                    <th className="border border-black text-center p-1 w-20 leading-tight">GHI<br />CHÚ</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -341,7 +342,7 @@ export default function PrintPreviewDialog({
                     return (
                       <tr key={l.id || index}>
                         <td className="border border-black text-center p-1.5">{index + 1}</td>
-                        <td className="border border-black p-1.5 font-medium text-center">{l.designName || "—"}</td>
+                        <td className="border border-black p-1.5 font-medium text-left" style={{ textAlign: "left", paddingLeft: "8px" }}>{l.designName || "—"}</td>
                         <td className="border border-black text-center p-1.5">Cái</td>
                         <td className="border border-black text-center p-1.5 font-medium">
                           {(l.deliveryQty || 0).toLocaleString("vi-VN")}
@@ -369,15 +370,14 @@ export default function PrintPreviewDialog({
                     );
                   })}
                   <tr className="font-bold bg-stone-50">
-                    <td className="border border-black text-center p-1.5" colSpan={3}>Cộng</td>
-                    <td className="border border-black text-center p-1.5">
-                      {totalDeliveryQty.toLocaleString("vi-VN")}
+                    <td className="border border-black text-center p-1.5" colSpan={3}>
+                      {showPrice ? "CỘNG TIỀN HÀNG" : "CỘNG TIỀN HÀNG"}
                     </td>
                     <td className="border border-black text-center p-1.5">
-                      {totalScrapQty.toLocaleString("vi-VN")}
                     </td>
                     <td className="border border-black text-center p-1.5">
-                      {totalNetQty.toLocaleString("vi-VN")}
+                    </td>
+                    <td className="border border-black text-center p-1.5">
                     </td>
                     {showPrice && (
                       <>
@@ -393,19 +393,17 @@ export default function PrintPreviewDialog({
               </table>
 
               {/* Disclaimer Notice */}
-              <div className="disclaimer text-[10.5px] italic text-black mt-2 leading-relaxed">
+              <div className="disclaimer text-[12.5px] font-bold italic text-black mt-2 leading-relaxed" style={{ fontSize: "12.5px", fontWeight: "bold" }}>
                 *Quý khách vui lòng kiểm tra kỹ hàng trước khi ký nhận. Quý khách hàng có thắc mắc về lô hàng đã nhận vui lòng liên hệ với chúng tôi trong vòng 7 ngày kể từ ngày nhận hàng.
               </div>
 
               {/* Signatures Row */}
               <div className="signatures flex justify-between mt-12 px-10 text-[13px] font-bold text-center">
                 <div className="w-40">
-                  <div>Người giao hàng</div>
-                  <div className="text-[10px] text-stone-400 font-normal italic mt-1">(Ký, ghi rõ họ tên)</div>
+                  <div>Bên giao </div>
                 </div>
                 <div className="w-40">
-                  <div>Người nhận hàng</div>
-                  <div className="text-[10px] text-stone-400 font-normal italic mt-1">(Ký, ghi rõ họ tên)</div>
+                  <div>Bên nhận </div>
                 </div>
               </div>
             </div>
