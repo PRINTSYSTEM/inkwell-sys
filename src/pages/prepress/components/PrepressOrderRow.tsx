@@ -139,6 +139,11 @@ export function PrepressOrderRow({
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
                   Thiết kế {idx + 1}: {d?.designName || d?.code || "—"}
+                  {d?.customer && (
+                    <span className="text-muted-foreground font-normal text-[10px]">
+                      {" - "}{d.customer.companyName || d.customer.name}
+                    </span>
+                  )}
                 </p>
                 <div className="bg-muted/30 rounded-md p-2.5 space-y-1.5 border text-xs">
                   <div className="flex justify-between items-center">
@@ -149,17 +154,12 @@ export function PrepressOrderRow({
                       {d?.latestOrderCode || d?.orderCode || "—"}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center gap-2">
-                    <span className="text-muted-foreground font-medium shrink-0">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground font-medium">
                       Người tạo thiết kế:
                     </span>
-                    <span className="font-semibold text-slate-700 dark:text-slate-300 truncate text-right" title={`${d?.designer?.fullName || d?.designer?.username || "—"}${d?.customer ? ` - ${d.customer.companyName || d.customer.name}` : ""}`}>
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">
                       {d?.designer?.fullName || d?.designer?.username || "—"}
-                      {d?.customer && (
-                        <span className="text-muted-foreground font-normal">
-                          {" - "}{d.customer.companyName || d.customer.name}
-                        </span>
-                      )}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">

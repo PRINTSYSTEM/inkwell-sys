@@ -298,6 +298,18 @@ export const MENU_ITEMS: MenuItem[] = [
     ],
     children: [
       {
+        id: "accounting-design-lookup",
+        title: "Tra cứu thiết kế và giá",
+        icon: PackageSearch,
+        path: ROUTE_PATHS.DESIGN.SALE_LOOKUP,
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.ACCOUNTING,
+          ROLE.ACCOUNTING_LEAD,
+        ],
+      },
+      {
         id: "accounting-invoice",
         title: "Hóa đơn",
         icon: FileText,
