@@ -170,9 +170,11 @@ export default function PrintPreviewDialog({
       }
       .text-center { text-align: center !important; }
       .text-right { text-align: right !important; }
+      .text-left { text-align: left !important; }
       .font-bold { font-weight: bold; }
       .disclaimer {
-        font-size: 10.5px;
+        font-size: 12.5px;
+        font-weight: bold;
         font-style: italic;
         color: #000;
         margin-top: 8px;
@@ -341,7 +343,7 @@ export default function PrintPreviewDialog({
                     return (
                       <tr key={l.id || index}>
                         <td className="border border-black text-center p-1.5">{index + 1}</td>
-                        <td className="border border-black p-1.5 font-medium text-center">{l.designName || "—"}</td>
+                        <td className="border border-black p-1.5 font-medium text-left" style={{ textAlign: "left", paddingLeft: "8px" }}>{l.designName || "—"}</td>
                         <td className="border border-black text-center p-1.5">Cái</td>
                         <td className="border border-black text-center p-1.5 font-medium">
                           {(l.deliveryQty || 0).toLocaleString("vi-VN")}
@@ -369,15 +371,17 @@ export default function PrintPreviewDialog({
                     );
                   })}
                   <tr className="font-bold bg-stone-50">
-                    <td className="border border-black text-center p-1.5" colSpan={3}>Cộng</td>
-                    <td className="border border-black text-center p-1.5">
-                      {totalDeliveryQty.toLocaleString("vi-VN")}
+                    <td className="border border-black text-center p-1.5" colSpan={3}>
+                      {showPrice ? "CỘNG TIỀN HÀNG" : "Cộng"}
                     </td>
                     <td className="border border-black text-center p-1.5">
-                      {totalScrapQty.toLocaleString("vi-VN")}
+                      {showPrice ? "" : totalDeliveryQty.toLocaleString("vi-VN")}
                     </td>
                     <td className="border border-black text-center p-1.5">
-                      {totalNetQty.toLocaleString("vi-VN")}
+                      {showPrice ? "" : totalScrapQty.toLocaleString("vi-VN")}
+                    </td>
+                    <td className="border border-black text-center p-1.5">
+                      {showPrice ? "" : totalNetQty.toLocaleString("vi-VN")}
                     </td>
                     {showPrice && (
                       <>
@@ -393,7 +397,7 @@ export default function PrintPreviewDialog({
               </table>
 
               {/* Disclaimer Notice */}
-              <div className="disclaimer text-[10.5px] italic text-black mt-2 leading-relaxed">
+              <div className="disclaimer text-[12.5px] font-bold italic text-black mt-2 leading-relaxed" style={{ fontSize: "12.5px", fontWeight: "bold" }}>
                 *Quý khách vui lòng kiểm tra kỹ hàng trước khi ký nhận. Quý khách hàng có thắc mắc về lô hàng đã nhận vui lòng liên hệ với chúng tôi trong vòng 7 ngày kể từ ngày nhận hàng.
               </div>
 

@@ -1810,7 +1810,7 @@ function OrdersView({
                               <TableCell className="w-[120px] font-mono font-black text-[11px] uppercase text-stone-800 dark:text-stone-200">
                                 {detail.designCode}
                               </TableCell>
-                              <TableCell className="text-[11px] text-stone-500 font-medium truncate max-w-[150px] md:max-w-[200px]" title={detail.designName}>
+                              <TableCell className="text-[11px] text-stone-500 font-medium truncate max-w-[150px] md:max-w-[200px] text-left" title={detail.designName}>
                                 {detail.designName}
                               </TableCell>
                               <TableCell className="text-[11px] text-stone-500 font-medium truncate max-w-[150px] md:max-w-[200px]" title={detail.deliveryAddress || ""}>
