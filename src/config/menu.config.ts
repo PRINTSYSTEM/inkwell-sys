@@ -76,7 +76,7 @@ export const MENU_ITEMS: MenuItem[] = [
     id: "design-dept",
     title: "Thiết kế",
     icon: Palette,
-    allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.DESIGN, ROLE.DESIGN_LEAD],
+    allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.DESIGN, ROLE.DESIGN_LEAD,ROLE.SALE],
     children: [
       {
         id: "design-staff",
@@ -90,7 +90,7 @@ export const MENU_ITEMS: MenuItem[] = [
         title: "Danh sách thiết kế",
         icon: Eye,
         path: ROUTE_PATHS.DESIGN.ALL,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.DESIGN_LEAD],
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.DESIGN_LEAD, ROLE.SALE],
       },
       {
         id: "design-my-work",

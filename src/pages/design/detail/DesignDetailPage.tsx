@@ -408,6 +408,7 @@ export default function DesignDetailPage() {
   const canUpdateStatus =
     user?.role === ROLE.DESIGN ||
     user?.role === ROLE.DESIGN_LEAD ||
+    user?.role === ROLE.SALE ||
     user?.role === ROLE.ADMIN;
 
   const canChangeStatus =
@@ -748,6 +749,7 @@ export default function DesignDetailPage() {
   const canEditDesign =
     (user?.role === ROLE.DESIGN ||
       user?.role === ROLE.DESIGN_LEAD ||
+      user?.role === ROLE.SALE ||
       user?.role === ROLE.ADMIN) &&
     !hasProofingOrder;
 

@@ -1332,7 +1332,7 @@ function SpecValuesTab() {
 // ==========================================
 function SupplierCatalogsTab() {
   const { data: vendorsData } = useVendors({ pageSize: 1000, isActive: true });
-  const { data: templatesResp } = useMaterialTypeList({ pageSize: 100 });
+  const { data: templatesResp } = useMaterialTypeList({ status: "active", pageSize: 100 });
   const { data: specValuesData } = useSpecValues();
 
   const [selectedVendorId, setSelectedVendorId] = useState<string>("");
