@@ -589,6 +589,23 @@ export default function DesignDetailPage() {
     }
   };
 
+  const handleDrop = async (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!enabled) return;
+
+    const files = Array.from(event.dataTransfer.files);
+    if (files.length > 0) {
+      await handleDesignFileUpload(files);
+    }
+  };
+
+  const handleDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
   const handleTimelineAdd = async (image: File, description: string) => {
     if (!enabled) return;
     try {
@@ -1714,6 +1731,8 @@ export default function DesignDetailPage() {
                   <Card
                     className="flex-1 flex flex-col items-center justify-center border-2 border-dashed cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all"
                     onClick={() => fileInputRef.current?.click()}
+                    onDrop={handleDrop}
+                    onDragOver={handleDragOver}
                   >
                     <CardContent className="flex flex-col items-center justify-center p-6">
                       <UploadCloud className="h-12 w-12 text-muted-foreground mb-3" />
@@ -1721,7 +1740,7 @@ export default function DesignDetailPage() {
                         Chưa có file thiết kế
                       </p>
                       <p className="text-xs text-muted-foreground text-center">
-                        Click để tải lên file thiết kế
+                        Kéo thả ảnh hoặc file .ai vào đây để tải lên
                       </p>
                     </CardContent>
                   </Card>
