@@ -130,13 +130,6 @@ export const MENU_ITEMS: MenuItem[] = [
         path: ROUTE_PATHS.ACCOUNTING.CASH_RECEIPTS,
         allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.SALE],
       },
-      {
-        id: "sale-design-lookup",
-        title: "Tra cứu thiết kế",
-        icon: PackageSearch,
-        path: ROUTE_PATHS.DESIGN.SALE_LOOKUP,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.SALE],
-      },
     ],
   },
 
@@ -170,6 +163,20 @@ export const MENU_ITEMS: MenuItem[] = [
       ROLE.ACCOUNTING_LEAD,
       ROLE.PRODUCTION,
       ROLE.PRODUCTION_LEAD,
+      ROLE.DESIGN,
+      ROLE.DESIGN_LEAD,
+      ROLE.SALE,
+    ],
+  },
+  {
+    id: "design-price-lookup-top",
+    title: "Tra cứu thiết kế và giá",
+    icon: PackageSearch,
+    path: ROUTE_PATHS.DESIGN.SALE_LOOKUP,
+    allowedRoles: [
+      ROLE.ADMIN,
+      ROLE.MANAGER,
+      ROLE.ACCOUNTING,
       ROLE.DESIGN,
       ROLE.DESIGN_LEAD,
       ROLE.SALE,
@@ -297,18 +304,6 @@ export const MENU_ITEMS: MenuItem[] = [
       ROLE.ACCOUNTING_LEAD,
     ],
     children: [
-      {
-        id: "accounting-design-lookup",
-        title: "Tra cứu thiết kế và giá",
-        icon: PackageSearch,
-        path: ROUTE_PATHS.DESIGN.SALE_LOOKUP,
-        allowedRoles: [
-          ROLE.ADMIN,
-          ROLE.MANAGER,
-          ROLE.ACCOUNTING,
-          ROLE.ACCOUNTING_LEAD,
-        ],
-      },
       {
         id: "accounting-invoice",
         title: "Hóa đơn",
