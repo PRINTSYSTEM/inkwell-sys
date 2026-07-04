@@ -44,6 +44,7 @@ interface DetailEmptyOrderViewProps {
   handleSubmitDesigns: () => void;
   isAddingDesigns: boolean;
   isProofer?: boolean;
+  nextOrderId?: string | number;
 }
 
 export function DetailEmptyOrderView({
@@ -68,6 +69,7 @@ export function DetailEmptyOrderView({
   handleSubmitDesigns,
   isAddingDesigns,
   isProofer = true,
+  nextOrderId,
 }: DetailEmptyOrderViewProps) {
   return (
     <div className="flex-1 flex min-h-0 w-full max-w-full overflow-hidden border rounded-lg shadow-sm bg-background relative">
@@ -75,13 +77,22 @@ export function DetailEmptyOrderView({
         <div className="flex-1 flex flex-col min-h-0 bg-background">
           {/* Right header */}
           <div className="shrink-0 border-b bg-card/50 px-4 py-3 flex items-center justify-between gap-2">
-            <div>
-              <p className="text-base font-bold">Thêm mã hàng vào bình bài</p>
-              <p className="text-sm font-medium text-muted-foreground">
-                {selectedDesigns.length > 0
-                  ? `${selectedDesigns.length} mã hàng • ${selectedCount} đã nhập số lượng`
-                  : "Chọn mã hàng ở cột bên trái để thêm vào lệnh"}
+            <div className="flex flex-col gap-1 min-w-0">
+              <p className="text-base font-bold text-foreground truncate">
+                Thêm mã hàng vào bình bài
               </p>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                {nextOrderId && (
+                  <Badge variant="secondary" className="text-[11px] font-bold px-1.5 py-0 bg-blue-50 text-blue-600 border border-blue-100 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900 shrink-0 select-none">
+                    Mã bài: {nextOrderId}
+                  </Badge>
+                )}
+                <span className="text-xs text-muted-foreground truncate">
+                  {selectedDesigns.length > 0
+                    ? `${selectedDesigns.length} mã hàng • ${selectedCount} đã nhập`
+                    : "Chọn mã hàng bên trái"}
+                </span>
+              </div>
             </div>
             {materialTypeName && (
               <Badge variant="secondary" className="text-sm font-semibold">

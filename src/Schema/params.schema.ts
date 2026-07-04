@@ -26,6 +26,8 @@ import {
 
 export const DesignListParamsSchema = GenDesignListParamsSchema.extend({
   search: z.string().nullable().optional(),
+  designTypeId: z.number().nullable().optional(),
+  materialTypeId: z.number().nullable().optional(),
 });
 export type DesignListParams = z.infer<typeof DesignListParamsSchema>;
 

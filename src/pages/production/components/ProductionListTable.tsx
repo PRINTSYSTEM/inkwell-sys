@@ -773,16 +773,6 @@ function ProductionTableRow({
       });
     }
     
-    if (Array.isArray(proofingOrder.proofingOrderDesigns)) {
-      proofingOrder.proofingOrderDesigns.forEach((pod: any) => {
-        if (pod.design?.designImageUrl) {
-          urls.push(pod.design.designImageUrl);
-        } else if (pod.design?.imageUrl) {
-          urls.push(pod.design.imageUrl);
-        }
-      });
-    }
-    
     return Array.from(new Set(urls));
   }, [proofingOrder]);
 
@@ -1820,52 +1810,68 @@ function ProductionTableRow({
 
                       return (
                         <div key={`${pod.id}-${matchingStep.id}`} className="grid grid-cols-[1fr_auto] gap-3 py-2 first:pt-0 border-b border-dashed last:border-0">
-                          <div className="bg-muted/20 p-2.5 rounded-md text-xs">
-                            <p className="font-bold text-[13px] text-foreground mb-1.5 break-all">
-                              {highlightText(
-                                pod.design?.designName || pod.design?.code || "—",
-                                searchTerm
-                              )}
-                            </p>
-                            <div className="flex flex-col gap-1 text-[11px]">
-                              <div className="flex justify-between items-center gap-1 border-b border-muted/50 pb-1">
-                                <span className="text-muted-foreground font-medium whitespace-nowrap">
-                                  Số lượng:
-                                </span>
-                                <span className="font-bold text-foreground text-amber-700 text-right">
-                                  {pod.quantity} SP
-                                </span>
-                              </div>
-
-                              <div className="flex justify-between items-center gap-1 border-b border-muted/50 pb-1">
-                                <span className="text-muted-foreground font-medium whitespace-nowrap">
-                                  Mã:
-                                </span>
-                                <span className="font-bold text-foreground text-right truncate">
-                                  {pod.design?.code
-                                    ? highlightText(pod.design.code, searchTerm)
-                                    : "—"}
-                                </span>
-                              </div>
-
-                              <div className="flex justify-between items-center gap-1">
-                                <span className="text-muted-foreground font-medium whitespace-nowrap">
-                                  Kích thước:
-                                </span>
-                                <span className="font-bold text-foreground text-right truncate">
-                                  {pod.design?.dimensions
-                                    ? String(pod.design.dimensions)
-                                    : "—"}
-                                </span>
-                              </div>
-                              
-                              {(pod.notes || pod.design?.notes) && (
-                                <div className="flex flex-col gap-0.5 mt-1 pt-1 border-t border-muted/30">
-                                  <span className="font-bold text-amber-700 break-words whitespace-pre-wrap italic leading-tight text-[11px]">
-                                    {pod.notes || pod.design?.notes}
+                          <div className="bg-muted/20 p-2 text-xs flex gap-2 rounded-md items-start w-full">
+                            {(() => {
+                              const designImgUrl = pod.designImageUrl || pod.design?.designImageUrl || pod.design?.designImageUrlConverted || pod.thumbnailUrl || pod.design?.thumbnailUrl;
+                              if (!designImgUrl) return null;
+                              return (
+                                <div className="w-10 h-10 shrink-0 border rounded bg-white overflow-hidden flex items-center justify-center cursor-zoom-in shadow-sm hover:ring-1 hover:ring-primary/30 transition-all mt-0.5">
+                                  <img
+                                    src={designImgUrl}
+                                    alt={pod.design?.code || "design"}
+                                    className="w-full h-full object-contain"
+                                    onClick={() => setViewingImageUrl(designImgUrl)}
+                                  />
+                                </div>
+                              );
+                            })()}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-bold text-[12px] text-foreground mb-1 break-all">
+                                {highlightText(
+                                  pod.design?.designName || pod.design?.code || "—",
+                                  searchTerm
+                                )}
+                              </p>
+                              <div className="flex flex-col gap-0.5 text-[10px]">
+                                <div className="flex justify-between items-center gap-1 border-b border-muted/30 pb-0.5">
+                                  <span className="text-muted-foreground font-medium whitespace-nowrap">
+                                    Số lượng:
+                                  </span>
+                                  <span className="font-bold text-foreground text-amber-700 text-right">
+                                    {pod.quantity} SP
                                   </span>
                                 </div>
-                              )}
+
+                                <div className="flex justify-between items-center gap-1 border-b border-muted/30 pb-0.5">
+                                  <span className="text-muted-foreground font-medium whitespace-nowrap">
+                                    Mã:
+                                  </span>
+                                  <span className="font-bold text-foreground text-right truncate">
+                                    {pod.design?.code
+                                      ? highlightText(pod.design.code, searchTerm)
+                                      : "—"}
+                                  </span>
+                                </div>
+
+                                <div className="flex justify-between items-center gap-1">
+                                  <span className="text-muted-foreground font-medium whitespace-nowrap">
+                                    Kích thước:
+                                  </span>
+                                  <span className="font-bold text-foreground text-right truncate">
+                                    {pod.design?.dimensions
+                                      ? String(pod.design.dimensions)
+                                      : "—"}
+                                  </span>
+                                </div>
+                                
+                                {(pod.notes || pod.design?.notes) && (
+                                  <div className="flex flex-col gap-0.5 mt-0.5 pt-0.5 border-t border-muted/20">
+                                    <span className="font-bold text-amber-700 break-words whitespace-pre-wrap italic leading-tight text-[10px]">
+                                      {pod.notes || pod.design?.notes}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                           

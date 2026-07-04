@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-07-03T23:49:29.129Z */
+/* Generated at: 2026-07-04T01:09:02.981Z */
 
 import { z } from "zod";
 import { IdSchema, PagedParamsSchema } from "./Common";
@@ -764,6 +764,14 @@ export const InventoryReportSummaryParamsSchema = PagedParamsSchema.extend({
   itemType: z.string().nullable().optional(),
 });
 export type InventoryReportSummaryParams = z.infer<typeof InventoryReportSummaryParamsSchema>;
+
+// ==== InventoryReportSummaryPdfParams (GET /api/inventory-reports/summary/pdf) ====
+export const InventoryReportSummaryPdfParamsSchema = z.object({
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+  itemType: z.string().nullable().optional(),
+}).passthrough();
+export type InventoryReportSummaryPdfParams = z.infer<typeof InventoryReportSummaryPdfParamsSchema>;
 
 // ==== InventoryReportVendorReconciliationExcelParams (GET /api/inventory-reports/vendor-reconciliation/:vendorId/excel) ====
 export const InventoryReportVendorReconciliationExcelParamsSchema = z.object({

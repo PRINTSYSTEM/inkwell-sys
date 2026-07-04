@@ -9311,6 +9311,30 @@ const endpoints = makeApi([
   },
   {
     method: "get",
+    path: "/api/inventory-reports/summary/pdf",
+    alias: "getApiinventoryReportssummarypdf",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "itemType",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: z.instanceof(File),
+  },
+  {
+    method: "get",
     path: "/api/inventory-reports/vendor-reconciliation/:vendorId",
     alias: "getApiinventoryReportsvendorReconciliationVendorId",
     requestFormat: "json",

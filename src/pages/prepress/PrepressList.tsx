@@ -81,6 +81,7 @@ import {
 } from "@/hooks/use-proofing-order";
 import { useDesignTypeList } from "@/hooks/use-design-type";
 import { useProofingSelection } from "@/hooks/useProofingSelection";
+import { useSystemSetting } from "@/hooks/use-system-setting";
 
 import { ProofingOrderListParamsSchema } from "@/Schema/params.schema";
 import {
@@ -237,6 +238,42 @@ export default function PrepressList() {
     if (!items || !Array.isArray(items)) return [];
     return items as unknown as ProofingOrder[];
   }, [productionReturnedOrdersResp?.items]);
+
+  const { data: currentNumberSetting } = useSystemSetting("ProofingOrder_CurrentNumber");
+
+  const nextOrderId = useMemo(() => {
+    if (currentNumberSetting?.value) {
+      const num = parseInt(currentNumberSetting.value, 10);
+      if (!isNaN(num)) {
+        return (num + 1).toString();
+      }
+    }
+
+    let maxCodeNum = 0;
+    
+    const checkMax = (items: any[]) => {
+      items.forEach((item: any) => {
+        if (item.code) {
+          const num = parseInt(item.code, 10);
+          if (!isNaN(num) && num > maxCodeNum) {
+            maxCodeNum = num;
+          }
+        }
+      });
+    };
+
+    if (incompleteOrdersResp?.items) {
+      checkMax(incompleteOrdersResp.items);
+    }
+    if (completedOrdersResp?.items) {
+      checkMax(completedOrdersResp.items);
+    }
+    if (productionReturnedOrdersResp?.items) {
+      checkMax(productionReturnedOrdersResp.items);
+    }
+
+    return maxCodeNum > 0 ? (maxCodeNum + 1).toString() : undefined;
+  }, [currentNumberSetting, incompleteOrdersResp, completedOrdersResp, productionReturnedOrdersResp]);
 
   const incompleteTotalCount = incompleteOrdersResp?.total ?? 0;
   const incompleteTotalPages =
@@ -413,11 +450,32 @@ export default function PrepressList() {
       });
     }
 
-    return items.map((dt: any) => ({
+    const baseOptions = items.map((dt: any) => ({
       id: dt.id,
       name: dt.name || "",
       count: countMap.get(dt.id) || 0,
     }));
+
+    const result: typeof baseOptions = [];
+    baseOptions.forEach((opt) => {
+      result.push(opt);
+      const optNameLower = opt.name.toLowerCase();
+      if ((optNameLower.includes("nhãn") || optNameLower.includes("nhan")) && !optNameLower.includes("cuộn") && !optNameLower.includes("cuon")) {
+        result.push({
+          id: 999001,
+          name: "Nhãn Metaline",
+          count: countMap.get(999001) || 0,
+        });
+      } else if ((optNameLower.includes("túi") || optNameLower.includes("tui")) && !optNameLower.includes("cuộn") && !optNameLower.includes("cuon")) {
+        result.push({
+          id: 999002,
+          name: "Túi Metaline",
+          count: countMap.get(999002) || 0,
+        });
+      }
+    });
+
+    return result;
   }, [designTypesData, designTypesCount]);
 
   const materialTypeOptions = availableDesignsData?.materialTypeOptions ?? [];
@@ -980,6 +1038,7 @@ export default function PrepressList() {
                     isAddingDesigns={
                       isCreating || isAddingDesigns || isUpdatingOrder
                     }
+                    nextOrderId={nextOrderId}
                   />
                 </div>
               )}

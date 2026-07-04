@@ -7,6 +7,7 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
+  FileText,
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 
@@ -23,7 +24,11 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
-import { useInventorySummary, useExportInventorySummary } from "@/hooks/use-inventory-report";
+import {
+  useInventorySummary,
+  useExportInventorySummary,
+  useExportInventorySummaryPDF,
+} from "@/hooks/use-inventory-report";
 import { formatCurrency } from "@/lib/status-utils";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -51,16 +56,27 @@ export default function InventorySummaryPage() {
     pageNumber: currentPage,
     pageSize: itemsPerPage,
     search: searchQuery || undefined,
-    asOfDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
+    fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
+    toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
     itemType: "product",
   });
 
   const exportMutation = useExportInventorySummary();
+  const exportPdfMutation = useExportInventorySummaryPDF();
 
   const handleExportExcel = async () => {
     exportMutation.mutate({
       search: searchQuery || undefined,
-      asOfDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
+      fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
+      toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
+      itemType: "product",
+    });
+  };
+
+  const handleExportPdf = async () => {
+    exportPdfMutation.mutate({
+      fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
+      toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
       itemType: "product",
     });
   };
@@ -109,6 +125,18 @@ export default function InventorySummaryPage() {
               )}
               Xuất Excel
             </Button>
+            <Button 
+              variant="outline" 
+              onClick={handleExportPdf}
+              disabled={exportPdfMutation.isPending}
+            >
+              {exportPdfMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <FileText className="h-4 w-4 mr-2" />
+              )}
+              Xuất PDF
+            </Button>
           </div>
         </div>
 
@@ -151,14 +179,13 @@ export default function InventorySummaryPage() {
                 <TableHead className="text-right">Nhập</TableHead>
                 <TableHead className="text-right">Xuất</TableHead>
                 <TableHead className="text-right">Cuối kỳ</TableHead>
-                <TableHead className="text-right">Giá trị</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 7 }).map((_, j) => (
+                    {Array.from({ length: 6 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
                       </TableCell>
@@ -168,7 +195,7 @@ export default function InventorySummaryPage() {
               ) : !summaryData?.items || summaryData.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={6}
                     className="h-24 text-center text-muted-foreground"
                   >
                     Không tìm thấy dữ liệu tổng hợp nào.
@@ -177,17 +204,17 @@ export default function InventorySummaryPage() {
               ) : (
                 summaryData.items.map((item) => (
                   <TableRow
-                    key={item.itemCode || item.categoryId}
+                    key={item.itemCode || item.materialTypeCode || item.materialTypeId || item.categoryId}
                     className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleItemClick(item.itemCode)}
+                    onClick={() => handleItemClick(item.itemCode || item.materialTypeCode)}
                   >
                     <TableCell className="font-medium font-mono text-sm">
-                      {item.itemCode || "—"}
+                      {item.itemCode || item.materialTypeCode || "—"}
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1">
                         <div className="font-medium text-sm">
-                          {item.itemName || "—"}
+                          {item.itemName || item.materialTypeName || "—"}
                         </div>
                         {item.unit && (
                           <div className="text-xs text-muted-foreground">
@@ -197,31 +224,52 @@ export default function InventorySummaryPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right font-medium tabular-nums">
-                      {item.openingQuantity !== undefined
-                        ? item.openingQuantity.toLocaleString("vi-VN")
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums text-green-600">
-                      {item.inQuantity !== undefined
-                        ? item.inQuantity.toLocaleString("vi-VN")
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-right font-medium tabular-nums text-red-600">
-                      {item.outQuantity !== undefined
-                        ? item.outQuantity.toLocaleString("vi-VN")
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-right font-bold tabular-nums">
-                      {item.closingQuantity !== undefined
-                        ? item.closingQuantity.toLocaleString("vi-VN")
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-right font-bold tabular-nums">
-                      {item.closingValue !== undefined
-                        ? formatCurrency(item.closingValue)
-                        : item.openingValue !== undefined
+                      <div>
+                        {item.openingQuantity !== undefined
+                          ? item.openingQuantity.toLocaleString("vi-VN")
+                          : "—"}
+                      </div>
+                      <div className="text-xs text-muted-foreground font-normal">
+                        {item.openingValue !== undefined
                           ? formatCurrency(item.openingValue)
                           : "—"}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right font-medium tabular-nums text-green-600">
+                      <div>
+                        {item.inQuantity !== undefined
+                          ? item.inQuantity.toLocaleString("vi-VN")
+                          : "—"}
+                      </div>
+                      <div className="text-xs text-muted-foreground font-normal">
+                        {item.inValue !== undefined
+                          ? formatCurrency(item.inValue)
+                          : "—"}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right font-medium tabular-nums text-red-600">
+                      <div>
+                        {item.outQuantity !== undefined
+                          ? item.outQuantity.toLocaleString("vi-VN")
+                          : "—"}
+                      </div>
+                      <div className="text-xs text-muted-foreground font-normal">
+                        {item.outValue !== undefined
+                          ? formatCurrency(item.outValue)
+                          : "—"}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right font-bold tabular-nums">
+                      <div>
+                        {item.closingQuantity !== undefined
+                          ? item.closingQuantity.toLocaleString("vi-VN")
+                          : "—"}
+                      </div>
+                      <div className="text-xs text-muted-foreground font-normal">
+                        {item.closingValue !== undefined
+                          ? formatCurrency(item.closingValue)
+                          : "—"}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

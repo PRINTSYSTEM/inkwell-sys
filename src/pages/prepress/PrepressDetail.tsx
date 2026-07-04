@@ -809,11 +809,32 @@ export default function ProofingOrderDetailPage() {
       });
     }
 
-    return designTypeItems.map((dt) => ({
+    const baseOptions = designTypeItems.map((dt) => ({
       id: dt.id,
       name: dt.name || "",
       count: countMap.get(dt.id) || 0,
     }));
+
+    const result: typeof baseOptions = [];
+    baseOptions.forEach((opt) => {
+      result.push(opt);
+      const optNameLower = opt.name.toLowerCase();
+      if ((optNameLower.includes("nhãn") || optNameLower.includes("nhan")) && !optNameLower.includes("cuộn") && !optNameLower.includes("cuon")) {
+        result.push({
+          id: 999001,
+          name: "Nhãn Metaline",
+          count: countMap.get(999001) || 0,
+        });
+      } else if ((optNameLower.includes("túi") || optNameLower.includes("tui")) && !optNameLower.includes("cuộn") && !optNameLower.includes("cuon")) {
+        result.push({
+          id: 999002,
+          name: "Túi Metaline",
+          count: countMap.get(999002) || 0,
+        });
+      }
+    });
+
+    return result;
   }, [designTypesData, availableDesignsData?.designs, designTypesCount]);
 
   // Helper functions to check design type
@@ -2274,6 +2295,7 @@ export default function ProofingOrderDetailPage() {
                 handleSubmitDesigns={handleSubmitDesigns}
                 isAddingDesigns={isAddingDesigns}
                 isProofer={isProofer}
+                nextOrderId={order?.code || order?.id}
               />
             </div>
           </div>

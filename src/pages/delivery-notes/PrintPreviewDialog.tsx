@@ -16,12 +16,14 @@ interface PrintPreviewDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   deliveryNote: DeliveryNoteResponse;
+  showPrice?: boolean;
 }
 
 export default function PrintPreviewDialog({
   open,
   onOpenChange,
   deliveryNote,
+  showPrice = false,
 }: PrintPreviewDialogProps) {
   const [printType, setPrintType] = useState<"A4" | "A5">("A4");
 
@@ -39,6 +41,13 @@ export default function PrintPreviewDialog({
     return sum + scrap;
   }, 0);
   const totalNetQty = lines.reduce((sum, l) => sum + (l.netQtyTotal || l.deliveryQty || 0), 0);
+
+  const totalAmount = lines.reduce((sum, l) => {
+    const qty = l.netQtyTotal || l.deliveryQty || 0;
+    const price = (l as any).unitPriceSnapshot ?? (l as any).unitPrice ?? (l as any).price ?? 0;
+    const amount = (l as any).lineAmount ?? (qty * price);
+    return sum + (amount || 0);
+  }, 0);
 
   const handlePrint = () => {
     const printContent = document.getElementById("delivery-note-print-area")?.innerHTML;
@@ -84,11 +93,12 @@ export default function PrintPreviewDialog({
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        width: 120px;
+        width: 150px;
+        padding-left: 20px;
         flex-shrink: 0;
       }
       .logo-image {
-        height: 55px;
+        height: 70px;
         width: auto;
         object-fit: contain;
       }
@@ -150,11 +160,13 @@ export default function PrintPreviewDialog({
         padding: 5px 6px;
         font-size: 12px;
         color: #000;
+        text-align: center;
       }
       table.print-table th {
         background-color: #eaeaea !important;
         font-weight: bold;
         text-align: center;
+        vertical-align: middle;
       }
       .text-center { text-align: center !important; }
       .text-right { text-align: right !important; }
@@ -207,7 +219,7 @@ export default function PrintPreviewDialog({
           <div>
             <DialogTitle className="text-lg font-bold text-stone-900 dark:text-stone-50 flex items-center gap-2">
               <FileText className="w-5 h-5 text-primary" />
-              Xem trước Bản in Phiếu giao hàng
+              Xem trước Bản in Phiếu giao hàng {showPrice ? "(Có Tiền)" : ""}
             </DialogTitle>
             <p className="text-xs text-muted-foreground mt-1">
               Xem và kiểm tra nội dung trước khi xuất lệnh in trực tiếp ra máy in.
@@ -249,11 +261,11 @@ export default function PrintPreviewDialog({
             <div id="delivery-note-print-area">
               {/* Logo & Company info */}
               <div className="header-container flex items-center justify-between border-b-2 border-black pb-3">
-                <div className="logo-container flex flex-col items-center justify-center w-[120px] shrink-0">
+                <div className="logo-container flex flex-col items-center justify-center w-[150px] pl-5 shrink-0">
                   <img
                     src="/images/logo.png"
                     alt="QUANG DAT LOGO"
-                    className="logo-image h-14 w-auto object-contain"
+                    className="logo-image h-[70px] w-auto object-contain"
                   />
                 </div>
                 <div className="company-info text-center flex-1 pr-10 text-[11px] leading-relaxed">
@@ -301,12 +313,18 @@ export default function PrintPreviewDialog({
                 <thead>
                   <tr className="bg-stone-100">
                     <th className="border border-black text-center p-1 w-10">STT</th>
-                    <th className="border border-black text-left p-1">TÊN HÀNG HÓA</th>
-                    <th className="border border-black text-center p-1 w-16">ĐVT</th>
-                    <th className="border border-black text-right p-1 w-24">SỐ LƯỢNG</th>
-                    <th className="border border-black text-right p-1 w-20">PHỤ HAO</th>
-                    <th className="border border-black text-right p-1 w-24">SỐ LƯỢNG THỰC</th>
-                    <th className="border border-black text-left p-1 w-36">GHI CHÚ</th>
+                    <th className="border border-black text-center p-1">TÊN SẢN PHẨM</th>
+                    <th className="border border-black text-center p-1 w-12">ĐVT</th>
+                    <th className="border border-black text-center p-1 w-16 leading-tight">SỐ<br/>LƯỢNG</th>
+                    <th className="border border-black text-center p-1 w-14 leading-tight">PHỤ<br/>HAO</th>
+                    <th className="border border-black text-center p-1 w-16 leading-tight">SL<br/>THỰC</th>
+                    {showPrice && (
+                      <>
+                        <th className="border border-black text-center p-1 w-18 leading-tight">ĐƠN<br/>GIÁ</th>
+                        <th className="border border-black text-center p-1 w-22 leading-tight">THÀNH<br/>TIỀN</th>
+                      </>
+                    )}
+                    <th className="border border-black text-center p-1 w-20 leading-tight">GHI<br/>CHÚ</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -316,21 +334,35 @@ export default function PrintPreviewDialog({
                       : typeof l.orderedQty === "number" && typeof l.netQtyTotal === "number"
                         ? l.orderedQty - l.netQtyTotal
                         : 0;
+                    const qty = l.netQtyTotal || l.deliveryQty || 0;
+                    const price = (l as any).unitPriceSnapshot ?? (l as any).unitPrice ?? (l as any).price ?? 0;
+                    const amount = (l as any).lineAmount ?? (qty * price);
+
                     return (
                       <tr key={l.id || index}>
                         <td className="border border-black text-center p-1.5">{index + 1}</td>
-                        <td className="border border-black p-1.5 font-medium">{l.designName || "—"}</td>
+                        <td className="border border-black p-1.5 font-medium text-center">{l.designName || "—"}</td>
                         <td className="border border-black text-center p-1.5">Cái</td>
-                        <td className="border border-black text-right p-1.5 font-medium">
+                        <td className="border border-black text-center p-1.5 font-medium">
                           {(l.deliveryQty || 0).toLocaleString("vi-VN")}
                         </td>
-                        <td className="border border-black text-right p-1.5">
+                        <td className="border border-black text-center p-1.5">
                           {scrap.toLocaleString("vi-VN")}
                         </td>
-                        <td className="border border-black text-right p-1.5 font-bold">
+                        <td className="border border-black text-center p-1.5 font-bold">
                           {(l.netQtyTotal || l.deliveryQty || 0).toLocaleString("vi-VN")}
                         </td>
-                        <td className="border border-black p-1.5 italic text-stone-700">
+                        {showPrice && (
+                          <>
+                            <td className="border border-black text-center p-1.5">
+                              {(price || 0).toLocaleString("vi-VN")}
+                            </td>
+                            <td className="border border-black text-center p-1.5 font-semibold">
+                              {(amount || 0).toLocaleString("vi-VN")}
+                            </td>
+                          </>
+                        )}
+                        <td className="border border-black text-center p-1.5 italic text-stone-700">
                           {l.note || "—"}
                         </td>
                       </tr>
@@ -338,16 +370,24 @@ export default function PrintPreviewDialog({
                   })}
                   <tr className="font-bold bg-stone-50">
                     <td className="border border-black text-center p-1.5" colSpan={3}>Cộng</td>
-                    <td className="border border-black text-right p-1.5">
+                    <td className="border border-black text-center p-1.5">
                       {totalDeliveryQty.toLocaleString("vi-VN")}
                     </td>
-                    <td className="border border-black text-right p-1.5">
+                    <td className="border border-black text-center p-1.5">
                       {totalScrapQty.toLocaleString("vi-VN")}
                     </td>
-                    <td className="border border-black text-right p-1.5">
+                    <td className="border border-black text-center p-1.5">
                       {totalNetQty.toLocaleString("vi-VN")}
                     </td>
-                    <td className="border border-black p-1.5"></td>
+                    {showPrice && (
+                      <>
+                        <td className="border border-black text-center p-1.5"></td>
+                        <td className="border border-black text-center p-1.5">
+                          {totalAmount.toLocaleString("vi-VN")}
+                        </td>
+                      </>
+                    )}
+                    <td className="border border-black text-center p-1.5"></td>
                   </tr>
                 </tbody>
               </table>

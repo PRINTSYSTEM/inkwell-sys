@@ -247,16 +247,44 @@ export default function ReadyDesignListPage() {
     readyDesignsParams
   );
   const designs = readyDesignsData?.items || [];
-  const totalCount = readyDesignsData?.total || 0;
 
   const sortedDesigns = useMemo(() => {
     if (!designs) return [];
-    return [...designs].sort((a, b) => {
+    
+    let filtered = [...designs];
+
+    // Client-side design type filtering
+    if (selectedTypeName) {
+      filtered = filtered.filter((d) => {
+        const typeName = d.designTypeName || (d as any).designType?.name;
+        return typeName === selectedTypeName;
+      });
+    }
+
+    // Client-side material filtering
+    if (materialFilter) {
+      filtered = filtered.filter((d) => {
+        const matName = d.materialTypeName || (d as any).materialType?.name;
+        return matName === materialFilter;
+      });
+    }
+
+    // Client-side dimensions filtering
+    if (dimensionsFilter.trim()) {
+      const dimSearch = dimensionsFilter.trim().toLowerCase();
+      filtered = filtered.filter((d) => {
+        return d.dimensions?.toLowerCase().includes(dimSearch);
+      });
+    }
+
+    return filtered.sort((a, b) => {
       const uA = a.isUrgent ? 1 : 0;
       const uB = b.isUrgent ? 1 : 0;
       return uB - uA; // Urgent first
     });
-  }, [designs]);
+  }, [designs, selectedTypeName, materialFilter, dimensionsFilter]);
+
+  const totalCount = sortedDesigns.length;
 
   // Fetch customer addresses for the selected design's customer
   const targetCustomerIdForAddresses = useMemo(() => {

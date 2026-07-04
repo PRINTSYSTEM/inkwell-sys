@@ -399,41 +399,17 @@ export default function ARSummaryPage() {
                         </TableCell>
                       </TableRow>
                       {isExpanded && item.customerId && (
-                        <>
-                          <TableRow className="bg-muted/30 hover:bg-muted/30 border-t-0">
-                            <TableHead className="w-[40px] text-center">
-                              {/* Select All checkbox can be added here if needed */}
-                            </TableHead>
-                            <TableHead colSpan={2} className="pl-12 font-bold text-[10px] uppercase text-muted-foreground">
-                              Số chứng từ / Loại
-                            </TableHead>
-                            <TableHead className="text-center font-bold text-[10px] uppercase text-muted-foreground">
-                              Ngày CT
-                            </TableHead>
-                            <TableHead className="text-center font-bold text-[10px] uppercase text-muted-foreground">
-                              Hạn trả
-                            </TableHead>
-                            <TableHead className="text-right font-bold text-[10px] uppercase text-muted-foreground">
-                              VAT
-                            </TableHead>
-                            <TableHead className="text-right font-bold text-[10px] uppercase text-muted-foreground">
-                              Phải thu
-                            </TableHead>
-                            <TableHead className="text-right font-bold text-[10px] uppercase text-muted-foreground">
-                              Đã thu
-                            </TableHead>
-                            <TableHead className="text-right font-bold text-[10px] uppercase text-muted-foreground">
-                              Còn lại
-                            </TableHead>
-                          </TableRow>
-                          <CustomerDetailRow 
-                            customerId={item.customerId}
-                            customerName={item.customerName || item.companyName || ""}
-                            dateRange={dateRange}
-                            selectedOrders={selectedOrders}
-                            onSelectOrder={(order) => handleSelectOrder(order, item)}
-                          />
-                        </>
+                        <TableRow className="bg-muted/10 hover:bg-muted/10 border-t-0 select-none">
+                          <TableCell colSpan={9} className="p-3 pl-8 md:pl-12 bg-stone-50/50 dark:bg-stone-900/10">
+                            <CustomerDetailRow 
+                              customerId={item.customerId}
+                              customerName={item.customerName || item.companyName || ""}
+                              dateRange={dateRange}
+                              selectedOrders={selectedOrders}
+                              onSelectOrder={(order) => handleSelectOrder(order, item)}
+                            />
+                          </TableCell>
+                        </TableRow>
                       )}
                     </Fragment>
                   );
@@ -514,106 +490,148 @@ function CustomerDetailRow({
 
   if (isLoadingDetail) {
     return (
-      <TableRow className="bg-muted/10">
-        <TableCell colSpan={9}>
-          <div className="flex items-center justify-center py-4 gap-2 text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span className="text-xs">Đang tải chi tiết giao dịch...</span>
-          </div>
-        </TableCell>
-      </TableRow>
+      <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground bg-background rounded-lg border border-inner">
+        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+        <span className="text-xs">Đang tải sổ chi tiết công nợ...</span>
+      </div>
     );
   }
 
   if (unpaidItems.length === 0) {
     return (
-      <TableRow className="bg-muted/10">
-        <TableCell colSpan={9} className="text-center py-4 text-xs text-muted-foreground italic">
-          Không có giao dịch chưa thanh toán trong kỳ
-        </TableCell>
-      </TableRow>
+      <div className="text-center py-6 text-xs text-muted-foreground italic bg-background rounded-lg border border-dashed border-stone-200 dark:border-stone-800">
+        Không có giao dịch chưa thanh toán trong kỳ
+      </div>
     );
   }
 
+  // Flatten items so that each item becomes a row in the ledger
+  const flatRows = useMemo(() => {
+    const rows: Array<{
+      key: string;
+      detail: any;
+      item?: any;
+    }> = [];
+
+    unpaidItems.forEach((detail: any) => {
+      if (Array.isArray(detail.items) && detail.items.length > 0) {
+        detail.items.forEach((item: any, idx: number) => {
+          rows.push({
+            key: `${detail.documentId || detail.id}-${item.code || idx}`,
+            detail,
+            item,
+          });
+        });
+      } else {
+        rows.push({
+          key: `${detail.documentId || detail.id}-fallback`,
+          detail,
+        });
+      }
+    });
+
+    return rows;
+  }, [unpaidItems]);
+
   return (
-    <>
-      {unpaidItems.map((detail, index) => (
-        <TableRow
-          key={detail.documentId || index}
-          className={cn(
-            "bg-muted/5 hover:bg-muted/15 cursor-pointer border-l-2",
-            selectedOrders.has(detail.documentId) ? "border-l-green-500 bg-green-50/10" : "border-l-primary/30"
-          )}
-          onClick={() => handleOrderClick(detail.documentId)}
-        >
-          <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-            {detail.documentId && (
-              <Checkbox 
-                checked={selectedOrders.has(detail.documentId)}
-                onCheckedChange={() => onSelectOrder(detail)}
-              />
-            )}
-          </TableCell>
-          <TableCell colSpan={2} className="pl-12 py-3">
-            <div className="flex flex-col space-y-2">
-              <div>
-                <span className="font-bold text-sm text-primary/80">{detail.documentNumber || "—"}</span>
-                <span className="text-[10px] text-muted-foreground uppercase ml-2">({detail.documentType || "Hóa đơn"})</span>
-              </div>
-              {detail.items && detail.items.length > 0 && (
-                <div className="max-w-md mt-1 border rounded-lg overflow-hidden bg-background/50 shadow-sm">
-                  <Table>
-                    <TableHeader className="bg-muted/40">
-                      <TableRow className="hover:bg-transparent">
-                        <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2">Mã hàng</TableHead>
-                        <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2">Tên hàng</TableHead>
-                        <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2 text-right">SL</TableHead>
-                        <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2 text-right">Đơn giá</TableHead>
-                        <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2 text-right">Thành tiền</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {detail.items.map((item, idx) => (
-                        <TableRow key={idx} className="hover:bg-muted/10">
-                          <TableCell className="text-[11px] font-mono py-1 px-2">{item.code || "—"}</TableCell>
-                          <TableCell className="text-[11px] font-medium py-1 px-2 max-w-[120px] truncate" title={item.name || ""}>{item.name || "—"}</TableCell>
-                          <TableCell className="text-[11px] py-1 px-2 text-right tabular-nums">{item.quantity ?? 0}</TableCell>
-                          <TableCell className="text-[11px] py-1 px-2 text-right tabular-nums text-muted-foreground">{formatCurrency(item.unitPrice ?? 0)}</TableCell>
-                          <TableCell className="text-[11px] py-1 px-2 text-right tabular-nums font-semibold">{formatCurrency(item.totalAmount ?? 0)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </div>
-          </TableCell>
-          <TableCell className="text-center text-xs font-medium">
-            {detail.documentDate ? formatDate(detail.documentDate) : "—"}
-          </TableCell>
-          <TableCell className="text-center text-xs font-medium">
-            {detail.dueDate ? formatDate(detail.dueDate) : "—"}
-          </TableCell>
-          <TableCell className="text-right font-medium tabular-nums text-[10px] text-muted-foreground">
-            {(detail as any).vatAmount !== undefined && (detail as any).vatAmount > 0 ? formatCurrency((detail as any).vatAmount) : "—"}
-          </TableCell>
-          <TableCell className="text-right font-medium tabular-nums text-xs">
-            {detail.amountDue !== undefined ? formatCurrency(detail.amountDue) : "—"}
-          </TableCell>
-          <TableCell className="text-right font-medium tabular-nums text-xs text-green-600">
-            {detail.amountPaid !== undefined ? formatCurrency(detail.amountPaid) : "—"}
-          </TableCell>
-          <TableCell className="text-right">
-            {detail.outstanding !== undefined && detail.outstanding > 0 ? (
-              <Badge variant="outline" className="text-[10px] h-5 bg-background font-bold border-red-200 text-red-600">
-                {formatCurrency(detail.outstanding)}
-              </Badge>
-            ) : (
-              "—"
-            )}
-          </TableCell>
-        </TableRow>
-      ))}
-    </>
+    <div className="border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden bg-background shadow-sm select-none">
+      <Table>
+        <TableHeader className="bg-stone-50 dark:bg-stone-900/60 border-b border-stone-200 dark:border-stone-800">
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="w-[45px] text-center">Chọn</TableHead>
+            <TableHead className="w-[45px] text-center">STT</TableHead>
+            <TableHead className="w-[90px] text-center font-bold text-[10px] uppercase tracking-wider">Ngày</TableHead>
+            <TableHead className="w-[110px] font-bold text-[10px] uppercase tracking-wider">Mã đơn hàng</TableHead>
+            <TableHead className="w-[110px] font-bold text-[10px] uppercase tracking-wider">Mã hàng</TableHead>
+            <TableHead className="font-bold text-[10px] uppercase tracking-wider">Tên hàng hóa</TableHead>
+            <TableHead className="w-[85px] text-right font-bold text-[10px] uppercase tracking-wider">Số lượng</TableHead>
+            <TableHead className="w-[95px] text-right font-bold text-[10px] uppercase tracking-wider">Đơn giá</TableHead>
+            <TableHead className="w-[100px] text-right font-bold text-[10px] uppercase tracking-wider">Thành tiền</TableHead>
+            <TableHead className="w-[115px] text-right font-bold text-[10px] uppercase tracking-wider text-green-700">Đã thanh toán</TableHead>
+            <TableHead className="w-[115px] text-right font-bold text-[10px] uppercase tracking-wider text-red-750">Còn lại</TableHead>
+            <TableHead className="w-[100px] font-bold text-[10px] uppercase tracking-wider">Số phiếu</TableHead>
+            <TableHead className="w-[110px] font-bold text-[10px] uppercase tracking-wider">Ghi chú</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody className="divide-y divide-stone-100 dark:divide-stone-900">
+          {flatRows.map((row, index) => {
+            const { detail, item } = row;
+            const isSelected = selectedOrders.has(detail.documentId);
+            
+            // Calculate proportional values
+            const totalAmount = item?.totalAmount ?? detail.amountDue ?? 0;
+            const proportion = detail.amountDue ? (totalAmount / detail.amountDue) : 1;
+            const paid = (detail.amountPaid || 0) * proportion;
+            const outstanding = (detail.outstanding || 0) * proportion;
+
+            const isOrder = detail.documentType?.toLowerCase() === "order";
+            const orderCode = isOrder ? detail.documentNumber : "—";
+            const deliveryNoteCode = !isOrder ? detail.documentNumber : "—";
+
+            return (
+              <TableRow
+                key={row.key}
+                className={cn(
+                  "hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors cursor-pointer",
+                  isSelected && "bg-green-50/10 dark:bg-green-950/5 hover:bg-green-50/15"
+                )}
+                onClick={() => handleOrderClick(detail.documentId)}
+              >
+                <TableCell className="text-center py-2.5" onClick={(e) => e.stopPropagation()}>
+                  {detail.documentId && (
+                    <Checkbox 
+                      checked={isSelected}
+                      onCheckedChange={() => onSelectOrder(detail)}
+                    />
+                  )}
+                </TableCell>
+                <TableCell className="text-center py-2.5 text-xs text-stone-400 font-medium">
+                  {index + 1}
+                </TableCell>
+                <TableCell className="text-center py-2.5 text-xs text-stone-500 font-medium">
+                  {detail.documentDate ? formatDate(detail.documentDate) : "—"}
+                </TableCell>
+                <TableCell className="py-2.5 font-mono text-xs font-bold text-primary/80">
+                  {orderCode}
+                </TableCell>
+                <TableCell className="py-2.5 font-mono text-xs font-semibold text-stone-600 dark:text-stone-400">
+                  {item?.code || "—"}
+                </TableCell>
+                <TableCell className="py-2.5 text-xs font-medium text-stone-800 dark:text-stone-200">
+                  {item?.name || "—"}
+                </TableCell>
+                <TableCell className="text-right py-2.5 text-xs font-medium tabular-nums">
+                  {item?.quantity !== undefined ? item.quantity.toLocaleString("vi-VN") : "—"}
+                </TableCell>
+                <TableCell className="text-right py-2.5 text-xs font-medium text-stone-500 tabular-nums">
+                  {item?.unitPrice !== undefined ? formatCurrency(item.unitPrice) : "—"}
+                </TableCell>
+                <TableCell className="text-right py-2.5 text-xs font-semibold text-stone-900 dark:text-stone-100 tabular-nums">
+                  {formatCurrency(totalAmount)}
+                </TableCell>
+                <TableCell className="text-right py-2.5 text-xs font-medium text-green-750 tabular-nums">
+                  {paid > 0 ? formatCurrency(paid) : "0"}
+                </TableCell>
+                <TableCell className="text-right py-2.5">
+                  {outstanding > 0 ? (
+                    <Badge variant="outline" className="text-xs font-bold border-red-200 text-red-650 bg-red-50/50 hover:bg-red-50/50">
+                      {formatCurrency(outstanding)}
+                    </Badge>
+                  ) : (
+                    "0"
+                  )}
+                </TableCell>
+                <TableCell className="py-2.5 font-mono text-xs font-bold text-stone-500">
+                  {deliveryNoteCode}
+                </TableCell>
+                <TableCell className="py-2.5 text-xs text-stone-500 max-w-[150px] truncate" title={detail.notes || ""}>
+                  {detail.notes || "—"}
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
   );
 }

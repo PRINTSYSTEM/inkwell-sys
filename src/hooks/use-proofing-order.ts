@@ -101,19 +101,59 @@ export const useAvailableOrderDetailsForProofing = (
       params?.pageSize ?? 10,
     ],
     queryFn: async () => {
+      // 1. Fetch design types to resolve IDs
+      const designTypesRes = await apiRequest.get<any>(API_SUFFIX.DESIGN_TYPES);
+      const designTypes = Array.isArray(designTypesRes.data)
+        ? designTypesRes.data
+        : (designTypesRes.data.items ?? []);
+      const nhanGiayType = designTypes.find((dt: any) =>
+        dt.name.toLowerCase().includes("nhãn") || dt.name.toLowerCase().includes("nhan")
+      );
+      const tuiType = designTypes.find((dt: any) =>
+        dt.name.toLowerCase().includes("túi") || dt.name.toLowerCase().includes("tui")
+      );
+      const nhanGiayId = nhanGiayType?.id || 0;
+      const tuiId = tuiType?.id || 0;
+
+      // 2. Resolve parameters for backend
       const normalizedParams = normalizeParams(params ?? {});
+      const reqDesignTypeId = params?.designTypeId;
+      
+      let finalDesignTypeId = reqDesignTypeId;
+      let needClientFiltering = false;
+      
+      if (reqDesignTypeId === 999001) {
+        finalDesignTypeId = nhanGiayId;
+        needClientFiltering = true;
+      } else if (reqDesignTypeId === 999002) {
+        finalDesignTypeId = tuiId;
+        needClientFiltering = true;
+      } else if (reqDesignTypeId === nhanGiayId || reqDesignTypeId === tuiId) {
+        needClientFiltering = true;
+      }
+      
+      const apiParams = { ...normalizedParams };
+      if (finalDesignTypeId !== undefined && finalDesignTypeId !== null) {
+        apiParams.designTypeId = finalDesignTypeId;
+      }
+      
+      // If we are filtering client side, fetch a large list to do correct pagination
+      if (needClientFiltering) {
+        apiParams.pageSize = 1000;
+        apiParams.pageNumber = 1;
+      }
 
       // API returns OrderDetailResponsePaginate
       const res = await apiRequest.get<OrderDetailResponsePaginate>(
         API_SUFFIX.PROOFING_AVAILABLE_ORDER_DETAILS,
-        { params: normalizedParams },
+        { params: apiParams },
       );
 
       // Extract items from paginate response
       const orderDetails = res.data.items ?? [];
 
       // Transform OrderDetailResponse[] to expected structure
-      const designs = orderDetails
+      let designs = orderDetails
         .filter((od) => {
           const hasDesign = od.design != null;
           if (!hasDesign) {
@@ -128,12 +168,29 @@ export const useAvailableOrderDetailsForProofing = (
           const qId = (od as any).queueItemId || (isPoolDesign ? `RD_${rDesignId}` : `OD_${od.id}`);
           const avForProofing = (od as any).availableForProofing ?? (design.availableQuantityForProofing != null ? design.availableQuantityForProofing : undefined);
 
+          let designTypeId = design.designTypeId ?? 0;
+          let designTypeName = design.designType?.name || "";
+          
+          const lowerDesignName = designTypeName.toLowerCase();
+          const lowerMaterialName = (design.materialType?.name || "").toLowerCase();
+          const isMetaline = lowerMaterialName.includes("metaline") || lowerMaterialName.includes("metalize");
+
+          if (isMetaline) {
+            if (lowerDesignName.includes("nhãn") || lowerDesignName.includes("nhan")) {
+              designTypeId = 999001;
+              designTypeName = "Nhãn Metaline";
+            } else if (lowerDesignName.includes("túi") || lowerDesignName.includes("tui")) {
+              designTypeId = 999002;
+              designTypeName = "Túi Metaline";
+            }
+          }
+
           const designItem = {
             id: isPoolDesign ? -rDesignId : (od.id ?? 0),
             code: design.code || "",
             name: design.designName || "",
-            designTypeId: design.designTypeId ?? 0,
-            designTypeName: design.designType?.name || "",
+            designTypeId,
+            designTypeName,
             materialTypeId: design.materialTypeId ?? 0,
             materialTypeName: design.materialType?.name || "",
             length: design.length ?? 0,
@@ -152,11 +209,23 @@ export const useAvailableOrderDetailsForProofing = (
             sidesClassification: design.sidesClassification || undefined,
             laminationType: design.laminationType || undefined,
             thumbnailUrl: design.designImageUrl || "",
-            createdAt: design.createdAt || "",
+            createdAt: od.createdAt || design.createdAt || "",
             designId: design.id, // Store designId for fallback fetching if needed
             orderCode: od.orderCode || undefined,
-            customerName: (design as any).customer?.name || undefined,
-            customerCompanyName: (design as any).customer?.companyName || undefined,
+            customerName:
+              (design as any).customer?.name ||
+              (design as any).customerName ||
+              (od as any).customerName ||
+              (od as any).order?.customerName ||
+              (od as any).order?.customer?.name ||
+              undefined,
+            customerCompanyName:
+              (design as any).customer?.companyName ||
+              (design as any).customerCompanyName ||
+              (od as any).customerCompanyName ||
+              (od as any).order?.customerCompanyName ||
+              (od as any).order?.customer?.companyName ||
+              undefined,
             basisWeight: design.basisWeight ?? undefined,
             designerName: design.designer?.fullName || design.designer?.username || undefined,
             createdBy: (od as any).createdBy?.fullName || (od as any).createdBy?.username || undefined,
@@ -193,7 +262,76 @@ export const useAvailableOrderDetailsForProofing = (
           return designItem;
         });
 
-      // Extract unique design types with counts
+      // 3. Perform 2-pass mapping to auto-fill missing customer name by matching customer code prefix (e.g. YV from 0428YV-N002)
+      const getCustomerCode = (code: string): string => {
+        const match = code.trim().match(/^\d{4}([A-Z]+)-/);
+        return match ? match[1] : "";
+      };
+
+      const customerCodeMap = new Map<string, { name?: string; companyName?: string }>();
+      
+      // Pre-populate with known common codes in database as a safety net
+      customerCodeMap.set("YV", { companyName: "CÔNG TY TNHH SẢN XUẤT THƯƠNG MẠI YAMATO VN" });
+      customerCodeMap.set("VG", { companyName: "VITA GREEN" });
+      customerCodeMap.set("GW", { companyName: "CÔNG TY TNHH SÀI GÒN YAMATO VN" });
+      customerCodeMap.set("PN", { companyName: "VƯỢNG PHÁT NÔNG" });
+
+      // Pass 1: Collect customer names for populated prefixes from other items in list
+      designs.forEach((d) => {
+        if (d.code && (d.customerName || d.customerCompanyName)) {
+          const codePrefix = getCustomerCode(d.code);
+          if (codePrefix && !customerCodeMap.has(codePrefix)) {
+            customerCodeMap.set(codePrefix, {
+              name: d.customerName,
+              companyName: d.customerCompanyName,
+            });
+          }
+        }
+      });
+
+      // Pass 2: Fallback fill for missing customer names
+      designs = designs.map((d) => {
+        if (d.code && !d.customerName && !d.customerCompanyName) {
+          const codePrefix = getCustomerCode(d.code);
+          const mappedCustomer = customerCodeMap.get(codePrefix);
+          if (mappedCustomer) {
+            return {
+              ...d,
+              customerName: mappedCustomer.name,
+              customerCompanyName: mappedCustomer.companyName,
+            };
+          }
+        }
+        return d;
+      });
+
+      // Client-side filter
+      if (needClientFiltering) {
+        if (reqDesignTypeId === 999001) {
+          designs = designs.filter((d) => d.designTypeId === 999001);
+        } else if (reqDesignTypeId === 999002) {
+          designs = designs.filter((d) => d.designTypeId === 999002);
+        } else if (reqDesignTypeId === nhanGiayId) {
+          designs = designs.filter((d) => d.designTypeId === nhanGiayId);
+        } else if (reqDesignTypeId === tuiId) {
+          designs = designs.filter((d) => d.designTypeId === tuiId);
+        }
+      }
+
+      // Calculate totals for response based on filtered array
+      const totalCount = designs.length;
+      const requestedPage = params?.pageNumber ?? 1;
+      const requestedPageSize = params?.pageSize ?? 10;
+      const totalPages = Math.max(1, Math.ceil(totalCount / requestedPageSize));
+
+      // Paginate client-side if we fetched large pageSize
+      if (needClientFiltering) {
+        const start = (requestedPage - 1) * requestedPageSize;
+        const end = start + requestedPageSize;
+        designs = designs.slice(start, end);
+      }
+
+      // Extract unique design types with counts (for types summary when params has no type filter)
       const designTypeMap = new Map<
         number,
         { id: number; name: string; count: number }
@@ -230,24 +368,16 @@ export const useAvailableOrderDetailsForProofing = (
       });
 
       return {
-        // Pagination meta (from API)
-        size: res.data.size ?? params?.pageSize ?? designs.length,
-        page: res.data.page ?? params?.pageNumber ?? 1,
-        total: res.data.total ?? designs.length,
-        totalPages:
-          res.data.totalPages ??
-          Math.max(
-            1,
-            Math.ceil(
-              (res.data.total ?? designs.length) /
-                (res.data.size ?? params?.pageSize ?? 10),
-            ),
-          ),
+        // Pagination meta
+        size: requestedPageSize,
+        page: requestedPage,
+        total: totalCount,
+        totalPages,
         designs,
         designTypeOptions: Array.from(designTypeMap.values()),
         materialTypeOptions: Array.from(materialTypeMap.values()),
         // Keep old field name for backward compatibility
-        totalCount: res.data.total ?? designs.length,
+        totalCount,
       };
     },
     staleTime: 2 * 60 * 1000,
@@ -266,10 +396,57 @@ export const useProofingAvailableOrderDetailsDesignTypeSummary = (
     ],
     enabled,
     queryFn: async () => {
-      const res = await apiRequest.get<DesignTypeCountResponse[]>(
-        API_SUFFIX.PROOFING_DESIGN_TYPE_SUMMARY,
+      // 1. Fetch design types to resolve IDs
+      const designTypesRes = await apiRequest.get<any>(API_SUFFIX.DESIGN_TYPES);
+      const designTypes = Array.isArray(designTypesRes.data)
+        ? designTypesRes.data
+        : (designTypesRes.data.items ?? []);
+
+      // 2. Fetch all available designs
+      const res = await apiRequest.get<OrderDetailResponsePaginate>(
+        API_SUFFIX.PROOFING_AVAILABLE_ORDER_DETAILS,
+        { params: { pageNumber: 1, pageSize: 1000 } }
       );
-      return res.data;
+      const orderDetails = res.data.items ?? [];
+
+      const counts: Record<number, number> = {};
+
+      // Initialize count for all design types
+      designTypes.forEach((dt: any) => {
+        counts[dt.id] = 0;
+      });
+      counts[999001] = 0; // Nhãn Metaline
+      counts[999002] = 0; // Túi Metaline
+
+      orderDetails.forEach((od) => {
+        const design = od.design;
+        if (!design) return;
+
+        let designTypeId = design.designTypeId;
+        const designTypeName = design.designType?.name || "";
+        const materialTypeName = design.materialType?.name || "";
+
+        const lowerDesignName = designTypeName.toLowerCase();
+        const lowerMaterialName = materialTypeName.toLowerCase();
+        const isMetaline = lowerMaterialName.includes("metaline") || lowerMaterialName.includes("metalize");
+
+        if (isMetaline) {
+          if (lowerDesignName.includes("nhãn") || lowerDesignName.includes("nhan")) {
+            designTypeId = 999001;
+          } else if (lowerDesignName.includes("túi") || lowerDesignName.includes("tui")) {
+            designTypeId = 999002;
+          }
+        }
+
+        if (designTypeId != null) {
+          counts[designTypeId] = (counts[designTypeId] || 0) + 1;
+        }
+      });
+
+      return Object.entries(counts).map(([id, count]) => ({
+        designTypeId: parseInt(id, 10),
+        count,
+      }));
     },
     staleTime: 5 * 60 * 1000,
   });
