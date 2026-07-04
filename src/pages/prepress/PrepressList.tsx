@@ -619,7 +619,7 @@ export default function PrepressList() {
       }
 
       // 1. Create proofing order first
-      const result = await createProofingOrder({} as any);
+      const result = await createProofingOrder({ suppressToast: true } as any);
       const orderId = result?.id;
       if (!orderId) {
         toast.error("Không thể tạo lệnh bình bài");
@@ -630,6 +630,7 @@ export default function PrepressList() {
       await addDesignsMutate({
         id: orderId,
         request: { materialTypeId: currentMaterialTypeId, items },
+        suppressToast: true,
       });
 
       const firstDesignWithWeight = selectedDesigns.find(
@@ -652,6 +653,7 @@ export default function PrepressList() {
           notes: configNotes || undefined,
           basisWeight: basisWeightVal || undefined,
         },
+        suppressToast: true,
       });
 
       toast.success("Thành công", {

@@ -10,6 +10,7 @@ import {
   CreateProductionOrderRequestSchema as GenCreateProductionOrderRequestSchema,
   UpdateProductionStepRequestSchema as GenUpdateProductionStepRequestSchema,
   AssignProductionStepRequestSchema as GenAssignProductionStepRequestSchema,
+  BulkUpdateProductionOrderItemsRequestSchema as GenBulkUpdateProductionOrderItemsRequestSchema,
 } from "./generated";
 
 // ===== ProductionResponse (Legacy - still used in some endpoints) =====
@@ -57,6 +58,13 @@ export const AssignProductionStepRequestSchema =
   GenAssignProductionStepRequestSchema.passthrough();
 export type AssignProductionStepRequest = z.infer<
   typeof AssignProductionStepRequestSchema
+>;
+
+// ===== BulkUpdateProductionOrderItemsRequest =====
+export const BulkUpdateProductionOrderItemsRequestSchema =
+  GenBulkUpdateProductionOrderItemsRequestSchema.passthrough();
+export type BulkUpdateProductionOrderItemsRequest = z.infer<
+  typeof BulkUpdateProductionOrderItemsRequestSchema
 >;
 
 // ===== PagedResponse (Legacy helper for ProductionResponse) =====

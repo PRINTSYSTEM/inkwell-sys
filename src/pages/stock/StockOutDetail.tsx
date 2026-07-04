@@ -59,6 +59,7 @@ import {
 } from "@/hooks/use-stock";
 import { useCustomer } from "@/hooks/use-customer";
 import { useVendor } from "@/hooks/use-vendor";
+import { API_SUFFIX } from "@/apis";
 import {
   formatDate,
   formatDateTime,
@@ -70,6 +71,7 @@ import { toast } from "sonner";
 import { Helmet } from "react-helmet-async";
 import { downloadBlob } from "@/lib/download-utils";
 import { apiRequest } from "@/lib/http";
+import StockOutPrintPreviewDialog from "./components/StockOutPrintPreviewDialog";
 
 const formatDateOnly = (dateStr: string | null | undefined) => {
   if (!dateStr) return "Không có";
@@ -137,6 +139,8 @@ export default function StockOutDetailPage() {
   });
 
   const [isExportingExcel, setIsExportingExcel] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editReceiverName, setEditReceiverName] = useState("");
@@ -291,6 +295,27 @@ export default function StockOutDetailPage() {
     }
   };
 
+  const handleExportPdf = async () => {
+    if (!stockOut?.id) return;
+    setIsExportingPdf(true);
+    const toastId = toast.loading(`Đang tạo và tải file PDF phiếu xuất kho #${stockOut.code || stockOut.id}...`);
+    try {
+      const response = await apiRequest.get(API_SUFFIX.STOCK_OUT_PDF(stockOut.id), {
+        responseType: "blob",
+      });
+      const blob = new Blob([response.data], {
+        type: "application/pdf",
+      });
+      downloadBlob(blob, `phieu-xuat-kho-${stockOut.code || stockOut.id}.pdf`);
+      toast.success("Xuất file PDF thành công!", { id: toastId });
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Không thể tải file PDF. Vui lòng thử lại!", { id: toastId });
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   const handleComplete = () => {
     if (!stockOut?.id) return;
     completeStockOut(stockOut.id, {
@@ -416,6 +441,7 @@ export default function StockOutDetailPage() {
     vendorData?.name ||
     stockOut.supplier?.name ||
     "";
+  const creatorName = stockOut.createdBy?.fullName || stockOut.createdByName || "Quản trị viên";
   const partnerAddress =
     stockOut.customer?.address ||
     customerData?.address ||
@@ -571,7 +597,39 @@ export default function StockOutDetailPage() {
                         Chỉnh sửa
                       </Button>
                     )}
-                    {isExcelPurpose ? (
+                    {!isAdjustmentPurpose && (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIsPrintPreviewOpen(true)}
+                          className="cursor-pointer transition-colors duration-200 text-slate-700 hover:text-slate-800 hover:bg-slate-50 border-slate-300"
+                        >
+                          <Printer className="h-4 w-4 mr-2" />
+                          In phiếu
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleExportPdf}
+                          disabled={isExportingPdf}
+                          className="cursor-pointer transition-colors duration-200 border-red-500/30 text-red-600 hover:bg-red-50/50 hover:border-red-500/50"
+                        >
+                          {isExportingPdf ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Đang tải...
+                            </>
+                          ) : (
+                            <>
+                              <Download className="h-4 w-4 mr-2" />
+                              Tải PDF
+                            </>
+                          )}
+                        </Button>
+                      </>
+                    )}
+                    {isExcelPurpose && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -590,16 +648,6 @@ export default function StockOutDetailPage() {
                             Xuất Excel
                           </>
                         )}
-                      </Button>
-                    ) : isAdjustmentPurpose ? null : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => window.print()}
-                        className="cursor-pointer transition-colors duration-200 text-slate-700 hover:text-slate-800 hover:bg-slate-50"
-                      >
-                        <Printer className="h-4 w-4 mr-2" />
-                        In phiếu
                       </Button>
                     )}
                     <Button
@@ -834,25 +882,29 @@ export default function StockOutDetailPage() {
                   </table>
                 </div>
 
-                {/* Signatures Block */}
-                <div className="grid grid-cols-3 text-center text-xs mt-12 gap-y-16 leading-relaxed">
-                  <div>
-                    <div className="font-bold text-slate-900 print:text-black">Người lập</div>
-                    <div className="italic text-slate-500 print:text-black mt-0.5">(Ký, họ tên)</div>
+                {/* Signatures Row */}
+                <div className="signatures flex justify-between mt-8 text-center font-bold text-xs">
+                  <div className="w-[30%] flex flex-col justify-between min-h-[110px]">
+                    <div>
+                      <div className="font-bold text-slate-900 print:text-black">Người lập</div>
+                      <div className="italic text-slate-500 print:text-black mt-0.5">(Ký, họ tên)</div>
+                    </div>
+                    <div className="font-bold text-slate-900 print:text-black">{creatorName}</div>
                   </div>
-                  <div>
-                    <div className="font-bold text-slate-900 print:text-black">Người nhận hàng</div>
-                    <div className="italic text-slate-500 print:text-black mt-0.5">(Ký, họ tên)</div>
+                  <div className="w-[30%] flex flex-col justify-between min-h-[110px]">
+                    <div>
+                      <div className="font-bold text-slate-900 print:text-black">Người nhận hàng</div>
+                      <div className="italic text-slate-500 print:text-black mt-0.5">(Ký, họ tên)</div>
+                    </div>
+                    <div className="opacity-0">—</div>
                   </div>
-                  <div>
-                    <div className="font-bold text-slate-900 print:text-black">Thủ kho</div>
-                    <div className="italic text-slate-500 print:text-black mt-0.5">(Ký, họ tên)</div>
+                  <div className="w-[30%] flex flex-col justify-between min-h-[110px]">
+                    <div>
+                      <div className="font-bold text-slate-900 print:text-black">Thủ kho</div>
+                      <div className="italic text-slate-500 print:text-black mt-0.5">(Ký, họ tên)</div>
+                    </div>
+                    <div className="opacity-0">—</div>
                   </div>
-                </div>
-
-                <div className="w-1/3 text-center text-xs mt-8">
-                  <div className="font-bold text-slate-900 print:text-black">Quản trị viên</div>
-                  <div className="italic text-slate-500 print:text-black mt-0.5">(Ký, họ tên)</div>
                 </div>
             </div>
           </div>
@@ -921,6 +973,17 @@ export default function StockOutDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <StockOutPrintPreviewDialog
+        open={isPrintPreviewOpen}
+        onOpenChange={setIsPrintPreviewOpen}
+        stockOut={stockOut}
+        partnerName={partnerName}
+        partnerAddress={partnerAddress}
+        partnerPhone={partnerPhone}
+        warehouseName={warehouseName}
+        warehouseAddress={warehouseAddress}
+      />
     </>
   );
 }

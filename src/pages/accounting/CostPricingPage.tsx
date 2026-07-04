@@ -226,12 +226,9 @@ function PlateTab({ filter }: { filter: PlateFilterState }) {
     setReceivingPlateId(id);
     try {
       await receivePlate(id);
-      toast.success("Đã xác nhận nhận kẽm thành công!");
       refetch();
     } catch (e: any) {
-      toast.error("Nhận kẽm thất bại", {
-        description: e.response?.data?.message || e.message
-      });
+      // Handled globally by useReceivePlate's onError handler
     } finally {
       setReceivingPlateId(null);
     }

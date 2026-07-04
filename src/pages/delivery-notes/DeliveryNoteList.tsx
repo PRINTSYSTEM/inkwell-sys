@@ -84,6 +84,7 @@ import {
   useDeliveryNote,
 } from "@/hooks/use-delivery-note";
 import { useCreateStockOutForDelivery } from "@/hooks/use-stock";
+import { useDesign } from "@/hooks/use-design";
 import type {
   OrderForDeliveryResponse,
   OrderDetailForDeliveryResponse,
@@ -273,7 +274,7 @@ const formatDate = (dateStr: string | null | undefined) => {
 const getDefaultLineNote = (designName: string | null | undefined): string => {
   if (!designName) return "";
   const lowerName = designName.toLowerCase();
-  if (lowerName.includes("nhãn giấy")) {
+  if (lowerName.includes("nhãn giấy") || lowerName.includes("nhãn")) {
     return "Xấp 500";
   }
   if (lowerName.includes("decal")) {
@@ -3004,6 +3005,158 @@ function AddressBookManager({
 // CREATE DIALOG COMPONENT
 // ============================================================================
 
+// ============================================================================
+// SELECTED ORDER CARD COMPONENT (WITH DESIGN TYPE AUTO-NOTE POPULATING)
+// ============================================================================
+
+interface SelectedOrderCardProps {
+  od: SelectedOrderDetail;
+  deliveryQtys: Record<number, number>;
+  setDeliveryQtys: React.Dispatch<React.SetStateAction<Record<number, number>>>;
+  lineNotes: Record<number, string>;
+  setLineNotes: React.Dispatch<React.SetStateAction<Record<number, string>>>;
+  getRemainingQty: (od: SelectedOrderDetail) => number;
+  onImageClick: (url: string, e: React.MouseEvent) => void;
+}
+
+function SelectedOrderCard({
+  od,
+  deliveryQtys,
+  setDeliveryQtys,
+  lineNotes,
+  setLineNotes,
+  getRemainingQty,
+  onImageClick,
+}: SelectedOrderCardProps) {
+  const { data: design } = useDesign(od.designId, !!od.designId);
+
+  React.useEffect(() => {
+    if (design && od.orderDetailId != null) {
+      const currentNote = lineNotes[od.orderDetailId];
+      if (!currentNote) {
+        const typeName = design.designType?.name || "";
+        const defaultNote = getDefaultLineNote(typeName || od.designName);
+        if (defaultNote) {
+          setLineNotes((prev) => {
+            if (prev[od.orderDetailId]) return prev;
+            return {
+              ...prev,
+              [od.orderDetailId]: defaultNote,
+            };
+          });
+        }
+      }
+    }
+  }, [design, od.orderDetailId, lineNotes, setLineNotes, od.designName]);
+
+  return (
+    <Card className="border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+      <CardContent className="p-3">
+        <div className="flex flex-col gap-3">
+          {/* Header row: name + qty input */}
+          <div className="flex items-start gap-3">
+            <div className="h-10 w-10 rounded-md bg-muted/50 border flex items-center justify-center flex-shrink-0 overflow-hidden relative">
+              {od.designImageUrl ? (
+                <img
+                  src={od.designImageUrl}
+                  alt={od.designCode || "Thiết kế"}
+                  className="h-full w-full object-cover cursor-zoom-in"
+                  onClick={(e) => onImageClick(od.designImageUrl!, e)}
+                />
+              ) : (
+                <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold font-mono text-sm text-slate-900 dark:text-slate-50">
+                {od.designCode}{" "}
+                <span className="text-slate-400 font-sans text-xs">({od.orderCode})</span>
+              </div>
+              <div className="text-sm text-slate-700 dark:text-slate-300 mt-0.5 line-clamp-1">
+                {od.designName}
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                {od.orderedQty != null && (
+                  <span>
+                    Đơn hàng:{" "}
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">
+                      {new Intl.NumberFormat("vi-VN").format(od.orderedQty)}
+                    </span>
+                  </span>
+                )}
+                {od.deliveredQtyTotal != null && od.deliveredQtyTotal > 0 && (
+                  <span>
+                    Đã giao:{" "}
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                      {new Intl.NumberFormat("vi-VN").format(od.deliveredQtyTotal)}
+                    </span>
+                  </span>
+                )}
+                <span>
+                  Còn lại:{" "}
+                  <span className="font-bold text-primary">
+                    {new Intl.NumberFormat("vi-VN").format(getRemainingQty(od) || 0)}
+                  </span>
+                </span>
+                {od.proofingOrderCodes && od.proofingOrderCodes.length > 0 && (
+                  <span className="flex items-center gap-1">
+                    <span className="text-slate-400 font-medium">| Mã bài:</span>
+                    <span className="font-mono font-extrabold text-amber-600 dark:text-amber-400 text-xs">
+                      {od.proofingOrderCodes.join(", ")}
+                    </span>
+                  </span>
+                )}
+              </div>
+              {od.deliveryAddress && (
+                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
+                  <MapPin className="h-3 w-3 text-stone-400 shrink-0" />
+                  <span className="truncate" title={od.deliveryAddress}>Địa chỉ giao: {od.deliveryAddress}</span>
+                </div>
+              )}
+            </div>
+            <div className="w-[110px] flex-shrink-0">
+              <Label className="text-xs text-slate-500 mb-1 block">Số lượng giao</Label>
+              <Input
+                type="number"
+                min="1"
+                max={getRemainingQty(od) || 1}
+                value={deliveryQtys[od.orderDetailId] || ""}
+                onChange={(e) => {
+                  let val = parseInt(e.target.value, 10);
+                  if (isNaN(val)) val = 0;
+                  const maxVal = getRemainingQty(od);
+                  if (val > maxVal) val = maxVal;
+                  setDeliveryQtys((prev) => ({
+                    ...prev,
+                    [od.orderDetailId]: val,
+                  }));
+                }}
+                className="h-8 text-right font-semibold text-primary"
+              />
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+            <Label className="text-[10px] uppercase text-slate-500 font-bold mb-1 block">Ghi chú mặt hàng</Label>
+            <Input
+              placeholder="Nhập ghi chú riêng cho sản phẩm này..."
+              value={lineNotes[od.orderDetailId] || ""}
+              onChange={(e) => {
+                setLineNotes((prev) => ({
+                  ...prev,
+                  [od.orderDetailId]: e.target.value,
+                }));
+              }}
+              className="h-8 text-xs bg-slate-50/50 dark:bg-slate-900/50"
+            />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+
 interface CreateDeliveryNoteDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
@@ -3066,112 +3219,16 @@ function CreateDeliveryNoteDialog({
             </div>
             <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3 min-h-0">
               {selectedOrders.map((od) => (
-                <Card
+                <SelectedOrderCard
                   key={od.orderDetailId}
-                  className="border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm"
-                >
-                  <CardContent className="p-3">
-                    <div className="flex flex-col gap-3">
-                      {/* Header row: name + qty input */}
-                      <div className="flex items-start gap-3">
-                        <div className="h-10 w-10 rounded-md bg-muted/50 border flex items-center justify-center flex-shrink-0 overflow-hidden relative">
-                          {od.designImageUrl ? (
-                            <img
-                              src={od.designImageUrl}
-                              alt={od.designCode || "Thiết kế"}
-                              className="h-full w-full object-cover cursor-zoom-in"
-                              onClick={(e) => onImageClick(od.designImageUrl!, e)}
-                            />
-                          ) : (
-                            <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold font-mono text-sm text-slate-900 dark:text-slate-50">
-                            {od.designCode}{" "}
-                            <span className="text-slate-400 font-sans text-xs">({od.orderCode})</span>
-                          </div>
-                          <div className="text-sm text-slate-700 dark:text-slate-300 mt-0.5 line-clamp-1">
-                            {od.designName}
-                          </div>
-                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-                            {od.orderedQty != null && (
-                              <span>
-                                Đơn hàng:{" "}
-                                <span className="font-semibold text-slate-700 dark:text-slate-300">
-                                  {new Intl.NumberFormat("vi-VN").format(od.orderedQty)}
-                                </span>
-                              </span>
-                            )}
-                            {od.deliveredQtyTotal != null && od.deliveredQtyTotal > 0 && (
-                              <span>
-                                Đã giao:{" "}
-                                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                                  {new Intl.NumberFormat("vi-VN").format(od.deliveredQtyTotal)}
-                                </span>
-                              </span>
-                            )}
-                            <span>
-                              Còn lại:{" "}
-                              <span className="font-bold text-primary">
-                                {new Intl.NumberFormat("vi-VN").format(getRemainingQty(od) || 0)}
-                              </span>
-                            </span>
-                            {od.proofingOrderCodes && od.proofingOrderCodes.length > 0 && (
-                              <span className="flex items-center gap-1">
-                                <span className="text-slate-400 font-medium">| Mã bài:</span>
-                                <span className="font-mono font-extrabold text-amber-600 dark:text-amber-400 text-xs">
-                                  {od.proofingOrderCodes.join(", ")}
-                                </span>
-                              </span>
-                            )}
-                          </div>
-                          {od.deliveryAddress && (
-                            <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
-                              <MapPin className="h-3 w-3 text-stone-400 shrink-0" />
-                              <span className="truncate" title={od.deliveryAddress}>Địa chỉ giao: {od.deliveryAddress}</span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="w-[110px] flex-shrink-0">
-                          <Label className="text-xs text-slate-500 mb-1 block">Số lượng giao</Label>
-                          <Input
-                            type="number"
-                            min="1"
-                            max={getRemainingQty(od) || 1}
-                            value={deliveryQtys[od.orderDetailId] || ""}
-                            onChange={(e) => {
-                              let val = parseInt(e.target.value, 10);
-                              if (isNaN(val)) val = 0;
-                              const maxVal = getRemainingQty(od);
-                              if (val > maxVal) val = maxVal;
-                              setDeliveryQtys((prev: Record<number, number>) => ({
-                                ...prev,
-                                [od.orderDetailId]: val,
-                              }));
-                            }}
-                            className="h-8 text-right font-semibold text-primary"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-                        <Label className="text-[10px] uppercase text-slate-500 font-bold mb-1 block">Ghi chú mặt hàng</Label>
-                        <Input
-                          placeholder="Nhập ghi chú riêng cho sản phẩm này..."
-                          value={lineNotes[od.orderDetailId] || ""}
-                          onChange={(e) => {
-                            setLineNotes((prev) => ({
-                              ...prev,
-                              [od.orderDetailId]: e.target.value,
-                            }));
-                          }}
-                          className="h-8 text-xs bg-slate-50/50 dark:bg-slate-900/50"
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                  od={od}
+                  deliveryQtys={deliveryQtys}
+                  setDeliveryQtys={setDeliveryQtys}
+                  lineNotes={lineNotes}
+                  setLineNotes={setLineNotes}
+                  getRemainingQty={getRemainingQty}
+                  onImageClick={onImageClick}
+                />
               ))}
             </div>
 

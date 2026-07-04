@@ -3064,6 +3064,15 @@ const UpdateProductionOrderItemRequest = z.object({
   defectQty: z.number().int().nullish(),
   notes: z.string().nullish(),
 });
+const BulkUpdateItem = z.object({
+  itemId: z.number().int(),
+  outputQty: z.number().int(),
+  defectQty: z.number().int().nullish(),
+  notes: z.string().nullish(),
+});
+const BulkUpdateProductionOrderItemsRequest = z.object({
+  items: z.array(BulkUpdateItem).min(1),
+});
 const ProofingOrderDesignResponse = z
   .object({
     id: z.number().int(),
@@ -3227,6 +3236,7 @@ const UpdateProofingDesignItem = z.object({
 });
 const UpdateProofingOrderRequest = z
   .object({
+    code: z.string().min(0).max(50).nullable(),
     status: z.string().min(0).max(50).nullable(),
     notes: z.string().nullable(),
     paperSizeId: z.number().int().nullable(),
@@ -4452,6 +4462,8 @@ export const schemas = {
   UpdateProductionStepRequest,
   AssignProductionStepRequest,
   UpdateProductionOrderItemRequest,
+  BulkUpdateItem,
+  BulkUpdateProductionOrderItemsRequest,
   ProofingOrderDesignResponse,
   ProductionResponse,
   ProofingOrderResponse,
@@ -11337,6 +11349,25 @@ const endpoints = makeApi([
       },
     ],
     response: ProductionOrderItemResponse,
+  },
+  {
+    method: "put",
+    path: "/api/production-orders/:productionOrderId/items/bulk",
+    alias: "putApiproductionOrdersProductionOrderIditemsbulk",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: BulkUpdateProductionOrderItemsRequest,
+      },
+      {
+        name: "productionOrderId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.array(ProductionOrderItemResponse),
   },
   {
     method: "get",

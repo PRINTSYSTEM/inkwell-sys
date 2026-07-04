@@ -228,6 +228,7 @@ function QuantityCell({
             max={maxAvailableQty}
             value={inlineQuantityValue}
             onChange={(e) => setInlineQuantityValue(e.target.value)}
+            onWheel={(e) => (e.target as HTMLInputElement).blur()}
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 const qty = parseInt(inlineQuantityValue, 10);
@@ -426,7 +427,7 @@ export default function ProofingOrderDetailPage() {
 
   // Inline editing state for order info
   const [editingField, setEditingField] = useState<
-    "totalQuantity" | "paperSize" | "notes" | "basisWeight" | "rollWidth" | "all" | null
+    "totalQuantity" | "paperSize" | "notes" | "basisWeight" | "rollWidth" | "code" | "all" | null
   >(null);
   const [inlineTotalQuantity, setInlineTotalQuantity] = useState<string>("");
   const [inlinePaperSizeId, setInlinePaperSizeId] = useState<string>("custom");
@@ -435,6 +436,7 @@ export default function ProofingOrderDetailPage() {
   const [inlineNotes, setInlineNotes] = useState<string>("");
   const [inlineBasisWeight, setInlineBasisWeight] = useState<string>("");
   const [inlineRollWidth, setInlineRollWidth] = useState<string>("");
+  const [inlineCode, setInlineCode] = useState<string>("");
 
   // Related dies dialog state
   const [isRelatedDiesDialogOpen, setIsRelatedDiesDialogOpen] = useState(false);
@@ -1252,6 +1254,7 @@ export default function ProofingOrderDetailPage() {
       await addDesignsMutate({
         id: order.id,
         request: addDesignsPayload,
+        suppressToast: true,
       });
 
       // If this is an empty order (first time adding designs), also update config
@@ -1306,6 +1309,7 @@ export default function ProofingOrderDetailPage() {
             await updateProofingOrderAsync({
               id: order.id,
               data: updateData,
+              suppressToast: true,
             });
             // Query will be automatically invalidated by the hook's onSuccess
           } catch (error) {
@@ -1316,6 +1320,11 @@ export default function ProofingOrderDetailPage() {
       }
 
       // On success: reset and the page will automatically refresh
+      toast.success("Thành công", {
+        description: isEmptyOrder 
+          ? "Đã thêm thiết kế và cấu hình bài bình thành công" 
+          : "Đã thêm thiết kế vào bài bình thành công",
+      });
       clearSelection();
       setDesignQuantities({});
       // Reset config state when order is no longer empty
@@ -1364,7 +1373,7 @@ export default function ProofingOrderDetailPage() {
 
   // Inline editing handlers
   const handleStartEditField = (
-    field: "totalQuantity" | "paperSize" | "notes" | "basisWeight" | "rollWidth",
+    field: "totalQuantity" | "paperSize" | "notes" | "basisWeight" | "rollWidth" | "code",
   ) => {
     if (!order || order.status === "completed") return;
     // If another field is being edited, cancel it first
@@ -1385,6 +1394,8 @@ export default function ProofingOrderDetailPage() {
       setInlineBasisWeight((order.basisWeight ?? "").toString());
     } else if (field === "rollWidth") {
       setInlineRollWidth((order.rollWidth ?? "").toString());
+    } else if (field === "code") {
+      setInlineCode(order.code || "");
     }
   };
 
@@ -1399,6 +1410,7 @@ export default function ProofingOrderDetailPage() {
     setInlineNotes(order.notes || "");
     setInlineBasisWeight((order.basisWeight ?? "").toString());
     setInlineRollWidth((order.rollWidth ?? "").toString());
+    setInlineCode(order.code || "");
   };
 
   const handleCancelEditField = () => {
@@ -1409,6 +1421,7 @@ export default function ProofingOrderDetailPage() {
     setInlineNotes("");
     setInlineBasisWeight("");
     setInlineRollWidth("");
+    setInlineCode("");
   };
 
   const handleSaveField = async () => {
@@ -1501,6 +1514,20 @@ export default function ProofingOrderDetailPage() {
       return true;
     };
 
+    const processCode = () => {
+      const codeVal = inlineCode.trim();
+      if (!codeVal) {
+        toast.error("Lỗi", {
+          description: "Mã bài không được để trống",
+        });
+        return false;
+      }
+      if (codeVal !== order.code) {
+        updateData.code = codeVal;
+      }
+      return true;
+    };
+
     if (editingField === "totalQuantity") {
       if (!processTotalQuantity()) return;
     } else if (editingField === "paperSize") {
@@ -1511,12 +1538,15 @@ export default function ProofingOrderDetailPage() {
       if (!processBasisWeight()) return;
     } else if (editingField === "rollWidth") {
       if (!processRollWidth()) return;
+    } else if (editingField === "code") {
+      if (!processCode()) return;
     } else if (editingField === "all") {
       if (!processTotalQuantity()) return;
       if (!(await processPaperSize())) return;
       processNotes();
       if (!processBasisWeight()) return;
       if (!processRollWidth()) return;
+      if (!processCode()) return;
     }
 
     // Only update if there are changes
@@ -2101,6 +2131,13 @@ export default function ProofingOrderDetailPage() {
         onOldStatusChangeClick={handleOldStatusChangeClick}
         onCancelClick={handleCancelProofingOrder}
         isProofer={isProofer}
+        editingField={editingField}
+        inlineCode={inlineCode}
+        setInlineCode={setInlineCode}
+        isUpdatingInfo={isUpdatingInfo}
+        handleStartEditField={handleStartEditField}
+        handleCancelEditField={handleCancelEditField}
+        handleSaveField={handleSaveField}
       />
 
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">

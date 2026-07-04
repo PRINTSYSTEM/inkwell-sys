@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-07-02T23:05:22.188Z */
+/* Generated at: 2026-07-03T23:49:29.055Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -60,6 +60,8 @@ export const BankLedgerEntryResponseSchema = schemas.BankLedgerEntryResponse;
 export const BankLedgerResponseSchema = schemas.BankLedgerResponse;
 export const BillableItemResponseSchema = schemas.BillableItemResponse;
 export const BulkCreateMaterialTypeRequestSchema = schemas.BulkCreateMaterialTypeRequest;
+export const BulkUpdateItemSchema = schemas.BulkUpdateItem;
+export const BulkUpdateProductionOrderItemsRequestSchema = schemas.BulkUpdateProductionOrderItemsRequest;
 export const CancelOrderRequestSchema = schemas.CancelOrderRequest;
 export const CancelProofingOrderRequestSchema = schemas.CancelProofingOrderRequest;
 export const CashBookEntryResponseSchema = schemas.CashBookEntryResponse;

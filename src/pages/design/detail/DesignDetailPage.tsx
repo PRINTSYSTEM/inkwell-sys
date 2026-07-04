@@ -485,6 +485,7 @@ export default function DesignDetailPage() {
               ? design.requestedQuantity
               : null,
         },
+        suppressToast: true,
       });
 
       toast.success("Thành công", {

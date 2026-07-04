@@ -225,6 +225,7 @@ export function DetailEmptyOrderView({
                               parseInt(e.target.value, 10)
                             )
                           }
+                          onWheel={(e) => (e.target as HTMLInputElement).blur()}
                           disabled={!isProofer}
                           className="h-10 text-base font-bold border-muted-foreground/20 focus:border-primary"
                         />

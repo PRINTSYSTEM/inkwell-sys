@@ -53,6 +53,7 @@ import {
   useUpdateProductionStep,
   useUpdateProductionOrderItem,
   useDeleteProductionOrder,
+  useBulkUpdateProductionOrderItems,
 } from "@/hooks/use-production";
 import {
   Select,
@@ -811,6 +812,7 @@ function ProductionTableRow({
 
   const { mutate: updateStep } = useUpdateProductionStep();
   const { mutate: updateOrderItem } = useUpdateProductionOrderItem();
+  const { mutateAsync: bulkUpdateOrderItems } = useBulkUpdateProductionOrderItems();
 
   const steps = prod.steps || [];
 
@@ -1008,7 +1010,39 @@ function ProductionTableRow({
     }
 
     try {
-      const promises = proofingOrder.proofingOrderDesigns.map(async (pod: any) => {
+      const itemsToUpdate = proofingOrder.proofingOrderDesigns
+        .map((pod: any) => {
+          const prodItem = productionItems.find(
+            (i: any) =>
+              i.proofingOrderDesignId === pod.id ||
+              i.designId === pod.designId ||
+              i.id === pod.id,
+          );
+          if (!prodItem) return null;
+          const values = tempPackagingValues[pod.id] || {
+            outputQty: "",
+            defectQty: "",
+            notes: "",
+            assignedToUserId: "",
+            defectSource: "production",
+          };
+          return {
+            itemId: prodItem.id,
+            outputQty: Number(values.outputQty) || 0,
+            defectQty: Number(values.defectQty) || 0,
+            notes: values.notes || "",
+          };
+        })
+        .filter(Boolean) as any[];
+
+      // 1. Bulk update the production order items in one database transaction
+      await bulkUpdateOrderItems({
+        productionOrderId: prod.id!,
+        data: { items: itemsToUpdate },
+      });
+
+      // 2. Manage corresponding defect records
+      const defectPromises = proofingOrder.proofingOrderDesigns.map(async (pod: any) => {
         const prodItem = productionItems.find(
           (i: any) =>
             i.proofingOrderDesignId === pod.id ||
@@ -1025,18 +1059,7 @@ function ProductionTableRow({
         };
         const defectQtyNum = Number(values.defectQty) || 0;
 
-        // 1. Update the production order item (standard flow)
-        await updateOrderItem({
-          productionOrderId: prod.id!,
-          itemId: prodItem.id,
-          data: {
-            outputQty: Number(values.outputQty) || 0,
-            defectQty: defectQtyNum,
-            notes: values.notes,
-          },
-        });
-
-        // 2. Find existing defect record for this design/item
+        // Find existing defect record for this design/item
         const existingDefect = defectRecords.find(
           (dr) => dr.designId === pod.design?.id || dr.orderDetailId === pod.id
         );
@@ -1090,7 +1113,7 @@ function ProductionTableRow({
         }
       });
 
-      await Promise.all(promises);
+      await Promise.all(defectPromises);
 
       // Invalidate queries to refresh defect data in view mode
       queryClient.invalidateQueries({
@@ -1711,25 +1734,61 @@ function ProductionTableRow({
             ) : proofingOrder?.proofingOrderDesigns &&
               proofingOrder.proofingOrderDesigns.length > 0 ? (
               <>
-                {/* Universal Status for Packaging column */}
-                {(packagingStep ||
-                  steps.find((s) => s.stepType === "packaging")) && (
-                  <div className="pb-2 border-b border-dashed mb-1">
-                    <InlineStepStatus
-                      step={
-                        (packagingStep ||
-                          steps.find((s) => s.stepType === "packaging"))!
-                      }
-                      isEnabled={isPackagingEnabled}
-                      isStatusLocked={true}
-                      defaultPrintQty={defaultPrintQty}
-                    />
+                {/* Universal Status & Edit/Save Buttons for Packaging column */}
+                <div className="pb-2 border-b border-dashed mb-2">
+                  <div className="flex items-center justify-between gap-1.5">
+                    <div className="flex-1 min-w-0">
+                      {(packagingStep ||
+                        steps.find((s) => s.stepType === "packaging")) && (
+                        <InlineStepStatus
+                          step={
+                            (packagingStep ||
+                              steps.find((s) => s.stepType === "packaging"))!
+                          }
+                          isEnabled={isPackagingEnabled}
+                          isStatusLocked={true}
+                          defaultPrintQty={defaultPrintQty}
+                        />
+                      )}
+                    </div>
+                    <div className="shrink-0">
+                      {isEditingPackaging ? (
+                        <div className="flex gap-1 justify-end">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-6 px-1.5 text-[9px] bg-slate-50 hover:bg-slate-100"
+                            onClick={() => setIsEditingPackaging(false)}
+                          >
+                            Hủy
+                          </Button>
+                          <Button
+                            variant="default"
+                            size="sm"
+                            className="h-6 px-1.5 text-[9px] bg-[#93631F] hover:bg-[#7a521a] text-white"
+                            onClick={handleSaveAllPackaging}
+                          >
+                            Lưu
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-[9px]"
+                          disabled={!isPackagingEnabled}
+                          onClick={startEditingPackaging}
+                        >
+                          Sửa
+                        </Button>
+                      )}
+                    </div>
                   </div>
-                )}
+                </div>
 
                 <div className="flex flex-col gap-2 divide-y divide-dashed">
                   {proofingOrder.proofingOrderDesigns
-                    .map((pod: any) => {
+                    .map((pod: any, idx: number) => {
                       const matchingStep =
                         steps.find((s) => {
                           const isPackaging =
@@ -1819,7 +1878,31 @@ function ProductionTableRow({
                                     type="number"
                                     value={tempPackagingValues[pod.id]?.outputQty ?? ""}
                                     onChange={(e) => handleTempChange(pod.id, "outputQty", e.target.value)}
+                                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
                                     className="h-7 text-[12px] px-1.5 py-0 focus-visible:ring-emerald-500 font-bold tabular-nums"
+                                    data-output-qty-index={idx}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        const nextInput = document.querySelector(
+                                          `[data-output-qty-index="${idx + 1}"]`
+                                        ) as HTMLInputElement;
+                                        if (nextInput) {
+                                          nextInput.focus();
+                                          nextInput.select();
+                                        } else {
+                                          const firstDefectInput = document.querySelector(
+                                            `[data-defect-qty-index="0"]`
+                                          ) as HTMLInputElement;
+                                          if (firstDefectInput) {
+                                            firstDefectInput.focus();
+                                            firstDefectInput.select();
+                                          } else {
+                                            handleSaveAllPackaging();
+                                          }
+                                        }
+                                      }
+                                    }}
                                   />
                                 </div>
                                 <div className="flex items-center gap-1">
@@ -1828,7 +1911,23 @@ function ProductionTableRow({
                                     type="number"
                                     value={tempPackagingValues[pod.id]?.defectQty ?? ""}
                                     onChange={(e) => handleTempChange(pod.id, "defectQty", e.target.value)}
+                                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
                                     className="h-7 text-[12px] px-1.5 py-0 focus-visible:ring-red-500 font-bold text-red-600 tabular-nums"
+                                    data-defect-qty-index={idx}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        const nextInput = document.querySelector(
+                                          `[data-defect-qty-index="${idx + 1}"]`
+                                        ) as HTMLInputElement;
+                                        if (nextInput) {
+                                          nextInput.focus();
+                                          nextInput.select();
+                                        } else {
+                                          handleSaveAllPackaging();
+                                        }
+                                      }
+                                    }}
                                   />
                                 </div>
                                 {Number(tempPackagingValues[pod.id]?.defectQty) > 0 && (
@@ -1935,41 +2034,7 @@ function ProductionTableRow({
                     .filter(Boolean)}
                 </div>
 
-                {/* Save/Edit buttons at the bottom of the column */}
-                <div className="mt-2 pt-2 border-t border-dashed">
-                  {isEditingPackaging ? (
-                    <div className="flex gap-1.5">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 text-[10px] flex-1 bg-slate-50 hover:bg-slate-100"
-                        onClick={() => setIsEditingPackaging(false)}
-                      >
-                        Hủy
-                      </Button>
-                      <Button
-                        variant="default"
-                        size="sm"
-                        className="h-7 text-[10px] flex-1 bg-[#93631F] hover:bg-[#7a521a] text-white"
-                        onClick={handleSaveAllPackaging}
-                      >
-                        <Save className="w-3.5 h-3.5 mr-1" />
-                        Lưu
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-[10px] w-full"
-                      disabled={!isPackagingEnabled}
-                      onClick={startEditingPackaging}
-                    >
-                      <Edit className="w-3.5 h-3.5 mr-1" />
-                      Sửa
-                    </Button>
-                  )}
-                </div>
+                {/* Save/Edit buttons removed from bottom, moved to the top of column */}
               </>
             ) : packagingSteps.length > 0 ? (
               <div className="flex flex-col gap-2 divide-y divide-dashed">
