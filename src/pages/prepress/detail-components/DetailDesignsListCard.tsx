@@ -198,6 +198,11 @@ export function DetailDesignsListCard({
                   <div className="space-y-2 text-sm max-w-md">
                     <div className="font-semibold text-base border-b pb-2">
                       {pod.design?.designName}
+                      {pod.design?.customer && (
+                        <span className="text-muted-foreground font-normal text-sm">
+                          {" - "}{pod.design.customer.companyName || pod.design.customer.name}
+                        </span>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
@@ -268,13 +273,8 @@ export function DetailDesignsListCard({
                         <span className="text-muted-foreground">
                           Thiết kế:
                         </span>
-                        <span className="ml-2 font-medium">
+                        <span className="ml-2">
                           {pod.design?.designer?.fullName || "—"}
-                          { (pod.design?.customer?.companyName || pod.design?.customer?.name) && (
-                            <span className="text-muted-foreground font-normal">
-                              {" - "}{pod.design.customer.companyName || pod.design.customer.name}
-                            </span>
-                          )}
                         </span>
                       </div>
                     </div>
