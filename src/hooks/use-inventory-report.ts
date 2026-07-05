@@ -68,6 +68,9 @@ export interface InventorySummaryParams {
   search?: string;
   itemType?: string;
   itemGroup?: string;
+  hideEmpty?: boolean;
+  sortColumn?: string;
+  sortOrder?: string;
 }
 
 export const useInventorySummary = (params?: InventorySummaryParams) => {
@@ -115,7 +118,7 @@ export const useExportInventorySummary = () => {
 
 export const useExportInventorySummaryPDF = () => {
   return useMutation({
-    mutationFn: async (params?: InventoryReportSummaryPdfParams) => {
+    mutationFn: async (params?: InventorySummaryParams) => {
       if (USE_MOCK_DATA) {
         // Simulating network delay
         await new Promise((resolve) => setTimeout(resolve, 800));
@@ -316,6 +319,7 @@ export const useSlowMoving = (params?: SlowMovingParams) => {
 export interface StockCardParams {
   fromDate?: string;
   toDate?: string;
+  itemType?: string;
 }
 
 export const useStockCard = (itemCode: string, params?: StockCardParams) => {

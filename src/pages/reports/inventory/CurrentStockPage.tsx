@@ -307,7 +307,7 @@ export default function CurrentStockPage() {
                     key={item.id}
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() =>
-                      navigate(`/reports/inventory/stock-card/${item.id}`)
+                      navigate(`/reports/inventory/stock-card/${item.id}?type=material`)
                     }
                   >
                     <TableCell className="font-medium font-mono text-sm">

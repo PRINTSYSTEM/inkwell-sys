@@ -467,14 +467,14 @@ export function AddDesignToProofingDialog({
                           <span className="text-muted-foreground text-xs">—</span>
                         )}
                       </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
+                      <TableCell className="w-48 min-w-[150px]">
+                        <div className="flex items-center gap-1.5 min-w-[140px]">
                           <Input
                             type="number"
                             min="0"
                             max={maxQty}
                             className={cn(
-                              "h-9 flex-1 text-right font-mono text-base font-semibold",
+                              "h-8 w-20 text-center font-mono text-sm font-semibold",
                               isExceeded &&
                                 "border-destructive focus-visible:ring-destructive",
                               !isSelected && "opacity-50"

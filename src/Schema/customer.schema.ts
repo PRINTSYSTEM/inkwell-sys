@@ -248,3 +248,27 @@ export type UpdateCustomerAddressRequest = z.infer<
   typeof UpdateCustomerAddressRequestSchema
 >;
 
+// ===== CustomerFavoriteStatsResponse =====
+export const DesignTypeStatSchema = z.object({
+  name: z.string(),
+  count: z.number(),
+  percentage: z.number(),
+});
+export type DesignTypeStat = z.infer<typeof DesignTypeStatSchema>;
+
+export const MaterialTypeStatSchema = z.object({
+  name: z.string(),
+  count: z.number(),
+  percentage: z.number(),
+});
+export type MaterialTypeStat = z.infer<typeof MaterialTypeStatSchema>;
+
+export const CustomerFavoriteStatsResponseSchema = z.object({
+  topDesignTypes: z.array(DesignTypeStatSchema),
+  topMaterialTypes: z.array(MaterialTypeStatSchema),
+  commonQuantities: z.array(z.number()),
+});
+export type CustomerFavoriteStatsResponse = z.infer<
+  typeof CustomerFavoriteStatsResponseSchema
+>;
+

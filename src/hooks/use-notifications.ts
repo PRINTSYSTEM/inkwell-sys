@@ -33,22 +33,11 @@ export const useNotifications = (params?: NotificationsParams) => {
         (params ?? {}) as Record<string, unknown>
       );
 
-      // TODO: Replace with actual API endpoint when available
-      // For now, return mock data structure
-      // const res = await apiRequest.get<NotificationsResponsePaginate>(
-      //   NOTIFICATIONS_ENDPOINT,
-      //   { params: normalizedParams }
-      // );
-      // return res.data;
-
-      // Mock response for now
-      return {
-        items: [],
-        total: 0,
-        pageNumber: params?.pageNumber ?? 1,
-        pageSize: params?.pageSize ?? 10,
-        totalPages: 0,
-      } as NotificationsResponsePaginate;
+      const res = await apiRequest.get<NotificationsResponsePaginate>(
+        API_SUFFIX.NOTIFICATIONS,
+        { params: normalizedParams }
+      );
+      return res.data;
     },
     staleTime: 30 * 1000, // 30 seconds for real-time updates
   });
@@ -60,12 +49,10 @@ export const useNotification = (id: number | null, enabled: boolean = true) => {
     queryKey: ["notification", id],
     queryFn: async () => {
       if (!id) return null;
-      // TODO: Replace with actual API endpoint
-      // const res = await apiRequest.get<Notification>(
-      //   `${NOTIFICATIONS_ENDPOINT}/${id}`
-      // );
-      // return res.data;
-      return null;
+      const res = await apiRequest.get<Notification>(
+        API_SUFFIX.NOTIFICATION_BY_ID(id)
+      );
+      return res.data;
     },
     enabled: enabled && id !== null,
   });
@@ -78,7 +65,7 @@ export const useMarkNotificationAsRead = () => {
   return useMutation({
     mutationFn: async (id: number) => {
       const res = await apiRequest.put<Notification>(
-        `${NOTIFICATIONS_ENDPOINT}/${id}/read`
+        API_SUFFIX.NOTIFICATION_READ(id)
       );
       return res.data;
     },
@@ -95,7 +82,7 @@ export const useMarkAllNotificationsAsRead = () => {
 
   return useMutation({
     mutationFn: async () => {
-      const res = await apiRequest.put(`${NOTIFICATIONS_ENDPOINT}/read-all`);
+      const res = await apiRequest.put(API_SUFFIX.NOTIFICATION_READ_ALL);
       return res.data;
     },
     onSuccess: () => {
@@ -111,8 +98,7 @@ export const useDeleteNotification = () => {
 
   return useMutation({
     mutationFn: async (id: number) => {
-      // TODO: Replace with actual API endpoint
-      // await apiRequest.delete(`${NOTIFICATIONS_ENDPOINT}/${id}`);
+      await apiRequest.delete(API_SUFFIX.NOTIFICATION_BY_ID(id));
       return { id };
     },
     onSuccess: () => {

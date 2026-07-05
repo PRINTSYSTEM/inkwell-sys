@@ -9,6 +9,7 @@ import { debtNotificationKeys } from "@/hooks/use-debt-notification";
 import { orderKeys } from "@/hooks/use-order";
 
 interface NotificationMessage {
+  id?: number | string;
   type: string;
   title: string;
   message: string;
@@ -68,8 +69,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
         message.message === "Theo dõi và quản lý tiến độ sản xuất";
 
       if (!isDuplicateProductionToast) {
-        // 1. Hiển thị Toast thông báo cho người dùng
+        // 1. Hiển thị Toast thông báo cho người dùng với cơ chế chống tràn (deduplication)
         toast(message.title, {
+          id: message.id ? `${message.type}-${message.id}` : `${message.type}-${message.title}`,
           description: message.message,
           duration: 8000,
           action: message.data?.customerId
@@ -86,8 +88,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
       switch (message.type) {
         case "DebtApproved":
         case "CustomerDebtWarning":
-          // Làm mới danh sách thông báo công nợ và số lượng trên chuông
+          // Làm mới danh sách thông báo công nợ, thông báo chung và số lượng trên chuông
           queryClient.invalidateQueries({ queryKey: debtNotificationKeys.all });
+          queryClient.invalidateQueries({ queryKey: ["notifications"] });
           break;
 
         case "OrderStatusChanged":

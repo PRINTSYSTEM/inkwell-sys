@@ -432,10 +432,10 @@ export default function OrderList() {
                       <>
                         <TableRow
                           key={order.id}
-                          className="h-14 cursor-pointer border-x-2 border-t-2 border-border border-l-4 shadow-sm bg-card hover:bg-muted/40 border-l-primary"
+                          className="h-11 cursor-pointer border-x-2 border-t-2 border-border border-l-4 shadow-sm bg-card hover:bg-muted/40 border-l-primary"
                           onClick={() => handleOrderClick(order.id ?? 0)}
                         >
-                          <TableCell className="py-3">
+                          <TableCell className="py-1.5 align-middle">
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="font-bold text-sm text-primary">
                                 {order.code || `ORD-${order.id}`}
@@ -447,18 +447,18 @@ export default function OrderList() {
                               )}
                             </div>
                             {order.createdAt && (
-                              <p className="text-xs font-medium text-muted-foreground mt-0.5">
+                              <p className="text-[10px] font-medium text-muted-foreground mt-0.5">
                                 {formatDate(order.createdAt)}
                               </p>
                             )}
                           </TableCell>
-                          <TableCell className="py-3">
+                          <TableCell className="py-1.5 align-middle">
                             <div className="flex items-center gap-2">
-                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted shrink-0">
+                              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-muted shrink-0">
                                 {isCompany ? (
-                                  <Building2 className="h-4 w-4 text-muted-foreground" />
+                                  <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
                                 ) : (
-                                  <User className="h-4 w-4 text-muted-foreground" />
+                                  <User className="h-3.5 w-3.5 text-muted-foreground" />
                                 )}
                               </div>
                               <div className="min-w-0">
@@ -477,7 +477,7 @@ export default function OrderList() {
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="py-3">
+                          <TableCell className="py-1.5 align-middle">
                             <StatusBadge
                               status={order.status}
                               label={
@@ -485,12 +485,12 @@ export default function OrderList() {
                               }
                             />
                           </TableCell>
-                          <TableCell className="text-center py-3">
-                            <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-muted text-sm font-bold">
+                          <TableCell className="text-center py-1.5 align-middle">
+                            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-bold">
                               {order.orderDetails?.length || 0}
                             </span>
                           </TableCell>
-                          <TableCell className="py-3">
+                          <TableCell className="py-1.5 align-middle">
                             {order.deliveryDate ? (
                               <div className="flex items-center gap-1.5 text-sm font-semibold">
                                 <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
@@ -504,10 +504,10 @@ export default function OrderList() {
                           </TableCell>
                           {canViewPrice && (
                             <>
-                              <TableCell className="text-right py-3 font-bold text-sm">
+                              <TableCell className="text-right py-1.5 align-middle font-bold text-sm">
                                 {formatCurrency(totalAmount)}
                               </TableCell>
-                              <TableCell className="text-right py-3">
+                              <TableCell className="text-right py-1.5 align-middle">
                                 <span
                                   className={`text-sm font-bold ${
                                     depositAmount > 0
@@ -518,7 +518,7 @@ export default function OrderList() {
                                   {formatCurrency(depositAmount)}
                                 </span>
                               </TableCell>
-                              <TableCell className="text-right py-3">
+                              <TableCell className="text-right py-1.5 align-middle">
                                 <span
                                   className={`text-sm font-bold ${
                                     remaining > 0
@@ -539,8 +539,8 @@ export default function OrderList() {
                               colSpan={canViewPrice ? 8 : 5}
                               className="p-0 bg-muted/20 border-x-2 border-b-2 border-border border-l-4 border-l-primary"
                             >
-                              <div className="px-4 py-3 pl-6">
-                                <div className="overflow-hidden rounded-md border border-border/70 bg-background">
+                              <div className="px-3 py-1.5 pl-6 bg-muted/10">
+                                <div className="overflow-hidden rounded border border-border/70 bg-background">
                                   <Table className="mb-0">
                                     <TableBody>
                                       {orderDetails.map((orderDetail) => {
@@ -563,8 +563,8 @@ export default function OrderList() {
                                             }
                                           >
                                             {/* Ảnh */}
-                                            <TableCell className="w-[72px] align-middle">
-                                              <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md bg-muted/60 flex items-center justify-center">
+                                            <TableCell className="w-[50px] py-1 align-middle">
+                                              <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded bg-muted/60 flex items-center justify-center">
                                                 {designImageUrl ? (
                                                   <img
                                                     src={designImageUrl}
@@ -580,14 +580,14 @@ export default function OrderList() {
                                                     }
                                                   />
                                                 ) : (
-                                                  <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                                                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
                                                 )}
                                               </div>
                                             </TableCell>
 
                                             {/* Mã + tên thiết kế */}
-                                            <TableCell className="min-w-[220px] align-middle">
-                                              <div className="min-w-0 space-y-1">
+                                            <TableCell className="min-w-[200px] py-1 align-middle">
+                                              <div className="min-w-0 space-y-0.5">
                                                 <div className="flex items-center justify-between gap-2">
                                                   <span className="truncate text-xs font-semibold uppercase tracking-wide text-primary">
                                                     {designCode ||
@@ -595,7 +595,7 @@ export default function OrderList() {
                                                   </span>
                                                 </div>
                                                 {designName && (
-                                                  <p className="truncate text-xs text-muted-foreground">
+                                                  <p className="truncate text-[11px] text-muted-foreground">
                                                     {designName}
                                                   </p>
                                                 )}
@@ -603,7 +603,7 @@ export default function OrderList() {
                                             </TableCell>
 
                                             {/* Trạng thái */}
-                                            <TableCell className="w-[160px] align-middle">
+                                            <TableCell className="w-[160px] py-1 align-middle">
                                               <StatusBadge
                                                 status={status}
                                                 label={
@@ -617,8 +617,8 @@ export default function OrderList() {
                                             </TableCell>
 
                                             {/* Số lượng */}
-                                            <TableCell className="w-[110px] text-right align-middle">
-                                              <span className="inline-flex min-w-[56px] items-center justify-end rounded-full bg-muted px-2 py-1 text-xs font-semibold">
+                                            <TableCell className="w-[110px] text-right py-1 align-middle">
+                                              <span className="inline-flex min-w-[50px] h-5 items-center justify-center rounded bg-muted px-1.5 text-[11px] font-semibold">
                                                 x{quantity}
                                               </span>
                                             </TableCell>

@@ -41,7 +41,7 @@ import type {
   InvoiceLineInput,
   CreateInvoiceFromLinesRequest,
 } from "@/Schema/invoice.schema";
-import { Loader2, ShoppingCart, Check, ChevronsUpDown, Search } from "lucide-react";
+import { Loader2, ShoppingCart, Check, ChevronsUpDown, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CreateInvoiceFromLinesDialogProps {
@@ -55,17 +55,6 @@ export function CreateInvoiceFromLinesDialog({
   onOpenChange,
   customerId,
 }: CreateInvoiceFromLinesDialogProps) {
-  const { data: billableItems, isLoading, refetch } = useBillableItems(
-    customerId ? { customerId } : undefined
-  );
-
-  // Refetch billable items when dialog opens
-  useEffect(() => {
-    if (open) {
-      refetch();
-    }
-  }, [open, refetch]);
-
   // Load customer data
   const { data: customersData } = useCustomers({ pageSize: 1000 });
   const customers = (customersData as any)?.items || [];
@@ -83,6 +72,18 @@ export function CreateInvoiceFromLinesDialog({
   const [buyerTaxCode, setBuyerTaxCode] = useState<string>("");
   const [buyerAddress, setBuyerAddress] = useState<string>("");
   const [buyerEmail, setBuyerEmail] = useState<string>("");
+
+  // Use local selection billToCustomerId if available, otherwise fall back to customerId prop
+  const { data: billableItems, isLoading, refetch } = useBillableItems(
+    billToCustomerId || customerId ? { customerId: billToCustomerId || customerId } : undefined
+  );
+
+  // Refetch billable items when dialog opens & when customer changes
+  useEffect(() => {
+    if (open) {
+      refetch();
+    }
+  }, [open, refetch, billToCustomerId]);
 
   const createInvoiceMutation = useCreateInvoiceFromLines();
 
@@ -195,6 +196,20 @@ export function CreateInvoiceFromLinesDialog({
     });
   }, [billableItems, searchQuery]);
 
+  // Selected lines mapped with details for visual layout & editing
+  const selectedLinesArray = useMemo(() => {
+    return Array.from(selectedLines.values()).map((line) => {
+      const item = billableItems?.find((i) => i.deliveryLineId === line.deliveryLineId);
+      return {
+        line,
+        item,
+      };
+    }).filter((x) => x.item != null) as Array<{
+      line: InvoiceLineInput;
+      item: BillableItemResponse;
+    }>;
+  }, [selectedLines, billableItems]);
+
   // Calculate totals
   const totals = useMemo(() => {
     let subTotal = 0;
@@ -204,7 +219,12 @@ export function CreateInvoiceFromLinesDialog({
         (i) => i.deliveryLineId === deliveryLineId
       );
       if (item && item.unitPrice) {
-        const lineTotal = (item.unitPrice || 0) * (line.invoiceQty || 1);
+        const linePrice = item.unitPrice || 0;
+        const lineQty = line.invoiceQty || 0;
+        let lineTotal = linePrice * lineQty;
+        if (line.discountPercent != null && line.discountPercent > 0) {
+          lineTotal = lineTotal * (1 - line.discountPercent / 100);
+        }
         subTotal += lineTotal;
       }
     });
@@ -499,6 +519,84 @@ export function CreateInvoiceFromLinesDialog({
                     rows={2}
                   />
                 </div>
+
+                {/* Selected Lines Customizer */}
+                {selectedLinesArray.length > 0 && (
+                  <div className="space-y-2 border-t pt-2 mt-2">
+                    <Label className="text-[11px] font-bold text-slate-700">Chi tiết dòng hàng xuất hóa đơn</Label>
+                    <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                      {selectedLinesArray.map(({ line, item }) => {
+                        const maxQty = item.remainingToInvoice || 1;
+                        return (
+                          <div key={line.deliveryLineId} className="p-2.5 border rounded-lg bg-white space-y-2 shadow-xs border-slate-200">
+                            <div className="flex justify-between items-start gap-2">
+                              <div className="text-xs font-bold truncate text-slate-800">
+                                {item.designName || item.designCode || "—"}
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="h-5 w-5 text-muted-foreground hover:text-destructive shrink-0 cursor-pointer"
+                                onClick={() => toggleLine(item)}
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                            <div className="text-[10px] text-muted-foreground flex justify-between">
+                              <span>Mã đơn: <span className="font-semibold text-slate-700">{item.orderCode}</span></span>
+                              <span>Đơn giá: <span className="font-semibold text-slate-700">{formatCurrency(item.unitPrice || 0)}</span></span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div className="space-y-1">
+                                <Label className="text-[10px] text-slate-500 font-medium">Số lượng (max {maxQty})</Label>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={maxQty}
+                                  value={line.invoiceQty}
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value, 10);
+                                    if (isNaN(val)) return;
+                                    const clamped = Math.max(1, Math.min(maxQty, val));
+                                    const newSelected = new Map(selectedLines);
+                                    newSelected.set(line.deliveryLineId, {
+                                      ...line,
+                                      invoiceQty: clamped
+                                    });
+                                    setSelectedLines(newSelected);
+                                  }}
+                                  className="h-7 text-[11px] px-2 bg-slate-50/50"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-[10px] text-slate-500 font-medium">Chiết khấu (%)</Label>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  value={line.discountPercent ?? ""}
+                                  placeholder="0"
+                                  onChange={(e) => {
+                                    const val = e.target.value === "" ? null : parseInt(e.target.value, 10);
+                                    if (val !== null && (isNaN(val) || val < 0 || val > 100)) return;
+                                    const newSelected = new Map(selectedLines);
+                                    newSelected.set(line.deliveryLineId, {
+                                      ...line,
+                                      discountPercent: val
+                                    });
+                                    setSelectedLines(newSelected);
+                                  }}
+                                  className="h-7 text-[11px] px-2 bg-slate-50/50"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Summary Card */}
                 <Card className="shadow-sm bg-slate-50 border-slate-200 mt-2">

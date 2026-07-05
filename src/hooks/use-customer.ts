@@ -13,6 +13,7 @@ import type {
   CustomerAddressResponsePaginate,
   CreateCustomerAddressRequest,
   UpdateCustomerAddressRequest,
+  CustomerFavoriteStatsResponse,
 } from "@/Schema/customer.schema";
 import { createCrudHooks } from "./use-base";
 import {
@@ -263,28 +264,18 @@ export const useCustomerStatistics = (
 };
 
 // ================== GET CUSTOMER FAVORITE STATS ==================
-// TODO: Implement when API endpoint is available
+// GET /customers/{id}/favorite-stats
 export function useCustomerFavoriteStats(
   customerId: number,
   enabled: boolean = true
 ) {
-  return useQuery<{
-    topDesignTypes: Array<{ name: string; count: number; percentage: number }>;
-    topMaterialTypes: Array<{
-      name: string;
-      count: number;
-      percentage: number;
-    }>;
-    commonQuantities: number[];
-  }>({
+  return useQuery<CustomerFavoriteStatsResponse>({
     queryKey: ["customerFavoriteStats", customerId],
     queryFn: async () => {
-      // Placeholder - return empty stats until API is implemented
-      return {
-        topDesignTypes: [],
-        topMaterialTypes: [],
-        commonQuantities: [],
-      };
+      const res = await apiRequest.get<CustomerFavoriteStatsResponse>(
+        API_SUFFIX.CUSTOMER_FAVORITE_STATS(customerId)
+      );
+      return res.data;
     },
     enabled: enabled && !!customerId,
   });

@@ -112,6 +112,7 @@ export const API_SUFFIX = {
   CUSTOMER_MONTHLY_DEBT: (id: number) => `/customers/${id}/monthly-debt`,
   CUSTOMER_DEBT_SUMMARY: (id: number) => `/customers/${id}/debt-summary`,
   CUSTOMER_STATISTICS: (id: number) => `/customers/${id}/statistics`,
+  CUSTOMER_FAVORITE_STATS: (id: number) => `/customers/${id}/favorite-stats`,
   CUSTOMER_ORDERS: (id: number) => `/customers/${id}/order-history`,
 
   // ========== CUSTOMER ADDRESSES ==========
@@ -367,6 +368,13 @@ export const API_SUFFIX = {
   DEBT_NOTIFICATION_PREVIEW: (id: number) => `/debt-notifications/${id}/preview`,
   DEBT_NOTIFICATION_READ: (id: number) => `/debt-notifications/${id}/read`,
   DEBT_NOTIFICATION_READ_ALL: "/debt-notifications/read-all",
+
+  // ========== NOTIFICATIONS ==========
+  NOTIFICATIONS: "/notifications",
+  NOTIFICATION_BY_ID: (id: number) => `/notifications/${id}`,
+  NOTIFICATION_READ: (id: number) => `/notifications/${id}/read`,
+  NOTIFICATION_READ_ALL: "/notifications/read-all",
+  NOTIFICATION_UNREAD_COUNT: "/notifications/unread-count",
 
   // ========== DEBT RECONCILIATIONS ==========
   DEBT_RECONCILIATION_AP: "/debt-reconciliations/ap",

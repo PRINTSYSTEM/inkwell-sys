@@ -193,37 +193,37 @@ export default function APDetailPage() {
       {/* Overview Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="shadow-sm border-blue-100 bg-blue-50/20">
-          <CardHeader className="p-4 pb-2">
+          <CardHeader className="p-2.5 pb-2">
             <CardTitle className="text-xs font-semibold text-blue-600 uppercase tracking-wider">
               Tổng phát sinh mua
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="text-xl font-bold text-blue-700">
+          <CardContent className="p-2.5 pt-0">
+            <div className="text-lg font-bold text-blue-700">
               {formatCurrency(totalAmountDue)}
             </div>
           </CardContent>
         </Card>
         <Card className="shadow-sm border-green-100 bg-green-50/20">
-          <CardHeader className="p-4 pb-2">
+          <CardHeader className="p-2.5 pb-2">
             <CardTitle className="text-xs font-semibold text-green-600 uppercase tracking-wider">
               Tổng đã trả
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="text-xl font-bold text-green-700">
+          <CardContent className="p-2.5 pt-0">
+            <div className="text-lg font-bold text-green-700">
               {formatCurrency(totalAmountPaid)}
             </div>
           </CardContent>
         </Card>
         <Card className="shadow-sm border-orange-100 bg-orange-50/20">
-          <CardHeader className="p-4 pb-2">
+          <CardHeader className="p-2.5 pb-2">
             <CardTitle className="text-xs font-semibold text-orange-600 uppercase tracking-wider">
               Còn phải trả (Còn nợ)
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-4 pt-0">
-            <div className="text-xl font-bold text-orange-700">
+          <CardContent className="p-2.5 pt-0">
+            <div className="text-lg font-bold text-orange-700">
               {formatCurrency(totalOutstanding)}
             </div>
           </CardContent>
@@ -376,28 +376,28 @@ export default function APDetailPage() {
                         <TableCell className="font-mono text-xs font-bold text-slate-700">
                           {item.documentNumber || "—"}
                         </TableCell>
-                        <TableCell className="text-sm font-semibold py-3">
+                        <TableCell className="text-sm font-semibold py-1.5">
                           <div>{translateDocType(item.documentType)}</div>
                           {item.items && item.items.length > 0 && (
                             <div className="max-w-md mt-1 border rounded-lg overflow-hidden bg-background/50 shadow-sm font-normal">
                               <Table>
                                 <TableHeader className="bg-muted/40">
                                   <TableRow className="hover:bg-transparent">
-                                    <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2">Mã vật tư</TableHead>
-                                    <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2">Tên vật tư</TableHead>
-                                    <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2 text-right">SL</TableHead>
-                                    <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2 text-right">Đơn giá</TableHead>
-                                    <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2 text-right">Thành tiền</TableHead>
+                                    <TableHead className="text-[9px] font-bold uppercase h-6 py-0.5 px-1">Mã vật tư</TableHead>
+                                    <TableHead className="text-[9px] font-bold uppercase h-6 py-0.5 px-1">Tên vật tư</TableHead>
+                                    <TableHead className="text-[9px] font-bold uppercase h-6 py-0.5 px-1 text-right">SL</TableHead>
+                                    <TableHead className="text-[9px] font-bold uppercase h-6 py-0.5 px-1 text-right">Đơn giá</TableHead>
+                                    <TableHead className="text-[9px] font-bold uppercase h-6 py-0.5 px-1 text-right">Thành tiền</TableHead>
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                   {item.items.map((goodsItem, idx) => (
                                     <TableRow key={idx} className="hover:bg-muted/10">
-                                      <TableCell className="text-[11px] font-mono py-1 px-2">{goodsItem.code || "—"}</TableCell>
-                                      <TableCell className="text-[11px] font-medium py-1 px-2 max-w-[120px] truncate" title={goodsItem.name || ""}>{goodsItem.name || "—"}</TableCell>
-                                      <TableCell className="text-[11px] py-1 px-2 text-right tabular-nums">{goodsItem.quantity ?? 0}</TableCell>
-                                      <TableCell className="text-[11px] py-1 px-2 text-right tabular-nums text-muted-foreground">{formatCurrency(goodsItem.unitPrice ?? 0)}</TableCell>
-                                      <TableCell className="text-[11px] py-1 px-2 text-right tabular-nums font-semibold">{formatCurrency(goodsItem.totalAmount ?? 0)}</TableCell>
+                                      <TableCell className="text-[10px] font-mono py-0.5 px-1">{goodsItem.code || "—"}</TableCell>
+                                      <TableCell className="text-[10px] font-medium py-0.5 px-1 max-w-[120px] truncate" title={goodsItem.name || ""}>{goodsItem.name || "—"}</TableCell>
+                                      <TableCell className="text-[10px] py-0.5 px-1 text-right tabular-nums">{goodsItem.quantity ?? 0}</TableCell>
+                                      <TableCell className="text-[10px] py-0.5 px-1 text-right tabular-nums text-muted-foreground">{formatCurrency(goodsItem.unitPrice ?? 0)}</TableCell>
+                                      <TableCell className="text-[10px] py-0.5 px-1 text-right tabular-nums font-semibold">{formatCurrency(goodsItem.totalAmount ?? 0)}</TableCell>
                                     </TableRow>
                                   ))}
                                 </TableBody>
