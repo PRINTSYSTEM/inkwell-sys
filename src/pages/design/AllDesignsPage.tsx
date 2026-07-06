@@ -24,6 +24,7 @@ import {
   Eye,
 } from "lucide-react";
 import { useDesigns, useFilters, useUsers, useUpdateDesign, useAuth, useReprintDesign } from "@/hooks";
+import { useDesignTypeList } from "@/hooks/use-design-type";
 import {
   Dialog,
   DialogContent,
@@ -59,6 +60,12 @@ export default function AllDesignsPage() {
   const queryClient = useQueryClient();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const { data: designTypesData } = useDesignTypeList({ status: "active" });
+  const designTypes = useMemo(() => {
+    return Array.isArray(designTypesData)
+      ? designTypesData
+      : (designTypesData as any)?.items || [];
+  }, [designTypesData]);
   const [pageInput, setPageInput] = useState<string>("");
   const [selectedMonth, setSelectedMonth] = useState<number | null>(
     new Date().getMonth() + 1
@@ -371,18 +378,11 @@ export default function AllDesignsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả loại</SelectItem>
-                {Array.from(new Set(designs.map((d) => d.designTypeId))).map(
-                  (typeId) => {
-                    const type = designs.find(
-                      (d) => d.designTypeId === typeId
-                    )?.designType;
-                    return type ? (
-                      <SelectItem key={type.id} value={type.id.toString()}>
-                        {type.name}
-                      </SelectItem>
-                    ) : null;
-                  }
-                )}
+                {designTypes.map((type: any) => (
+                  <SelectItem key={type.id} value={type.id.toString()}>
+                    {type.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
