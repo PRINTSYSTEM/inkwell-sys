@@ -37,6 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { AsyncSelect } from "@/components/forms/AsyncSelect";
 import { getStatusColorClass } from "@/lib/status-utils";
@@ -110,6 +111,7 @@ interface QCInspectionRowProps {
 
 function QCInspectionRow({ prod, searchTerm }: QCInspectionRowProps) {
   const queryClient = useQueryClient();
+  const [isExpanded, setIsExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
@@ -127,19 +129,21 @@ function QCInspectionRow({ prod, searchTerm }: QCInspectionRowProps) {
     >
   >({});
 
+  // Query defect records only when row is expanded
   const { data: defectRecordsData } = useDefectRecordsByProductionOrder(
     prod.id || null,
     undefined,
-    !!prod.id,
+    !!prod.id && isExpanded,
   );
   const defectRecords = defectRecordsData?.items || [];
 
   const { mutate: updateStep } = useUpdateProductionStep();
   const { mutateAsync: bulkUpdateOrderItems } = useBulkUpdateProductionOrderItems();
 
+  // Query proofing order only when row is expanded
   const { data: proofingOrderData, isLoading: isProofingLoading } = useProofingOrder(
     prod.proofingOrderId || null,
-    !!prod.proofingOrderId,
+    !!prod.proofingOrderId && isExpanded,
   );
   const proofingOrder = (proofingOrderData || prod.proofingOrder) as any;
 
@@ -206,7 +210,7 @@ function QCInspectionRow({ prod, searchTerm }: QCInspectionRowProps) {
   };
 
   const startEditing = () => {
-    if (!proofingOrder?.proofingOrderDesigns) return;
+    setIsExpanded(true);
 
     // Auto-progress step to 'in_progress' if ready
     if (
@@ -226,42 +230,49 @@ function QCInspectionRow({ prod, searchTerm }: QCInspectionRowProps) {
       });
     }
 
-    const initialValues: typeof tempPackagingValues = {};
-    proofingOrder.proofingOrderDesigns.forEach((pod: any) => {
-      const prodItem = productionItems.find(
-        (i: any) =>
-          i.proofingOrderDesignId === pod.id ||
-          i.designId === pod.designId ||
-          i.id === pod.id,
-      );
-
-      const outQty = prodItem?.outputQty != null
-        ? (prodItem.outputQty === 0 ? "" : prodItem.outputQty.toString())
-        : prodItem?.producedQty != null
-          ? (prodItem.producedQty === 0 ? "" : prodItem.producedQty.toString())
-          : defaultPrintQty
-            ? String(defaultPrintQty)
-            : "";
-      const defQty = prodItem?.defectQty != null && prodItem.defectQty !== 0
-        ? prodItem.defectQty.toString()
-        : "";
-      const notesVal = prodItem?.notes || "";
-
-      const existingDefect = defectRecords.find(
-        (dr) => dr.designId === pod.design?.id || dr.orderDetailId === pod.id
-      );
-
-      initialValues[pod.id] = {
-        outputQty: outQty,
-        defectQty: defQty,
-        notes: notesVal,
-        assignedToUserId: existingDefect?.assignedToUserId?.toString() || "",
-        defectSource: existingDefect?.defectSource || "production",
-      };
-    });
-    setTempPackagingValues(initialValues);
+    setTempPackagingValues({});
     setIsEditing(true);
   };
+
+  // Auto-initialize edit values once proofingOrder is loaded
+  useEffect(() => {
+    if (isEditing && proofingOrder && proofingOrder.proofingOrderDesigns && Object.keys(tempPackagingValues).length === 0) {
+      const initialValues: typeof tempPackagingValues = {};
+      proofingOrder.proofingOrderDesigns.forEach((pod: any) => {
+        const prodItem = productionItems.find(
+          (i: any) =>
+            i.proofingOrderDesignId === pod.id ||
+            i.designId === pod.designId ||
+            i.id === pod.id,
+        );
+
+        const outQtyVal = prodItem?.outputQty != null && prodItem.outputQty !== 0
+          ? prodItem.outputQty
+          : prodItem?.producedQty != null && prodItem.producedQty !== 0
+            ? prodItem.producedQty
+            : 0;
+
+        const outQty = outQtyVal > 0 ? outQtyVal.toString() : "";
+        const defQty = prodItem?.defectQty != null && prodItem.defectQty !== 0
+          ? prodItem.defectQty.toString()
+          : "";
+        const notesVal = prodItem?.notes || "";
+
+        const existingDefect = defectRecords.find(
+          (dr) => dr.designId === pod.design?.id || dr.orderDetailId === pod.id
+        );
+
+        initialValues[pod.id] = {
+          outputQty: outQty,
+          defectQty: defQty,
+          notes: notesVal,
+          assignedToUserId: existingDefect?.assignedToUserId?.toString() || "",
+          defectSource: existingDefect?.defectSource || "production",
+        };
+      });
+      setTempPackagingValues(initialValues);
+    }
+  }, [isEditing, proofingOrder, productionItems, defectRecords, tempPackagingValues]);
 
   const handleTempChange = (
     podId: number,
@@ -419,67 +430,85 @@ function QCInspectionRow({ prod, searchTerm }: QCInspectionRowProps) {
   return (
     <TableRow className="hover:bg-slate-50/50">
       {/* 1. Job details */}
-      <TableCell className="align-top py-4 font-bold text-sm text-center w-[120px] max-w-[120px] border-r">
-        {isProofingLoading ? (
-          <div className="flex justify-center py-4">
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-1.5 px-1">
+      <TableCell className="align-top py-4 font-bold text-sm text-center w-[125px] max-w-[125px] border-r">
+        <div className="flex flex-col items-center gap-1.5 px-1">
+          <div className="flex items-center justify-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 p-0 rounded-full cursor-pointer hover:bg-slate-100 shrink-0"
+              onClick={() => setIsExpanded(!isExpanded)}
+            >
+              {isExpanded ? (
+                <ChevronDown className="h-4 w-4 text-slate-500" />
+              ) : (
+                <ChevronRight className="h-4 w-4 text-slate-500" />
+              )}
+            </Button>
             <span className="font-extrabold text-stone-900 dark:text-stone-100 text-[13px] tracking-wide bg-stone-100 dark:bg-stone-800 px-2 py-0.5 rounded shadow-sm">
-              {proofingOrder?.code || `BB${proofingOrder?.id}`}
+              {prod.proofingOrderCode || `BB${prod.proofingOrderId}`}
             </span>
-            {orderImages.length > 0 && (
-              <div
-                onClick={() => setViewingImageUrl(orderImages[activeImageIdx])}
-                className="relative w-16 h-16 rounded border border-slate-200 shadow-sm overflow-hidden bg-slate-50 cursor-zoom-in hover:scale-105 transition-all mt-1"
-              >
-                <img
-                  src={orderImages[activeImageIdx]}
-                  alt="Hình bài"
-                  className="w-full h-full object-cover"
-                />
-                {orderImages.length > 1 && (
-                  <div className="absolute bottom-0 right-0 bg-black/60 text-white text-[8px] px-1 font-bold">
-                    {activeImageIdx + 1}/{orderImages.length}
-                  </div>
-                )}
-              </div>
-            )}
-            {orderImages.length > 1 && (
-              <div className="flex gap-1 mt-1 justify-center">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-4 w-4 rounded-full p-0"
-                  onClick={() => setActiveImageIdx((prev) => (prev - 1 + orderImages.length) % orderImages.length)}
-                >
-                  <ChevronLeft className="h-2.5 w-2.5" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-4 w-4 rounded-full p-0"
-                  onClick={() => setActiveImageIdx((prev) => (prev + 1) % orderImages.length)}
-                >
-                  <ChevronRight className="h-2.5 w-2.5" />
-                </Button>
-              </div>
-            )}
-            {prod.customerName && (
-              <span className="text-[10px] text-muted-foreground font-semibold text-center mt-1 break-words line-clamp-2 leading-tight">
-                {prod.customerName}
-              </span>
-            )}
           </div>
-        )}
+
+          {isExpanded && isProofingLoading ? (
+            <div className="flex justify-center py-3">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <>
+              {orderImages.length > 0 && (
+                <div
+                  onClick={() => setViewingImageUrl(orderImages[activeImageIdx])}
+                  className="relative w-16 h-16 rounded border border-slate-200 shadow-sm overflow-hidden bg-slate-50 cursor-zoom-in hover:scale-105 transition-all mt-1.5"
+                >
+                  <img
+                    src={orderImages[activeImageIdx]}
+                    alt="Hình bài"
+                    className="w-full h-full object-cover"
+                  />
+                  {orderImages.length > 1 && (
+                    <div className="absolute bottom-0 right-0 bg-black/60 text-white text-[8px] px-1 font-bold">
+                      {activeImageIdx + 1}/{orderImages.length}
+                    </div>
+                  )}
+                </div>
+              )}
+              {isExpanded && orderImages.length > 1 && (
+                <div className="flex gap-1 mt-1 justify-center">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-4 w-4 rounded-full p-0"
+                    onClick={() => setActiveImageIdx((prev) => (prev - 1 + orderImages.length) % orderImages.length)}
+                  >
+                    <ChevronLeft className="h-2.5 w-2.5" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-4 w-4 rounded-full p-0"
+                    onClick={() => setActiveImageIdx((prev) => (prev + 1) % orderImages.length)}
+                  >
+                    <ChevronRight className="h-2.5 w-2.5" />
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+
+          {prod.customerName && (
+            <span className="text-[10px] text-muted-foreground font-semibold text-center mt-1 break-words line-clamp-2 leading-tight">
+              {prod.customerName}
+            </span>
+          )}
+        </div>
       </TableCell>
 
       {/* 2. Step Status selector */}
       <TableCell className="align-top py-4 w-[140px] max-w-[140px] border-r">
         {packagingStep ? (
           <div className="flex flex-col gap-2 mt-2">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Trạng thái khâu kiểm:</span>
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">Trạng thái:</span>
             <Select
               value={packagingStep.status || "pending"}
               onValueChange={handleStatusChange}
@@ -500,26 +529,41 @@ function QCInspectionRow({ prod, searchTerm }: QCInspectionRowProps) {
               </SelectContent>
             </Select>
 
-            {/* Actions for entire row */}
+            {/* Actions */}
             <div className="mt-4 flex flex-col gap-1.5">
-              {isEditing ? (
-                <>
+              {isExpanded ? (
+                isEditing ? (
+                  <>
+                    <Button
+                      onClick={handleSave}
+                      size="sm"
+                      className="h-7 w-full text-xs font-bold bg-[#93631F] hover:bg-[#7a521a] text-white"
+                    >
+                      Lưu
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setIsEditing(false);
+                        setTempPackagingValues({});
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="h-7 w-full text-xs"
+                    >
+                      Hủy
+                    </Button>
+                  </>
+                ) : (
                   <Button
-                    onClick={handleSave}
-                    size="sm"
-                    className="h-7 w-full text-xs font-bold bg-[#93631F] hover:bg-[#7a521a] text-white"
-                  >
-                    Lưu
-                  </Button>
-                  <Button
-                    onClick={() => setIsEditing(false)}
+                    onClick={startEditing}
                     variant="outline"
                     size="sm"
-                    className="h-7 w-full text-xs"
+                    className="h-7 w-full text-xs font-bold text-[#93631F] border-[#93631F] hover:bg-stone-50"
                   >
-                    Hủy
+                    <Edit2 className="h-3 w-3 mr-1" />
+                    Sửa số lượng
                   </Button>
-                </>
+                )
               ) : (
                 <Button
                   onClick={startEditing}
@@ -527,8 +571,7 @@ function QCInspectionRow({ prod, searchTerm }: QCInspectionRowProps) {
                   size="sm"
                   className="h-7 w-full text-xs font-bold text-[#93631F] border-[#93631F] hover:bg-stone-50"
                 >
-                  <Edit2 className="h-3 w-3 mr-1" />
-                  Sửa số lượng
+                  Nhập số lượng
                 </Button>
               )}
             </div>
@@ -542,8 +585,19 @@ function QCInspectionRow({ prod, searchTerm }: QCInspectionRowProps) {
 
       {/* 3. Items list with quantity inputs */}
       <TableCell className="align-top py-4">
-        {isProofingLoading ? (
-          <div className="space-y-2 animate-pulse">
+        {!isExpanded ? (
+          <div className="flex flex-col gap-1.5 py-3">
+            <p className="text-xs text-muted-foreground font-semibold">
+              Bấm nút mở rộng hoặc nút "Nhập số lượng" để kiểm hàng cho sản phẩm.
+            </p>
+            {productionItems.length > 0 && (
+              <span className="text-[11px] font-bold text-[#93631F] bg-amber-50 border border-amber-100 w-fit px-2.5 py-0.5 rounded mt-2 block">
+                Số lượng sản phẩm: {productionItems.length}
+              </span>
+            )}
+          </div>
+        ) : isProofingLoading ? (
+          <div className="space-y-2 animate-pulse py-4">
             <div className="h-8 bg-muted rounded w-full"></div>
             <div className="h-8 bg-muted rounded w-full"></div>
           </div>
@@ -837,7 +891,7 @@ export function QCInspectionView({ tab }: QCInspectionViewProps) {
             <Table>
               <TableHeader className="bg-slate-50 font-bold border-b text-[12px] uppercase text-slate-600">
                 <TableRow>
-                  <TableHead className="w-[120px] max-w-[120px] text-center font-bold">Mã bài / Hình bài</TableHead>
+                  <TableHead className="w-[125px] max-w-[125px] text-center font-bold">Mã bài / Hình bài</TableHead>
                   <TableHead className="w-[140px] max-w-[140px] font-bold">Thao tác</TableHead>
                   <TableHead className="font-bold">Danh sách hàng & Số lượng kiểm</TableHead>
                 </TableRow>
