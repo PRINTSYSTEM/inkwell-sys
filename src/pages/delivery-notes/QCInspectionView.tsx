@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDebounce } from "use-debounce";
 import {
@@ -167,7 +167,7 @@ function QCInspectionRow({ prod, searchTerm }: QCInspectionRowProps) {
     (proofingOrder as any)?.totalQuantity ||
     0;
 
-  const loadUsersOptions = async (search?: string) => {
+  const loadUsersOptions = useCallback(async (search?: string) => {
     try {
       const res = await apiRequest.get<any>("/users", {
         params: {
@@ -186,7 +186,7 @@ function QCInspectionRow({ prod, searchTerm }: QCInspectionRowProps) {
       console.error("loadUsersOptions error:", err);
       return [];
     }
-  };
+  }, []);
 
   const handleStatusChange = (newStatus: string) => {
     if (!packagingStep || !packagingStep.id) {
