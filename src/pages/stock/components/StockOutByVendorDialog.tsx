@@ -477,6 +477,24 @@ export function StockOutByVendorDialog({
   const handleItemChange = (index: number, field: keyof FormItem, value: any) => {
     const newItems = [...items];
     newItems[index] = { ...newItems[index], [field]: value };
+    
+    if (field === "jobCode" && value) {
+      const po = enrichedProductionOrders.find((p) => p.proofingOrderCode === value);
+      if (po) {
+        if (po.totalQuantity) {
+          newItems[index].quantity = po.totalQuantity;
+        }
+        const matchingMaterial = vendorMaterials.find(
+          (m) =>
+            (po.materialCode && m.code === po.materialCode) ||
+            (po.paperName && m.name === po.paperName)
+        );
+        if (matchingMaterial) {
+          newItems[index].materialId = matchingMaterial.id;
+        }
+      }
+    }
+    
     setItems(newItems);
   };
 
