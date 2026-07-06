@@ -47,6 +47,39 @@ const ExportDebtRequest = z
     month: z.number().int().nullable(),
   })
   .partial();
+const ArLedgerResponse = z
+  .object({
+    id: z.number().int(),
+    customerId: z.number().int(),
+    orderId: z.number().int(),
+    deliveryNoteId: z.number().int(),
+    deliveryNoteLineId: z.number().int(),
+    designId: z.number().int().nullable(),
+    deliveredAt: z.string().datetime({ offset: true }),
+    orderCode: z.string().nullable(),
+    deliveryNoteCode: z.string().nullable(),
+    designCode: z.string().nullable(),
+    designName: z.string().nullable(),
+    materialTypeName: z.string().nullable(),
+    deliveredQuantity: z.number(),
+    unitPriceSnapshot: z.number(),
+    lineAmount: z.number(),
+    paidAmount: z.number(),
+    remainingAmount: z.number(),
+    status: z.string().nullable(),
+    createdAt: z.string().datetime({ offset: true }),
+  })
+  .partial();
+const ArLedgerSummaryResponse = z
+  .object({
+    customerId: z.number().int(),
+    customerName: z.string().nullable(),
+    totalReceivable: z.number(),
+    totalPaid: z.number(),
+    totalRemaining: z.number(),
+    details: z.array(ArLedgerResponse).nullable(),
+  })
+  .partial();
 const LoginRequest = z.object({
   username: z.string().min(1),
   password: z.string().min(1),
@@ -711,6 +744,27 @@ const CustomerOrderHistoryResponsePaginate = z
     total: z.number().int(),
     totalPages: z.number().int(),
     items: z.array(CustomerOrderHistoryResponse).nullable(),
+  })
+  .partial();
+const DesignTypeStat = z
+  .object({
+    name: z.string().nullable(),
+    count: z.number().int(),
+    percentage: z.number(),
+  })
+  .partial();
+const MaterialTypeStat = z
+  .object({
+    name: z.string().nullable(),
+    count: z.number().int(),
+    percentage: z.number(),
+  })
+  .partial();
+const CustomerFavoriteStatsResponse = z
+  .object({
+    topDesignTypes: z.array(DesignTypeStat).nullable(),
+    topMaterialTypes: z.array(MaterialTypeStat).nullable(),
+    commonQuantities: z.array(z.number().int()).nullable(),
   })
   .partial();
 const CreateDebtNotificationRequest = z
@@ -2000,6 +2054,8 @@ const StockHistoryResponse = z
     itemName: z.string().nullable(),
     unit: z.string().nullable(),
     quantity: z.number().int(),
+    balanceAfter: z.number().int(),
+    referenceCode: z.string().nullable(),
     unitPrice: z.number().nullable(),
     totalPrice: z.number().nullable(),
     itemType: z.string().nullable(),
@@ -3082,6 +3138,8 @@ const ProofingOrderDesignResponse = z
     quantity: z.number().int(),
     createdAt: z.string().datetime({ offset: true }),
     specification: z.array(z.string()).nullable(),
+    designImageUrl: z.string().nullable(),
+    isUrgent: z.boolean(),
   })
   .partial();
 const ProductionResponse = z
@@ -3181,6 +3239,8 @@ const ProofingOrderDesignListResponse = z
     designId: z.number().int(),
     design: DesignSimpleResponse,
     quantity: z.number().int(),
+    designImageUrl: z.string().nullable(),
+    isUrgent: z.boolean(),
   })
   .partial();
 const ProofingOrderListResponse = z
@@ -4222,6 +4282,8 @@ export const schemas = {
   AccountingResponse,
   ConfirmPaymentRequest,
   ExportDebtRequest,
+  ArLedgerResponse,
+  ArLedgerSummaryResponse,
   LoginRequest,
   UserInfo,
   LoginResponse,
@@ -4274,6 +4336,9 @@ export const schemas = {
   OrderHistoryDetailResponse,
   CustomerOrderHistoryResponse,
   CustomerOrderHistoryResponsePaginate,
+  DesignTypeStat,
+  MaterialTypeStat,
+  CustomerFavoriteStatsResponse,
   CreateDebtNotificationRequest,
   DebtNotificationResponse,
   DebtNotificationResponseIPaginate,
@@ -4669,6 +4734,53 @@ const endpoints = makeApi([
       },
     ],
     response: AccountingResponse,
+  },
+  {
+    method: "get",
+    path: "/api/ar-ledger",
+    alias: "getApiarLedger",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "customerId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "status",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: z.array(ArLedgerResponse),
+  },
+  {
+    method: "get",
+    path: "/api/ar-ledger/:id",
+    alias: "getApiarLedgerId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: ArLedgerResponse,
+  },
+  {
+    method: "get",
+    path: "/api/ar-ledger/summary/:customerId",
+    alias: "getApiarLedgersummaryCustomerId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "customerId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: ArLedgerSummaryResponse,
   },
   {
     method: "post",
@@ -5734,6 +5846,11 @@ const endpoints = makeApi([
         schema: z.number().int(),
       },
       {
+        name: "filterType",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
         name: "startDate",
         type: "Query",
         schema: z.string().datetime({ offset: true }).optional(),
@@ -5803,6 +5920,20 @@ const endpoints = makeApi([
       },
     ],
     response: z.instanceof(File),
+  },
+  {
+    method: "get",
+    path: "/api/customers/:id/favorite-stats",
+    alias: "getApicustomersIdfavoriteStats",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: CustomerFavoriteStatsResponse,
   },
   {
     method: "get",
@@ -7828,6 +7959,16 @@ const endpoints = makeApi([
         schema: z.string().datetime({ offset: true }).optional(),
       },
       {
+        name: "designTypeId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "materialTypeId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
         name: "sortColumn",
         type: "Query",
         schema: z.string().optional(),
@@ -9257,6 +9398,11 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.string().optional().default("finished_product"),
       },
+      {
+        name: "hideEmpty",
+        type: "Query",
+        schema: z.boolean().optional().default(false),
+      },
     ],
     response: InventorySummaryItemResponseIPaginate,
   },
@@ -9305,6 +9451,11 @@ const endpoints = makeApi([
         name: "itemType",
         type: "Query",
         schema: z.string().optional().default("finished_product"),
+      },
+      {
+        name: "hideEmpty",
+        type: "Query",
+        schema: z.boolean().optional().default(false),
       },
     ],
     response: z.void(),

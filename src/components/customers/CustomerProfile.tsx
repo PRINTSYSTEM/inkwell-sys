@@ -105,8 +105,8 @@ export function CustomerProfile({
   };
 
   return (
-    <Card className={cn("h-fit", isDesignRole && "shadow-lg")}>
-      <CardHeader className={cn("pb-2", isDesignRole && "pb-4")}>
+    <Card className={cn("h-full flex flex-col overflow-hidden", isDesignRole && "shadow-lg")}>
+      <CardHeader className={cn("pb-2 flex-shrink-0", isDesignRole && "pb-4")}>
         <div className="flex items-center justify-between">
           <CardTitle
             className={cn(
@@ -157,7 +157,7 @@ export function CustomerProfile({
           )}
         </div>
       </CardHeader>
-      <CardContent className={cn("space-y-3", isDesignRole && "space-y-6")}>
+      <CardContent className={cn("flex-1 overflow-y-auto space-y-3 custom-scrollbar", isDesignRole && "space-y-6")}>
         {/* Thông tin cơ bản */}
         <div className={cn("space-y-2", isDesignRole && "space-y-6")}>
           <p

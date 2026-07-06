@@ -1338,7 +1338,7 @@ function SupplierCatalogsTab() {
   const [selectedVendorId, setSelectedVendorId] = useState<string>("");
 
   const vendors = vendorsData?.items || [];
-  const templates = templatesResp?.items || [];
+  const templates = (templatesResp?.items || []).filter((t: any) => t.status === "active");
 
   // Default selectedVendorId to the first vendor once loaded
   useEffect(() => {

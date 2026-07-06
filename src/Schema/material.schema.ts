@@ -13,6 +13,10 @@ export const MaterialResponseSchema =
   GenMaterialResponseSchema?.passthrough().extend({
     unit: z.string().nullable().optional(),
     unitPrice: z.number().nullable().optional(),
+    minStock: z.number().nullable().optional(),
+    materialTypeName: z.string().nullable().optional(),
+    vendorName: z.string().nullable().optional(),
+    type: z.string().nullable().optional(),
   }) || z.any();
 export type MaterialResponse = z.infer<typeof MaterialResponseSchema>;
 

@@ -49,6 +49,8 @@ export function PrepressOrderRow({
     shouldShowExpand && order.code?.toLowerCase().includes(searchTermLower);
 
   const isUrgent = useMemo(() => {
+    if (designs.some((pod: any) => pod.isUrgent)) return true;
+
     if (!order.deliveryDate) return false;
     try {
       const deliveryDate = new Date(order.deliveryDate);
@@ -61,7 +63,7 @@ export function PrepressOrderRow({
     } catch (e) {
       return false;
     }
-  }, [order.deliveryDate]);
+  }, [order.deliveryDate, designs]);
 
   const highlightText = (text: string, searchTerm: string) => {
     if (!searchTerm || !text) return text;
@@ -136,9 +138,14 @@ export function PrepressOrderRow({
                 )}
               </div>
               <div className="space-y-1">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5">
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5 flex-wrap">
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                  Thiết kế {idx + 1}: {d?.designName || d?.code || "—"}
+                  <span>Thiết kế {idx + 1}: {d?.designName || d?.code || "—"}</span>
+                  {pod.isUrgent && (
+                    <span className="bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-400 text-[9px] px-1 py-0.5 rounded font-bold uppercase tracking-wide border border-red-300">
+                      Gấp
+                    </span>
+                  )}
                   {d?.customer && (
                     <span className="text-muted-foreground font-normal text-[10px]">
                       {" - "}{d.customer.companyName || d.customer.name}
@@ -251,8 +258,13 @@ export function PrepressOrderRow({
               {designs.map((pod: any, idx: number) => {
                 const code = pod.design?.code || "—";
                 return (
-                  <div key={pod.id || idx} className="flex items-center gap-1.5 min-h-5">
+                  <div key={pod.id || idx} className="flex items-center gap-1.5 min-h-5 flex-wrap">
                     <span>{highlightText(code, debouncedSearchTerm.trim())}</span>
+                    {pod.isUrgent && (
+                      <span className="bg-red-500 text-white text-[9px] px-1 py-0.5 rounded font-bold uppercase tracking-wide shrink-0">
+                        Gấp
+                      </span>
+                    )}
                     {code !== "—" && (
                       <Button
                         variant="ghost"

@@ -270,12 +270,12 @@ export default function DesignersPage() {
   return (
     <div className="h-full flex flex-col overflow-hidden bg-background">
       {/* Header */}
-      <div className="flex items-center justify-between mb-4 shrink-0">
+      <div className="flex items-center justify-between mb-3 shrink-0">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">
+          <h1 className="text-lg font-bold text-foreground">
             Nhân viên thiết kế
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
+          <p className="text-xs text-muted-foreground mt-0.5">
             Quản lý danh sách nhân viên thiết kế và công việc của họ
           </p>
         </div>
@@ -325,24 +325,24 @@ export default function DesignersPage() {
       </div>
 
       {/* Stats and KPI Section */}
-      <div className="grid gap-3 mb-4 shrink-0 grid-cols-2 md:grid-cols-4">
+      <div className="grid gap-2.5 mb-3 shrink-0 grid-cols-2 md:grid-cols-4">
         {/* KPI: Đã chốt in */}
-        <Card className="p-3 bg-gradient-to-br from-blue-50/60 to-blue-100/40 dark:from-blue-950/20 dark:to-blue-900/10 border-blue-100/80 dark:border-blue-900/20 shadow-sm relative overflow-hidden">
+        <Card className="p-2.5 bg-gradient-to-br from-blue-50/60 to-blue-100/40 dark:from-blue-950/20 dark:to-blue-900/10 border-blue-100/80 dark:border-blue-900/20 shadow-sm relative overflow-hidden">
           <div className="absolute right-2 top-2 text-blue-500/10 dark:text-blue-400/10">
-            <TrendingUp className="h-10 w-10" />
+            <TrendingUp className="h-8 w-8" />
           </div>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-0 mb-1">
+          <CardHeader className="flex flex-row items-center justify-between pb-1 p-0 mb-0.5">
             <CardTitle className="text-xs font-semibold text-blue-800 dark:text-blue-300">
               Đã chốt in (Tháng {selectedMonth}/{selectedYear})
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             {loadingTeamKpi ? (
-              <div className="h-8 flex items-center">
-                <div className="animate-pulse bg-blue-200/50 dark:bg-blue-800/40 h-6 w-12 rounded" />
+              <div className="h-7 flex items-center">
+                <div className="animate-pulse bg-blue-200/50 dark:bg-blue-800/40 h-5 w-12 rounded" />
               </div>
             ) : (
-              <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">
+              <div className="text-lg font-bold text-blue-700 dark:text-blue-400">
                 {teamKpi?.totalDesignsCompleted ?? 0}
               </div>
             )}
@@ -353,15 +353,15 @@ export default function DesignersPage() {
         </Card>
 
         {/* Tổng số nhân viên */}
-        <Card className="p-3 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-0 mb-1">
+        <Card className="p-2.5 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-1 p-0 mb-0.5">
             <CardTitle className="text-xs font-semibold text-muted-foreground">
               Tổng số nhân viên
             </CardTitle>
             <User className="h-3.5 w-3.5 text-slate-500" />
           </CardHeader>
           <CardContent className="p-0">
-            <div className="text-2xl font-bold text-foreground">{totalCount}</div>
+            <div className="text-lg font-bold text-foreground">{totalCount}</div>
             <p className="text-[10px] text-muted-foreground mt-0.5">
               Nhân viên thiết kế
             </p>
@@ -369,15 +369,15 @@ export default function DesignersPage() {
         </Card>
 
         {/* Đang hoạt động */}
-        <Card className="p-3 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-0 mb-1">
+        <Card className="p-2.5 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-1 p-0 mb-0.5">
             <CardTitle className="text-xs font-semibold text-muted-foreground">
               Đang hoạt động
             </CardTitle>
             <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
           </CardHeader>
           <CardContent className="p-0">
-            <div className="text-2xl font-bold text-foreground">{activeCount}</div>
+            <div className="text-lg font-bold text-foreground">{activeCount}</div>
             <p className="text-[10px] text-muted-foreground mt-0.5">
               {totalCount > 0
                 ? `${((activeCount / totalCount) * 100).toFixed(0)}% tổng số`
@@ -387,15 +387,15 @@ export default function DesignersPage() {
         </Card>
 
         {/* Ngừng hoạt động */}
-        <Card className="p-3 shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 p-0 mb-1">
+        <Card className="p-2.5 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between pb-1 p-0 mb-0.5">
             <CardTitle className="text-xs font-semibold text-muted-foreground">
               Ngừng hoạt động
             </CardTitle>
             <div className="h-2 w-2 rounded-full bg-slate-400" />
           </CardHeader>
           <CardContent className="p-0">
-            <div className="text-2xl font-bold text-foreground">{inactiveCount}</div>
+            <div className="text-lg font-bold text-foreground">{inactiveCount}</div>
             <p className="text-[10px] text-muted-foreground mt-0.5">
               {totalCount > 0
                 ? `${((inactiveCount / totalCount) * 100).toFixed(0)}% tổng số`
@@ -473,7 +473,7 @@ export default function DesignersPage() {
                       >
                         <TableCell className="py-2">
                           <div className="flex items-center gap-2">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-purple-100 to-pink-100 text-sm font-semibold text-purple-700 shrink-0">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-purple-100 to-pink-100 text-xs font-semibold text-purple-700 shrink-0">
                               {(designer.username ?? "?")
                                 .charAt(0)
                                 .toUpperCase()}

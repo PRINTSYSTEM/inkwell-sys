@@ -127,7 +127,7 @@ import { apiRequest } from "@/lib/http";
 // UTILITY FUNCTIONS
 // ============================================================================
 
-type SelectedOrderDetail = OrderDetailForDeliveryResponse & {
+export type SelectedOrderDetail = OrderDetailForDeliveryResponse & {
   orderCode?: string | null;
   customerName?: string | null;
   orderId?: number;
@@ -273,7 +273,7 @@ const formatDate = (dateStr: string | null | undefined) => {
   return format(new Date(dateStr), "dd/MM/yyyy", { locale: vi });
 };
 
-const getDefaultLineNote = (designName: string | null | undefined): string => {
+export const getDefaultLineNote = (designName: string | null | undefined): string => {
   if (!designName) return "";
   const lowerName = designName.toLowerCase();
   if (lowerName.includes("nhãn giấy") || lowerName.includes("nhãn")) {
@@ -1320,18 +1320,18 @@ export default function DeliveryNoteListPage() {
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {/* Total Notes */}
         <Card className="border-0 shadow-sm bg-white dark:bg-stone-900">
-          <CardContent className="p-3 flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-              <Package className="h-4 w-4 text-primary" />
+          <CardContent className="p-2.5 flex items-center gap-2.5">
+            <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+              <Package className="h-3.5 w-3.5 text-primary" />
             </div>
             <div className="min-w-0">
               <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
                 Tổng phiếu
               </p>
-              <p className="text-base sm:text-xl font-bold mt-1 leading-none text-stone-900 dark:text-stone-50">
+              <p className="text-sm sm:text-base font-bold mt-0.5 leading-none text-stone-900 dark:text-stone-50">
                 {stats.total}
               </p>
-              <p className="text-[9px] sm:text-[10px] text-muted-foreground font-medium mt-1 leading-none truncate">
+              <p className="text-[9px] text-muted-foreground font-medium mt-0.5 leading-none truncate">
                 30 ngày gần nhất
               </p>
             </div>
@@ -1340,18 +1340,18 @@ export default function DeliveryNoteListPage() {
 
         {/* Created Today */}
         <Card className="border-0 shadow-sm bg-white dark:bg-stone-900">
-          <CardContent className="p-3 flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center shrink-0">
-              <Plus className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <CardContent className="p-2.5 flex items-center gap-2.5">
+            <div className="h-7 w-7 rounded-full bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center shrink-0">
+              <Plus className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
             </div>
             <div className="min-w-0">
               <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
                 Tạo hôm nay
               </p>
-              <p className="text-base sm:text-xl font-bold mt-1 leading-none text-stone-900 dark:text-stone-50">
+              <p className="text-sm sm:text-base font-bold mt-0.5 leading-none text-stone-900 dark:text-stone-50">
                 {stats.todayCount}
               </p>
-              <p className="text-[9px] sm:text-[10px] text-muted-foreground font-medium mt-1 leading-none truncate">
+              <p className="text-[9px] text-muted-foreground font-medium mt-0.5 leading-none truncate">
                 {format(new Date(), "dd/MM/yyyy")}
               </p>
             </div>
@@ -1360,18 +1360,18 @@ export default function DeliveryNoteListPage() {
 
         {/* Delivered (Success) */}
         <Card className="border-0 shadow-sm bg-white dark:bg-stone-900">
-          <CardContent className="p-3 flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-emerald-50 dark:bg-emerald-950/20 flex items-center justify-center shrink-0">
-              <Check className="h-4 w-4 text-emerald-500" />
+          <CardContent className="p-2.5 flex items-center gap-2.5">
+            <div className="h-7 w-7 rounded-full bg-emerald-50 dark:bg-emerald-950/20 flex items-center justify-center shrink-0">
+              <Check className="h-3.5 w-3.5 text-emerald-500" />
             </div>
             <div className="min-w-0">
               <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
                 Đã giao
               </p>
-              <p className="text-base sm:text-xl font-bold mt-1 leading-none text-emerald-600 dark:text-emerald-400">
+              <p className="text-sm sm:text-base font-bold mt-0.5 leading-none text-emerald-600 dark:text-emerald-400">
                 {stats.deliveredCount}
               </p>
-              <p className="text-[9px] sm:text-[10px] text-emerald-600 dark:text-emerald-400 font-bold mt-1 leading-none truncate">
+              <p className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold mt-0.5 leading-none truncate">
                 {stats.successRate}% thành công
               </p>
             </div>
@@ -1380,18 +1380,18 @@ export default function DeliveryNoteListPage() {
 
         {/* Pending / Transit */}
         <Card className="border-0 shadow-sm bg-white dark:bg-stone-900">
-          <CardContent className="p-3 flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-stone-100 dark:bg-stone-800 flex items-center justify-center shrink-0">
-              <RefreshCw className="h-3.5 w-3.5 text-stone-600 dark:text-stone-400" />
+          <CardContent className="p-2.5 flex items-center gap-2.5">
+            <div className="h-7 w-7 rounded-full bg-stone-100 dark:bg-stone-800 flex items-center justify-center shrink-0">
+              <RefreshCw className="h-3 w-3 text-stone-600 dark:text-stone-400" />
             </div>
             <div className="min-w-0">
               <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
                 Chờ / Đang giao
               </p>
-              <p className="text-base sm:text-xl font-bold mt-1 leading-none text-stone-900 dark:text-stone-50">
+              <p className="text-sm sm:text-base font-bold mt-0.5 leading-none text-stone-900 dark:text-stone-50">
                 {stats.pendingCount}
               </p>
-              <p className="text-[9px] sm:text-[10px] text-muted-foreground font-medium mt-1 leading-none truncate">
+              <p className="text-[9px] text-muted-foreground font-medium mt-0.5 leading-none truncate">
                 Cần xử lý
               </p>
             </div>
@@ -1400,18 +1400,18 @@ export default function DeliveryNoteListPage() {
 
         {/* Failed */}
         <Card className="border-0 shadow-sm bg-white dark:bg-stone-900">
-          <CardContent className="p-3 flex items-center gap-3">
-            <div className="h-8 w-8 rounded-full bg-destructive/10 dark:bg-red-950/20 flex items-center justify-center shrink-0">
-              <X className="h-4 w-4 text-destructive" />
+          <CardContent className="p-2.5 flex items-center gap-2.5">
+            <div className="h-7 w-7 rounded-full bg-destructive/10 dark:bg-red-950/20 flex items-center justify-center shrink-0">
+              <X className="h-3.5 w-3.5 text-destructive" />
             </div>
             <div className="min-w-0">
               <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
                 Thất bại
               </p>
-              <p className="text-base sm:text-xl font-bold mt-1 leading-none text-destructive">
+              <p className="text-sm sm:text-base font-bold mt-0.5 leading-none text-destructive">
                 {stats.failedCount}
               </p>
-              <p className="text-[9px] sm:text-[10px] text-destructive font-medium mt-1 leading-none truncate">
+              <p className="text-[9px] text-destructive font-medium mt-0.5 leading-none truncate">
                 Cần hẹn lại / hủy
               </p>
             </div>
@@ -3029,7 +3029,7 @@ interface SelectedOrderCardProps {
   onImageClick: (url: string, e: React.MouseEvent) => void;
 }
 
-function SelectedOrderCard({
+export function SelectedOrderCard({
   od,
   deliveryQtys,
   setDeliveryQtys,
@@ -3187,7 +3187,7 @@ interface CreateDeliveryNoteDialogProps {
   onImageClick: (url: string, e: React.MouseEvent) => void;
 }
 
-function CreateDeliveryNoteDialog({
+export function CreateDeliveryNoteDialog({
   isOpen,
   onOpenChange,
   selectedOrders,

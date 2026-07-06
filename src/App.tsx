@@ -47,11 +47,12 @@ const App = () => (
           <NotificationProvider>
             <RouterProvider router={router} />
             <Sonner 
-              position="bottom-right" 
+              position="top-right" 
               expand={true} 
               visibleToasts={6}
               gap={10}
               closeButton 
+              duration={2000}
             />
           </NotificationProvider>
         </AuthProvider>

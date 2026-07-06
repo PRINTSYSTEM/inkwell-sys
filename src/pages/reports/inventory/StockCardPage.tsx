@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useState, useMemo } from "react";
+import { useParams, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import {
@@ -63,17 +63,23 @@ const formatDateTime = (dateStr: string | null | undefined) => {
 export default function StockCardPage() {
   const navigate = useNavigate();
   const { itemCode } = useParams<{ itemCode: string }>();
+  const [searchParams] = useSearchParams();
+  const typeParam = searchParams.get("type");
+
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: addDays(new Date(), -30),
     to: new Date(),
   });
 
-  const materialId = itemCode ? parseInt(itemCode, 10) : null;
-  const isNumericId = materialId !== null && !isNaN(materialId);
+  const isNumericId = itemCode ? /^\d+$/.test(itemCode) : false;
+  const materialId = isNumericId ? parseInt(itemCode!, 10) : null;
+
   const { data: materialDetail, isLoading: isLoadingMaterial } = useMaterial(
     isNumericId ? materialId : null,
     isNumericId
   );
+
+  const itemType = typeParam || (isNumericId ? "material" : "finished_product");
 
   const [searchQuery, setSearchQuery] = useState("");
   const [transactionType, setTransactionType] = useState<string>("all");
@@ -92,6 +98,7 @@ export default function StockCardPage() {
         ? dateRange.from.toISOString()
         : undefined,
       toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
+      itemType: itemType,
     }
   );
 
@@ -107,7 +114,7 @@ export default function StockCardPage() {
     fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
     toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
     itemCode: itemCode,
-    itemType: "material",
+    itemType: itemType,
     transactionType: transactionType === "all" ? undefined : transactionType,
     search: searchQuery || undefined,
   });
@@ -115,6 +122,57 @@ export default function StockCardPage() {
   const isLoading = isLoadingStockCard || isLoadingHistory || isLoadingMaterial;
   const isError = isErrorStockCard || isErrorHistory;
   const error = errorStockCard || errorHistory;
+
+  // Compute running balances for the visible page based on openingBalance
+  const computedItems = useMemo(() => {
+    if (!historyData?.items) return [];
+
+    const items = [...historyData.items];
+    let runningQty = stockCardData?.openingBalance ?? 0;
+    let runningValue = 0; 
+    
+    // Sort ascending to calculate running totals
+    const sortedAsc = [...items].sort((a, b) => {
+      const aAny = a as any;
+      const bAny = b as any;
+      const dateA = new Date(aAny.transactionDate || aAny.date || aAny.createdAt || 0).getTime();
+      const dateB = new Date(bAny.transactionDate || bAny.date || bAny.createdAt || 0).getTime();
+      return dateA - dateB;
+    });
+
+    const balanceMap = new Map<number, { balanceQty: number; balanceValue: number }>();
+    
+    sortedAsc.forEach((entry) => {
+      const origIdx = items.findIndex(item => item === entry);
+      const entryAny = entry as any;
+      const typeLower = entryAny.transactionType?.toLowerCase() || entryAny.voucherType?.toLowerCase() || "";
+      const isStockIn = typeLower === "in" || typeLower === "stockin";
+      const qty = entryAny.quantity || entryAny.inQuantity || entryAny.outQuantity || 0;
+      const val = entryAny.totalPrice || entryAny.inValue || entryAny.outValue || 0;
+      
+      if (isStockIn) {
+        runningQty += qty;
+        runningValue += val;
+      } else {
+        runningQty -= qty;
+        runningValue -= val;
+      }
+      
+      balanceMap.set(origIdx, {
+        balanceQty: runningQty,
+        balanceValue: runningValue
+      });
+    });
+
+    return items.map((entry, idx) => {
+      const balances = balanceMap.get(idx);
+      return {
+        ...entry,
+        computedBalanceQty: balances?.balanceQty,
+        computedBalanceValue: balances?.balanceValue,
+      };
+    });
+  }, [historyData?.items, stockCardData]);
 
   const exportMutation = useExportStockCard();
 
@@ -125,8 +183,40 @@ export default function StockCardPage() {
       params: {
         fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
         toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
+        itemType: itemType,
       },
     });
+  };
+
+  const getCustomDescription = (entryAny: any) => {
+    const typeLower = entryAny.transactionType?.toLowerCase() || entryAny.voucherType?.toLowerCase() || "";
+    const isStockIn = typeLower === "in" || typeLower === "stockin";
+    const isStockOut = typeLower === "out" || typeLower === "stockout";
+    const source = entryAny.sourceOrPurpose?.toLowerCase() || "";
+    const notes = entryAny.notes || "";
+    const notesLower = notes.toLowerCase();
+
+    // 1. Nhập từ sản xuất
+    if (isStockIn && (source === "production" || notesLower.includes("sản xuất") || notesLower.includes("lsx"))) {
+      return `Nhập từ bài ${entryAny.itemName || "thành phẩm"} (LSX ${entryAny.orderCode || entryAny.voucherCode || "—"})`;
+    }
+
+    // 2. Hoàn hàng từ phiếu giao hàng / trả hàng
+    if (isStockIn && (source === "customer_return" || source === "return" || notesLower.includes("trả hàng") || notesLower.includes("hoàn hàng"))) {
+      return `Hoàn hàng từ phiếu giao hàng ${entryAny.voucherCode || "—"}`;
+    }
+
+    // 3. Nhập từ phiếu giao hàng
+    if (isStockIn && (source === "delivery" || notesLower.includes("giao hàng"))) {
+      return `Nhập từ phiếu giao hàng ${entryAny.voucherCode || "—"}`;
+    }
+
+    // 4. Xuất kho cho phiếu giao hàng
+    if (isStockOut && (source === "delivery" || notesLower.includes("giao hàng"))) {
+      return `Xuất kho cho phiếu giao hàng ${entryAny.voucherCode || "—"}`;
+    }
+
+    return entryAny.sourceOrPurposeLabel || entryAny.notes || "Giao dịch kho";
   };
 
   const handleVoucherClick = (
@@ -148,6 +238,11 @@ export default function StockCardPage() {
       voucherTypeLower.includes("xuat")
     ) {
       navigate(`/stock/stock-outs/${voucherId}`);
+    } else if (
+      voucherTypeLower.includes("delivery") ||
+      voucherTypeLower.includes("giao")
+    ) {
+      navigate(`/delivery-notes/${voucherId}`);
     }
   };
 
@@ -354,11 +449,8 @@ export default function StockCardPage() {
                 <TableHead className="w-[140px]">Số chứng từ</TableHead>
                 <TableHead>Diễn giải</TableHead>
                 <TableHead className="text-right">SL Nhập</TableHead>
-                <TableHead className="text-right">Giá trị Nhập</TableHead>
                 <TableHead className="text-right">SL Xuất</TableHead>
-                <TableHead className="text-right">Giá trị Xuất</TableHead>
                 <TableHead className="text-right">SL Tồn</TableHead>
-                <TableHead className="text-right">Giá trị Tồn</TableHead>
                 <TableHead>Tham chiếu</TableHead>
               </TableRow>
             </TableHeader>
@@ -366,7 +458,7 @@ export default function StockCardPage() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 10 }).map((_, j) => (
+                    {Array.from({ length: 7 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
                       </TableCell>
@@ -376,81 +468,80 @@ export default function StockCardPage() {
               ) : !historyData?.items || historyData.items.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={10}
+                    colSpan={7}
                     className="h-24 text-center text-muted-foreground"
                   >
                     Không có giao dịch nào trong khoảng thời gian này.
                   </TableCell>
                 </TableRow>
               ) : (
-                historyData.items.map((entry, index) => {
-                  const matchedEntry = stockCardData?.entries?.find(
-                    (e) => e.voucherCode === entry.voucherCode && e.voucherId === entry.voucherId
-                  );
-                  const inValue = matchedEntry?.inValue ?? 0;
-                  const outValue = matchedEntry?.outValue ?? 0;
-                  const balanceValue = matchedEntry?.balanceValue ?? 0;
+                computedItems.map((entry, index) => {
+                  const entryAny = entry as any;
+                  
+                  const typeLower = entryAny.transactionType?.toLowerCase() || entryAny.voucherType?.toLowerCase() || "";
+                  const isStockIn = typeLower === "in" || typeLower === "stockin";
+                  const isStockOut = typeLower === "out" || typeLower === "stockout";
+                  
+                  const qty = entryAny.quantity || entryAny.inQuantity || entryAny.outQuantity || 0;
+
+                  const inQty = isStockIn ? qty : 0;
+                  const outQty = isStockOut ? qty : 0;
+
+                  const balanceQty = entryAny.balanceAfter !== undefined && entryAny.balanceAfter !== null
+                    ? entryAny.balanceAfter
+                    : (entryAny.computedBalanceQty !== undefined
+                      ? entryAny.computedBalanceQty
+                      : (entryAny.balance !== undefined
+                        ? entryAny.balance
+                        : null));
 
                   return (
                     <TableRow
                       key={index}
                       className="cursor-pointer hover:bg-muted/50"
                       onClick={() =>
-                        handleVoucherClick(entry.voucherType, entry.voucherId)
+                        handleVoucherClick(entryAny.transactionType || entryAny.voucherType, entryAny.voucherId)
                       }
                     >
                       <TableCell className="text-sm">
-                        {entry.date ? formatDate(entry.date) : "—"}
+                        {formatDate(entryAny.transactionDate || entryAny.date)}
                       </TableCell>
                       <TableCell className="font-mono text-sm font-medium">
-                        {entry.voucherCode || "—"}
+                        {entryAny.voucherCode ? (
+                          <span 
+                            className="text-blue-600 hover:underline cursor-pointer font-bold"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleVoucherClick(entryAny.transactionType || entryAny.voucherType, entryAny.voucherId);
+                            }}
+                          >
+                            {entryAny.voucherCode}
+                          </span>
+                        ) : "—"}
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          <div>{entry.notes || "—"}</div>
-                          {entry.voucherType && (
-                            <div className="text-xs text-muted-foreground">
-                              {entry.voucherType === "StockIn"
-                                ? "Phiếu nhập"
-                                : entry.voucherType === "StockOut"
-                                  ? "Phiếu xuất"
-                                  : entry.voucherType}
+                          <div className="font-medium text-slate-800">
+                            {getCustomDescription(entryAny)}
+                          </div>
+                          {typeLower && (
+                            <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
+                              {typeLower === "in" || typeLower === "stockin" ? "Phiếu nhập" : "Phiếu xuất"}
                             </div>
                           )}
                         </div>
                       </TableCell>
                       <TableCell className="text-right font-medium tabular-nums text-green-600">
-                        {entry.inQuantity !== undefined && entry.inQuantity > 0
-                          ? entry.inQuantity.toLocaleString()
-                          : "—"}
-                      </TableCell>
-                      <TableCell className="text-right font-medium tabular-nums text-green-600">
-                        {entry.inQuantity !== undefined && entry.inQuantity > 0 && inValue !== undefined
-                          ? formatCurrency(inValue)
-                          : "—"}
+                        {inQty > 0 ? inQty.toLocaleString() : "—"}
                       </TableCell>
                       <TableCell className="text-right font-medium tabular-nums text-red-600">
-                        {entry.outQuantity !== undefined && entry.outQuantity > 0
-                          ? entry.outQuantity.toLocaleString()
-                          : "—"}
-                      </TableCell>
-                      <TableCell className="text-right font-medium tabular-nums text-red-600">
-                        {entry.outQuantity !== undefined && entry.outQuantity > 0 && outValue !== undefined
-                          ? formatCurrency(outValue)
-                          : "—"}
+                        {outQty > 0 ? outQty.toLocaleString() : "—"}
                       </TableCell>
                       <TableCell className="text-right font-medium tabular-nums">
-                        {entry.balance !== undefined
-                          ? entry.balance.toLocaleString()
-                          : "—"}
-                      </TableCell>
-                      <TableCell className="text-right font-medium tabular-nums text-primary">
-                        {balanceValue !== undefined
-                          ? formatCurrency(balanceValue)
-                          : "—"}
+                        {balanceQty !== null && balanceQty !== undefined ? balanceQty.toLocaleString() : "—"}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {entry.reference || "—"}
+                        {entryAny.referenceCode || entryAny.orderCode || entryAny.reference || "—"}
                       </TableCell>
                     </TableRow>
                   );

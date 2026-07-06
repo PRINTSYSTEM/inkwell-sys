@@ -1,13 +1,11 @@
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useMemo } from 'react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Package, AlertTriangle, TrendingUp, Eye, ChevronLeft, ChevronRight, MoreHorizontal, Edit, Copy, Trash2, Download } from 'lucide-react';
+import { Plus, Search, Package, AlertTriangle, TrendingUp, Eye, ChevronLeft, ChevronRight, MoreHorizontal, Edit, Copy, Trash2, Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { mockMaterials } from '@/lib/mockData';
-import { Material, MaterialType } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import {
   DropdownMenu,
@@ -15,83 +13,80 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useMaterials, useDeleteMaterial } from '@/hooks/use-material';
+import type { MaterialResponse } from '@/Schema/material.schema';
 
 export default function InventoryIndex() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<MaterialType | 'all'>('all');
+  const [filterType, setFilterType] = useState<string>('all');
   const [filterStock, setFilterStock] = useState<'all' | 'low' | 'normal'>('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10; // 10 items per page
+  const itemsPerPage = 10;
 
-  const handleEditMaterial = (materialId: string) => {
-    toast.success(`Đang chuyển đến chỉnh sửa nguyên liệu ${materialId}`);
-  };
-
-  const handleDeleteMaterial = (materialId: string) => {
-    toast.success(`Đã đánh dấu xóa nguyên liệu ${materialId}`);
-  };
-
-  const handleDuplicateMaterial = (materialId: string) => {
-    toast.success(`Đang sao chép nguyên liệu ${materialId}`);
-  };
-
-  const handleExportMaterial = (materialId: string) => {
-    toast.success(`Đang xuất dữ liệu nguyên liệu ${materialId}`);
-  };
-
-  // Lọc nguyên liệu
-  const filteredMaterials = mockMaterials.filter(material => {
-    const matchSearch = material.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       material.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                       material.category.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchType = filterType === 'all' || material.type === filterType;
-    
-    const matchStock = filterStock === 'all' || 
-                      (filterStock === 'low' && material.currentStock <= material.minStock) ||
-                      (filterStock === 'normal' && material.currentStock > material.minStock);
-    
-    return matchSearch && matchType && matchStock;
+  const { data: materialsData, isLoading } = useMaterials({
+    page: currentPage,
+    size: itemsPerPage,
+    search: searchTerm || undefined,
   });
 
-  // Pagination calculations
-  const totalPages = Math.ceil(filteredMaterials.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedMaterials = filteredMaterials.slice(startIndex, startIndex + itemsPerPage);
+  const deleteMaterial = useDeleteMaterial();
 
-  // Reset to page 1 when filters change
-  const handleSearchChange = (value: string) => {
-    setSearchTerm(value);
-    setCurrentPage(1);
-  };
+  const materials = materialsData?.items ?? [];
+  const totalMaterials = materialsData?.total ?? 0;
+  const totalPages = materialsData?.totalPages ?? 1;
 
-  const handleFilterChange = (type: 'filterType' | 'filterStock', value: string) => {
-    if (type === 'filterType') {
-      setFilterType(value as MaterialType | 'all');
-    } else {
-      setFilterStock(value as 'all' | 'low' | 'normal');
-    }
-    setCurrentPage(1);
-  };
+  const lowStockCount = useMemo(
+    () => materials.filter((m: MaterialResponse) => m.currentStock <= m.minStock).length,
+    [materials]
+  );
 
-  // Thống kê
-  const totalMaterials = mockMaterials.length;
-  const lowStockCount = mockMaterials.filter(m => m.currentStock <= m.minStock).length;
-  const totalValue = mockMaterials.reduce((sum, m) => sum + (m.currentStock * m.unitPrice), 0);
+  const totalValue = useMemo(
+    () => materials.reduce((sum: number, m: MaterialResponse) => sum + (m.currentStock ?? 0) * (m.unitPrice ?? 0), 0),
+    [materials]
+  );
 
-  const getStockStatus = (material: Material) => {
-    if (material.currentStock <= material.minStock * 0.5) return 'critical';
-    if (material.currentStock <= material.minStock) return 'low';
+  const filteredMaterials = useMemo(
+    () => materials.filter((material: MaterialResponse) => {
+      if (filterStock === 'all') return true;
+      if (filterStock === 'low') return (material.currentStock ?? 0) <= (material.minStock ?? 0);
+      return (material.currentStock ?? 0) > (material.minStock ?? 0);
+    }),
+    [materials, filterStock]
+  );
+
+  const getStockStatus = (material: MaterialResponse) => {
+    const stock = material.currentStock ?? 0;
+    const min = material.minStock ?? 0;
+    if (stock <= min * 0.5) return 'critical';
+    if (stock <= min) return 'low';
     return 'normal';
   };
 
-  const getStockBadge = (material: Material) => {
+  const getStockBadge = (material: MaterialResponse) => {
     const status = getStockStatus(material);
     if (status === 'critical') return <Badge variant="destructive">Rất thấp</Badge>;
     if (status === 'low') return <Badge variant="secondary">Thấp</Badge>;
     return <Badge variant="outline">Bình thường</Badge>;
   };
+
+  const handleDelete = (materialId: number) => {
+    deleteMaterial.mutate(materialId);
+  };
+
+  const typeLabel = (type?: string) => {
+    if (type === 'cuon') return 'Cuộn';
+    if (type === 'to') return 'Tờ';
+    return type ?? '—';
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -128,7 +123,7 @@ export default function InventoryIndex() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
@@ -142,7 +137,7 @@ export default function InventoryIndex() {
             </div>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center gap-4">
@@ -164,29 +159,14 @@ export default function InventoryIndex() {
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder="Tìm kiếm theo tên, mã, hoặc loại nguyên liệu..." 
+              <Input
+                placeholder="Tìm kiếm theo tên, mã nguyên liệu..."
                 className="pl-10"
                 value={searchTerm}
-                onChange={(e) => handleSearchChange(e.target.value)}
+                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               />
             </div>
-            <Select value={filterType} onValueChange={(value) => handleFilterChange('filterType', value)}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Loại nguyên liệu" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả loại</SelectItem>
-                <SelectItem value="paper">Giấy</SelectItem>
-                <SelectItem value="plastic">Nhựa</SelectItem>
-                <SelectItem value="ink">Mực in</SelectItem>
-                <SelectItem value="glue">Keo dán</SelectItem>
-                <SelectItem value="foil">Kim tuyến</SelectItem>
-                <SelectItem value="ribbon">Dây cột</SelectItem>
-                <SelectItem value="hardware">Phụ kiện</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterStock} onValueChange={(value) => handleFilterChange('filterStock', value)}>
+            <Select value={filterStock} onValueChange={(value) => { setFilterStock(value as 'all' | 'low' | 'normal'); setCurrentPage(1); }}>
               <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="Tình trạng kho" />
               </SelectTrigger>
@@ -201,7 +181,7 @@ export default function InventoryIndex() {
 
         <CardContent>
           <div className="space-y-4">
-            {paginatedMaterials.map((material) => (
+            {filteredMaterials.map((material: MaterialResponse) => (
               <Card key={material.id} className="hover:shadow-md transition-shadow">
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between">
@@ -214,45 +194,45 @@ export default function InventoryIndex() {
                             {getStockBadge(material)}
                           </div>
                           <p className="text-sm text-muted-foreground mt-1">
-                            {material.category} • {material.specification}
+                            {material.materialTypeName ?? '—'} • {typeLabel(material.type)}
                           </p>
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3 text-sm">
                             <div>
                               <span className="text-muted-foreground">Tồn kho:</span>
                               <span className="ml-2 font-medium">
-                                {material.currentStock} {material.unit}
+                                {material.currentStock ?? 0} {material.unit ?? ''}
                               </span>
                             </div>
                             <div>
                               <span className="text-muted-foreground">Tối thiểu:</span>
                               <span className="ml-2 font-medium">
-                                {material.minStock} {material.unit}
+                                {material.minStock ?? 0} {material.unit ?? ''}
                               </span>
                             </div>
                             <div>
                               <span className="text-muted-foreground">Đơn giá:</span>
                               <span className="ml-2 font-medium">
-                                {material.unitPrice.toLocaleString('vi-VN')}đ
+                                {(material.unitPrice ?? 0).toLocaleString('vi-VN')}đ
                               </span>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">Vị trí:</span>
-                              <span className="ml-2 font-medium">{material.location}</span>
+                              <span className="text-muted-foreground">Nhà cung cấp:</span>
+                              <span className="ml-2 font-medium">{material.vendorName ?? '—'}</span>
                             </div>
                           </div>
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={() => navigate(`/inventory/${material.id}`)}
                       >
                         <Eye className="h-4 w-4 mr-2" />
                         Chi tiết
                       </Button>
-                      
+
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="sm">
@@ -260,20 +240,20 @@ export default function InventoryIndex() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEditMaterial(material.id)}>
+                          <DropdownMenuItem onClick={() => toast.success(`Chỉnh sửa nguyên liệu ${material.id}`)}>
                             <Edit className="h-4 w-4 mr-2" />
                             Chỉnh sửa
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleDuplicateMaterial(material.id)}>
+                          <DropdownMenuItem onClick={() => toast.success(`Sao chép nguyên liệu ${material.id}`)}>
                             <Copy className="h-4 w-4 mr-2" />
                             Sao chép
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleExportMaterial(material.id)}>
+                          <DropdownMenuItem onClick={() => toast.success(`Xuất dữ liệu nguyên liệu ${material.id}`)}>
                             <Download className="h-4 w-4 mr-2" />
                             Xuất dữ liệu
                           </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleDeleteMaterial(material.id)}
+                          <DropdownMenuItem
+                            onClick={() => handleDelete(material.id!)}
                             className="text-red-600 focus:text-red-600"
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
@@ -289,10 +269,10 @@ export default function InventoryIndex() {
           </div>
 
           {/* Pagination Controls */}
-          {filteredMaterials.length > 0 && (
+          {totalMaterials > 0 && (
             <div className="flex items-center justify-between px-2 py-4">
               <div className="text-sm text-muted-foreground">
-                Hiển thị {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredMaterials.length)} trong tổng số {filteredMaterials.length} nguyên liệu
+                Trang {currentPage} / {totalPages} (tổng {totalMaterials} nguyên liệu)
               </div>
               <div className="flex items-center space-x-2">
                 <Button
@@ -333,7 +313,7 @@ export default function InventoryIndex() {
             </div>
           )}
 
-          {filteredMaterials.length === 0 && (
+          {!isLoading && filteredMaterials.length === 0 && (
             <div className="text-center py-8">
               <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-medium mb-2">Không tìm thấy nguyên liệu</h3>

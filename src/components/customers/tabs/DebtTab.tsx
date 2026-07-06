@@ -242,7 +242,6 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
     useCustomerDebtHistory(
       customerId,
       {
-        filterType: "payment",
         startDate,
         endDate,
       },

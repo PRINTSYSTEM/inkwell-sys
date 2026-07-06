@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Bell, MoreHorizontal, Check, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { useDebtNotifications, useMarkAllDebtNotificationsRead, useMarkDebtNotificationRead } from "@/hooks/use-debt-notification";
+import { useNotifications, useMarkAllNotificationsAsRead, useMarkNotificationAsRead } from "@/hooks/use-notifications";
 import { useNotification } from "@/hooks/use-notification";
 import {
   Popover,
@@ -22,18 +22,18 @@ function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"all" | "unread">("all");
 
-  const { data, isLoading, refetch } = useDebtNotifications({ 
+  const { data, isLoading, refetch } = useNotifications({ 
     pageSize: 10,
     isRead: tab === "unread" ? false : undefined 
   });
 
-  const { data: unreadData, refetch: refetchUnreadCount } = useDebtNotifications({ 
+  const { data: unreadData, refetch: refetchUnreadCount } = useNotifications({ 
     pageSize: 1,
     isRead: false 
   });
 
-  const markAllAsRead = useMarkAllDebtNotificationsRead();
-  const markAsRead = useMarkDebtNotificationRead();
+  const markAllAsRead = useMarkAllNotificationsAsRead();
+  const markAsRead = useMarkNotificationAsRead();
   const { connection } = useNotification();
 
   const notifications = data?.items ?? [];
@@ -175,8 +175,8 @@ function NotificationBell() {
                       "text-sm leading-snug line-clamp-3",
                       !notif.isRead ? "font-bold text-foreground" : "text-muted-foreground"
                     )}>
-                      <span className="font-extrabold text-foreground">{notif.subject}: </span>
-                      {notif.body}
+                      <span className="font-extrabold text-foreground">{notif.title || "Thông báo"}: </span>
+                      {notif.message}
                     </p>
                     <p className={cn(
                       "text-xs font-medium",

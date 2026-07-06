@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-07-04T01:09:02.930Z */
+/* Generated at: 2026-07-05T20:11:50.658Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -52,6 +52,8 @@ export const AddDesignToOrderRequestSchema = schemas.AddDesignToOrderRequest;
 export const AddDesignsToProofingOrderRequestSchema = schemas.AddDesignsToProofingOrderRequest;
 export const AddProofingOrderDetailItemSchema = schemas.AddProofingOrderDetailItem;
 export const AdjustInventoryRequestSchema = schemas.AdjustInventoryRequest;
+export const ArLedgerResponseSchema = schemas.ArLedgerResponse;
+export const ArLedgerSummaryResponseSchema = schemas.ArLedgerSummaryResponse;
 export const AssignDieToProofingOrderRequestSchema = schemas.AssignDieToProofingOrderRequest;
 export const AssignProductionStepRequestSchema = schemas.AssignProductionStepRequest;
 export const BankAccountResponseSchema = schemas.BankAccountResponse;
@@ -130,6 +132,7 @@ export const CustomerAddressResponsePaginateSchema = schemas.CustomerAddressResp
 export const CustomerDebtHistoryResponseSchema = schemas.CustomerDebtHistoryResponse;
 export const CustomerDebtHistoryResponsePaginateSchema = schemas.CustomerDebtHistoryResponsePaginate;
 export const CustomerDebtSummaryResponseSchema = schemas.CustomerDebtSummaryResponse;
+export const CustomerFavoriteStatsResponseSchema = schemas.CustomerFavoriteStatsResponse;
 export const CustomerMonthlyDebtResponseSchema = schemas.CustomerMonthlyDebtResponse;
 export const CustomerOrderHistoryResponseSchema = schemas.CustomerOrderHistoryResponse;
 export const CustomerOrderHistoryResponsePaginateSchema = schemas.CustomerOrderHistoryResponsePaginate;
@@ -162,6 +165,7 @@ export const DesignTimelineEntryResponsePaginateSchema = schemas.DesignTimelineE
 export const DesignTypeCountResponseSchema = schemas.DesignTypeCountResponse;
 export const DesignTypeResponseSchema = schemas.DesignTypeResponse;
 export const DesignTypeResponsePaginateSchema = schemas.DesignTypeResponsePaginate;
+export const DesignTypeStatSchema = schemas.DesignTypeStat;
 export const DieExportHistoryResponseSchema = schemas.DieExportHistoryResponse;
 export const DieExportResponseSchema = schemas.DieExportResponse;
 export const DieResponseSchema = schemas.DieResponse;
@@ -205,6 +209,7 @@ export const MaterialSuggestionResponseSchema = schemas.MaterialSuggestionRespon
 export const MaterialTypeItemSchema = schemas.MaterialTypeItem;
 export const MaterialTypeResponseSchema = schemas.MaterialTypeResponse;
 export const MaterialTypeResponsePaginateSchema = schemas.MaterialTypeResponsePaginate;
+export const MaterialTypeStatSchema = schemas.MaterialTypeStat;
 export const MergeCustomerRequestSchema = schemas.MergeCustomerRequest;
 export const OrderDetailAvailableResponseSchema = schemas.OrderDetailAvailableResponse;
 export const OrderDetailAvailableResponsePaginateSchema = schemas.OrderDetailAvailableResponsePaginate;

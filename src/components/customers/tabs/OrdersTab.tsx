@@ -29,7 +29,9 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { useCustomerOrders } from "@/hooks/use-customer";
+import { useCustomerOrders, useCustomerStatistics } from "@/hooks/use-customer";
+import { Card, CardContent } from "@/components/ui/card";
+import { ShoppingCart, TrendingUp, Calendar } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   orderStatusLabels,
@@ -40,6 +42,7 @@ import { cn } from "@/lib/utils";
 
 interface OrdersTabProps {
   customerId: number;
+  isActive?: boolean;
 }
 
 const ORDER_STATUSES = [
@@ -57,7 +60,7 @@ const ORDER_STATUSES = [
   { value: "cancelled", label: "Đã hủy" },
 ];
 
-export function OrdersTab({ customerId }: OrdersTabProps) {
+export function OrdersTab({ customerId, isActive = true }: OrdersTabProps) {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
@@ -83,10 +86,72 @@ export function OrdersTab({ customerId }: OrdersTabProps) {
     pageSize,
     status: status === "all" ? undefined : status,
     search: search || undefined,
+    enabled: isActive,
   });
+
+  const { data: stats } = useCustomerStatistics(customerId, isActive);
+
+  const formatVND = (amount: number) => {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const lastOrder = data?.items?.[0];
+  const lastOrderDateStr = lastOrder?.createdAt
+    ? ((lastOrder.createdAt as any) instanceof Date
+      ? (lastOrder.createdAt as any).toLocaleDateString("vi-VN")
+      : new Date(lastOrder.createdAt as any).toLocaleDateString("vi-VN"))
+    : "Chưa có";
 
   return (
     <div className="space-y-4">
+      {/* Stats Cards */}
+      {stats && (
+        <div className="grid grid-cols-3 gap-3">
+          <Card className="border bg-background shadow-none">
+            <CardContent className="p-3 flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                <ShoppingCart className="h-4 w-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] text-muted-foreground">Tổng đơn hàng</p>
+                <h4 className="text-base font-bold truncate">
+                  {stats.totalOrders || 0}
+                </h4>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border bg-background shadow-none">
+            <CardContent className="p-3 flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-green-50 text-green-600 dark:bg-green-950/50">
+                <TrendingUp className="h-4 w-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] text-muted-foreground">Doanh thu</p>
+                <h4 className="text-base font-bold text-green-600 truncate">
+                  {formatVND(stats.totalOrderAmount || 0)}
+                </h4>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border bg-background shadow-none">
+            <CardContent className="p-3 flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-orange-50 text-orange-600 dark:bg-orange-950/50">
+                <Calendar className="h-4 w-4" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] text-muted-foreground">Đơn gần nhất</p>
+                <h4 className="text-base font-bold truncate">
+                  {lastOrderDateStr}
+                </h4>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
       {/* Filters */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-xs">

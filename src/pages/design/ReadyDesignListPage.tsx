@@ -256,7 +256,7 @@ export default function ReadyDesignListPage() {
     // Client-side design type filtering
     if (selectedTypeName) {
       filtered = filtered.filter((d) => {
-        const typeName = d.designTypeName || (d as any).designType?.name;
+        const typeName = (d as any).designTypeName || (d as any).designType?.name;
         return typeName === selectedTypeName;
       });
     }

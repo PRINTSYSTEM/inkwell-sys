@@ -503,21 +503,20 @@ export default function InvoicePage() {
           </div>
         </div>
 
-        {/* Stats Cards */}
         <div className="grid grid-cols-2 gap-3 max-w-md">
           <Card className="border-0 shadow-sm bg-white dark:bg-stone-900">
-            <CardContent className="p-3 flex items-center gap-3">
-              <div className="h-8 w-8 rounded-full bg-amber-50 dark:bg-amber-950/20 flex items-center justify-center shrink-0">
-                <FileText className="h-4 w-4 text-amber-500" />
+            <CardContent className="p-2.5 flex items-center gap-2.5">
+              <div className="h-7 w-7 rounded-full bg-amber-50 dark:bg-amber-950/20 flex items-center justify-center shrink-0">
+                <FileText className="h-3.5 w-3.5 text-amber-500" />
               </div>
               <div className="min-w-0">
                 <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
                   Chưa xuất HĐ
                 </p>
-                <p className="text-base sm:text-xl font-bold mt-1 leading-none text-stone-900 dark:text-stone-50">
+                <p className="text-sm sm:text-base font-bold mt-0.5 leading-none text-stone-900 dark:text-stone-50">
                   {summaryStats.notIssued}
                 </p>
-                <p className="text-[9px] sm:text-[10px] text-muted-foreground font-medium mt-1 leading-none truncate">
+                <p className="text-[9px] text-muted-foreground font-medium mt-0.5 leading-none truncate">
                   Cần xuất hóa đơn
                 </p>
               </div>
@@ -525,18 +524,18 @@ export default function InvoicePage() {
           </Card>
 
           <Card className="border-0 shadow-sm bg-white dark:bg-stone-900">
-            <CardContent className="p-3 flex items-center gap-3 flex-row">
-              <div className="h-8 w-8 rounded-full bg-emerald-50 dark:bg-emerald-950/20 flex items-center justify-center shrink-0">
-                <CheckCircle className="h-4 w-4 text-emerald-500" />
+            <CardContent className="p-2.5 flex items-center gap-2.5 flex-row">
+              <div className="h-7 w-7 rounded-full bg-emerald-50 dark:bg-emerald-950/20 flex items-center justify-center shrink-0">
+                <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />
               </div>
               <div className="min-w-0">
                 <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
                   Xuất hôm nay
                 </p>
-                <p className="text-base sm:text-xl font-bold mt-1 leading-none text-stone-900 dark:text-stone-50">
+                <p className="text-sm sm:text-base font-bold mt-0.5 leading-none text-stone-900 dark:text-stone-50">
                   {summaryStats.issuedToday}
                 </p>
-                <p className="text-[9px] sm:text-[10px] text-muted-foreground font-medium mt-1 leading-none truncate">
+                <p className="text-[9px] text-muted-foreground font-medium mt-0.5 leading-none truncate">
                   Đã hoàn tất
                 </p>
               </div>

@@ -30,6 +30,7 @@ import {
   useCreateAdjustmentStockOut,
 } from "@/hooks/use-stock";
 import { usePendingMaterialProductionOrders } from "@/hooks/use-production";
+import { useProofingOrders } from "@/hooks/use-proofing-order";
 import { cn } from "@/lib/utils";
 import {
   Popover,
@@ -207,19 +208,35 @@ function JobCodeSelector({
                       KH: {po.customerName}
                     </span>
                   )}
-                  {po.items && po.items.length > 0 && (
-                    <div className="mt-1 w-full bg-slate-50 dark:bg-slate-900 rounded-lg p-1.5 space-y-1 text-[10px] text-slate-600 dark:text-slate-400 border border-slate-100 dark:border-slate-800">
-                      <div className="font-semibold text-slate-500 mb-0.5">Sản phẩm cần xuất:</div>
-                      {po.items.map((it: any, idx: number) => (
-                        <div key={idx} className="flex justify-between items-start gap-2">
-                          <span className="truncate max-w-[180px] font-medium text-slate-700 dark:text-slate-300">
-                            {it.designCode ? `[${it.designCode}] ` : ""}{it.designName || "Chưa đặt tên"}
-                          </span>
-                          <span className="font-bold text-rose-600 whitespace-nowrap shrink-0">
-                            {it.inputQty?.toLocaleString()} tờ
-                          </span>
+                  {po.totalQuantity !== undefined && (
+                    <div className="mt-2 w-full bg-indigo-50/50 dark:bg-slate-900 rounded-lg p-2 space-y-1.5 text-[10px] text-slate-700 dark:text-slate-400 border border-indigo-100 dark:border-slate-800">
+                      <div className="font-bold text-indigo-800 dark:text-indigo-400 mb-0.5 border-b border-indigo-100 pb-0.5">Thông tin bình bài:</div>
+                      <div className="grid grid-cols-2 gap-x-2 gap-y-1 w-full">
+                        <div>
+                          <span className="text-slate-500 font-medium">Số giấy in:</span>
+                          <span className="font-bold ml-1 text-slate-800">{po.totalQuantity?.toLocaleString()} tờ</span>
                         </div>
-                      ))}
+                        <div>
+                          <span className="text-slate-500 font-medium">Mã hàng:</span>
+                          <span className="font-bold ml-1 text-slate-800">{po.designCount || 0} mã</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 font-medium">Khổ giấy:</span>
+                          <span className="font-bold ml-1 text-slate-800">{po.paperSizeName || "—"}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 font-medium">Định lượng:</span>
+                          <span className="font-bold ml-1 text-slate-800">{po.basisWeight || "—"} gsm</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-slate-500 font-medium">Chất liệu:</span>
+                          <span className="font-semibold ml-1 text-slate-800">{po.paperName} {po.materialCode ? `(${po.materialCode})` : ""}</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-slate-500 font-medium">Loại thiết kế:</span>
+                          <span className="font-semibold ml-1 text-slate-800">{po.designTypeName || "—"}</span>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </CommandItem>
@@ -317,6 +334,42 @@ export function StockOutByVendorDialog({
     pageSize: 1000,
   });
   const pendingProdOrders = pendingProdOrdersData?.items || [];
+
+  // Load proofing orders to match paper specifications
+  const { data: proofingResp } = useProofingOrders({
+    pageSize: 1000,
+  });
+  const proofingOrders = proofingResp?.items || [];
+
+  // Map proofing orders by ID for fast lookup
+  const proofingMap = useMemo(() => {
+    const map = new Map<number, any>();
+    proofingOrders.forEach((po) => {
+      if (po.id) {
+        map.set(po.id, po);
+      }
+    });
+    return map;
+  }, [proofingOrders]);
+
+  // Combine production orders with proofing order details
+  const enrichedProductionOrders = useMemo(() => {
+    return pendingProdOrders.map((po) => {
+      const proofing = po.proofingOrderId ? proofingMap.get(po.proofingOrderId) : null;
+      return {
+        ...po,
+        paperName: proofing?.materialType?.name || "Giấy in",
+        materialCode: proofing?.materialType?.code || "",
+        totalQuantity: proofing?.totalQuantity || 0,
+        paperSizeName: proofing?.rollWidth 
+          ? `Cuộn (Rộng: ${proofing.rollWidth} mm)` 
+          : (proofing?.paperSize?.name || proofing?.customPaperSize || "—"),
+        designTypeName: proofing?.designType?.name || "—",
+        basisWeight: proofing?.basisWeight || po.basisWeight || 0,
+        designCount: po.items?.length || proofing?.proofingOrderDesigns?.length || 0,
+      };
+    });
+  }, [pendingProdOrders, proofingMap]);
 
   // Filter materials based on purpose
   // Xuất sản xuất: currently applied for sheet (tờ)
@@ -919,7 +972,7 @@ export function StockOutByVendorDialog({
                               <JobCodeSelector
                                 value={item.jobCode}
                                 onSelect={(val) => handleItemChange(index, "jobCode", val)}
-                                productionOrders={pendingProdOrders}
+                                productionOrders={enrichedProductionOrders}
                                 placeholder="Mã bài..."
                                 className="h-9"
                               />

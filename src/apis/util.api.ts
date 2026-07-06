@@ -112,6 +112,7 @@ export const API_SUFFIX = {
   CUSTOMER_MONTHLY_DEBT: (id: number) => `/customers/${id}/monthly-debt`,
   CUSTOMER_DEBT_SUMMARY: (id: number) => `/customers/${id}/debt-summary`,
   CUSTOMER_STATISTICS: (id: number) => `/customers/${id}/statistics`,
+  CUSTOMER_FAVORITE_STATS: (id: number) => `/customers/${id}/favorite-stats`,
   CUSTOMER_ORDERS: (id: number) => `/customers/${id}/order-history`,
 
   // ========== CUSTOMER ADDRESSES ==========
@@ -368,6 +369,13 @@ export const API_SUFFIX = {
   DEBT_NOTIFICATION_READ: (id: number) => `/debt-notifications/${id}/read`,
   DEBT_NOTIFICATION_READ_ALL: "/debt-notifications/read-all",
 
+  // ========== NOTIFICATIONS ==========
+  NOTIFICATIONS: "/notifications",
+  NOTIFICATION_BY_ID: (id: number) => `/notifications/${id}`,
+  NOTIFICATION_READ: (id: number) => `/notifications/${id}/read`,
+  NOTIFICATION_READ_ALL: "/notifications/read-all",
+  NOTIFICATION_UNREAD_COUNT: "/notifications/unread-count",
+
   // ========== DEBT RECONCILIATIONS ==========
   DEBT_RECONCILIATION_AP: "/debt-reconciliations/ap",
   DEBT_RECONCILIATION_AP_DOWNLOAD: (id: number) =>
@@ -417,9 +425,10 @@ export const API_SUFFIX = {
 
   // ========== INVENTORY REPORTS ==========
   CURRENT_STOCK: "/inventory-reports/current-stock",
-  INVENTORY_SUMMARY: "/inventory-reports/summary", // Fixed: was "/inventory-reports/inventory-summary"
+  INVENTORY_SUMMARY: "/inventory-reports/summary",
   INVENTORY_SUMMARY_EXCEL: "/inventory-reports/summary/excel",
   INVENTORY_SUMMARY_PDF: "/inventory-reports/summary/pdf",
+  INVENTORY_HISTORY: "/inventory-reports/history",
   LOW_STOCK: "/inventory-reports/low-stock",
   SLOW_MOVING: "/inventory-reports/slow-moving",
   STOCK_CARD: (itemCode: string) => `/inventory-reports/stock-card/${itemCode}`,

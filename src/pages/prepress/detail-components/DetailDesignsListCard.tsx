@@ -196,11 +196,18 @@ export function DetailDesignsListCard({
               {orderDesigns.map((pod, index) => {
                 const fullInfo = (
                   <div className="space-y-2 text-sm max-w-md">
-                    <div className="font-semibold text-base border-b pb-2">
-                      {pod.design?.designName}
-                      {pod.design?.customer && (
-                        <span className="text-muted-foreground font-normal text-sm">
-                          {" - "}{pod.design.customer.companyName || pod.design.customer.name}
+                    <div className="font-semibold text-base border-b pb-2 flex items-center justify-between gap-4">
+                      <div className="truncate flex-1">
+                        {pod.design?.designName}
+                        {pod.design?.customer && (
+                          <span className="text-muted-foreground font-normal text-sm">
+                            {" - "}{pod.design.customer.companyName || pod.design.customer.name}
+                          </span>
+                        )}
+                      </div>
+                      {pod.isUrgent && (
+                        <span className="bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-400 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide border border-red-300 shrink-0">
+                          Gấp
                         </span>
                       )}
                     </div>
@@ -410,9 +417,16 @@ export function DetailDesignsListCard({
                           )}
                         </TableCell>
                         <TableCell className="px-2 py-1">
-                          <p className="font-medium text-xs">
-                            {highlightText(pod.design?.code || "", highlightSearchTerm)}
-                          </p>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="font-medium text-xs">
+                              {highlightText(pod.design?.code || "", highlightSearchTerm)}
+                            </p>
+                            {pod.isUrgent && (
+                              <span className="bg-red-500 text-white text-[9px] px-1 py-0.5 rounded font-bold uppercase tracking-wide shrink-0">
+                                Gấp
+                              </span>
+                            )}
+                          </div>
                         </TableCell>
 
                         <TableCell className="px-2 py-1">

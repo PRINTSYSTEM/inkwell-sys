@@ -9,7 +9,6 @@ import { useAuth } from "@/hooks";
 import { ROLE } from "@/constants";
 import {
   CustomerHeader,
-  CustomerSummary,
   CustomerProfile,
   DebtTab,
   OrdersTab,
@@ -50,56 +49,12 @@ export default function CustomerDetail() {
     error,
   } = useCustomer(customerId, !!customerId);
 
-  // Only fetch orders for summary stats, not for the orders tab (which fetches its own)
-  const { data: ordersData } = useCustomerOrders({
-    customerId: customerId || 0, // Will be disabled if customerId is null
-    pageSize: 10, // Reduced from 100 since we only need summary stats
-    pageNumber: 1,
-    enabled: !!customerId, // Only fetch when customerId is valid
-  });
-
-  // Calculate summary stats
-  const summaryStats = useMemo(() => {
-    if (!ordersData || !ordersData.items || ordersData.items.length === 0) {
-      return {
-        totalOrders: 0,
-        ordersThisMonth: 0,
-        totalRevenue: 0,
-        lastOrderDate: null,
-      };
-    }
-
-    const now = new Date();
-    const thisMonth = now.getMonth();
-    const thisYear = now.getFullYear();
-
-    const ordersThisMonth = ordersData.items.filter((o) => {
-      if (!o.createdAt) return false;
-      const d = new Date(o.createdAt);
-      return d.getMonth() === thisMonth && d.getFullYear() === thisYear;
-    }).length;
-
-    const totalRevenue = ordersData.items.reduce(
-      (sum, o) => sum + (o.totalAmount || 0),
-      0
-    );
-    const lastOrderDate = ordersData.items[0]?.createdAt || null;
-
-    return {
-      totalOrders: ordersData.total || 0,
-      ordersThisMonth,
-      totalRevenue,
-      lastOrderDate,
-    };
-  }, [ordersData]);
-
   if (isLoading) {
     return (
       <div className="h-full bg-background">
         <div className="p-6 space-y-4">
           <Skeleton className="h-20 w-full" />
-          <Skeleton className="h-24 w-full" />
-          <div className="grid grid-cols-[380px_1fr] gap-6">
+          <div className="grid grid-cols-[300px_1fr] gap-6">
             <Skeleton className="h-[400px]" />
             <Skeleton className="h-[400px]" />
           </div>
@@ -161,18 +116,6 @@ export default function CustomerDetail() {
           canViewFinancialInfo={canViewFinancialInfo}
         />
 
-        {/* Summary Strip - chỉ hiển thị cho accounting và admin */}
-        {canViewFinancialInfo && (
-          <CustomerSummary
-            customer={customer}
-            totalOrders={summaryStats.totalOrders}
-            ordersThisMonth={summaryStats.ordersThisMonth}
-            totalRevenue={summaryStats.totalRevenue}
-            lastOrderDate={summaryStats.lastOrderDate}
-            onTabChange={setActiveTab}
-          />
-        )}
-
         {/* Body */}
         <div
           className={cn(
@@ -182,7 +125,7 @@ export default function CustomerDetail() {
         >
           {canViewFinancialInfo ? (
             /* Layout 2 cột cho accounting và admin */
-            <div className="grid grid-cols-[380px_1fr] gap-3 h-full">
+            <div className="grid grid-cols-[300px_1fr] gap-3 h-full">
               {/* Left Column: Profile */}
               <CustomerProfile customer={customer} />
 
@@ -235,7 +178,12 @@ export default function CustomerDetail() {
                     value="orders"
                     className="flex-1 mt-0 min-w-0 overflow-hidden"
                   >
-                    <OrdersTab customerId={customerId} />
+                    {customerId && (
+                      <OrdersTab
+                        customerId={customerId}
+                        isActive={activeTab === "orders"}
+                      />
+                    )}
                   </TabsContent>
 
                   <TabsContent

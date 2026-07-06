@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-07-04T01:09:02.981Z */
+/* Generated at: 2026-07-05T20:11:50.696Z */
 
 import { z } from "zod";
 import { IdSchema, PagedParamsSchema } from "./Common";
@@ -12,6 +12,13 @@ export const AccountingOrderConfirmDepositParamsSchema = z.object({
   depositAmount: z.number().nullable().optional(),
 }).passthrough();
 export type AccountingOrderConfirmDepositParams = z.infer<typeof AccountingOrderConfirmDepositParamsSchema>;
+
+// ==== ArLedgerListParams (GET /api/ar-ledger) ====
+export const ArLedgerListParamsSchema = z.object({
+  customerId: z.number().int().nullable().optional(),
+  status: z.string().nullable().optional(),
+}).passthrough();
+export type ArLedgerListParams = z.infer<typeof ArLedgerListParamsSchema>;
 
 // ==== BankAccountsListParams (GET /api/categories/bank-accounts) ====
 export const BankAccountsListParamsSchema = PagedParamsSchema.extend({
@@ -99,6 +106,7 @@ export type CustomerAddressesParams = z.infer<typeof CustomerAddressesParamsSche
 
 // ==== CustomerDebtHistoryParams (GET /api/customers/:id/debt-history) ====
 export const CustomerDebtHistoryParamsSchema = PagedParamsSchema.extend({
+  filterType: z.string().nullable().optional(),
   startDate: z.string().datetime({ offset: true }).nullable().optional(),
   endDate: z.string().datetime({ offset: true }).nullable().optional(),
   sortColumn: z.string().nullable().optional(),
@@ -549,6 +557,8 @@ export const DesignListParamsSchema = PagedParamsSchema.extend({
   year: z.number().int().nullable().optional(),
   startDate: z.string().datetime({ offset: true }).nullable().optional(),
   endDate: z.string().datetime({ offset: true }).nullable().optional(),
+  designTypeId: z.number().int().nullable().optional(),
+  materialTypeId: z.number().int().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });
@@ -749,6 +759,7 @@ export const InventoryReportSummaryExcelParamsSchema = z.object({
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
   itemType: z.string().nullable().optional(),
+  hideEmpty: z.boolean().nullable().optional(),
 }).passthrough();
 export type InventoryReportSummaryExcelParams = z.infer<typeof InventoryReportSummaryExcelParamsSchema>;
 
@@ -762,6 +773,7 @@ export const InventoryReportSummaryParamsSchema = PagedParamsSchema.extend({
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
   itemType: z.string().nullable().optional(),
+  hideEmpty: z.boolean().nullable().optional(),
 });
 export type InventoryReportSummaryParams = z.infer<typeof InventoryReportSummaryParamsSchema>;
 
