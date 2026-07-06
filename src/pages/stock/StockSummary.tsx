@@ -54,6 +54,7 @@ import { StockOutByVendorDialog } from "./components/StockOutByVendorDialog";
 import { PendingExportsDialog } from "./components/PendingExportsDialog";
 import { RecentStockOutsDialog } from "./components/RecentStockOutsDialog";
 import { downloadBlob } from "@/lib/download-utils";
+import { buildFilename, formatDateForFilename } from "@/utils/file-name";
 import { apiRequest } from "@/lib/http";
 import { API_SUFFIX } from "@/apis";
 
@@ -183,7 +184,8 @@ export default function StockSummary() {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
       
-      downloadBlob(blob, `doi-soat-${vendorName}-${new Date().getTime()}.xlsx`);
+      const excelName = buildFilename(["Đối soát nhà cung cấp", vendorName, formatDateForFilename(new Date())], "xlsx");
+      downloadBlob(blob, excelName);
       toast.success(`Đã xuất file đối soát cho ${vendorName} thành công!`);
     } catch (err: any) {
       console.error(err);

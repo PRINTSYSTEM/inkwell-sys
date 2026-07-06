@@ -111,6 +111,7 @@ export default function APDetailPage() {
       await exportLedger(vendorId, {
         fromDate: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
         toDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
+        vendorName: vendorName !== "Nhà cung cấp" ? vendorName : undefined,
       });
     }
   };

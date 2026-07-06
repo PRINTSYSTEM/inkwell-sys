@@ -1,6 +1,7 @@
 // src/hooks/use-ar-ap.ts
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/http";
+import { buildFilename, formatDateForFilename } from "@/utils/file-name";
 import { API_SUFFIX } from "@/apis";
 import { normalizeParams } from "@/apis/util.api";
 import { toast } from "sonner";
@@ -145,10 +146,11 @@ export const useARAging = (params?: DebtReportArAgingParams) => {
 export const useExportARSummary = () => {
   const { loading, error, execute, reset } = useAsyncCallback<
     ArrayBuffer,
-    [DebtReportArSummaryParams?]
-  >(async (params?: DebtReportArSummaryParams) => {
+    [(DebtReportArSummaryParams & { customerName?: string })?]
+  >(async (params?: DebtReportArSummaryParams & { customerName?: string }) => {
+    const { customerName, ...apiParams } = params ?? {};
     const normalizedParams = normalizeParams(
-      (params ?? {}) as Record<string, unknown>
+      apiParams as Record<string, unknown>
     );
     const res = await apiRequest.get<ArrayBuffer>(API_SUFFIX.AR_SUMMARY_EXPORT, {
       params: normalizedParams,
@@ -157,7 +159,7 @@ export const useExportARSummary = () => {
     return res.data;
   });
 
-  const mutate = async (params?: DebtReportArSummaryParams) => {
+  const mutate = async (params?: DebtReportArSummaryParams & { customerName?: string }) => {
     try {
       const blob = await execute(params);
       const fileBlob = new Blob([blob], {
@@ -166,7 +168,17 @@ export const useExportARSummary = () => {
       const url = window.URL.createObjectURL(fileBlob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `ar-summary-export.xlsx`;
+
+      const dateSuffix = params?.fromDate || params?.toDate
+        ? `Từ ${formatDateForFilename(params.fromDate)} Đến ${formatDateForFilename(params.toDate)}`
+        : "";
+      const customerSuffix = params?.customerId
+        ? (params.customerName || "Khách hàng")
+        : "";
+      link.download = buildFilename(
+        ["Báo cáo tổng hợp công nợ phải thu", customerSuffix, dateSuffix],
+        "xlsx"
+      );
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -199,10 +211,11 @@ export const useExportARSummary = () => {
 export const useExportARAging = () => {
   const { loading, error, execute, reset } = useAsyncCallback<
     ArrayBuffer,
-    [DebtReportArAgingParams?]
-  >(async (params?: DebtReportArAgingParams) => {
+    [(DebtReportArAgingParams & { customerName?: string })?]
+  >(async (params?: DebtReportArAgingParams & { customerName?: string }) => {
+    const { customerName, ...apiParams } = params ?? {};
     const normalizedParams = normalizeParams(
-      (params ?? {}) as Record<string, unknown>
+      apiParams as Record<string, unknown>
     );
     const res = await apiRequest.get<ArrayBuffer>(API_SUFFIX.AR_AGING_EXPORT, {
       params: normalizedParams,
@@ -211,7 +224,7 @@ export const useExportARAging = () => {
     return res.data;
   });
 
-  const mutate = async (params?: DebtReportArAgingParams) => {
+  const mutate = async (params?: DebtReportArAgingParams & { customerName?: string }) => {
     try {
       const blob = await execute(params);
       const fileBlob = new Blob([blob], {
@@ -220,7 +233,17 @@ export const useExportARAging = () => {
       const url = window.URL.createObjectURL(fileBlob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `ar-aging-export.xlsx`;
+
+      const dateSuffix = params?.asOfDate
+        ? `Đến ngày ${formatDateForFilename(params.asOfDate)}`
+        : "";
+      const customerSuffix = params?.customerId
+        ? (params.customerName || "Khách hàng")
+        : "";
+      link.download = buildFilename(
+        ["Báo cáo phân tích tuổi nợ phải thu", customerSuffix, dateSuffix],
+        "xlsx"
+      );
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -319,10 +342,11 @@ export const useAPAging = (params?: DebtReportApAgingParams) => {
 export const useExportAPSummary = () => {
   const { loading, error, execute, reset } = useAsyncCallback<
     ArrayBuffer,
-    [DebtReportApSummaryParams?]
-  >(async (params?: DebtReportApSummaryParams) => {
+    [(DebtReportApSummaryParams & { vendorName?: string })?]
+  >(async (params?: DebtReportApSummaryParams & { vendorName?: string }) => {
+    const { vendorName, ...apiParams } = params ?? {};
     const normalizedParams = normalizeParams(
-      (params ?? {}) as Record<string, unknown>
+      apiParams as Record<string, unknown>
     );
     const res = await apiRequest.get<ArrayBuffer>(API_SUFFIX.AP_SUMMARY_EXPORT, {
       params: normalizedParams,
@@ -331,7 +355,7 @@ export const useExportAPSummary = () => {
     return res.data;
   });
 
-  const mutate = async (params?: DebtReportApSummaryParams) => {
+  const mutate = async (params?: DebtReportApSummaryParams & { vendorName?: string }) => {
     try {
       const blob = await execute(params);
       const fileBlob = new Blob([blob], {
@@ -340,7 +364,17 @@ export const useExportAPSummary = () => {
       const url = window.URL.createObjectURL(fileBlob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `ap-summary-export.xlsx`;
+
+      const dateSuffix = params?.fromDate || params?.toDate
+        ? `Từ ${formatDateForFilename(params.fromDate)} Đến ${formatDateForFilename(params.toDate)}`
+        : "";
+      const vendorSuffix = params?.vendorId
+        ? (params.vendorName || "Nhà cung cấp")
+        : "";
+      link.download = buildFilename(
+        ["Báo cáo tổng hợp công nợ phải trả", vendorSuffix, dateSuffix],
+        "xlsx"
+      );
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -373,10 +407,11 @@ export const useExportAPSummary = () => {
 export const useExportAPAging = () => {
   const { loading, error, execute, reset } = useAsyncCallback<
     ArrayBuffer,
-    [DebtReportApAgingParams?]
-  >(async (params?: DebtReportApAgingParams) => {
+    [(DebtReportApAgingParams & { vendorName?: string })?]
+  >(async (params?: DebtReportApAgingParams & { vendorName?: string }) => {
+    const { vendorName, ...apiParams } = params ?? {};
     const normalizedParams = normalizeParams(
-      (params ?? {}) as Record<string, unknown>
+      apiParams as Record<string, unknown>
     );
     const res = await apiRequest.get<ArrayBuffer>(API_SUFFIX.AP_AGING_EXPORT, {
       params: normalizedParams,
@@ -385,7 +420,7 @@ export const useExportAPAging = () => {
     return res.data;
   });
 
-  const mutate = async (params?: DebtReportApAgingParams) => {
+  const mutate = async (params?: DebtReportApAgingParams & { vendorName?: string }) => {
     try {
       const blob = await execute(params);
       const fileBlob = new Blob([blob], {
@@ -394,7 +429,17 @@ export const useExportAPAging = () => {
       const url = window.URL.createObjectURL(fileBlob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `ap-aging-export.xlsx`;
+
+      const dateSuffix = params?.asOfDate
+        ? `Đến ngày ${formatDateForFilename(params.asOfDate)}`
+        : "";
+      const vendorSuffix = params?.vendorId
+        ? (params.vendorName || "Nhà cung cấp")
+        : "";
+      link.download = buildFilename(
+        ["Báo cáo phân tích tuổi nợ phải trả", vendorSuffix, dateSuffix],
+        "xlsx"
+      );
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -505,10 +550,11 @@ export const useCreateDebtReconciliationAP = () => {
 export const useDownloadDebtReconciliationAP = () => {
   const { loading, error, execute, reset } = useAsyncCallback<
     ArrayBuffer,
-    [number, DebtReconciliationApDownloadParams?]
-  >(async (id: number, params?: DebtReconciliationApDownloadParams) => {
+    [number, (DebtReconciliationApDownloadParams & { vendorName?: string; fromDate?: string; toDate?: string })?]
+  >(async (id: number, params?: DebtReconciliationApDownloadParams & { vendorName?: string; fromDate?: string; toDate?: string }) => {
+    const { vendorName, fromDate, toDate, ...apiParams } = params ?? {};
     const normalizedParams = normalizeParams(
-      (params ?? {}) as Record<string, unknown>
+      apiParams as Record<string, unknown>
     );
     const res = await apiRequest.get<ArrayBuffer>(
       API_SUFFIX.DEBT_RECONCILIATION_AP_DOWNLOAD(id),
@@ -520,7 +566,7 @@ export const useDownloadDebtReconciliationAP = () => {
     return res.data;
   });
 
-  const mutate = async (id: number, params?: DebtReconciliationApDownloadParams) => {
+  const mutate = async (id: number, params?: DebtReconciliationApDownloadParams & { vendorName?: string; fromDate?: string; toDate?: string }) => {
     try {
       const blob = await execute(id, params);
       const format = params?.format || "pdf";
@@ -530,7 +576,19 @@ export const useDownloadDebtReconciliationAP = () => {
       const url = window.URL.createObjectURL(fileBlob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `debt-reconciliation-ap-${id}.${format}`;
+
+      const dateSuffix = params?.fromDate || params?.toDate
+        ? `Từ ${formatDateForFilename(params.fromDate)} Đến ${formatDateForFilename(params.toDate)}`
+        : "";
+      link.download = buildFilename(
+        [
+          "Biên bản đối chiếu công nợ phải trả",
+          params?.vendorName || "Nhà cung cấp",
+          dateSuffix,
+          `Số ${id}`
+        ],
+        format
+      );
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -623,10 +681,11 @@ export const useCreateDebtReconciliationAR = () => {
 export const useDownloadDebtReconciliationAR = () => {
   const { loading, error, execute, reset } = useAsyncCallback<
     ArrayBuffer,
-    [number, DebtReconciliationArDownloadParams?]
-  >(async (id: number, params?: DebtReconciliationArDownloadParams) => {
+    [number, (DebtReconciliationArDownloadParams & { customerName?: string; fromDate?: string; toDate?: string })?]
+  >(async (id: number, params?: DebtReconciliationArDownloadParams & { customerName?: string; fromDate?: string; toDate?: string }) => {
+    const { customerName, fromDate, toDate, ...apiParams } = params ?? {};
     const normalizedParams = normalizeParams(
-      (params ?? {}) as Record<string, unknown>
+      apiParams as Record<string, unknown>
     );
     const res = await apiRequest.get<ArrayBuffer>(
       API_SUFFIX.DEBT_RECONCILIATION_AR_DOWNLOAD(id),
@@ -638,7 +697,7 @@ export const useDownloadDebtReconciliationAR = () => {
     return res.data;
   });
 
-  const mutate = async (id: number, params?: DebtReconciliationArDownloadParams) => {
+  const mutate = async (id: number, params?: DebtReconciliationArDownloadParams & { customerName?: string; fromDate?: string; toDate?: string }) => {
     try {
       const blob = await execute(id, params);
       const format = params?.format || "pdf";
@@ -648,7 +707,19 @@ export const useDownloadDebtReconciliationAR = () => {
       const url = window.URL.createObjectURL(fileBlob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `debt-reconciliation-ar-${id}.${format}`;
+
+      const dateSuffix = params?.fromDate || params?.toDate
+        ? `Từ ${formatDateForFilename(params.fromDate)} Đến ${formatDateForFilename(params.toDate)}`
+        : "";
+      link.download = buildFilename(
+        [
+          "Biên bản đối chiếu công nợ phải thu",
+          params?.customerName || "Khách hàng",
+          dateSuffix,
+          `Số ${id}`
+        ],
+        format
+      );
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -748,25 +819,42 @@ export const useARDetailLedger = (
 export const useExportARDetailLedger = () => {
   const { loading, error, execute, reset } = useAsyncCallback<
     ArrayBuffer,
-    [number]
-  >(async (customerId: number) => {
+    [number, (DebtReportArDetailLedgerParams & { customerName?: string })?]
+  >(async (customerId: number, params?: DebtReportArDetailLedgerParams & { customerName?: string }) => {
+    const { customerName, ...apiParams } = params ?? {};
+    const normalizedParams = normalizeParams(
+      apiParams as Record<string, unknown>
+    );
     const res = await apiRequest.get<ArrayBuffer>(
       API_SUFFIX.AR_DETAIL_LEDGER_EXPORT(customerId),
-      { responseType: "arraybuffer" }
+      {
+        params: normalizedParams,
+        responseType: "arraybuffer",
+      }
     );
     return res.data;
   });
 
-  const mutate = async (customerId: number) => {
+  const mutate = async (
+    customerId: number,
+    params?: DebtReportArDetailLedgerParams & { customerName?: string }
+  ) => {
     try {
-      const blob = await execute(customerId);
+      const blob = await execute(customerId, params);
       const fileBlob = new Blob([blob], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
       const url = window.URL.createObjectURL(fileBlob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `ar-detail-ledger-${customerId}.xlsx`;
+
+      const dateSuffix = params?.fromDate || params?.toDate
+        ? `Từ ${formatDateForFilename(params.fromDate)} Đến ${formatDateForFilename(params.toDate)}`
+        : "";
+      link.download = buildFilename(
+        ["Sổ chi tiết công nợ phải thu", params?.customerName || "Khách hàng", dateSuffix],
+        "xlsx"
+      );
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -821,10 +909,11 @@ export const useAROverdue = (params?: DebtReportArOverdueParams) => {
 export const useExportAROverdue = () => {
   const { loading, error, execute, reset } = useAsyncCallback<
     ArrayBuffer,
-    [DebtReportArOverdueParams]
-  >(async (params: DebtReportArOverdueParams) => {
+    [(DebtReportArOverdueParams & { customerName?: string })]
+  >(async (params: DebtReportArOverdueParams & { customerName?: string }) => {
+    const { customerName, ...apiParams } = params;
     const normalizedParams = normalizeParams(
-      (params ?? {}) as Record<string, unknown>
+      apiParams as Record<string, unknown>
     );
     const res = await apiRequest.get<ArrayBuffer>(API_SUFFIX.AR_OVERDUE_EXPORT, {
       params: normalizedParams,
@@ -833,7 +922,7 @@ export const useExportAROverdue = () => {
     return res.data;
   });
 
-  const mutate = async (params: DebtReportArOverdueParams) => {
+  const mutate = async (params: DebtReportArOverdueParams & { customerName?: string }) => {
     try {
       const blob = await execute(params);
       const fileBlob = new Blob([blob], {
@@ -842,7 +931,17 @@ export const useExportAROverdue = () => {
       const url = window.URL.createObjectURL(fileBlob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `ar-overdue-export.xlsx`;
+
+      const dateSuffix = params?.fromDate || params?.toDate
+        ? `Từ ${formatDateForFilename(params.fromDate)} Đến ${formatDateForFilename(params.toDate)}`
+        : "";
+      const customerSuffix = params?.customerId
+        ? (params.customerName || "Khách hàng")
+        : "";
+      link.download = buildFilename(
+        ["Báo cáo công nợ phải thu quá hạn", customerSuffix, dateSuffix],
+        "xlsx"
+      );
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -863,7 +962,8 @@ export const useExportAROverdue = () => {
 
       toast.error("Lỗi", {
         description: message,
-      });      throw err;
+      });
+      throw err;
     }
   };
 
@@ -916,10 +1016,11 @@ export const useARSummaryByCustomerGroup = (
 export const useExportARSummaryPDF = () => {
   const { loading, error, execute, reset } = useAsyncCallback<
     ArrayBuffer,
-    [DebtReportArSummaryExportPdfParams]
-  >(async (params: DebtReportArSummaryExportPdfParams) => {
+    [(DebtReportArSummaryExportPdfParams & { customerName?: string })]
+  >(async (params: DebtReportArSummaryExportPdfParams & { customerName?: string }) => {
+    const { customerName, ...apiParams } = params;
     const normalizedParams = normalizeParams(
-      (params ?? {}) as Record<string, unknown>
+      apiParams as Record<string, unknown>
     );
     const res = await apiRequest.get<ArrayBuffer>(API_SUFFIX.AR_SUMMARY_EXPORT_PDF, {
       params: normalizedParams,
@@ -928,7 +1029,7 @@ export const useExportARSummaryPDF = () => {
     return res.data;
   });
 
-  const mutate = async (params: DebtReportArSummaryExportPdfParams) => {
+  const mutate = async (params: DebtReportArSummaryExportPdfParams & { customerName?: string }) => {
     try {
       const blob = await execute(params);
       const fileBlob = new Blob([blob], {
@@ -937,7 +1038,17 @@ export const useExportARSummaryPDF = () => {
       const url = window.URL.createObjectURL(fileBlob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `ar-summary-export.pdf`;
+
+      const dateSuffix = params?.fromDate || params?.toDate
+        ? `Từ ${formatDateForFilename(params.fromDate)} Đến ${formatDateForFilename(params.toDate)}`
+        : "";
+      const customerSuffix = params?.customerId
+        ? (params.customerName || "Khách hàng")
+        : "";
+      link.download = buildFilename(
+        ["Báo cáo tổng hợp công nợ phải thu", customerSuffix, dateSuffix],
+        "pdf"
+      );
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -973,10 +1084,11 @@ export const useExportARSummaryPDF = () => {
 export const useExportARAgingPDF = () => {
   const { loading, error, execute, reset } = useAsyncCallback<
     ArrayBuffer,
-    [DebtReportArAgingExportPdfParams]
-  >(async (params: DebtReportArAgingExportPdfParams) => {
+    [(DebtReportArAgingExportPdfParams & { customerName?: string })]
+  >(async (params: DebtReportArAgingExportPdfParams & { customerName?: string }) => {
+    const { customerName, ...apiParams } = params;
     const normalizedParams = normalizeParams(
-      (params ?? {}) as Record<string, unknown>
+      apiParams as Record<string, unknown>
     );
     const res = await apiRequest.get<ArrayBuffer>(API_SUFFIX.AR_AGING_EXPORT_PDF, {
       params: normalizedParams,
@@ -985,7 +1097,7 @@ export const useExportARAgingPDF = () => {
     return res.data;
   });
 
-  const mutate = async (params: DebtReportArAgingExportPdfParams) => {
+  const mutate = async (params: DebtReportArAgingExportPdfParams & { customerName?: string }) => {
     try {
       const blob = await execute(params);
       const fileBlob = new Blob([blob], {
@@ -994,7 +1106,17 @@ export const useExportARAgingPDF = () => {
       const url = window.URL.createObjectURL(fileBlob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `ar-aging-export.pdf`;
+
+      const dateSuffix = params?.asOfDate
+        ? `Đến ngày ${formatDateForFilename(params.asOfDate)}`
+        : "";
+      const customerSuffix = params?.customerId
+        ? (params.customerName || "Khách hàng")
+        : "";
+      link.download = buildFilename(
+        ["Báo cáo phân tích tuổi nợ phải thu", customerSuffix, dateSuffix],
+        "pdf"
+      );
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -1049,10 +1171,11 @@ export const useARUnderdue = (params?: DebtReportArUnderdueParams) => {
 export const useExportCustomerReconciliation = () => {
   const { loading, error, execute, reset } = useAsyncCallback<
     ArrayBuffer,
-    [DebtReportCustomerReconciliationExportPdfParams]
-  >(async (params: DebtReportCustomerReconciliationExportPdfParams) => {
+    [(DebtReportCustomerReconciliationExportPdfParams & { customerName?: string })]
+  >(async (params: DebtReportCustomerReconciliationExportPdfParams & { customerName?: string }) => {
+    const { customerName, ...apiParams } = params;
     const normalizedParams = normalizeParams(
-      (params ?? {}) as Record<string, unknown>
+      apiParams as Record<string, unknown>
     );
     const res = await apiRequest.get<ArrayBuffer>(
       API_SUFFIX.CUSTOMER_RECONCILIATION_EXPORT,
@@ -1064,7 +1187,7 @@ export const useExportCustomerReconciliation = () => {
     return res.data;
   });
 
-  const mutate = async (params: DebtReportCustomerReconciliationExportPdfParams) => {
+  const mutate = async (params: DebtReportCustomerReconciliationExportPdfParams & { customerName?: string }) => {
     try {
       const blob = await execute(params);
       const fileBlob = new Blob([blob], {
@@ -1073,7 +1196,14 @@ export const useExportCustomerReconciliation = () => {
       const url = window.URL.createObjectURL(fileBlob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `customer-reconciliation-export.xlsx`;
+
+      const dateSuffix = params?.fromDate || params?.toDate
+        ? `Từ ${formatDateForFilename(params.fromDate)} Đến ${formatDateForFilename(params.toDate)}`
+        : "";
+      link.download = buildFilename(
+        ["Đối soát công nợ khách hàng", params?.customerName || "Khách hàng", dateSuffix],
+        "xlsx"
+      );
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -1109,10 +1239,11 @@ export const useExportCustomerReconciliation = () => {
 export const useExportCustomerReconciliationPDF = () => {
   const { loading, error, execute, reset } = useAsyncCallback<
     ArrayBuffer,
-    [DebtReportCustomerReconciliationExportPdfParams]
-  >(async (params: DebtReportCustomerReconciliationExportPdfParams) => {
+    [(DebtReportCustomerReconciliationExportPdfParams & { customerName?: string })]
+  >(async (params: DebtReportCustomerReconciliationExportPdfParams & { customerName?: string }) => {
+    const { customerName, ...apiParams } = params;
     const normalizedParams = normalizeParams(
-      (params ?? {}) as Record<string, unknown>
+      apiParams as Record<string, unknown>
     );
     const res = await apiRequest.get<ArrayBuffer>(
       API_SUFFIX.CUSTOMER_RECONCILIATION_EXPORT_PDF,
@@ -1124,7 +1255,7 @@ export const useExportCustomerReconciliationPDF = () => {
     return res.data;
   });
 
-  const mutate = async (params: DebtReportCustomerReconciliationExportPdfParams) => {
+  const mutate = async (params: DebtReportCustomerReconciliationExportPdfParams & { customerName?: string }) => {
     try {
       const blob = await execute(params);
       const fileBlob = new Blob([blob], {
@@ -1133,7 +1264,14 @@ export const useExportCustomerReconciliationPDF = () => {
       const url = window.URL.createObjectURL(fileBlob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `customer-reconciliation-export.pdf`;
+
+      const dateSuffix = params?.fromDate || params?.toDate
+        ? `Từ ${formatDateForFilename(params.fromDate)} Đến ${formatDateForFilename(params.toDate)}`
+        : "";
+      link.download = buildFilename(
+        ["Đối soát công nợ khách hàng", params?.customerName || "Khách hàng", dateSuffix],
+        "pdf"
+      );
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -1169,10 +1307,11 @@ export const useExportCustomerReconciliationPDF = () => {
 export const useExportCustomerReconciliationWord = () => {
   const { loading, error, execute, reset } = useAsyncCallback<
     ArrayBuffer,
-    [DebtReportCustomerReconciliationExportWordParams]
-  >(async (params: DebtReportCustomerReconciliationExportWordParams) => {
+    [(DebtReportCustomerReconciliationExportWordParams & { customerName?: string })]
+  >(async (params: DebtReportCustomerReconciliationExportWordParams & { customerName?: string }) => {
+    const { customerName, ...apiParams } = params;
     const normalizedParams = normalizeParams(
-      (params ?? {}) as Record<string, unknown>
+      apiParams as Record<string, unknown>
     );
     const res = await apiRequest.get<ArrayBuffer>(
       API_SUFFIX.CUSTOMER_RECONCILIATION_EXPORT_WORD,
@@ -1184,7 +1323,7 @@ export const useExportCustomerReconciliationWord = () => {
     return res.data;
   });
 
-  const mutate = async (params: DebtReportCustomerReconciliationExportWordParams) => {
+  const mutate = async (params: DebtReportCustomerReconciliationExportWordParams & { customerName?: string }) => {
     try {
       const blob = await execute(params);
       const fileBlob = new Blob([blob], {
@@ -1193,7 +1332,14 @@ export const useExportCustomerReconciliationWord = () => {
       const url = window.URL.createObjectURL(fileBlob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `customer-reconciliation-export.docx`;
+
+      const dateSuffix = params?.fromDate || params?.toDate
+        ? `Từ ${formatDateForFilename(params.fromDate)} Đến ${formatDateForFilename(params.toDate)}`
+        : "";
+      link.download = buildFilename(
+        ["Đối soát công nợ khách hàng", params?.customerName || "Khách hàng", dateSuffix],
+        "docx"
+      );
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -1274,10 +1420,11 @@ export const useAPDetailLedger = (
 export const useExportAPDetailLedger = () => {
   const { loading, error, execute, reset } = useAsyncCallback<
     ArrayBuffer,
-    [number, DebtReportApDetailLedgerExportParams?]
-  >(async (vendorId: number, params?: DebtReportApDetailLedgerExportParams) => {
+    [number, (DebtReportApDetailLedgerExportParams & { vendorName?: string })?]
+  >(async (vendorId: number, params?: DebtReportApDetailLedgerExportParams & { vendorName?: string }) => {
+    const { vendorName, ...apiParams } = params ?? {};
     const normalizedParams = normalizeParams({
-      ...(params ?? {}),
+      ...apiParams,
       vendorId: vendorId,
     } as Record<string, unknown>);
     
@@ -1293,7 +1440,7 @@ export const useExportAPDetailLedger = () => {
 
   const mutate = async (
     vendorId: number,
-    params?: DebtReportApDetailLedgerExportParams
+    params?: DebtReportApDetailLedgerExportParams & { vendorName?: string }
   ) => {
     try {
       const blob = await execute(vendorId, params);
@@ -1303,7 +1450,14 @@ export const useExportAPDetailLedger = () => {
       const url = window.URL.createObjectURL(fileBlob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `ap-detail-ledger-${vendorId}.xlsx`;
+
+      const dateSuffix = params?.fromDate || params?.toDate
+        ? `Từ ${formatDateForFilename(params.fromDate)} Đến ${formatDateForFilename(params.toDate)}`
+        : "";
+      link.download = buildFilename(
+        ["Sổ chi tiết công nợ phải trả", params?.vendorName || "Nhà cung cấp", dateSuffix],
+        "xlsx"
+      );
       document.body.appendChild(link);
       link.click();
       link.remove();

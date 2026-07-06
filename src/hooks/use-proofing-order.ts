@@ -2,6 +2,7 @@ import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiRequest } from "@/lib/http";
+import { buildFilename, formatDateForFilename } from "@/utils/file-name";
 import { createCrudHooks } from "./use-base";
 import { DesignTypeCountResponseSchema } from "@/Schema/generated";
 
@@ -814,7 +815,32 @@ export const useUpdateProofingImage = () => {
   return { data, loading, error, mutate, reset };
 };
 
+const getCachedProofingOrder = (queryClient: any, id: number) => {
+  let order = queryClient.getQueryData<any>(["proofing-orders", "detail", id]);
+  if (!order) {
+    const queries = queryClient.getQueryCache().findAll({ queryKey: ["proofing-orders"] });
+    for (const query of queries) {
+      const data = query.state.data as any;
+      if (data?.items && Array.isArray(data.items)) {
+        const found = data.items.find((item: any) => item.id === id);
+        if (found) {
+          order = found;
+          break;
+        }
+      } else if (Array.isArray(data)) {
+        const found = data.find((item: any) => item.id === id);
+        if (found) {
+          order = found;
+          break;
+        }
+      }
+    }
+  }
+  return order;
+};
+
 export const useDownloadProofingFile = () => {
+  const queryClient = useQueryClient();
   const { loading, error, execute, reset } = useAsyncCallback<
     void,
     [{ proofingOrderId: number; filename?: string }]
@@ -828,7 +854,13 @@ export const useDownloadProofingFile = () => {
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = filename ?? `proofing-${proofingOrderId}.pdf`;
+
+    const order = getCachedProofingOrder(queryClient, proofingOrderId);
+    const code = order?.code || `BB${String(proofingOrderId).padStart(5, '0')}`;
+    const customer = order?.customerName || order?.order?.customerName || "Khách hàng";
+    const date = formatDateForFilename(order?.createdAt || new Date());
+
+    link.download = filename || buildFilename(["Bản bình bài", code, customer, date], "pdf");
     document.body.appendChild(link);
     link.click();
     link.remove();

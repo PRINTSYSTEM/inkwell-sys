@@ -70,6 +70,7 @@ import {
 import { toast } from "sonner";
 import { Helmet } from "react-helmet-async";
 import { downloadBlob } from "@/lib/download-utils";
+import { buildFilename, formatDateForFilename } from "@/utils/file-name";
 import { apiRequest } from "@/lib/http";
 import StockOutPrintPreviewDialog from "./components/StockOutPrintPreviewDialog";
 
@@ -284,7 +285,19 @@ export default function StockOutDetailPage() {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
       
-      const filename = `phieu-xuat-kho-${stockOut.code || stockOut.id}.xlsx`;
+      const partnerName = stockOut.customerName ||
+        stockOut.customer?.name ||
+        customerData?.name ||
+        stockOut.vendorName ||
+        stockOut.vendor?.name ||
+        vendorData?.name ||
+        stockOut.supplier?.name ||
+        stockOut.receiverName ||
+        "Đối tác";
+      const dateStr = formatDateForFilename(stockOut.createdAt || stockOut.transactionDate || new Date());
+      const code = stockOut.code || `PX${String(stockOut.id).padStart(5, '0')}`;
+
+      const filename = buildFilename([code, partnerName, dateStr], "xlsx");
       downloadBlob(blob, filename);
       toast.success("Xuất file Excel thành công!");
     } catch (err: any) {
@@ -306,7 +319,21 @@ export default function StockOutDetailPage() {
       const blob = new Blob([response.data], {
         type: "application/pdf",
       });
-      downloadBlob(blob, `phieu-xuat-kho-${stockOut.code || stockOut.id}.pdf`);
+
+      const partnerName = stockOut.customerName ||
+        stockOut.customer?.name ||
+        customerData?.name ||
+        stockOut.vendorName ||
+        stockOut.vendor?.name ||
+        vendorData?.name ||
+        stockOut.supplier?.name ||
+        stockOut.receiverName ||
+        "Đối tác";
+      const dateStr = formatDateForFilename(stockOut.createdAt || stockOut.transactionDate || new Date());
+      const code = stockOut.code || `PX${String(stockOut.id).padStart(5, '0')}`;
+
+      const filename = buildFilename([code, partnerName, dateStr], "pdf");
+      downloadBlob(blob, filename);
       toast.success("Xuất file PDF thành công!", { id: toastId });
     } catch (err: any) {
       console.error(err);

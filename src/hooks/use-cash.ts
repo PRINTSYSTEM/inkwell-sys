@@ -1,6 +1,7 @@
 // src/hooks/use-cash.ts
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/http";
+import { buildFilename, formatDateForFilename } from "@/utils/file-name";
 import { API_SUFFIX } from "@/apis";
 import { normalizeParams } from "@/apis/util.api";
 import { toast } from "sonner";
@@ -196,6 +197,54 @@ export const usePostCashPayment = () => {
   });
 };
 
+const getCachedCashPayment = (queryClient: any, id: number) => {
+  let payment = queryClient.getQueryData<any>(["cash-payment", id]);
+  if (!payment) {
+    const queries = queryClient.getQueryCache().findAll({ queryKey: ["cash-payments"] });
+    for (const query of queries) {
+      const data = query.state.data as any;
+      if (data?.items && Array.isArray(data.items)) {
+        const found = data.items.find((item: any) => item.id === id);
+        if (found) {
+          payment = found;
+          break;
+        }
+      } else if (Array.isArray(data)) {
+        const found = data.find((item: any) => item.id === id);
+        if (found) {
+          payment = found;
+          break;
+        }
+      }
+    }
+  }
+  return payment;
+};
+
+const getCachedCashReceipt = (queryClient: any, id: number) => {
+  let receipt = queryClient.getQueryData<any>(["cash-receipt", id]);
+  if (!receipt) {
+    const queries = queryClient.getQueryCache().findAll({ queryKey: ["cash-receipts"] });
+    for (const query of queries) {
+      const data = query.state.data as any;
+      if (data?.items && Array.isArray(data.items)) {
+        const found = data.items.find((item: any) => item.id === id);
+        if (found) {
+          receipt = found;
+          break;
+        }
+      } else if (Array.isArray(data)) {
+        const found = data.find((item: any) => item.id === id);
+        if (found) {
+          receipt = found;
+          break;
+        }
+      }
+    }
+  }
+  return receipt;
+};
+
 // ================== CASH PAYMENT: EXPORT EXCEL ==================
 
 export const useExportCashPaymentsExcel = () => {
@@ -216,10 +265,14 @@ export const useExportCashPaymentsExcel = () => {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
 
+    const dateSuffix = params?.fromDate || params?.toDate
+      ? `Từ ${formatDateForFilename(params.fromDate)} Đến ${formatDateForFilename(params.toDate)}`
+      : "";
+
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `danh-sach-phieu-chi-${new Date().getTime()}.xlsx`;
+    link.download = buildFilename(["Danh sách phiếu chi", dateSuffix], "xlsx");
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -250,6 +303,7 @@ export const useExportCashPaymentsExcel = () => {
 // ================== CASH PAYMENT: EXPORT PDF ==================
 
 export const useExportCashPaymentPDF = () => {
+  const queryClient = useQueryClient();
   const { loading, error, execute, reset } = useAsyncCallback<void, [number]>(
     async (id: number) => {
       const res = await apiRequest.get<ArrayBuffer>(
@@ -263,10 +317,15 @@ export const useExportCashPaymentPDF = () => {
         type: "application/pdf",
       });
 
+      const payment = getCachedCashPayment(queryClient, id);
+      const code = payment?.code || `PC${String(id).padStart(5, '0')}`;
+      const name = payment?.vendorName || payment?.receiverName || "Nhà cung cấp";
+      const date = formatDateForFilename(payment?.createdAt || payment?.paymentDate || new Date());
+
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `phieu-chi-${id}.pdf`;
+      link.download = buildFilename(["Phiếu chi", code, name, date], "pdf");
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -464,6 +523,7 @@ export const usePostCashReceipt = () => {
 // ================== CASH RECEIPT: EXPORT PDF ==================
 
 export const useExportCashReceiptPDF = () => {
+  const queryClient = useQueryClient();
   const { loading, error, execute, reset } = useAsyncCallback<void, [number]>(
     async (id: number) => {
       const res = await apiRequest.get<ArrayBuffer>(
@@ -477,10 +537,15 @@ export const useExportCashReceiptPDF = () => {
         type: "application/pdf",
       });
 
+      const receipt = getCachedCashReceipt(queryClient, id);
+      const code = receipt?.code || `PT${String(id).padStart(5, '0')}`;
+      const name = receipt?.customerName || receipt?.payerName || "Khách lẻ";
+      const date = formatDateForFilename(receipt?.createdAt || receipt?.receiptDate || new Date());
+
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `phieu-thu-${id}.pdf`;
+      link.download = buildFilename(["Phiếu thu", code, name, date], "pdf");
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -532,10 +597,14 @@ export const useExportCashReceiptsExcel = () => {
       type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     });
 
+    const dateSuffix = params?.fromDate || params?.toDate
+      ? `Từ ${formatDateForFilename(params.fromDate)} Đến ${formatDateForFilename(params.toDate)}`
+      : "";
+
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `danh-sach-phieu-thu-${new Date().getTime()}.xlsx`;
+    link.download = buildFilename(["Danh sách phiếu thu", dateSuffix], "xlsx");
     document.body.appendChild(link);
     link.click();
     link.remove();

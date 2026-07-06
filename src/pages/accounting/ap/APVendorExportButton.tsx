@@ -33,6 +33,7 @@ export function APVendorExportButton({ vendorId, vendorName, defaultDateRange }:
     await exportDetail(vendorId, {
       fromDate: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
       toDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
+      vendorName,
     });
     setOpen(false);
   };

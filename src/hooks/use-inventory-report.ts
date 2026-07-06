@@ -1,6 +1,7 @@
 // src/hooks/use-inventory-report.ts
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/http";
+import { buildFilename, formatDateForFilename } from "@/utils/file-name";
 import { API_SUFFIX } from "@/apis";
 import { normalizeParams } from "@/apis/util.api";
 import { downloadBlob } from "@/lib/download-utils";
@@ -105,7 +106,12 @@ export const useExportInventorySummary = () => {
       const blob = new Blob([res.data], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
-      downloadBlob(blob, `inventory-summary-${new Date().getTime()}.xlsx`);
+      const dateSuffix = params?.fromDate || params?.toDate
+        ? `Từ ${formatDateForFilename(params.fromDate)} Đến ${formatDateForFilename(params.toDate)}`
+        : "";
+      const itemType = params?.itemType === "material" ? "Vật tư" : "Thành phẩm";
+      const excelName = buildFilename(["Báo cáo tổng hợp tồn kho", itemType, dateSuffix], "xlsx");
+      downloadBlob(blob, excelName);
     },
     onSuccess: () => {
       toast.success("Xuất báo cáo thành công");
@@ -225,7 +231,12 @@ export const useExportInventorySummaryPDF = () => {
           },
         });
 
-        doc.save(`inventory-summary-${new Date().getTime()}.pdf`);
+        const dateSuffix = params?.fromDate || params?.toDate
+          ? `Từ ${formatDateForFilename(params.fromDate)} Đến ${formatDateForFilename(params.toDate)}`
+          : "";
+        const itemType = params?.itemType === "material" ? "Vật tư" : "Thành phẩm";
+        const pdfName = buildFilename(["Báo cáo tổng hợp tồn kho", itemType, dateSuffix], "pdf");
+        doc.save(pdfName);
         return;
       }
 
@@ -239,7 +250,12 @@ export const useExportInventorySummaryPDF = () => {
       const blob = new Blob([res.data], {
         type: "application/pdf",
       });
-      downloadBlob(blob, `inventory-summary-${new Date().getTime()}.pdf`);
+      const dateSuffix = params?.fromDate || params?.toDate
+        ? `Từ ${formatDateForFilename(params.fromDate)} Đến ${formatDateForFilename(params.toDate)}`
+        : "";
+      const itemType = params?.itemType === "material" ? "Vật tư" : "Thành phẩm";
+      const pdfName = buildFilename(["Báo cáo tổng hợp tồn kho", itemType, dateSuffix], "pdf");
+      downloadBlob(blob, pdfName);
     },
     onSuccess: () => {
       toast.success("Xuất PDF thành công");
@@ -361,7 +377,11 @@ export const useExportStockCard = () => {
       const blob = new Blob([res.data], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
-      downloadBlob(blob, `stock-card-${itemCode}-${new Date().getTime()}.xlsx`);
+      const dateSuffix = params?.fromDate || params?.toDate
+        ? `Từ ${formatDateForFilename(params.fromDate)} Đến ${formatDateForFilename(params.toDate)}`
+        : "";
+      const excelName = buildFilename(["Thẻ kho", itemCode, dateSuffix], "xlsx");
+      downloadBlob(blob, excelName);
     },
     onSuccess: () => {
       toast.success("Xuất báo cáo thành công");
