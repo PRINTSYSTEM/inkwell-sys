@@ -105,20 +105,21 @@ export default function PrintPreviewDialog({
       .company-info {
         text-align: center;
         flex: 1;
-        padding-right: 40px;
+        padding-right: 24px;
         font-size: 12px;
         line-height: 1.45;
       }
       .company-name {
-        font-size: 14.5px;
+        font-size: 13.5px;
         font-weight: bold;
         text-transform: uppercase;
         margin-bottom: 3px;
+        letter-spacing: -0.2px;
       }
       .title-container {
         text-align: center;
-        margin-top: 15px;
-        margin-bottom: 15px;
+        margin-top: 10px;
+        margin-bottom: 10px;
         position: relative;
       }
       .print-title {
@@ -183,7 +184,7 @@ export default function PrintPreviewDialog({
       .signatures {
         display: flex;
         justify-content: space-between;
-        margin-top: 35px;
+        margin-top: 20px;
         padding: 0 40px;
         font-size: 14px;
         font-weight: bold;
@@ -269,8 +270,8 @@ export default function PrintPreviewDialog({
                     className="logo-image h-[70px] w-auto object-contain"
                   />
                 </div>
-                <div className="company-info text-center flex-1 pr-10 text-[12px] leading-relaxed">
-                  <div className="company-name text-[14.5px] font-bold uppercase text-stone-900">
+                <div className="company-info text-center flex-1 pr-6 text-[12px] leading-relaxed">
+                  <div className="company-name text-[13.5px] font-bold uppercase text-stone-900 tracking-tight">
                     CÔNG TY TNHH SẢN XUẤT THƯƠNG MẠI DỊCH VỤ QUỐC TẾ QUANG ĐẠT
                   </div>
                   <div>43D Ao Đôi, P. Bình Trị Đông A, Q. Bình Tân, TP. Hồ Chí Minh</div>
@@ -279,35 +280,56 @@ export default function PrintPreviewDialog({
               </div>
 
               {/* Title Section */}
-              <div className="title-container text-center my-4 relative">
+              <div className="title-container text-center mt-3 mb-2 relative">
                 <h1 className="print-title text-[22px] font-bold uppercase tracking-wider">
                   PHIẾU GIAO HÀNG
                 </h1>
-                <div className="print-subtitle text-[13px] flex justify-between px-2 mt-1">
-                  <span>{dateFormatted}</span>
-                  <span className="font-bold">Số phiếu: {deliveryNote.code || deliveryNote.id}</span>
-                </div>
               </div>
 
               {/* Client & Address Info */}
-              <div className="info-section text-[14px] leading-normal space-y-1 mb-3">
-                <div className="grid grid-cols-[100px_1fr] gap-x-2">
-                  <span className="font-bold">Khách hàng:</span>
-                  <span className="uppercase font-bold">{deliveryNote.orders?.[0]?.customerName || "—"}</span>
-                </div>
-                <div className="grid grid-cols-[100px_1fr] gap-x-2">
-                  <span className="font-bold">Địa chỉ:</span>
-                  <span>{deliveryNote.deliveryAddress || "—"}</span>
-                </div>
-                <div className="grid grid-cols-[100px_1fr] gap-x-2">
-                  <span className="font-bold">Người nhận:</span>
-                  <span>{deliveryNote.recipientName || "—"}</span>
-                </div>
-                <div className="grid grid-cols-[100px_1fr] gap-x-2">
-                  <span className="font-bold">Số điện thoại:</span>
-                  <span>{deliveryNote.recipientPhone || "—"}</span>
-                </div>
-              </div>
+              <table style={{ width: "100%", border: "none", marginBottom: "12px", fontSize: "14.5px", lineHeight: "1.5", borderCollapse: "collapse", fontFamily: '"Times New Roman", Times, serif' }}>
+                <tbody>
+                  <tr>
+                    <td colSpan={2} style={{ padding: "4px 0" }}>
+                      <table style={{ width: "100%", border: "none", borderCollapse: "collapse" }}>
+                        <tbody>
+                          <tr>
+                            <td style={{ padding: 0, textAlign: "left", fontStyle: "italic" }}>{dateFormatted}</td>
+                            <td style={{ padding: 0, textAlign: "right" }}>
+                              <span style={{ fontWeight: "bold" }}>Số phiếu: </span>
+                              <span style={{ fontWeight: "900", fontSize: "16px", textDecorationColor: "#a8a29e", textUnderlineOffset: "2px" }}>{deliveryNote.code || deliveryNote.id}</span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style={{ width: "105px", fontWeight: "bold", verticalAlign: "top", padding: "4px 0" }}>Khách hàng:</td>
+                    <td style={{ textAlign: "left", fontWeight: "bold", textTransform: "uppercase", padding: "4px 0" }}>{deliveryNote.orders?.[0]?.customerName || "—"}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ fontWeight: "bold", verticalAlign: "top", padding: "4px 0" }}>Địa chỉ:</td>
+                    <td style={{ textAlign: "left", padding: "4px 0" }}>{deliveryNote.deliveryAddress || "—"}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ fontWeight: "bold", verticalAlign: "top", padding: "4px 0" }}>Người nhận:</td>
+                    <td style={{ textAlign: "left", padding: "4px 0" }}>
+                      <table style={{ width: "100%", border: "none", borderCollapse: "collapse" }}>
+                        <tbody>
+                          <tr>
+                            <td style={{ padding: 0, textAlign: "left" }}>{deliveryNote.recipientName || "—"}</td>
+                            <td style={{ padding: 0, textAlign: "right", width: "260px" }}>
+                              <span style={{ fontWeight: "bold", marginRight: "6px" }}>Số điện thoại:</span>
+                              <span style={{ fontWeight: "normal" }}>{deliveryNote.recipientPhone || "—"}</span>
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
 
               {/* Line Items Table */}
               <table className="print-table w-full border-collapse border border-black text-[13px] mt-3">
@@ -389,14 +411,14 @@ export default function PrintPreviewDialog({
               </div>
 
               {/* Signatures Row */}
-              <div className="signatures flex justify-between mt-12 px-10 text-[14px] font-bold text-center">
-                <div className="w-40">
-                  <div>Bên giao </div>
-                </div>
-                <div className="w-40">
-                  <div>Bên nhận </div>
-                </div>
-              </div>
+              <table style={{ width: "100%", border: "none", marginTop: "10px", fontSize: "14px", fontWeight: "bold", textAlign: "center", borderCollapse: "collapse", fontFamily: '"Times New Roman", Times, serif' }}>
+                <tbody>
+                  <tr>
+                    <td style={{ width: "50%", textAlign: "center", padding: "0px 0" }}>Bên giao</td>
+                    <td style={{ width: "50%", textAlign: "center", padding: "0px 0" }}>Bên nhận</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
