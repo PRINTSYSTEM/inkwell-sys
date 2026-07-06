@@ -739,7 +739,7 @@ function QCInspectionRow({ prod, searchTerm }: QCInspectionRowProps) {
       {/* Viewing zoom image dialog */}
       {viewingImageUrl && (
         <ImageViewerDialog
-          isOpen={!!viewingImageUrl}
+          open={!!viewingImageUrl}
           onOpenChange={(open) => !open && setViewingImageUrl(null)}
           imageUrl={viewingImageUrl}
         />
