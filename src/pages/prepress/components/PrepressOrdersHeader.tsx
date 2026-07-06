@@ -506,6 +506,7 @@ export function PrepressOrdersHeader({
               searchTermLower={searchTermLower}
               debouncedSearchTerm={debouncedDesignCode}
               onNavigate={onNavigate}
+              showAllDesignsByDefault={true}
             />
             {incompleteTotalCount > itemsPerPage && (
               <div className="flex items-center justify-between gap-3 bg-background px-1 py-1 border rounded-lg shadow-sm">

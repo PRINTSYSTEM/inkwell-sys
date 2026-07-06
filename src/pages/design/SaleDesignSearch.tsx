@@ -28,7 +28,7 @@ export default function SaleDesignSearch() {
   const [customerName, setCustomerName] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 12;
+  const pageSize = 10;
   const [selectedTypeName, setSelectedTypeName] = useState<string | null>(null);
   const [selectedMaterialName, setSelectedMaterialName] = useState<
     string | null
@@ -278,18 +278,18 @@ export default function SaleDesignSearch() {
                   </div>
                 </DialogContent>
               </Dialog>
-              <table className="min-w-full text-left text-xs">
+              <table className="min-w-full text-left text-sm">
                 <thead className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
                   <tr>
-                    <th className="px-3 py-2 text-center w-12">&nbsp;</th>
-                    <th className="px-3 py-2">Khách hàng</th>
-                    <th className="px-3 py-2">Mã thiết kế</th>
-                    <th className="px-3 py-2 min-w-[220px]">Tên thiết kế</th>
-                    <th className="px-3 py-2">Loại</th>
-                    <th className="px-3 py-2">Kích thước</th>
-                    <th className="px-3 py-2 w-32 max-w-[130px]">Chất liệu</th>
-                    <th className="px-3 py-2 w-24 max-w-[90px]">Ngày tạo</th>
-                    <th className="px-3 py-2">Giá</th>
+                    <th className="px-4 py-3 text-center w-16">&nbsp;</th>
+                    <th className="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200">Khách hàng</th>
+                    <th className="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200">Mã thiết kế</th>
+                    <th className="px-4 py-3 min-w-[220px] font-semibold text-slate-700 dark:text-slate-200">Tên thiết kế</th>
+                    <th className="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200">Loại</th>
+                    <th className="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200">Kích thước</th>
+                    <th className="px-4 py-3 w-32 max-w-[130px] font-semibold text-slate-700 dark:text-slate-200">Chất liệu</th>
+                    <th className="px-4 py-3 w-24 max-w-[90px] font-semibold text-slate-700 dark:text-slate-200">Ngày tạo</th>
+                    <th className="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200">Giá</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -298,10 +298,10 @@ export default function SaleDesignSearch() {
                       key={design.id}
                       className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-900/50"
                     >
-                      <td className="px-3 py-1 align-middle text-center w-12">
+                      <td className="px-4 py-3 align-middle text-center w-16">
                         <button
                           onClick={() => openPreview(design.designImageUrl)}
-                          className="w-7 h-7 rounded overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center hover:scale-105 transition-transform border border-slate-200 dark:border-slate-700"
+                          className="w-9 h-9 rounded overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center hover:scale-105 transition-transform border border-slate-200 dark:border-slate-700"
                         >
                           {design.designImageUrl ? (
                             <img
@@ -310,20 +310,20 @@ export default function SaleDesignSearch() {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <ImageIcon className="h-3.5 w-3.5 text-slate-400" />
+                            <ImageIcon className="h-4 w-4 text-slate-400" />
                           )}
                         </button>
                       </td>
-                      <td className="px-3 py-1 align-middle max-w-[200px] truncate">
+                      <td className="px-4 py-3 align-middle max-w-[250px] truncate font-medium text-slate-800 dark:text-slate-200">
                         {design.customer?.name || "—"}
                       </td>
-                      <td className="px-3 py-1 align-middle font-mono font-medium">
+                      <td className="px-4 py-3 align-middle font-mono font-medium text-slate-800 dark:text-slate-200">
                         {design.code || `DES-${design.id}`}
                       </td>
-                      <td className="px-3 py-1 align-middle min-w-[220px]">
+                      <td className="px-4 py-3 align-middle min-w-[220px]">
                         <div className="flex items-center gap-1.5 group">
                           <div
-                            className="whitespace-normal break-words flex-1 text-slate-700 dark:text-slate-300 font-medium"
+                            className="whitespace-normal break-words flex-1 text-slate-900 dark:text-slate-100 font-semibold"
                             title={design.designName || "Không tên"}
                           >
                             {design.designName || "Không tên"}
@@ -331,26 +331,26 @@ export default function SaleDesignSearch() {
                           {design.designName && (
                             <button
                               onClick={() => handleCopyDesignName(design.designName, design.id)}
-                              className="inline-flex items-center justify-center p-0.5 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors h-5 w-5 shrink-0 opacity-0 group-hover:opacity-100"
+                              className="inline-flex items-center justify-center p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100"
                               title="Sao chép tên thiết kế"
                             >
                               {copiedDesignId === design.id ? (
-                                <Check className="h-3 w-3 text-green-600 dark:text-green-400" />
+                                <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
                               ) : (
-                                <Copy className="h-3 w-3" />
+                                <Copy className="h-3.5 w-3.5" />
                               )}
                             </button>
                           )}
                         </div>
                       </td>
-                      <td className="px-3 py-1 align-middle">
+                      <td className="px-4 py-3 align-middle">
                         {design.designType?.name || "—"}
                       </td>
-                      <td className="px-3 py-1 align-middle font-mono text-slate-600 dark:text-slate-400">
+                      <td className="px-4 py-3 align-middle font-mono text-slate-700 dark:text-slate-300">
                         {design.dimensions ||
                           `${design.length || ""} x ${design.width || ""} x ${design.height || ""}`}
                       </td>
-                      <td className="px-3 py-1 align-middle max-w-[130px] truncate text-[11px]" title={
+                      <td className="px-4 py-3 align-middle max-w-[130px] truncate text-[13px]" title={
                         `${design.materialType?.name || design.materialTypeName || "—"}${design.basisWeight ? ` (${design.basisWeight} gsm)` : ""}`
                       }>
                         <span>
@@ -358,14 +358,14 @@ export default function SaleDesignSearch() {
                           {design.basisWeight ? ` (${design.basisWeight} gsm)` : ""}
                         </span>
                       </td>
-                      <td className="px-3 py-1 align-middle text-slate-500 text-[11px] w-24 max-w-[90px] truncate">
+                      <td className="px-4 py-3 align-middle text-slate-500 text-[13px] w-24 max-w-[90px] truncate">
                         {design.createdAt
                           ? new Date(design.createdAt).toLocaleDateString(
                               "vi-VN",
                             )
                           : "—"}
                       </td>
-                      <td className="px-3 py-1 align-middle font-bold text-primary">
+                      <td className="px-4 py-3 align-middle font-bold text-primary text-[15px]">
                         {design.latestUnitPrice
                           ? formatCurrency(design.latestUnitPrice)
                           : "—"}
