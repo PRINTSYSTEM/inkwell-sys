@@ -23,6 +23,7 @@ import type {
 import { useAsyncCallback } from "@/hooks/use-async";
 import { API_SUFFIX } from "@/apis";
 import { normalizeParams } from "@/apis/util.api";
+import { invalidateRelatedQueries } from "@/lib/crud-key";
 
 // Production Order CRUD hooks (new API structure)
 const {
@@ -160,7 +161,13 @@ export const useDeleteProductionOrder = () => {
       // Delete the production order directly
       await apiRequest.delete(API_SUFFIX.PRODUCTION_ORDER_BY_ID(productionOrderId));
 
-      queryClient.invalidateQueries({ queryKey: productionOrderKeys.all });
+      // Invalidate all related query keys to ensure the list, prepress/proofing, and order states are refreshed
+      invalidateRelatedQueries(queryClient, [
+        "production-orders",
+        "productions",
+        "proofing-orders",
+        "orders",
+      ]);
 
       toast.success("Thành công", {
         description: "Đã hủy lệnh sản xuất",

@@ -52,6 +52,7 @@ const App = () => (
               visibleToasts={6}
               gap={10}
               closeButton 
+              duration={2000}
             />
           </NotificationProvider>
         </AuthProvider>

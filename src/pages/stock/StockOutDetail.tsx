@@ -735,29 +735,31 @@ export default function StockOutDetailPage() {
                   </div>
 
                   {/* Row 2 */}
-                  <div className="flex flex-col sm:flex-row items-end gap-3 sm:gap-6 w-full">
-                    <div className="flex items-end gap-1.5 flex-1 w-full min-w-0">
-                      <span className="shrink-0 text-slate-700 print:text-black font-medium">- Địa chỉ (bộ phận):</span>
-                      <span className="text-slate-900 print:text-black border-b border-dotted border-slate-400 flex-1 pb-0.5 min-h-[1.5rem] text-left flex items-end font-medium">
-                        {isEditing ? (
-                          <Input
-                            value={editReceiverAddress}
-                            onChange={(e) => setEditReceiverAddress(e.target.value)}
-                            className="h-6 py-0 px-2 border border-dashed border-blue-400 focus-visible:ring-0 focus-visible:border-blue-600 focus-visible:bg-blue-50 w-full text-xs bg-blue-50/30 text-blue-900 rounded"
-                            placeholder="Địa chỉ..."
-                          />
-                        ) : (
-                          stockOut.receiverAddress || partnerAddress || "—"
-                        )}
-                      </span>
+                  {stockOut.purpose?.toLowerCase() !== "production" && (
+                    <div className="flex flex-col sm:flex-row items-end gap-3 sm:gap-6 w-full">
+                      <div className="flex items-end gap-1.5 flex-1 w-full min-w-0">
+                        <span className="shrink-0 text-slate-700 print:text-black font-medium">- Địa chỉ (bộ phận):</span>
+                        <span className="text-slate-900 print:text-black border-b border-dotted border-slate-400 flex-1 pb-0.5 min-h-[1.5rem] text-left flex items-end font-medium">
+                          {isEditing ? (
+                            <Input
+                              value={editReceiverAddress}
+                              onChange={(e) => setEditReceiverAddress(e.target.value)}
+                              className="h-6 py-0 px-2 border border-dashed border-blue-400 focus-visible:ring-0 focus-visible:border-blue-600 focus-visible:bg-blue-50 w-full text-xs bg-blue-50/30 text-blue-900 rounded"
+                              placeholder="Địa chỉ..."
+                            />
+                          ) : (
+                            stockOut.receiverAddress || partnerAddress || "—"
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex items-end gap-1.5 shrink-0 w-full sm:w-auto">
+                        <span className="shrink-0 text-slate-700 print:text-black font-medium">SĐT:</span>
+                        <span className="text-slate-900 print:text-black border-b border-dotted border-slate-400 pb-0.5 min-h-[1.5rem] text-left w-full sm:w-36 font-semibold">
+                          {partnerPhone || "—"}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-end gap-1.5 shrink-0 w-full sm:w-auto">
-                      <span className="shrink-0 text-slate-700 print:text-black font-medium">SĐT:</span>
-                      <span className="text-slate-900 print:text-black border-b border-dotted border-slate-400 pb-0.5 min-h-[1.5rem] text-left w-full sm:w-36 font-semibold">
-                        {partnerPhone || "—"}
-                      </span>
-                    </div>
-                  </div>
+                  )}
 
                   {/* Row 3 */}
                   <div className="flex items-end gap-1.5 w-full">

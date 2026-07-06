@@ -320,16 +320,18 @@ export default function StockOutPrintPreviewDialog({
                   <span className="info-label">- Họ và tên người nhận hàng:</span>
                   <span className="info-val-border font-semibold">{stockOut.receiverName || partnerName || "—"}</span>
                 </div>
-                <div className="info-flex-group">
-                  <div className="info-row flex-1">
-                    <span className="info-label">- Địa chỉ (bộ phận):</span>
-                    <span className="info-val-border">{stockOut.receiverAddress || partnerAddress || "—"}</span>
+                {stockOut.purpose?.toLowerCase() !== "production" && (
+                  <div className="info-flex-group">
+                    <div className="info-row flex-1">
+                      <span className="info-label">- Địa chỉ (bộ phận):</span>
+                      <span className="info-val-border">{stockOut.receiverAddress || partnerAddress || "—"}</span>
+                    </div>
+                    <div className="info-row w-[220px] shrink-0">
+                      <span className="info-label">SĐT:</span>
+                      <span className="info-val-border font-semibold">{partnerPhone || "—"}</span>
+                    </div>
                   </div>
-                  <div className="info-row w-[220px] shrink-0">
-                    <span className="info-label">SĐT:</span>
-                    <span className="info-val-border font-semibold">{partnerPhone || "—"}</span>
-                  </div>
-                </div>
+                )}
                 <div className="info-row">
                   <span className="info-label">- Lý do xuất kho:</span>
                   <span className="info-val-border">

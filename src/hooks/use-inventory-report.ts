@@ -416,7 +416,7 @@ export const useInventoryHistory = (params?: InventoryHistoryParams) => {
           (params ?? {}) as Record<string, unknown>
         );
         const res = await apiRequest.get<InventoryHistoryResponse>(
-          "/inventory-reports/history",
+          API_SUFFIX.INVENTORY_HISTORY,
           { params: normalizedParams }
         );
         return res.data;

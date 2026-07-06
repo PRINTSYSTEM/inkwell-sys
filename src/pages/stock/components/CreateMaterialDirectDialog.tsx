@@ -330,10 +330,7 @@ export function CreateMaterialDirectDialog({
       return;
     }
 
-    if (!selectedFamilyId) {
-      toast.error("Vui lòng chọn nhóm vật tư!");
-      return;
-    }
+
 
     if (!selectedTemplateId) {
       toast.error("Vui lòng chọn định mức chất liệu!");

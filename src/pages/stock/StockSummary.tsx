@@ -48,6 +48,7 @@ import { useStockOuts } from "@/hooks/use-stock";
 import { formatCurrency, formatDate } from "@/lib/status-utils";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { toast } from "sonner";
+import { SearchableSelect } from "@/components/forms";
 import { CreateMaterialDirectDialog } from "./components/CreateMaterialDirectDialog";
 import { StockOutByVendorDialog } from "./components/StockOutByVendorDialog";
 import { PendingExportsDialog } from "./components/PendingExportsDialog";
@@ -364,25 +365,22 @@ export default function StockSummary() {
 
               {/* Vendor Selector */}
               <div className="w-full sm:w-[220px]">
-                <Select value={selectedVendorId} onValueChange={setSelectedVendorId}>
-                  <SelectTrigger className="h-9 text-xs bg-white border-slate-200 rounded-lg cursor-pointer">
-                    <SelectValue placeholder="Chọn nhà cung cấp" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tất cả nhà cung cấp</SelectItem>
-                    {isLoadingVendors ? (
-                      <div className="flex items-center justify-center p-2">
-                        <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                      </div>
-                    ) : (
-                      filteredVendors?.map((vendor) => (
-                        <SelectItem key={vendor.id} value={String(vendor.id)}>
-                          {vendor.name || vendor.code}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  value={selectedVendorId}
+                  onValueChange={setSelectedVendorId}
+                  options={[
+                    { value: "all", label: "Tất cả nhà cung cấp" },
+                    ...(filteredVendors || []).map((vendor) => ({
+                      value: String(vendor.id),
+                      label: vendor.name || vendor.code || "",
+                    })),
+                  ]}
+                  placeholder="Chọn nhà cung cấp..."
+                  searchPlaceholder="Tìm nhà cung cấp..."
+                  disabled={isLoadingVendors}
+                  className="h-9 text-xs w-full"
+                  popoverWidth="w-[220px]"
+                />
               </div>
             </div>
 

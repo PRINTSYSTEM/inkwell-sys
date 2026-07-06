@@ -14,6 +14,7 @@ import {
 import { toast } from "sonner";
 import { usePendingMaterialProductionOrders } from "@/hooks/use-production";
 import { useProofingOrders } from "@/hooks/use-proofing-order";
+import { useSupplierCatalogs } from "@/hooks/use-supplier-catalog";
 
 interface PendingExportsDialogProps {
   open: boolean;
@@ -30,7 +31,7 @@ const getSuggestedVendorsForMaterial = (materialName: string, isRoll: boolean): 
   if (name.includes("duplex") || name.includes("ivory")) {
     suggestions.push("Thuận Tuyền");
   }
-  if (name.includes("couche")) {
+  if (name.includes("couche") || name.includes("coschue")) {
     if (name.includes("nhãn") || name.includes("nhan")) {
       suggestions.push("Minh Kim Long", "CP");
     } else {
@@ -82,6 +83,9 @@ export function PendingExportsDialog({
   });
   const pendingOrders = pendingResp?.items || [];
 
+  // Load supplier catalogs to match material types dynamically
+  const { data: catalogs = [] } = useSupplierCatalogs();
+
   // Load proofing orders to match paper specifications
   const { data: proofingResp, isLoading: isLoadingProofing } = useProofingOrders({
     pageSize: 1000,
@@ -104,6 +108,7 @@ export function PendingExportsDialog({
     return pendingOrders.map((po) => {
       const proofing = po.proofingOrderId ? proofingMap.get(po.proofingOrderId) : null;
       const paperName = proofing?.materialType?.name || "Giấy in";
+      const materialTypeId = proofing?.materialTypeId || proofing?.materialType?.id;
       const totalQuantity = proofing?.totalQuantity || 0;
       
       const unitLower = (proofing?.materialType?.unit || "").toLowerCase();
@@ -116,7 +121,30 @@ export function PendingExportsDialog({
       const designTypeName = (proofing?.designType?.name || "").toLowerCase();
       const isBoxCarton = designTypeName.includes("hộp") && designTypeName.includes("carton");
 
-      const suggestedSupplierNames = getSuggestedVendorsForMaterial(paperName, isRoll);
+      // 1. Get dynamic suggestions from Supplier Catalog configurations
+      const catalogSuppliers = materialTypeId
+        ? catalogs
+            .filter((c) => c.materialTypeId === materialTypeId)
+            .map((c) => {
+              const v = vendors.find((vendor) => vendor.id === c.vendorId);
+              return v?.name || v?.code || "";
+            })
+            .filter(Boolean)
+        : [];
+
+      // 2. Get fallback hardcoded suggestions if no catalogs configured
+      const hardcodedSuggestions = getSuggestedVendorsForMaterial(paperName, isRoll);
+
+      // Merge and deduplicate
+      const suggestedSupplierNames = Array.from(
+        new Set([...catalogSuppliers, ...hardcodedSuggestions])
+      ).filter((name) =>
+        vendors.some(
+          (v) =>
+            (v.name || "").toLowerCase() === name.toLowerCase() ||
+            (v.code || "").toLowerCase() === name.toLowerCase()
+        )
+      );
 
       return {
         ...po,
@@ -128,7 +156,7 @@ export function PendingExportsDialog({
         suggestedSupplierNames,
       };
     });
-  }, [pendingOrders, proofingMap]);
+  }, [pendingOrders, proofingMap, catalogs, vendors]);
 
   // Filter based on search query
   const filteredOrders = useMemo(() => {

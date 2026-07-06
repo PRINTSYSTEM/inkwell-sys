@@ -434,40 +434,17 @@ export default function APUnifiedPage() {
                         </TableCell>
                       </TableRow>
                       {isExpanded && item.vendorId && (
-                        <>
-                          <TableRow className="bg-muted/30 hover:bg-muted/30 border-t-0">
-                            <TableHead className="w-[40px] text-center">
-                              {/* Select All can be added here */}
-                            </TableHead>
-                            <TableHead colSpan={2} className="pl-12 font-bold text-[10px] uppercase text-muted-foreground">
-                              Số chứng từ / Loại
-                            </TableHead>
-                            <TableHead className="text-center font-bold text-[10px] uppercase text-muted-foreground">
-                              Ngày CT
-                            </TableHead>
-                            <TableHead className="text-center font-bold text-[10px] uppercase text-muted-foreground">
-                              Hạn trả
-                            </TableHead>
-                            <TableHead className="text-right font-bold text-[10px] uppercase text-muted-foreground">
-                              Số tiền mua
-                            </TableHead>
-                            <TableHead className="text-right font-bold text-[10px] uppercase text-muted-foreground">
-                              Đã trả
-                            </TableHead>
-                            <TableHead className="text-right font-bold text-[10px] uppercase text-muted-foreground">
-                              Còn nợ
-                            </TableHead>
-                            <TableHead colSpan={isReport ? 3 : 2}></TableHead>
-                          </TableRow>
-                          <VendorDetailRow 
-                            vendorId={item.vendorId}
-                            vendorName={item.vendorName || ""}
-                            dateRange={dateRange}
-                            selectedOrders={selectedOrders}
-                            onSelectOrder={(order) => handleSelectOrder(order, item)}
-                            colSpan={isReport ? 10 : 9}
-                          />
-                        </>
+                        <TableRow className="bg-muted/10 hover:bg-muted/10 border-t-0 select-none">
+                          <TableCell colSpan={isReport ? 10 : 9} className="p-3 pl-8 md:pl-12 bg-stone-50/50 dark:bg-stone-900/10">
+                            <VendorDetailRow 
+                              vendorId={item.vendorId}
+                              vendorName={item.vendorName || ""}
+                              dateRange={dateRange}
+                              selectedOrders={selectedOrders}
+                              onSelectOrder={(order) => handleSelectOrder(order, item)}
+                            />
+                          </TableCell>
+                        </TableRow>
                       )}
                     </>
                   );
@@ -520,14 +497,12 @@ function VendorDetailRow({
   dateRange,
   selectedOrders,
   onSelectOrder,
-  colSpan = 9,
 }: {
   vendorId: number;
   vendorName: string;
   dateRange: DateRange | undefined;
   selectedOrders: Map<number, any>;
   onSelectOrder: (order: any) => void;
-  colSpan?: number;
 }) {
   const navigate = useNavigate();
 
@@ -550,106 +525,152 @@ function VendorDetailRow({
     return detailData.items.filter((detail: any) => (detail.outstanding ?? 0) > 0);
   }, [detailData?.items]);
 
+  // Flatten items so that each item becomes a row in the ledger
+  const flatRows = useMemo(() => {
+    const rows: Array<{
+      key: string;
+      detail: any;
+      item?: any;
+    }> = [];
+
+    unpaidItems.forEach((detail: any) => {
+      const itemsList = detail.items || [];
+      if (itemsList.length === 0) {
+        rows.push({
+          key: `${detail.documentId || detail.id}`,
+          detail,
+        });
+      } else {
+        itemsList.forEach((item: any, idx: number) => {
+          rows.push({
+            key: `${detail.documentId || detail.id}-${idx}`,
+            detail,
+            item,
+          });
+        });
+      }
+    });
+
+    return rows;
+  }, [unpaidItems]);
+
   if (isLoadingDetail) {
     return (
-      <TableRow className="bg-muted/10">
-        <TableCell colSpan={colSpan}>
-          <div className="flex items-center justify-center py-4 gap-2 text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            <span className="text-xs">Đang tải chi tiết giao dịch...</span>
-          </div>
-        </TableCell>
-      </TableRow>
+      <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground bg-background rounded-lg border border-inner">
+        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+        <span className="text-xs">Đang tải chi tiết giao dịch...</span>
+      </div>
     );
   }
 
   if (unpaidItems.length === 0) {
     return (
-      <TableRow className="bg-muted/10">
-        <TableCell colSpan={colSpan} className="text-center py-4 text-xs text-muted-foreground italic">
-          Không có giao dịch chưa thanh toán trong kỳ
-        </TableCell>
-      </TableRow>
+      <div className="text-center py-6 text-xs text-muted-foreground italic bg-background rounded-lg border border-dashed border-stone-200 dark:border-stone-800">
+        Không có giao dịch chưa thanh toán trong kỳ
+      </div>
     );
   }
 
   return (
-    <>
-      {unpaidItems.map((detail, index) => (
-        <TableRow
-          key={detail.documentId || index}
-          className={cn(
-            "bg-muted/5 hover:bg-muted/15 cursor-pointer border-l-2",
-            selectedOrders.has(detail.documentId) ? "border-l-orange-500 bg-orange-50/10" : "border-l-primary/30"
-          )}
-          onClick={() => handleOrderClick(detail.documentId)}
-        >
-          <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
-            {detail.documentId && (
-              <Checkbox 
-                checked={selectedOrders.has(detail.documentId)}
-                onCheckedChange={() => onSelectOrder(detail)}
-              />
-            )}
-          </TableCell>
-          <TableCell colSpan={2} className="pl-12 py-3">
-            <div className="flex flex-col space-y-2">
-              <div>
-                <span className="font-bold text-sm text-primary/80">{detail.documentNumber || "—"}</span>
-                <span className="text-[10px] text-muted-foreground uppercase ml-2">({detail.documentType || "Hóa đơn"})</span>
-              </div>
-              {detail.items && detail.items.length > 0 && (
-                <div className="max-w-md mt-1 border rounded-lg overflow-hidden bg-background/50 shadow-sm">
-                  <Table>
-                    <TableHeader className="bg-muted/40">
-                      <TableRow className="hover:bg-transparent">
-                        <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2">Mã vật tư</TableHead>
-                        <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2">Tên vật tư</TableHead>
-                        <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2 text-right">SL</TableHead>
-                        <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2 text-right">Đơn giá</TableHead>
-                        <TableHead className="text-[10px] font-bold uppercase h-7 py-1 px-2 text-right">Thành tiền</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {detail.items.map((item, idx) => (
-                        <TableRow key={idx} className="hover:bg-muted/10">
-                          <TableCell className="text-[11px] font-mono py-1 px-2">{item.code || "—"}</TableCell>
-                          <TableCell className="text-[11px] font-medium py-1 px-2 max-w-[120px] truncate" title={item.name || ""}>{item.name || "—"}</TableCell>
-                          <TableCell className="text-[11px] py-1 px-2 text-right tabular-nums">{item.quantity ?? 0}</TableCell>
-                          <TableCell className="text-[11px] py-1 px-2 text-right tabular-nums text-muted-foreground">{formatCurrency(item.unitPrice ?? 0)}</TableCell>
-                          <TableCell className="text-[11px] py-1 px-2 text-right tabular-nums font-semibold">{formatCurrency(item.totalAmount ?? 0)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </div>
-          </TableCell>
-          <TableCell className="text-center text-xs font-medium">
-            {detail.documentDate ? formatDate(detail.documentDate) : "—"}
-          </TableCell>
-          <TableCell className="text-center text-xs font-medium">
-            {detail.dueDate ? formatDate(detail.dueDate) : "—"}
-          </TableCell>
-          <TableCell className="text-right font-medium tabular-nums text-xs">
-            {detail.amountDue !== undefined ? formatCurrency(detail.amountDue) : "—"}
-          </TableCell>
-          <TableCell className="text-right font-medium tabular-nums text-xs text-green-600">
-            {detail.amountPaid !== undefined ? formatCurrency(detail.amountPaid) : "—"}
-          </TableCell>
-          <TableCell className="text-right">
-            {detail.outstanding !== undefined && detail.outstanding > 0 ? (
-              <Badge variant="outline" className="text-[10px] h-5 bg-background font-bold border-red-200 text-red-600">
-                {formatCurrency(detail.outstanding)}
-              </Badge>
-            ) : (
-              "—"
-            )}
-          </TableCell>
-          <TableCell colSpan={colSpan - 8}></TableCell>
-        </TableRow>
-      ))}
-    </>
+    <div className="border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden bg-background shadow-sm select-none">
+      <Table>
+        <TableHeader className="bg-stone-50 dark:bg-stone-900/60 border-b border-stone-200 dark:border-stone-800">
+          <TableRow className="hover:bg-transparent">
+            <TableHead className="w-[45px] text-center">Chọn</TableHead>
+            <TableHead className="w-[45px] text-center">STT</TableHead>
+            <TableHead className="w-[90px] text-center font-bold text-[10px] uppercase tracking-wider">Ngày CT</TableHead>
+            <TableHead className="w-[120px] font-bold text-[10px] uppercase tracking-wider">Số chứng từ</TableHead>
+            <TableHead className="w-[110px] font-bold text-[10px] uppercase tracking-wider">Loại</TableHead>
+            <TableHead className="w-[110px] font-bold text-[10px] uppercase tracking-wider">Mã vật tư</TableHead>
+            <TableHead className="font-bold text-[10px] uppercase tracking-wider">Tên vật tư</TableHead>
+            <TableHead className="w-[70px] text-right font-bold text-[10px] uppercase tracking-wider">Số lượng</TableHead>
+            <TableHead className="w-[90px] text-right font-bold text-[10px] uppercase tracking-wider">Đơn giá</TableHead>
+            <TableHead className="w-[100px] text-right font-bold text-[10px] uppercase tracking-wider">Thành tiền</TableHead>
+            <TableHead className="w-[115px] text-right font-bold text-[10px] uppercase tracking-wider text-green-700">Đã trả</TableHead>
+            <TableHead className="w-[115px] text-right font-bold text-[10px] uppercase tracking-wider text-red-750">Còn nợ</TableHead>
+            <TableHead className="w-[100px] font-bold text-[10px] uppercase tracking-wider">Hạn trả</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody className="divide-y divide-stone-100 dark:divide-stone-900">
+          {flatRows.map((row, index) => {
+            const { detail, item } = row;
+            const docKey = detail.documentId || detail.id;
+            const isSelected = selectedOrders.has(docKey);
+
+            const totalAmount = item ? (item.totalAmount ?? 0) : (detail.amountDue ?? 0);
+            const paid = item ? 0 : (detail.amountPaid ?? 0);
+            const outstanding = detail.outstanding ?? 0;
+
+            return (
+              <TableRow
+                key={row.key}
+                className={cn(
+                  "hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors cursor-pointer",
+                  isSelected && "bg-orange-50/10 dark:bg-orange-950/5 hover:bg-orange-50/15"
+                )}
+                onClick={() => handleOrderClick(detail.documentId)}
+              >
+                <TableCell className="text-center py-2.5" onClick={(e) => e.stopPropagation()}>
+                  {docKey && (
+                    <Checkbox 
+                      checked={isSelected}
+                      onCheckedChange={() => onSelectOrder({
+                        documentId: docKey,
+                        documentNumber: detail.documentNumber || "—",
+                        outstanding: outstanding,
+                      })}
+                    />
+                  )}
+                </TableCell>
+                <TableCell className="text-center py-2.5 text-xs text-stone-400 font-medium">
+                  {index + 1}
+                </TableCell>
+                <TableCell className="text-center py-2.5 text-xs text-stone-500 font-medium">
+                  {detail.documentDate ? formatDate(detail.documentDate) : "—"}
+                </TableCell>
+                <TableCell className="py-2.5 font-mono text-xs font-bold text-primary/80">
+                  {detail.documentNumber || "—"}
+                </TableCell>
+                <TableCell className="py-2.5 font-mono text-[10px] uppercase text-muted-foreground">
+                  {detail.documentType || "Hóa đơn"}
+                </TableCell>
+                <TableCell className="py-2.5 font-mono text-xs font-semibold text-stone-600 dark:text-stone-400">
+                  {item?.code || "—"}
+                </TableCell>
+                <TableCell className="py-2.5 text-xs font-medium text-stone-800 dark:text-stone-200">
+                  {item?.name || "—"}
+                </TableCell>
+                <TableCell className="text-right py-2.5 text-xs font-mono">
+                  {item?.quantity ?? "—"}
+                </TableCell>
+                <TableCell className="text-right py-2.5 text-xs font-mono text-muted-foreground">
+                  {item?.unitPrice !== undefined ? formatCurrency(item.unitPrice) : "—"}
+                </TableCell>
+                <TableCell className="text-right py-2.5 text-xs font-mono font-semibold">
+                  {formatCurrency(totalAmount)}
+                </TableCell>
+                <TableCell className="text-right py-2.5 text-xs font-mono text-green-600">
+                  {item ? "—" : formatCurrency(detail.amountPaid || 0)}
+                </TableCell>
+                <TableCell className="text-right py-2.5 text-xs font-mono">
+                  {item ? "—" : (
+                    detail.outstanding !== undefined && detail.outstanding > 0 ? (
+                      <Badge variant="outline" className="text-[10px] h-5 bg-background font-bold border-red-200 text-red-600">
+                        {formatCurrency(detail.outstanding)}
+                      </Badge>
+                    ) : (
+                      "—"
+                    )
+                  )}
+                </TableCell>
+                <TableCell className="text-center py-2.5 text-xs text-stone-500 font-medium">
+                  {detail.dueDate ? formatDate(detail.dueDate) : "—"}
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
