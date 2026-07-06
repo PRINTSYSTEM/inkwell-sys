@@ -51,17 +51,23 @@ export function APExportDialog() {
     const fromDate = dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined;
     const toDate = dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined;
 
+    const vendorName = selectedVendorId !== "all"
+      ? vendors?.find((v) => v.id.toString() === selectedVendorId)?.name
+      : undefined;
+
     if (reportType === "summary") {
       await exportSummary({
         fromDate,
         toDate,
         vendorId: selectedVendorId !== "all" ? parseInt(selectedVendorId) : undefined,
         searchTerm: searchTerm || undefined,
+        vendorName,
       });
     } else {
       await exportDetail(parseInt(selectedVendorId), {
         fromDate,
         toDate,
+        vendorName,
       });
     }
     

@@ -1,6 +1,7 @@
 // src/hooks/use-delivery-note.ts
 import { useQuery, useMutation, useQueryClient, UseMutationOptions } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/http";
+import { buildFilename, formatDateForFilename } from "@/utils/file-name";
 import { API_SUFFIX } from "@/apis";
 import { normalizeParams } from "@/apis/util.api";
 import { toast } from "sonner";
@@ -91,9 +92,34 @@ export const useUpdateDeliveryNoteStatus = (
   });
 };
 
+const getCachedDeliveryNote = (queryClient: any, id: number) => {
+  let note = queryClient.getQueryData<any>(["deliveryNote", id]);
+  if (!note) {
+    const queries = queryClient.getQueryCache().findAll({ queryKey: ["deliveryNotes"] });
+    for (const query of queries) {
+      const data = query.state.data as any;
+      if (data?.items && Array.isArray(data.items)) {
+        const found = data.items.find((item: any) => item.id === id);
+        if (found) {
+          note = found;
+          break;
+        }
+      } else if (Array.isArray(data)) {
+        const found = data.find((item: any) => item.id === id);
+        if (found) {
+          note = found;
+          break;
+        }
+      }
+    }
+  }
+  return note;
+};
+
 // ================== EXPORT DELIVERY NOTE PDF ==================
 // GET /delivery-notes/{id}/export-pdf
 export const useExportDeliveryNotePDF = () => {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, type }: { id: number; type?: string }) => {
       const res = await apiRequest.get<Blob>(
@@ -107,10 +133,16 @@ export const useExportDeliveryNotePDF = () => {
     },
     onSuccess: (blob, variables) => {
       const { id, type } = variables;
+      const note = getCachedDeliveryNote(queryClient, id);
+      const code = note?.code || `DN${String(id).padStart(5, '0')}`;
+      const customer = note?.customerName || note?.order?.customerName || "Khách hàng";
+      const date = formatDateForFilename(note?.createdAt || note?.deliveryDate || new Date());
+      const typeLabel = type ? (type === "internal" ? "Nội bộ" : "Khách hàng") : "";
+
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `delivery-note-${id}${type ? `-${type}` : ""}.pdf`;
+      link.download = buildFilename(["Phiếu giao hàng", code, customer, date, typeLabel], "pdf");
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

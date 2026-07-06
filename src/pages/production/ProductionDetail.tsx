@@ -94,7 +94,7 @@ export default function ProductionDetailPage() {
 
   // Form states
   const [progressPercent, setProgressPercent] = useState("0");
-  const [wastage, setWastage] = useState("0");
+  const [wastage, setWastage] = useState("");
   const [producedQty, setProducedQty] = useState("1");
   const [defectNotes, setDefectNotes] = useState("");
   const [startNotes, setStartNotes] = useState("");
@@ -215,9 +215,10 @@ export default function ProductionDetailPage() {
       setDefectNotes("");
       setWastage(
         production.totalWastage !== undefined &&
-          production.totalWastage !== null
+          production.totalWastage !== null &&
+          production.totalWastage !== 0
           ? production.totalWastage.toString()
-          : "0"
+          : ""
       );
       // Set default producedQty from production order if available
       if (production.producedQty) {
@@ -440,7 +441,7 @@ export default function ProductionDetailPage() {
       });
       setIsUpdateDialogOpen(false);
       setProgressPercent("0");
-      setWastage("0");
+      setWastage("");
       setDefectNotes("");
     } catch (error) {
       // Error is handled by the hook
@@ -570,7 +571,7 @@ export default function ProductionDetailPage() {
       });
       setIsCompleteDialogOpen(false);
       setProducedQty("1");
-      setWastage("0");
+      setWastage("");
       setDefectNotes("");
       setCompleteNotes("");
 

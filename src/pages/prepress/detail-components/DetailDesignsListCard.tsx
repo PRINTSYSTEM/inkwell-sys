@@ -196,19 +196,21 @@ export function DetailDesignsListCard({
               {orderDesigns.map((pod, index) => {
                 const fullInfo = (
                   <div className="space-y-2 text-sm max-w-md">
-                    <div className="font-semibold text-base border-b pb-2 flex items-center justify-between gap-4">
-                      <div className="truncate flex-1">
-                        {pod.design?.designName}
-                        {pod.design?.customer && (
-                          <span className="text-muted-foreground font-normal text-sm">
-                            {" - "}{pod.design.customer.companyName || pod.design.customer.name}
+                    <div className="font-semibold text-base border-b pb-2 flex flex-col gap-1 w-full">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="min-w-0 break-words flex-1 leading-snug">
+                          {pod.design?.designName}
+                        </div>
+                        {pod.isUrgent && (
+                          <span className="bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-400 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide border border-red-300 shrink-0">
+                            Gấp
                           </span>
                         )}
                       </div>
-                      {pod.isUrgent && (
-                        <span className="bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-400 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide border border-red-300 shrink-0">
-                          Gấp
-                        </span>
+                      {pod.design?.customer && (
+                        <div className="text-muted-foreground font-normal text-sm break-words w-full">
+                          {pod.design.customer.companyName || pod.design.customer.name}
+                        </div>
                       )}
                     </div>
 

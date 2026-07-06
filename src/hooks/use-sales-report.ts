@@ -2,6 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiRequest } from "@/lib/http";
+import { buildFilename, formatDateForFilename } from "@/utils/file-name";
 import { API_SUFFIX } from "@/apis";
 import { normalizeParams } from "@/apis/util.api";
 import { downloadBlob } from "@/lib/download-utils";
@@ -288,7 +289,10 @@ export const useSalesInvoiceListExport = () => {
       const fileBlob = new Blob([blob], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
-      downloadBlob(fileBlob, "sales-invoice-list-export.xlsx");
+      const dateSuffix = params?.fromDate || params?.toDate
+        ? `Từ ${formatDateForFilename(params.fromDate)} Đến ${formatDateForFilename(params.toDate)}`
+        : "";
+      downloadBlob(fileBlob, buildFilename(["Danh sách hóa đơn bán hàng", dateSuffix], "xlsx"));
       toast.success("Thành công", {
         description: "Đã xuất danh sách hóa đơn",
       });
@@ -331,7 +335,10 @@ export const useSalesInvoiceListExportPDF = () => {
       const fileBlob = new Blob([blob], {
         type: "application/pdf",
       });
-      downloadBlob(fileBlob, "sales-invoice-list-export.pdf");
+      const dateSuffix = params?.fromDate || params?.toDate
+        ? `Từ ${formatDateForFilename(params.fromDate)} Đến ${formatDateForFilename(params.toDate)}`
+        : "";
+      downloadBlob(fileBlob, buildFilename(["Danh sách hóa đơn bán hàng", dateSuffix], "pdf"));
       toast.success("Thành công", {
         description: "Đã xuất PDF danh sách hóa đơn",
       });
@@ -371,10 +378,11 @@ export const useSalesDetailLedger = (params?: SalesReportSalesDetailLedgerParams
 export const useSalesDetailLedgerExport = () => {
   const { loading, error, execute, reset } = useAsyncCallback<
     ArrayBuffer,
-    [SalesReportsSalesDetailLedgerExportParams]
-  >(async (params: SalesReportsSalesDetailLedgerExportParams) => {
+    [(SalesReportsSalesDetailLedgerExportParams & { customerName?: string })]
+  >(async (params: SalesReportsSalesDetailLedgerExportParams & { customerName?: string }) => {
+    const { customerName, ...apiParams } = params;
     const normalizedParams = normalizeParams(
-      (params ?? {}) as Record<string, unknown>
+      apiParams as Record<string, unknown>
     );
     const res = await apiRequest.get<ArrayBuffer>(
       API_SUFFIX.SALES_DETAIL_LEDGER_EXPORT,
@@ -386,13 +394,19 @@ export const useSalesDetailLedgerExport = () => {
     return res.data;
   });
 
-  const mutate = async (params: SalesReportsSalesDetailLedgerExportParams) => {
+  const mutate = async (params: SalesReportsSalesDetailLedgerExportParams & { customerName?: string }) => {
     try {
       const blob = await execute(params);
       const fileBlob = new Blob([blob], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
-      downloadBlob(fileBlob, "sales-detail-ledger-export.xlsx");
+      const dateSuffix = params?.fromDate || params?.toDate
+        ? `Từ ${formatDateForFilename(params.fromDate)} Đến ${formatDateForFilename(params.toDate)}`
+        : "";
+      const customerSuffix = params?.customerId
+        ? (params.customerName || "Khách hàng")
+        : "";
+      downloadBlob(fileBlob, buildFilename(["Sổ chi tiết bán hàng", customerSuffix, dateSuffix], "xlsx"));
       toast.success("Thành công", {
         description: "Đã xuất sổ chi tiết bán hàng",
       });
@@ -414,10 +428,11 @@ export const useSalesDetailLedgerExport = () => {
 export const useSalesDetailLedgerExportPDF = () => {
   const { loading, error, execute, reset } = useAsyncCallback<
     ArrayBuffer,
-    [SalesReportSalesDetailLedgerExportPdfParams]
-  >(async (params: SalesReportSalesDetailLedgerExportPdfParams) => {
+    [(SalesReportSalesDetailLedgerExportPdfParams & { customerName?: string })]
+  >(async (params: SalesReportSalesDetailLedgerExportPdfParams & { customerName?: string }) => {
+    const { customerName, ...apiParams } = params;
     const normalizedParams = normalizeParams(
-      (params ?? {}) as Record<string, unknown>
+      apiParams as Record<string, unknown>
     );
     const res = await apiRequest.get<ArrayBuffer>(
       API_SUFFIX.SALES_DETAIL_LEDGER_EXPORT_PDF,
@@ -429,13 +444,19 @@ export const useSalesDetailLedgerExportPDF = () => {
     return res.data;
   });
 
-  const mutate = async (params: SalesReportSalesDetailLedgerExportPdfParams) => {
+  const mutate = async (params: SalesReportSalesDetailLedgerExportPdfParams & { customerName?: string }) => {
     try {
       const blob = await execute(params);
       const fileBlob = new Blob([blob], {
         type: "application/pdf",
       });
-      downloadBlob(fileBlob, "sales-detail-ledger-export.pdf");
+      const dateSuffix = params?.fromDate || params?.toDate
+        ? `Từ ${formatDateForFilename(params.fromDate)} Đến ${formatDateForFilename(params.toDate)}`
+        : "";
+      const customerSuffix = params?.customerId
+        ? (params.customerName || "Khách hàng")
+        : "";
+      downloadBlob(fileBlob, buildFilename(["Sổ chi tiết bán hàng", customerSuffix, dateSuffix], "pdf"));
       toast.success("Thành công", {
         description: "Đã xuất PDF sổ chi tiết bán hàng",
       });
@@ -493,7 +514,10 @@ export const useSalesSummaryExport = () => {
       const fileBlob = new Blob([blob], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
-      downloadBlob(fileBlob, "sales-summary-export.xlsx");
+      const dateSuffix = params?.fromDate || params?.toDate
+        ? `Từ ${formatDateForFilename(params.fromDate)} Đến ${formatDateForFilename(params.toDate)}`
+        : "";
+      downloadBlob(fileBlob, buildFilename(["Báo cáo tổng hợp bán hàng", dateSuffix], "xlsx"));
       toast.success("Thành công", {
         description: "Đã xuất tổng hợp bán hàng",
       });
@@ -533,7 +557,10 @@ export const useSalesSummaryExportPDF = () => {
       const fileBlob = new Blob([blob], {
         type: "application/pdf",
       });
-      downloadBlob(fileBlob, "sales-summary-export.pdf");
+      const dateSuffix = params?.fromDate || params?.toDate
+        ? `Từ ${formatDateForFilename(params.fromDate)} Đến ${formatDateForFilename(params.toDate)}`
+        : "";
+      downloadBlob(fileBlob, buildFilename(["Báo cáo tổng hợp bán hàng", dateSuffix], "pdf"));
       toast.success("Thành công", {
         description: "Đã xuất PDF tổng hợp bán hàng",
       });

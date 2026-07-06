@@ -100,6 +100,7 @@ import {
 } from "@/hooks/use-customer";
 // import { useOrdersForAccounting } from "@/hooks/use-order";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
+import { QCInspectionView } from "./QCInspectionView";
 import { 
   orderStatusLabels, 
   deliveryNoteStatusLabels, 
@@ -582,7 +583,7 @@ export default function DeliveryNoteListPage() {
     setPreviewImageUrl(url);
   };
 
-  const [viewMode, setViewMode] = useState<"orders" | "delivery-notes">(
+  const [viewMode, setViewMode] = useState<"orders" | "delivery-notes" | "pending-qc" | "completed-qc">(
     "delivery-notes",
   );
 
@@ -1422,7 +1423,7 @@ export default function DeliveryNoteListPage() {
       {/* Tabs */}
       <Tabs
         value={viewMode}
-        onValueChange={(value) => setViewMode(value as "orders" | "delivery-notes")}
+        onValueChange={(value) => setViewMode(value as any)}
       >
         <TabsList className="flex bg-stone-100/80 dark:bg-stone-900/80 p-1 rounded-full w-fit mb-6">
           <TabsTrigger
@@ -1438,6 +1439,20 @@ export default function DeliveryNoteListPage() {
           >
             <Plus className="h-4 w-4 mr-2" />
             Tạo phiếu
+          </TabsTrigger>
+          <TabsTrigger
+            value="pending-qc"
+            className="rounded-full px-6 py-2 text-sm font-semibold transition-all data-[state=active]:bg-white data-[state=active]:text-stone-900 data-[state=active]:shadow-sm text-stone-500 hover:text-stone-900 dark:data-[state=active]:bg-stone-800 dark:data-[state=active]:text-stone-50"
+          >
+            <Check className="h-4 w-4 mr-2" />
+            Bài chờ kiểm hàng
+          </TabsTrigger>
+          <TabsTrigger
+            value="completed-qc"
+            className="rounded-full px-6 py-2 text-sm font-semibold transition-all data-[state=active]:bg-white data-[state=active]:text-stone-900 data-[state=active]:shadow-sm text-stone-500 hover:text-stone-900 dark:data-[state=active]:bg-stone-800 dark:data-[state=active]:text-stone-50"
+          >
+            <Check className="h-4 w-4 mr-2" />
+            Bài hoàn thành
           </TabsTrigger>
         </TabsList>
 
@@ -1488,6 +1503,14 @@ export default function DeliveryNoteListPage() {
             onImageClick={handleImageClick}
             allNotesForStats={allNotesData}
           />
+        </TabsContent>
+
+        <TabsContent value="pending-qc" className="mt-6">
+          <QCInspectionView tab="pending_qc" />
+        </TabsContent>
+
+        <TabsContent value="completed-qc" className="mt-6">
+          <QCInspectionView tab="completed" />
         </TabsContent>
       </Tabs>
 

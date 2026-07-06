@@ -106,11 +106,11 @@ export default function PrintPreviewDialog({
         text-align: center;
         flex: 1;
         padding-right: 40px;
-        font-size: 11px;
+        font-size: 12px;
         line-height: 1.45;
       }
       .company-name {
-        font-size: 13.5px;
+        font-size: 14.5px;
         font-weight: bold;
         text-transform: uppercase;
         margin-bottom: 3px;
@@ -122,21 +122,21 @@ export default function PrintPreviewDialog({
         position: relative;
       }
       .print-title {
-        font-size: 20px;
+        font-size: 22px;
         font-weight: bold;
         text-transform: uppercase;
         letter-spacing: 1px;
         margin: 0;
       }
       .print-subtitle {
-        font-size: 12px;
+        font-size: 13px;
         margin-top: 5px;
         display: flex;
         justify-content: space-between;
         padding: 0 10px;
       }
       .info-section {
-        font-size: 13px;
+        font-size: 14px;
         line-height: 1.5;
         margin-bottom: 15px;
       }
@@ -157,8 +157,8 @@ export default function PrintPreviewDialog({
       }
       table.print-table th, table.print-table td {
         border: 1px solid #000;
-        padding: 5px 6px;
-        font-size: 12px;
+        padding: 6px 8px;
+        font-size: 13px;
         color: #000;
         text-align: center;
       }
@@ -173,7 +173,7 @@ export default function PrintPreviewDialog({
       .text-left { text-align: left !important; }
       .font-bold { font-weight: bold; }
       .disclaimer {
-        font-size: 12.5px;
+        font-size: 13px;
         font-weight: bold;
         font-style: italic;
         color: #000;
@@ -185,7 +185,7 @@ export default function PrintPreviewDialog({
         justify-content: space-between;
         margin-top: 35px;
         padding: 0 40px;
-        font-size: 13px;
+        font-size: 14px;
         font-weight: bold;
       }
     `;
@@ -269,8 +269,8 @@ export default function PrintPreviewDialog({
                     className="logo-image h-[70px] w-auto object-contain"
                   />
                 </div>
-                <div className="company-info text-center flex-1 pr-10 text-[11px] leading-relaxed">
-                  <div className="company-name text-[13.5px] font-bold uppercase text-stone-900">
+                <div className="company-info text-center flex-1 pr-10 text-[12px] leading-relaxed">
+                  <div className="company-name text-[14.5px] font-bold uppercase text-stone-900">
                     CÔNG TY TNHH SẢN XUẤT THƯƠNG MẠI DỊCH VỤ QUỐC TẾ QUANG ĐẠT
                   </div>
                   <div>43D Ao Đôi, P. Bình Trị Đông A, Q. Bình Tân, TP. Hồ Chí Minh</div>
@@ -280,17 +280,17 @@ export default function PrintPreviewDialog({
 
               {/* Title Section */}
               <div className="title-container text-center my-4 relative">
-                <h1 className="print-title text-xl font-bold uppercase tracking-wider">
+                <h1 className="print-title text-[22px] font-bold uppercase tracking-wider">
                   PHIẾU GIAO HÀNG
                 </h1>
-                <div className="print-subtitle text-[12px] flex justify-between px-2 mt-1">
+                <div className="print-subtitle text-[13px] flex justify-between px-2 mt-1">
                   <span>{dateFormatted}</span>
                   <span className="font-bold">Số phiếu: {deliveryNote.code || deliveryNote.id}</span>
                 </div>
               </div>
 
               {/* Client & Address Info */}
-              <div className="info-section text-[13px] leading-normal space-y-1 mb-3">
+              <div className="info-section text-[14px] leading-normal space-y-1 mb-3">
                 <div className="grid grid-cols-[100px_1fr] gap-x-2">
                   <span className="font-bold">Khách hàng:</span>
                   <span className="uppercase font-bold">{deliveryNote.orders?.[0]?.customerName || "—"}</span>
@@ -310,22 +310,22 @@ export default function PrintPreviewDialog({
               </div>
 
               {/* Line Items Table */}
-              <table className="print-table w-full border-collapse border border-black text-xs mt-3">
+              <table className="print-table w-full border-collapse border border-black text-[13px] mt-3">
                 <thead>
                   <tr className="bg-stone-100">
-                    <th className="border border-black text-center p-1 w-10">STT</th>
-                    <th className="border border-black text-center p-1">TÊN SẢN PHẨM</th>
-                    <th className="border border-black text-center p-1 w-12">ĐVT</th>
-                    <th className="border border-black text-center p-1 w-16 leading-tight">SỐ<br />LƯỢNG</th>
-                    <th className="border border-black text-center p-1 w-14 leading-tight">PHỤ<br />HAO</th>
-                    <th className="border border-black text-center p-1 w-16 leading-tight">SL<br />THỰC</th>
+                    <th className="border border-black text-center p-1.5 w-10">STT</th>
+                    <th className="border border-black text-center p-1.5">TÊN SẢN PHẨM</th>
+                    <th className="border border-black text-center p-1.5 w-12">ĐVT</th>
+                    <th className="border border-black text-center p-1.5 w-16 leading-tight">SỐ<br />LƯỢNG</th>
+                    <th className="border border-black text-center p-1.5 w-14 leading-tight">PHỤ<br />HAO</th>
+                    <th className="border border-black text-center p-1.5 w-16 leading-tight">SL<br />THỰC</th>
                     {showPrice && (
                       <>
-                        <th className="border border-black text-center p-1 w-18 leading-tight">ĐƠN<br />GIÁ</th>
-                        <th className="border border-black text-center p-1 w-22 leading-tight">THÀNH<br />TIỀN</th>
+                        <th className="border border-black text-center p-1.5 w-18 leading-tight">ĐƠN<br />GIÁ</th>
+                        <th className="border border-black text-center p-1.5 w-22 leading-tight">THÀNH<br />TIỀN</th>
                       </>
                     )}
-                    <th className="border border-black text-center p-1 w-20 leading-tight">GHI<br />CHÚ</th>
+                    <th className="border border-black text-center p-1.5 w-20 leading-tight">GHI<br />CHÚ</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -341,64 +341,55 @@ export default function PrintPreviewDialog({
 
                     return (
                       <tr key={l.id || index}>
-                        <td className="border border-black text-center p-1.5">{index + 1}</td>
-                        <td className="border border-black p-1.5 font-medium text-left" style={{ textAlign: "left", paddingLeft: "8px" }}>{l.designName || "—"}</td>
-                        <td className="border border-black text-center p-1.5">Cái</td>
-                        <td className="border border-black text-center p-1.5 font-medium">
+                        <td className="border border-black text-center p-2">{index + 1}</td>
+                        <td className="border border-black p-2 font-medium text-left" style={{ textAlign: "left", paddingLeft: "8px" }}>{l.designName || "—"}</td>
+                        <td className="border border-black text-center p-2">Cái</td>
+                        <td className="border border-black text-center p-2 font-medium">
                           {(l.deliveryQty || 0).toLocaleString("vi-VN")}
                         </td>
-                        <td className="border border-black text-center p-1.5">
+                        <td className="border border-black text-center p-2">
                           {scrap.toLocaleString("vi-VN")}
                         </td>
-                        <td className="border border-black text-center p-1.5 font-bold">
+                        <td className="border border-black text-center p-2 font-bold">
                           {(l.netQtyTotal || l.deliveryQty || 0).toLocaleString("vi-VN")}
                         </td>
                         {showPrice && (
                           <>
-                            <td className="border border-black text-center p-1.5">
+                            <td className="border border-black text-center p-2">
                               {(price || 0).toLocaleString("vi-VN")}
                             </td>
-                            <td className="border border-black text-center p-1.5 font-semibold">
+                            <td className="border border-black text-center p-2 font-semibold">
                               {(amount || 0).toLocaleString("vi-VN")}
                             </td>
                           </>
                         )}
-                        <td className="border border-black text-center p-1.5 italic text-stone-700">
+                        <td className="border border-black text-center p-2 italic text-stone-700">
                           {l.note || "—"}
                         </td>
                       </tr>
                     );
                   })}
                   <tr className="font-bold bg-stone-50">
-                    <td className="border border-black text-center p-1.5" colSpan={3}>
-                      {showPrice ? "CỘNG TIỀN HÀNG" : "CỘNG TIỀN HÀNG"}
-                    </td>
-                    <td className="border border-black text-center p-1.5">
-                    </td>
-                    <td className="border border-black text-center p-1.5">
-                    </td>
-                    <td className="border border-black text-center p-1.5">
+                    <td className="border border-black text-center p-2" colSpan={showPrice ? 7 : 6}>
+                      CỘNG TIỀN HÀNG
                     </td>
                     {showPrice && (
-                      <>
-                        <td className="border border-black text-center p-1.5"></td>
-                        <td className="border border-black text-center p-1.5">
-                          {totalAmount.toLocaleString("vi-VN")}
-                        </td>
-                      </>
+                      <td className="border border-black text-center p-2">
+                        {totalAmount.toLocaleString("vi-VN")}
+                      </td>
                     )}
-                    <td className="border border-black text-center p-1.5"></td>
+                    <td className="border border-black text-center p-2"></td>
                   </tr>
                 </tbody>
               </table>
 
               {/* Disclaimer Notice */}
-              <div className="disclaimer text-[12.5px] font-bold italic text-black mt-2 leading-relaxed" style={{ fontSize: "12.5px", fontWeight: "bold" }}>
+              <div className="disclaimer text-[13px] font-bold italic text-black mt-2 leading-relaxed" style={{ fontSize: "13px", fontWeight: "bold" }}>
                 *Quý khách vui lòng kiểm tra kỹ hàng trước khi ký nhận. Quý khách hàng có thắc mắc về lô hàng đã nhận vui lòng liên hệ với chúng tôi trong vòng 7 ngày kể từ ngày nhận hàng.
               </div>
 
               {/* Signatures Row */}
-              <div className="signatures flex justify-between mt-12 px-10 text-[13px] font-bold text-center">
+              <div className="signatures flex justify-between mt-12 px-10 text-[14px] font-bold text-center">
                 <div className="w-40">
                   <div>Bên giao </div>
                 </div>

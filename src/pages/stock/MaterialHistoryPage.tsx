@@ -90,6 +90,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { downloadBlob } from "@/lib/download-utils";
+import { buildFilename, formatDateForFilename } from "@/utils/file-name";
 import { apiRequest } from "@/lib/http";
 import { API_SUFFIX } from "@/apis";
 
@@ -463,8 +464,43 @@ export default function MaterialHistoryPage() {
         type: "application/pdf",
       });
       
-      downloadBlob(blob, `phieu-xuat-kho-${idToExport}.pdf`);
-      toast.success(`Tải phiếu xuất kho #${idToExport} thành công!`, { id: toastId });
+      let stockOut: any = queryClient.getQueryData(["stock-out", idToExport]) || 
+                        queryClient.getQueryData(["stock-outs", "detail", idToExport]);
+      if (!stockOut) {
+        const queries = queryClient.getQueryCache().findAll({ queryKey: ["stock-outs"] });
+        for (const query of queries) {
+          const data = query.state.data as any;
+          if (data?.items && Array.isArray(data.items)) {
+            const found = data.items.find((item: any) => item.id === idToExport);
+            if (found) {
+              stockOut = found;
+              break;
+            }
+          } else if (Array.isArray(data)) {
+            const found = data.find((item: any) => item.id === idToExport);
+            if (found) {
+              stockOut = found;
+              break;
+            }
+          }
+        }
+      }
+
+      const partnerName = stockOut
+        ? (stockOut.customerName ||
+           stockOut.customer?.name ||
+           stockOut.vendorName ||
+           stockOut.vendor?.name ||
+           stockOut.supplier?.name ||
+           stockOut.receiverName ||
+           "Đối tác")
+        : "Đối tác";
+      const dateStr = formatDateForFilename(stockOut?.createdAt || stockOut?.transactionDate || new Date());
+      const code = stockOut?.code || `PX${String(idToExport).padStart(5, '0')}`;
+
+      const filename = buildFilename([code, partnerName, dateStr], "pdf");
+      downloadBlob(blob, filename);
+      toast.success(`Tải phiếu xuất kho thành công!`, { id: toastId });
       setIsPdfDialogOpen(false);
       setStockOutIdInput("");
     } catch (err: any) {

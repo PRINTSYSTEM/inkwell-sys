@@ -23,6 +23,7 @@ interface PrepressOrdersTableProps {
   debouncedSearchTerm: string;
   onNavigate: (id: number) => void;
   tableRef?: React.RefObject<HTMLDivElement>;
+  showAllDesignsByDefault?: boolean;
 }
 
 export function PrepressOrdersTable({
@@ -36,6 +37,7 @@ export function PrepressOrdersTable({
   debouncedSearchTerm,
   onNavigate,
   tableRef,
+  showAllDesignsByDefault = false,
 }: PrepressOrdersTableProps) {
   return (
     <div className="relative flex-1 min-h-0 flex flex-col border rounded-lg overflow-hidden">
@@ -123,6 +125,7 @@ export function PrepressOrdersTable({
                           searchTermLower={searchTermLower}
                           debouncedSearchTerm={debouncedSearchTerm}
                           onNavigate={onNavigate}
+                          showAllDesignsByDefault={showAllDesignsByDefault}
                         />
                       ))
                     )}

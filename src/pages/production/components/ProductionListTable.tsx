@@ -12,9 +12,9 @@ import {
 import { TableSkeleton } from "@/components/ui/skeleton-components";
 import {
   Factory,
-  ExternalLink,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   FileText,
   Layers,
   Hash,
@@ -304,16 +304,16 @@ function StepItem({
       : "";
   const computedOutputQty =
     isPackagingItem && initialOutputQtyOverride !== null
-      ? initialOutputQtyOverride.toString()
-      : step.outputQty
-        ? step.outputQty.toString()
+      ? (initialOutputQtyOverride === 0 ? "" : initialOutputQtyOverride.toString())
+      : step.outputQty != null
+        ? (step.outputQty === 0 ? "" : step.outputQty.toString())
         : defaultPrintQty
           ? String(defaultPrintQty)
           : "";
   const computedDefectQty =
     isPackagingItem && initialDefectQtyOverride !== null
-      ? initialDefectQtyOverride.toString()
-      : step.defectQty?.toString() || "";
+      ? (initialDefectQtyOverride === 0 ? "" : initialDefectQtyOverride.toString())
+      : (step.defectQty ? step.defectQty.toString() : "");
 
   const hasBeenSaved = isPackagingItem
     ? initialOutputQtyOverride !== null || initialDefectQtyOverride !== null
@@ -342,17 +342,17 @@ function StepItem({
     );
     setOutputQty(
       isPackagingItem && initialOutputQtyOverride !== null
-        ? initialOutputQtyOverride.toString()
-        : step.outputQty
-          ? step.outputQty.toString()
+        ? (initialOutputQtyOverride === 0 ? "" : initialOutputQtyOverride.toString())
+        : step.outputQty != null
+          ? (step.outputQty === 0 ? "" : step.outputQty.toString())
           : defaultPrintQty
             ? String(defaultPrintQty)
             : "",
     );
     setDefectQty(
       isPackagingItem && initialDefectQtyOverride !== null
-        ? initialDefectQtyOverride.toString()
-        : step.defectQty?.toString() || "",
+        ? (initialDefectQtyOverride === 0 ? "" : initialDefectQtyOverride.toString())
+        : (step.defectQty ? step.defectQty.toString() : ""),
     );
     setNotes(
       isPackagingItem
@@ -696,6 +696,7 @@ function ProductionTableRow({
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const imageContainerRef = React.useRef<HTMLDivElement>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const { data: defectRecordsData } = useDefectRecordsByProductionOrder(
     prod.id || null,
@@ -929,13 +930,13 @@ function ProductionTableRow({
       );
       
       const outQty = prodItem?.outputQty != null
-        ? prodItem.outputQty.toString()
+        ? (prodItem.outputQty === 0 ? "" : prodItem.outputQty.toString())
         : prodItem?.producedQty != null
-          ? prodItem.producedQty.toString()
+          ? (prodItem.producedQty === 0 ? "" : prodItem.producedQty.toString())
           : defaultPrintQty
             ? String(defaultPrintQty)
             : "";
-      const defQty = prodItem?.defectQty != null
+      const defQty = prodItem?.defectQty != null && prodItem.defectQty !== 0
         ? prodItem.defectQty.toString()
         : "";
       const notesVal = prodItem?.notes || "";
@@ -1189,6 +1190,20 @@ function ProductionTableRow({
               : ""
         }`}
       >
+        <TableCell className="p-0 text-center w-8 align-middle border-r border-border/40 bg-muted/10">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="w-7 h-7 hover:bg-muted/80"
+            onClick={() => setIsExpanded(!isExpanded)}
+          >
+            {isExpanded ? (
+              <ChevronDown className="w-4 h-4 text-slate-500" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-slate-500" />
+            )}
+          </Button>
+        </TableCell>
         <TableCell className="py-3 align-top font-bold text-sm text-primary bg-muted/20 border-r border-border/50 text-center w-[90px] max-w-[90px]">
           {isProofingLoading ? (
             <div className="flex justify-center mt-2">
@@ -1196,18 +1211,26 @@ function ProductionTableRow({
             </div>
           ) : proofingOrder ? (
             <div className="flex flex-col items-center justify-center mt-2 gap-1 px-1">
-              <div 
-                className={cn(
-                  "flex items-center gap-1 px-2 py-1 rounded transition-colors",
-                  !isDraft ? "cursor-pointer text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20" : "text-muted-foreground"
-                )}
-                onClick={() => !isDraft && onProductionClick(prod.id!)}
-                title={!isDraft ? "Xem chi tiết lệnh sản xuất" : ""}
-              >
-                <span className="font-bold underline decoration-blue-400/30 underline-offset-4">
+              <div className="flex flex-col items-center gap-1 px-2 py-0.5 text-slate-700 dark:text-slate-300">
+                <span className="font-bold text-slate-900 dark:text-slate-100">
                   {(proofingOrder as any).code || `BB${(proofingOrder as any).id}`}
                 </span>
-                {!isDraft && <ExternalLink className="w-3 h-3" />}
+                {!isExpanded && orderImages.length > 0 && (
+                  <div 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setViewingImageUrl(orderImages[0]);
+                    }}
+                    className="w-10 h-10 rounded border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-slate-50 dark:bg-slate-900 cursor-zoom-in hover:scale-105 transition-all duration-150 shrink-0 mt-0.5"
+                    title="Xem nhanh hình ảnh bài in"
+                  >
+                    <img
+                      src={orderImages[0]}
+                      alt="Hình bài"
+                      className="w-full h-full object-cover select-none"
+                    />
+                  </div>
+                )}
               </div>
 
               {prod.customerName && (
@@ -1217,7 +1240,7 @@ function ProductionTableRow({
               )}
 
               {/* Hình ảnh bài in với Carousel (Mũi tên & Cuộn chuột) */}
-              {orderImages.length > 0 && (
+              {isExpanded && orderImages.length > 0 && (
                 <div className="mt-1 flex flex-col items-center gap-1 shrink-0">
                   <div 
                     ref={imageContainerRef}
@@ -1272,7 +1295,7 @@ function ProductionTableRow({
               )}
 
               {/* Nút hủy lệnh SX */}
-              {!isDraft && materialExportStep?.status !== "done" && (
+              {isExpanded && !isDraft && materialExportStep?.status !== "done" && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -1285,7 +1308,7 @@ function ProductionTableRow({
               )}
 
               {/* Hiển thị thời gian bình bài xong bên dưới hình/mã */}
-              {(() => {
+              {isExpanded && (() => {
                 const finishedTime = proofingOrder?.completedAt || proofingOrder?.updatedAt;
                 const formatted = formatDateTimeWithSeconds(finishedTime);
                 if (!formatted) return null;
@@ -1320,77 +1343,79 @@ function ProductionTableRow({
             <div className="flex flex-col gap-2.5 text-sm">
               {/* 1. Trạng thái IN (Đưa lên đầu cho đồng bộ) */}
               {printStep && (
-                <div className="pb-3 border-b border-dashed">
+                <div className={cn(isExpanded && "pb-3 border-b border-dashed")}>
                   {/* <div className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5">Trạng thái In:</div> */}
                   <InlineStepStatus step={printStep} isEnabled={isPrintEnabled} defaultPrintQty={defaultPrintQty} />
                 </div>
               )}
 
               {/* 2. Header & General Info */}
-              <div className="space-y-2">
-                <div className="flex justify-between items-start">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* Trạng thái công đoạn In đã chuyển lên đầu */}
+              {isExpanded && (
+                <div className="space-y-2">
+                  <div className="flex justify-between items-start">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {/* Trạng thái công đoạn In đã chuyển lên đầu */}
+                    </div>
                   </div>
-                </div>
-                <div className="flex flex-col gap-2 text-xs">
-                  <div className="flex flex-col">
-                    <span className="text-muted-foreground font-bold uppercase text-[9px] mb-0.5">
-                      Chất liệu:
-                    </span>
-                    <span className="font-bold text-foreground leading-tight text-[11px]">
-                      {proofingOrder?.materialType?.name || "—"}
-                      {displayBasisWeight ? ` ${displayBasisWeight}` : ""}
-                      {displayDesignType ? ` (${displayDesignType})` : ""}
-                    </span>
+                  <div className="flex flex-col gap-2 text-xs">
+                    <div className="flex flex-col">
+                      <span className="text-muted-foreground font-bold uppercase text-[9px] mb-0.5">
+                        Chất liệu:
+                      </span>
+                      <span className="font-bold text-foreground leading-tight text-[11px]">
+                        {proofingOrder?.materialType?.name || "—"}
+                        {displayBasisWeight ? ` ${displayBasisWeight}` : ""}
+                        {displayDesignType ? ` (${displayDesignType})` : ""}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col border-t border-dashed border-muted/50 pt-1 mt-0">
+                      <span className="text-muted-foreground font-bold uppercase text-[9px] mb-0.5">
+                        Khổ giấy:
+                      </span>
+                      <span className="font-bold text-foreground leading-tight text-[11px]">
+                        {proofingOrder?.paperSize?.name || proofingOrder?.customPaperSize || "—"} cm
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center border-t border-dashed border-muted/50 pt-1.5 mt-0.5">
+                      <span className="text-muted-foreground font-medium">
+                        Số lượng in:
+                      </span>
+                      <span className="font-bold text-blue-600">
+                        {String(
+                          proofingOrder?.totalProcessedQty ||
+                            proofingOrder?.totalQuantity ||
+                            "0",
+                        )}{" "}
+                        tờ
+                      </span>
+                    </div>
+                    
+                    {(prod.notes || proofingOrder?.notes || proofingOrder?.additionalNotes) && (
+                      <div className="flex flex-col border-t border-dashed border-muted/50 pt-1.5 mt-0.5">
+                        <span className="text-muted-foreground font-medium mb-0.5">
+                          Ghi chú:
+                        </span>
+                        <span className="font-medium text-amber-700 break-words whitespace-pre-wrap italic leading-snug">
+                          {prod.notes || proofingOrder?.notes || proofingOrder?.additionalNotes}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="flex flex-col border-t border-dashed border-muted/50 pt-1 mt-0">
-                    <span className="text-muted-foreground font-bold uppercase text-[9px] mb-0.5">
-                      Khổ giấy:
-                    </span>
-                    <span className="font-bold text-foreground leading-tight text-[11px]">
-                      {proofingOrder?.paperSize?.name || proofingOrder?.customPaperSize || "—"} cm
-                    </span>
-                  </div>
-
-                  <div className="flex justify-between items-center border-t border-dashed border-muted/50 pt-1.5 mt-0.5">
-                    <span className="text-muted-foreground font-medium">
-                      Số lượng in:
-                    </span>
-                    <span className="font-bold text-blue-600">
-                      {String(
-                        proofingOrder?.totalProcessedQty ||
-                          proofingOrder?.totalQuantity ||
-                          "0",
-                      )}{" "}
-                      tờ
-                    </span>
-                  </div>
-                  
-                  {(prod.notes || proofingOrder?.notes || proofingOrder?.additionalNotes) && (
-                    <div className="flex flex-col border-t border-dashed border-muted/50 pt-1.5 mt-0.5">
-                      <span className="text-muted-foreground font-medium mb-0.5">
-                        Ghi chú:
-                      </span>
-                      <span className="font-medium text-amber-700 break-words whitespace-pre-wrap italic leading-snug">
-                        {prod.notes || proofingOrder?.notes || proofingOrder?.additionalNotes}
-                      </span>
+                  {isDraft && (
+                    <div className="mt-3 flex items-center gap-2 text-[10px] text-blue-600 font-bold animate-pulse">
+                      <PlayCircle className="w-3.5 h-3.5" />
+                      ĐANG KHỞI TẠO LỆNH...
                     </div>
                   )}
                 </div>
-
-                {isDraft && (
-                  <div className="mt-3 flex items-center gap-2 text-[10px] text-blue-600 font-bold animate-pulse">
-                    <PlayCircle className="w-3.5 h-3.5" />
-                    ĐANG KHỞI TẠO LỆNH...
-                  </div>
-                )}
-              </div>
+              )}
 
               {/* 4. Thông tin khuôn bế & Kẽm (Buttons + Popovers) */}
-              <div className="flex flex-row gap-2 mt-1">
-                {(proofingOrder as any).plateExport && (
+              {isExpanded && (proofingOrder as any).plateExport && (
+                <div className="flex flex-row gap-2 mt-1">
                   <div className="flex flex-col items-center flex-1">
                     <HoverCard>
                       <HoverCardTrigger asChild>
@@ -1491,8 +1516,8 @@ function ProductionTableRow({
                       {(proofingOrder as any).plateExport.isReceived ? "Đã nhận kẽm" : "Chưa nhận kẽm"}
                     </span>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="text-sm font-medium text-muted-foreground flex flex-col items-center justify-center p-4 bg-muted/20 border-2 border-dashed rounded-lg">
@@ -1505,7 +1530,7 @@ function ProductionTableRow({
           step={specialProcessStep}
           isEnabled={isSpecialProcessEnabled}
           info={
-            specialProcessStep?.stepTypeName && (
+            isExpanded && specialProcessStep?.stepTypeName && (
               <div className="text-[13px] font-bold text-amber-600 dark:text-amber-400 italic uppercase mt-1">
                 {specialProcessStep.stepTypeName}
               </div>
@@ -1518,7 +1543,7 @@ function ProductionTableRow({
           step={laminationStep}
           isEnabled={isLaminationEnabled}
           info={
-            laminationInfo && (
+            isExpanded && laminationInfo && (
               <div className="text-[13px] font-bold text-primary italic uppercase mt-1">
                 {laminationInfo}
               </div>
@@ -1533,6 +1558,7 @@ function ProductionTableRow({
           defaultPrintQty={defaultPrintQty}
           productionItems={productionItems}
           info={
+            isExpanded &&
             ((proofingOrder as any)?.dieExports?.length > 0 ||
               (proofingOrder as any)?.proofingOrderDies?.length > 0) && (
               <div onClick={(e) => e.stopPropagation()}>
@@ -1725,7 +1751,7 @@ function ProductionTableRow({
               proofingOrder.proofingOrderDesigns.length > 0 ? (
               <>
                 {/* Universal Status & Edit/Save Buttons for Packaging column */}
-                <div className="pb-2 border-b border-dashed mb-2">
+                <div className={cn("pb-2 mb-2", isExpanded && "border-b border-dashed")}>
                   <div className="flex items-center justify-between gap-1.5">
                     <div className="flex-1 min-w-0">
                       {(packagingStep ||
@@ -1741,304 +1767,308 @@ function ProductionTableRow({
                         />
                       )}
                     </div>
-                    <div className="shrink-0">
-                      {isEditingPackaging ? (
-                        <div className="flex gap-1 justify-end">
+                    {isExpanded && (
+                      <div className="shrink-0">
+                        {isEditingPackaging ? (
+                          <div className="flex gap-1 justify-end">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-6 px-1.5 text-[9px] bg-slate-50 hover:bg-slate-100"
+                              onClick={() => setIsEditingPackaging(false)}
+                            >
+                              Hủy
+                            </Button>
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="h-6 px-1.5 text-[9px] bg-[#93631F] hover:bg-[#7a521a] text-white"
+                              onClick={handleSaveAllPackaging}
+                            >
+                              Lưu
+                            </Button>
+                          </div>
+                        ) : (
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-6 px-1.5 text-[9px] bg-slate-50 hover:bg-slate-100"
-                            onClick={() => setIsEditingPackaging(false)}
+                            className="h-6 px-2 text-[9px]"
+                            disabled={!isPackagingEnabled}
+                            onClick={startEditingPackaging}
                           >
-                            Hủy
+                            Sửa
                           </Button>
-                          <Button
-                            variant="default"
-                            size="sm"
-                            className="h-6 px-1.5 text-[9px] bg-[#93631F] hover:bg-[#7a521a] text-white"
-                            onClick={handleSaveAllPackaging}
-                          >
-                            Lưu
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-6 px-2 text-[9px]"
-                          disabled={!isPackagingEnabled}
-                          onClick={startEditingPackaging}
-                        >
-                          Sửa
-                        </Button>
-                      )}
-                    </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2 divide-y divide-dashed">
-                  {proofingOrder.proofingOrderDesigns
-                    .map((pod: any, idx: number) => {
-                      const matchingStep =
-                        steps.find((s) => {
-                          const isPackaging =
-                            s.stepType === "packaging" ||
-                            (s.stepTypeName &&
-                              ["đóng gói", "giao hàng"].some((k) =>
-                                s.stepTypeName!.toLowerCase().includes(k),
-                              ));
-                          if (!isPackaging) return false;
-                          const name = s.stepTypeName?.toLowerCase() || "";
-                          const designCode =
-                            pod.design?.code?.toLowerCase() || "";
-                          const designName =
-                            pod.design?.designName?.toLowerCase() || "";
-                          return (
-                            (designCode && name.includes(designCode)) ||
-                            (designName && name.includes(designName))
-                          );
-                        }) || packagingStep;
+                {isExpanded && (
+                  <div className="flex flex-col gap-2 divide-y divide-dashed">
+                    {proofingOrder.proofingOrderDesigns
+                      .map((pod: any, idx: number) => {
+                        const matchingStep =
+                          steps.find((s) => {
+                            const isPackaging =
+                              s.stepType === "packaging" ||
+                              (s.stepTypeName &&
+                                ["đóng gói", "giao hàng"].some((k) =>
+                                  s.stepTypeName!.toLowerCase().includes(k),
+                                ));
+                            if (!isPackaging) return false;
+                            const name = s.stepTypeName?.toLowerCase() || "";
+                            const designCode =
+                              pod.design?.code?.toLowerCase() || "";
+                            const designName =
+                              pod.design?.designName?.toLowerCase() || "";
+                            return (
+                              (designCode && name.includes(designCode)) ||
+                              (designName && name.includes(designName))
+                            );
+                          }) || packagingStep;
 
-                      if (!matchingStep) return null;
+                        if (!matchingStep) return null;
 
-                      const prodItem = productionItems.find(
-                        (i: any) =>
-                          i.proofingOrderDesignId === pod.id ||
-                          i.designId === pod.designId ||
-                          i.id === pod.id,
-                      );
+                        const prodItem = productionItems.find(
+                          (i: any) =>
+                            i.proofingOrderDesignId === pod.id ||
+                            i.designId === pod.designId ||
+                            i.id === pod.id,
+                        );
 
-                      return (
-                        <div key={`${pod.id}-${matchingStep.id}`} className="grid grid-cols-[1fr_auto] gap-3 py-2 first:pt-0 border-b border-dashed last:border-0">
-                          <div className="bg-muted/20 p-2 text-xs flex gap-2 rounded-md items-start w-full">
-                            {(() => {
-                              const designImgUrl = pod.designImageUrl || pod.design?.designImageUrl || pod.design?.designImageUrlConverted || pod.thumbnailUrl || pod.design?.thumbnailUrl;
-                              if (!designImgUrl) return null;
-                              return (
-                                <div className="w-10 h-10 shrink-0 border rounded bg-white overflow-hidden flex items-center justify-center cursor-zoom-in shadow-sm hover:ring-1 hover:ring-primary/30 transition-all mt-0.5">
-                                  <img
-                                    src={designImgUrl}
-                                    alt={pod.design?.code || "design"}
-                                    className="w-full h-full object-contain"
-                                    onClick={() => setViewingImageUrl(designImgUrl)}
-                                  />
-                                </div>
-                              );
-                            })()}
-                            <div className="flex-1 min-w-0">
-                              <p className="font-bold text-[12px] text-foreground mb-1 break-all">
-                                {highlightText(
-                                  pod.design?.designName || pod.design?.code || "—",
-                                  searchTerm
-                                )}
-                              </p>
-                              <div className="flex flex-col gap-0.5 text-[10px]">
-                                <div className="flex justify-between items-center gap-1 border-b border-muted/30 pb-0.5">
-                                  <span className="text-muted-foreground font-medium whitespace-nowrap">
-                                    Số lượng:
-                                  </span>
-                                  <span className="font-bold text-foreground text-amber-700 text-right">
-                                    {pod.quantity} SP
-                                  </span>
-                                </div>
-
-                                <div className="flex justify-between items-center gap-1 border-b border-muted/30 pb-0.5">
-                                  <span className="text-muted-foreground font-medium whitespace-nowrap">
-                                    Mã:
-                                  </span>
-                                  <span className="font-bold text-foreground text-right truncate">
-                                    {pod.design?.code
-                                      ? highlightText(pod.design.code, searchTerm)
-                                      : "—"}
-                                  </span>
-                                </div>
-
-                                <div className="flex justify-between items-center gap-1">
-                                  <span className="text-muted-foreground font-medium whitespace-nowrap">
-                                    Kích thước:
-                                  </span>
-                                  <span className="font-bold text-foreground text-right truncate">
-                                    {pod.design?.dimensions
-                                      ? String(pod.design.dimensions)
-                                      : "—"}
-                                  </span>
-                                </div>
-                                
-                                {(pod.notes || pod.design?.notes) && (
-                                  <div className="flex flex-col gap-0.5 mt-0.5 pt-0.5 border-t border-muted/20">
-                                    <span className="font-bold text-amber-700 break-words whitespace-pre-wrap italic leading-tight text-[10px]">
-                                      {pod.notes || pod.design?.notes}
+                        return (
+                          <div key={`${pod.id}-${matchingStep.id}`} className="grid grid-cols-[1fr_auto] gap-3 py-2 first:pt-0 border-b border-dashed last:border-0">
+                            <div className="bg-muted/20 p-2 text-xs flex gap-2 rounded-md items-start w-full">
+                              {(() => {
+                                const designImgUrl = pod.designImageUrl || pod.design?.designImageUrl || pod.design?.designImageUrlConverted || pod.thumbnailUrl || pod.design?.thumbnailUrl;
+                                if (!designImgUrl) return null;
+                                return (
+                                  <div className="w-10 h-10 shrink-0 border rounded bg-white overflow-hidden flex items-center justify-center cursor-zoom-in shadow-sm hover:ring-1 hover:ring-primary/30 transition-all mt-0.5">
+                                    <img
+                                      src={designImgUrl}
+                                      alt={pod.design?.code || "design"}
+                                      className="w-full h-full object-contain"
+                                      onClick={() => setViewingImageUrl(designImgUrl)}
+                                    />
+                                  </div>
+                                );
+                              })()}
+                              <div className="flex-1 min-w-0">
+                                <p className="font-bold text-[12px] text-foreground mb-1 break-all">
+                                  {highlightText(
+                                    pod.design?.designName || pod.design?.code || "—",
+                                    searchTerm
+                                  )}
+                                </p>
+                                <div className="flex flex-col gap-0.5 text-[10px]">
+                                  <div className="flex justify-between items-center gap-1 border-b border-muted/30 pb-0.5">
+                                    <span className="text-muted-foreground font-medium whitespace-nowrap">
+                                      Số lượng:
+                                    </span>
+                                    <span className="font-bold text-foreground text-amber-700 text-right">
+                                      {pod.quantity} SP
                                     </span>
                                   </div>
-                                )}
+
+                                  <div className="flex justify-between items-center gap-1 border-b border-muted/30 pb-0.5">
+                                    <span className="text-muted-foreground font-medium whitespace-nowrap">
+                                      Mã:
+                                    </span>
+                                    <span className="font-bold text-foreground text-right truncate">
+                                      {pod.design?.code
+                                        ? highlightText(pod.design.code, searchTerm)
+                                        : "—"}
+                                    </span>
+                                  </div>
+
+                                  <div className="flex justify-between items-center gap-1">
+                                    <span className="text-muted-foreground font-medium whitespace-nowrap">
+                                      Kích thước:
+                                    </span>
+                                    <span className="font-bold text-foreground text-right truncate">
+                                      {pod.design?.dimensions
+                                        ? String(pod.design.dimensions)
+                                        : "—"}
+                                    </span>
+                                  </div>
+                                  
+                                  {(pod.notes || pod.design?.notes) && (
+                                    <div className="flex flex-col gap-0.5 mt-0.5 pt-0.5 border-t border-muted/20">
+                                      <span className="font-bold text-amber-700 break-words whitespace-pre-wrap italic leading-tight text-[10px]">
+                                        {pod.notes || pod.design?.notes}
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </div>
-                          </div>
-                          
-                          <div className="flex flex-col justify-center min-w-[80px]">
-                            {isEditingPackaging ? (
-                              <div className="flex flex-col gap-1.5 min-w-[80px]">
-                                <div className="flex items-center gap-1">
-                                  <span className="text-[11px] font-bold text-emerald-600 uppercase w-4 shrink-0 text-center">Ra</span>
-                                  <Input
-                                    type="number"
-                                    value={tempPackagingValues[pod.id]?.outputQty ?? ""}
-                                    onChange={(e) => handleTempChange(pod.id, "outputQty", e.target.value)}
-                                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                                    className="h-7 text-[12px] px-1.5 py-0 focus-visible:ring-emerald-500 font-bold tabular-nums"
-                                    data-output-qty-index={idx}
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter") {
-                                        e.preventDefault();
-                                        const nextInput = document.querySelector(
-                                          `[data-output-qty-index="${idx + 1}"]`
-                                        ) as HTMLInputElement;
-                                        if (nextInput) {
-                                          nextInput.focus();
-                                          nextInput.select();
-                                        } else {
-                                          const firstDefectInput = document.querySelector(
-                                            `[data-defect-qty-index="0"]`
+                            
+                            <div className="flex flex-col justify-center min-w-[80px]">
+                              {isEditingPackaging ? (
+                                <div className="flex flex-col gap-1.5 min-w-[80px]">
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-[11px] font-bold text-emerald-600 uppercase w-4 shrink-0 text-center">Ra</span>
+                                    <Input
+                                      type="number"
+                                      value={tempPackagingValues[pod.id]?.outputQty ?? ""}
+                                      onChange={(e) => handleTempChange(pod.id, "outputQty", e.target.value)}
+                                      onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                                      className="h-7 text-[12px] px-1.5 py-0 focus-visible:ring-emerald-500 font-bold tabular-nums"
+                                      data-output-qty-index={idx}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          e.preventDefault();
+                                          const nextInput = document.querySelector(
+                                            `[data-output-qty-index="${idx + 1}"]`
                                           ) as HTMLInputElement;
-                                          if (firstDefectInput) {
-                                            firstDefectInput.focus();
-                                            firstDefectInput.select();
+                                          if (nextInput) {
+                                            nextInput.focus();
+                                            nextInput.select();
+                                          } else {
+                                            const firstDefectInput = document.querySelector(
+                                              `[data-defect-qty-index="0"]`
+                                            ) as HTMLInputElement;
+                                            if (firstDefectInput) {
+                                              firstDefectInput.focus();
+                                              firstDefectInput.select();
+                                            } else {
+                                              handleSaveAllPackaging();
+                                            }
+                                          }
+                                        }
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-[11px] font-bold text-red-600 uppercase w-4 shrink-0 text-center">Lỗi</span>
+                                    <Input
+                                      type="number"
+                                      value={tempPackagingValues[pod.id]?.defectQty ?? ""}
+                                      onChange={(e) => handleTempChange(pod.id, "defectQty", e.target.value)}
+                                      onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                                      className="h-7 text-[12px] px-1.5 py-0 focus-visible:ring-red-500 font-bold text-red-600 tabular-nums"
+                                      data-defect-qty-index={idx}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          e.preventDefault();
+                                          const nextInput = document.querySelector(
+                                            `[data-defect-qty-index="${idx + 1}"]`
+                                          ) as HTMLInputElement;
+                                          if (nextInput) {
+                                            nextInput.focus();
+                                            nextInput.select();
                                           } else {
                                             handleSaveAllPackaging();
                                           }
                                         }
-                                      }
-                                    }}
-                                  />
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <span className="text-[11px] font-bold text-red-600 uppercase w-4 shrink-0 text-center">Lỗi</span>
+                                      }}
+                                    />
+                                  </div>
+                                  {Number(tempPackagingValues[pod.id]?.defectQty) > 0 && (
+                                    <div className="flex flex-col gap-1.5 border-t border-dashed pt-1.5 mt-0.5" onClick={(e) => e.stopPropagation()}>
+                                      <div className="flex flex-col gap-0.5 text-left">
+                                        <span className="text-[9px] font-bold text-red-600 uppercase">Nhân viên lỗi</span>
+                                        <AsyncSelect
+                                          value={tempPackagingValues[pod.id]?.assignedToUserId || ""}
+                                          onValueChange={(val) => handleTempChange(pod.id, "assignedToUserId", val?.toString() || "")}
+                                          loadOptions={loadUsersOptions}
+                                          placeholder="Chọn nhân viên..."
+                                          emptyMessage="Không tìm thấy"
+                                          className="w-full text-[10px] h-7 min-h-7"
+                                        />
+                                      </div>
+                                      <div className="flex flex-col gap-0.5 text-left">
+                                        <span className="text-[9px] font-bold text-muted-foreground uppercase">Nguồn lỗi</span>
+                                        <Select
+                                          value={tempPackagingValues[pod.id]?.defectSource || "production"}
+                                          onValueChange={(val) => handleTempChange(pod.id, "defectSource", val)}
+                                        >
+                                          <SelectTrigger className="h-7 text-[10px] px-1.5 py-0 bg-background border-muted">
+                                            <SelectValue />
+                                          </SelectTrigger>
+                                          <SelectContent>
+                                            <SelectItem value="design" className="text-xs">Lỗi thiết kế</SelectItem>
+                                            <SelectItem value="proofing" className="text-xs">Lỗi bình bài</SelectItem>
+                                            <SelectItem value="production" className="text-xs">Lỗi sản xuất</SelectItem>
+                                            <SelectItem value="management_decision" className="text-xs">Quyết định QL</SelectItem>
+                                          </SelectContent>
+                                        </Select>
+                                      </div>
+                                    </div>
+                                  )}
                                   <Input
-                                    type="number"
-                                    value={tempPackagingValues[pod.id]?.defectQty ?? ""}
-                                    onChange={(e) => handleTempChange(pod.id, "defectQty", e.target.value)}
-                                    onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                                    className="h-7 text-[12px] px-1.5 py-0 focus-visible:ring-red-500 font-bold text-red-600 tabular-nums"
-                                    data-defect-qty-index={idx}
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter") {
-                                        e.preventDefault();
-                                        const nextInput = document.querySelector(
-                                          `[data-defect-qty-index="${idx + 1}"]`
-                                        ) as HTMLInputElement;
-                                        if (nextInput) {
-                                          nextInput.focus();
-                                          nextInput.select();
-                                        } else {
-                                          handleSaveAllPackaging();
-                                        }
-                                      }
-                                    }}
+                                    placeholder="Ghi chú..."
+                                    className="h-7 w-full text-[10px] px-1.5 py-0 bg-background mt-0.5 border-amber-200 focus:border-amber-500"
+                                    value={tempPackagingValues[pod.id]?.notes ?? ""}
+                                    onChange={(e) => handleTempChange(pod.id, "notes", e.target.value)}
                                   />
                                 </div>
-                                {Number(tempPackagingValues[pod.id]?.defectQty) > 0 && (
-                                  <div className="flex flex-col gap-1.5 border-t border-dashed pt-1.5 mt-0.5" onClick={(e) => e.stopPropagation()}>
-                                    <div className="flex flex-col gap-0.5 text-left">
-                                      <span className="text-[9px] font-bold text-red-600 uppercase">Nhân viên lỗi</span>
-                                      <AsyncSelect
-                                        value={tempPackagingValues[pod.id]?.assignedToUserId || ""}
-                                        onValueChange={(val) => handleTempChange(pod.id, "assignedToUserId", val?.toString() || "")}
-                                        loadOptions={loadUsersOptions}
-                                        placeholder="Chọn nhân viên..."
-                                        emptyMessage="Không tìm thấy"
-                                        className="w-full text-[10px] h-7 min-h-7"
-                                      />
-                                    </div>
-                                    <div className="flex flex-col gap-0.5 text-left">
-                                      <span className="text-[9px] font-bold text-muted-foreground uppercase">Nguồn lỗi</span>
-                                      <Select
-                                        value={tempPackagingValues[pod.id]?.defectSource || "production"}
-                                        onValueChange={(val) => handleTempChange(pod.id, "defectSource", val)}
-                                      >
-                                        <SelectTrigger className="h-7 text-[10px] px-1.5 py-0 bg-background border-muted">
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="design" className="text-xs">Lỗi thiết kế</SelectItem>
-                                          <SelectItem value="proofing" className="text-xs">Lỗi bình bài</SelectItem>
-                                          <SelectItem value="production" className="text-xs">Lỗi sản xuất</SelectItem>
-                                          <SelectItem value="management_decision" className="text-xs">Quyết định QL</SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
+                              ) : (
+                                <div className="flex flex-col justify-center min-w-[70px] text-xs">
+                                  <div className="flex items-center justify-between gap-1">
+                                    <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">
+                                      Ra
+                                    </span>
+                                    <span className="text-[13px] tabular-nums font-bold text-emerald-700">
+                                      {prodItem?.outputQty != null
+                                        ? prodItem.outputQty
+                                        : prodItem?.producedQty != null
+                                          ? prodItem.producedQty
+                                          : 0}
+                                    </span>
                                   </div>
-                                )}
-                                <Input
-                                  placeholder="Ghi chú..."
-                                  className="h-7 w-full text-[10px] px-1.5 py-0 bg-background mt-0.5 border-amber-200 focus:border-amber-500"
-                                  value={tempPackagingValues[pod.id]?.notes ?? ""}
-                                  onChange={(e) => handleTempChange(pod.id, "notes", e.target.value)}
-                                />
-                              </div>
-                            ) : (
-                              <div className="flex flex-col justify-center min-w-[70px] text-xs">
-                                <div className="flex items-center justify-between gap-1">
-                                  <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">
-                                    Ra
-                                  </span>
-                                  <span className="text-[13px] tabular-nums font-bold text-emerald-700">
-                                    {prodItem?.outputQty != null
-                                      ? prodItem.outputQty
-                                      : prodItem?.producedQty != null
-                                        ? prodItem.producedQty
-                                        : 0}
-                                  </span>
-                                </div>
-                                <div className="flex items-center justify-between gap-1">
-                                  <span className="text-[11px] font-bold text-red-600 dark:text-red-400 uppercase tracking-tighter">
-                                    Lỗi
-                                  </span>
-                                  <span className="text-[13px] tabular-nums font-bold text-red-600">
-                                    {prodItem?.defectQty != null ? prodItem.defectQty : 0}
-                                  </span>
-                                </div>
+                                  <div className="flex items-center justify-between gap-1">
+                                    <span className="text-[11px] font-bold text-red-600 dark:text-red-400 uppercase tracking-tighter">
+                                      Lỗi
+                                    </span>
+                                    <span className="text-[13px] tabular-nums font-bold text-red-600">
+                                      {prodItem?.defectQty != null ? prodItem.defectQty : 0}
+                                    </span>
+                                  </div>
 
-                                {(() => {
-                                  const matchingDefects = defectRecords.filter(
-                                    (dr) => dr.designId === pod.design?.id || dr.orderDetailId === pod.id
-                                  );
-                                  if (matchingDefects.length === 0) return null;
-                                  return (
-                                    <div className="text-[9px] text-muted-foreground mt-1 border-t border-dashed pt-1 space-y-1 text-left">
-                                      {matchingDefects.map((dr: any) => (
-                                        <div key={dr.id} className="flex flex-col gap-0.5 border-b border-dotted last:border-0 pb-0.5 last:pb-0">
-                                          <div className="flex justify-between items-center gap-1 font-semibold text-foreground">
-                                            <span className="truncate max-w-[80px]" title={dr.assignedToUserName}>
-                                              {dr.assignedToUserName}
-                                            </span>
-                                            <span className="font-bold text-red-600 shrink-0">
-                                              {dr.defectQuantity}
-                                            </span>
+                                  {(() => {
+                                    const matchingDefects = defectRecords.filter(
+                                      (dr) => dr.designId === pod.design?.id || dr.orderDetailId === pod.id
+                                    );
+                                    if (matchingDefects.length === 0) return null;
+                                    return (
+                                      <div className="text-[9px] text-muted-foreground mt-1 border-t border-dashed pt-1 space-y-1 text-left">
+                                        {matchingDefects.map((dr: any) => (
+                                          <div key={dr.id} className="flex flex-col gap-0.5 border-b border-dotted last:border-0 pb-0.5 last:pb-0">
+                                            <div className="flex justify-between items-center gap-1 font-semibold text-foreground">
+                                              <span className="truncate max-w-[80px]" title={dr.assignedToUserName}>
+                                                {dr.assignedToUserName}
+                                              </span>
+                                              <span className="font-bold text-red-600 shrink-0">
+                                                {dr.defectQuantity}
+                                              </span>
+                                            </div>
+                                            {dr.defectSourceDisplay && (
+                                              <span className="text-[8px] text-red-500 italic block">
+                                                ({dr.defectSourceDisplay})
+                                              </span>
+                                            )}
                                           </div>
-                                          {dr.defectSourceDisplay && (
-                                            <span className="text-[8px] text-red-500 italic block">
-                                              ({dr.defectSourceDisplay})
-                                            </span>
-                                          )}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  );
-                                })()}
+                                        ))}
+                                      </div>
+                                    );
+                                  })()}
 
-                                {prodItem?.notes && (
-                                  <div className="text-[10px] font-medium text-amber-700 dark:text-amber-500 break-words leading-tight border-l-2 border-amber-500/50 pl-1 mt-1 bg-amber-50/30 dark:bg-amber-900/10 py-0.5">
-                                    {prodItem.notes}
-                                  </div>
-                                )}
-                              </div>
-                            )}
+                                  {prodItem?.notes && (
+                                    <div className="text-[10px] font-medium text-amber-700 dark:text-amber-500 break-words leading-tight border-l-2 border-amber-500/50 pl-1 mt-1 bg-amber-50/30 dark:bg-amber-900/10 py-0.5">
+                                      {prodItem.notes}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })
-                    .filter(Boolean)}
-                </div>
+                        );
+                      })
+                      .filter(Boolean)}
+                  </div>
+                )}
 
                 {/* Save/Edit buttons removed from bottom, moved to the top of column */}
               </>
@@ -2165,6 +2195,7 @@ export function ProductionListTable({
           <Table>
             <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
               <TableRow className="bg-muted/50 hover:bg-muted/50">
+                <TableHead className="w-8 p-0 text-center" />
                 <TableHead className="h-10 font-bold text-sm text-center w-[90px] max-w-[90px] bg-muted/50 border-r border-border/50">
                   MÃ BB
                 </TableHead>
@@ -2195,7 +2226,7 @@ export function ProductionListTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableSkeleton cols={9} rows={5} rowHeight="h-32" />
+              <TableSkeleton cols={10} rows={5} rowHeight="h-32" />
             </TableBody>
           </Table>
         ) : productions.length === 0 ? (
@@ -2209,6 +2240,7 @@ export function ProductionListTable({
           <Table>
             <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
               <TableRow className="bg-muted/50 hover:bg-muted/50">
+                <TableHead className="w-8 p-0 text-center bg-muted/50" />
                 <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[90px] max-w-[90px] bg-muted/50 border-r border-border/50">
                   MÃ BB
                 </TableHead>

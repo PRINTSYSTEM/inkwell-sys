@@ -1,5 +1,6 @@
 import { toast } from "sonner";
 import { apiRequest } from "@/lib/http";
+import { buildFilename, formatDateForFilename } from "@/utils/file-name";
 import { createCrudHooks } from "./use-base";
 import type {
   OrderResponse,
@@ -87,12 +88,36 @@ const useOrderListBaseWithEnabled = (
 export const useOrder = (id: number | null, enabled = true) =>
   useOrderDetailBase(id, enabled);
 
+const getCachedOrder = (queryClient: any, id: number) => {
+  let order = queryClient.getQueryData<any>(["orders", "detail", id]);
+  if (!order) {
+    const queries = queryClient.getQueryCache().findAll({ queryKey: ["orders"] });
+    for (const query of queries) {
+      const data = query.state.data as any;
+      if (data?.items && Array.isArray(data.items)) {
+        const found = data.items.find((item: any) => item.id === id);
+        if (found) {
+          order = found;
+          break;
+        }
+      } else if (Array.isArray(data)) {
+        const found = data.find((item: any) => item.id === id);
+        if (found) {
+          order = found;
+          break;
+        }
+      }
+    }
+  }
+  return order;
+};
+
 export const useCreateOrder = () => useCreateOrderBase();
 export const useUpdateOrder = () => useUpdateOrderBase();
 
 // POST /orders/{id}/generate-excel
 export const useGenerateOrderExcel = () => {
-  // Không cần trả data ra ngoài, chỉ cần download file
+  const queryClient = useQueryClient();
   const { loading, error, execute, reset } = useAsyncCallback<void, [number]>(
     async (id: number) => {
       const res = await apiRequest.post<ArrayBuffer>(
@@ -107,10 +132,15 @@ export const useGenerateOrderExcel = () => {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
 
+      const order = getCachedOrder(queryClient, id);
+      const code = order?.code || id;
+      const customer = order?.customerName || "Khách hàng";
+      const date = formatDateForFilename(order?.createdAt || new Date());
+
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `don-hang-${id}.xlsx`;
+      link.download = buildFilename(["Đơn hàng", code, customer, date], "xlsx");
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -568,6 +598,7 @@ export const useUpdateOrderForSale = () => {
 // POST /orders/{id}/export-delivery-note
 
 export const useExportOrderInvoice = () => {
+  const queryClient = useQueryClient();
   const { loading, error, execute, reset } = useAsyncCallback<void, [number]>(
     async (id: number) => {
       const res = await apiRequest.post<ArrayBuffer>(
@@ -582,10 +613,15 @@ export const useExportOrderInvoice = () => {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
 
+      const order = getCachedOrder(queryClient, id);
+      const code = order?.code || id;
+      const customer = order?.customerName || "Khách hàng";
+      const date = formatDateForFilename(order?.createdAt || new Date());
+
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `hoa-don-don-hang-${id}.xlsx`;
+      link.download = buildFilename(["Hóa đơn đơn hàng", code, customer, date], "xlsx");
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -618,6 +654,7 @@ export const useExportOrderInvoice = () => {
 };
 
 export const useExportOrderDeliveryNote = () => {
+  const queryClient = useQueryClient();
   const { loading, error, execute, reset } = useAsyncCallback<void, [number]>(
     async (id: number) => {
       const res = await apiRequest.post<ArrayBuffer>(
@@ -632,10 +669,15 @@ export const useExportOrderDeliveryNote = () => {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
 
+      const order = getCachedOrder(queryClient, id);
+      const code = order?.code || id;
+      const customer = order?.customerName || "Khách hàng";
+      const date = formatDateForFilename(order?.createdAt || new Date());
+
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `phieu-giao-hang-don-hang-${id}.xlsx`;
+      link.download = buildFilename(["Phiếu giao hàng đơn hàng", code, customer, date], "xlsx");
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -668,6 +710,7 @@ export const useExportOrderDeliveryNote = () => {
 };
 
 export const useExportOrderPDF = () => {
+  const queryClient = useQueryClient();
   const { loading, error, execute, reset } = useAsyncCallback<void, [number]>(
     async (id: number) => {
       const res = await apiRequest.get<ArrayBuffer>(
@@ -681,10 +724,15 @@ export const useExportOrderPDF = () => {
         type: "application/pdf",
       });
 
+      const order = getCachedOrder(queryClient, id);
+      const code = order?.code || id;
+      const customer = order?.customerName || "Khách hàng";
+      const date = formatDateForFilename(order?.createdAt || new Date());
+
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `don-hang-${id}.pdf`;
+      link.download = buildFilename(["Đơn hàng", code, customer, date], "pdf");
       document.body.appendChild(link);
       link.click();
       link.remove();

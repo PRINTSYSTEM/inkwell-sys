@@ -61,6 +61,7 @@ import { useProofingOrder } from "@/hooks/use-proofing-order";
 import { useAuth } from "@/hooks/use-auth";
 import { ROLE } from "@/constants";
 import { AsyncSelect } from "@/components/forms/AsyncSelect";
+import { buildFilename, formatDateForFilename } from "@/utils/file-name";
 import { apiRequest } from "@/lib/http";
 import { productionStepTypeLabels } from "@/lib/status-utils";
 import type {
@@ -181,10 +182,14 @@ export default function DefectRecordListPage() {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
 
+      const dateSuffix = fromDate || toDate
+        ? `Từ ${formatDateForFilename(fromDate)} Đến ${formatDateForFilename(toDate)}`
+        : formatDateForFilename(new Date());
+
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `nhat-ky-loi-san-xuat-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      link.download = buildFilename(["Nhật ký lỗi sản xuất", dateSuffix], "xlsx");
       document.body.appendChild(link);
       link.click();
       link.remove();
