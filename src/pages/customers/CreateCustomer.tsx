@@ -47,7 +47,7 @@ export default function CreateCustomer() {
     address: "",
     scrapRate: 0.005,
     type: "company",
-    maxDebt: 50000000,
+    maxDebt: 200000000,
   });
 
   const [generatedCode, setGeneratedCode] = useState("");
@@ -86,12 +86,12 @@ export default function CreateCustomer() {
   ) => {
     setForm((p) => ({ ...p, [field]: value }));
     clearFieldError(field as string);
-    
+
     // Clear companyName error when switching from company to retail
     if (field === "type" && value === "retail") {
       clearFieldError("companyName");
     }
-    
+
     if (field === "companyName")
       setGeneratedCode(generatePreviewCode(String(value ?? "")));
   };
@@ -426,7 +426,7 @@ export default function CreateCustomer() {
                   <Input
                     id="maxDebt"
                     type="number"
-                    placeholder="50000000"
+                    placeholder="200000000"
                     value={form.maxDebt}
                     onChange={(e) =>
                       handleInput("maxDebt", Number(e.target.value))

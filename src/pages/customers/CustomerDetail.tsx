@@ -29,7 +29,7 @@ export default function CustomerDetail() {
   const customerId =
     id && !isNaN(Number(id)) && Number(id) > 0 ? Number(id) : null;
 
-  const [activeTab, setActiveTab] = useState("addresses");
+  const [activeTab, setActiveTab] = useState("debt");
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [cashReceiptModalOpen, setCashReceiptModalOpen] = useState(false);
@@ -120,43 +120,60 @@ export default function CustomerDetail() {
         <div
           className={cn(
             "flex-1 overflow-hidden",
-            canViewFinancialInfo ? "p-3" : "p-3 overflow-y-auto"
+            canViewFinancialInfo ? "pt-1 px-3 pb-3" : "pt-1 px-3 pb-3 overflow-y-auto"
           )}
         >
           {canViewFinancialInfo ? (
-            /* Layout 2 cột cho accounting và admin */
-            <div className="grid grid-cols-[300px_1fr] gap-3 h-full">
-              {/* Left Column: Profile */}
-              <CustomerProfile customer={customer} />
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="flex-1 flex flex-col min-w-0 overflow-hidden h-full"
+            >
+              {/* Tab Triggers */}
+              <TabsList className="w-fit mb-2 flex-shrink-0">
+                <TabsTrigger value="overview" className="text-sm">
+                  Tổng quan
+                </TabsTrigger>
+                <TabsTrigger value="debt" className="text-sm">
+                  Công nợ
+                </TabsTrigger>
+                <TabsTrigger value="invoices" className="text-sm">
+                  Hóa đơn
+                </TabsTrigger>
+                <TabsTrigger value="orders" className="text-sm">
+                  Đơn hàng
+                </TabsTrigger>
+                <TabsTrigger value="favorites" className="text-sm">
+                  Ưa thích
+                </TabsTrigger>
+              </TabsList>
 
-              {/* Right Column: Tabs */}
-              <div className="flex flex-col min-w-0 overflow-hidden">
-                <Tabs
-                  value={activeTab}
-                  onValueChange={setActiveTab}
-                  className="flex-1 flex flex-col min-w-0 overflow-hidden"
-                >
-                  <TabsList className="w-fit mb-3 flex-shrink-0">
-                    <TabsTrigger value="addresses" className="text-sm">
-                      Địa chỉ giao hàng
-                    </TabsTrigger>
-                    <TabsTrigger value="debt" className="text-sm">
-                      Công nợ
-                    </TabsTrigger>
-                    <TabsTrigger value="invoices" className="text-sm">
-                      Hóa đơn
-                    </TabsTrigger>
-                    <TabsTrigger value="orders" className="text-sm">
-                      Đơn hàng
-                    </TabsTrigger>
-                    <TabsTrigger value="favorites" className="text-sm">
-                      Ưa thích
-                    </TabsTrigger>
-                  </TabsList>
+              {/* Tab Contents */}
+              {activeTab === "overview" ? (
+                /* Layout 2 cột cho tab Tổng quan: Left: Profile, Right: Addresses */
+                <div className="grid grid-cols-[370px_1fr] gap-3 flex-1 min-h-0 overflow-hidden">
+                  {/* Left Column: Profile */}
+                  <CustomerProfile customer={customer} isExpanded={true} />
 
+                  {/* Right Column: Addresses */}
+                  <div className="flex flex-col min-w-0 overflow-hidden h-full">
+                    <TabsContent
+                      value="overview"
+                      className="flex-1 mt-0 overflow-hidden h-full animate-none"
+                    >
+                      <AddressesTab
+                        customerId={customerId}
+                        isActive={activeTab === "overview"}
+                      />
+                    </TabsContent>
+                  </div>
+                </div>
+              ) : (
+                /* Layout 1 cột full width cho các tab khác */
+                <div className="flex-1 min-h-0 overflow-hidden w-full h-full">
                   <TabsContent
                     value="debt"
-                    className="flex-1 mt-0 overflow-hidden"
+                    className="flex-1 mt-0 overflow-hidden h-full"
                   >
                     <DebtTab
                       customerId={customerId}
@@ -166,7 +183,7 @@ export default function CustomerDetail() {
 
                   <TabsContent
                     value="invoices"
-                    className="flex-1 mt-0 min-w-0 overflow-hidden"
+                    className="flex-1 mt-0 min-w-0 overflow-hidden h-full"
                   >
                     <InvoicesTab
                       customerId={customerId}
@@ -176,7 +193,7 @@ export default function CustomerDetail() {
 
                   <TabsContent
                     value="orders"
-                    className="flex-1 mt-0 min-w-0 overflow-hidden"
+                    className="flex-1 mt-0 min-w-0 overflow-hidden h-full"
                   >
                     {customerId && (
                       <OrdersTab
@@ -188,26 +205,16 @@ export default function CustomerDetail() {
 
                   <TabsContent
                     value="favorites"
-                    className="flex-1 mt-0 overflow-hidden"
+                    className="flex-1 mt-0 overflow-hidden h-full"
                   >
                     <FavoritesTab
                       customerId={customerId}
                       isActive={activeTab === "favorites"}
                     />
                   </TabsContent>
-
-                  <TabsContent
-                    value="addresses"
-                    className="flex-1 mt-0 overflow-hidden"
-                  >
-                    <AddressesTab
-                      customerId={customerId}
-                      isActive={activeTab === "addresses"}
-                    />
-                  </TabsContent>
-                </Tabs>
-              </div>
-            </div>
+                </div>
+              )}
+            </Tabs>
           ) : (
             /* Layout 1 cột cho design và prepress - chỉ hiển thị profile */
             <div className="max-w-4xl mx-auto w-full h-full flex flex-col">

@@ -185,15 +185,15 @@ export function AddressesTab({ customerId, isActive = true }: AddressesTabProps)
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {/* Filters */}
       <div className="flex items-center justify-end">
         <Button
           size="sm"
           onClick={handleOpenAdd}
-          className="h-9 text-sm font-medium gap-1.5"
+          className="h-8 text-xs font-semibold gap-1.5"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-3.5 w-3.5" />
           Thêm địa chỉ
         </Button>
       </div>
@@ -213,11 +213,11 @@ export function AddressesTab({ customerId, isActive = true }: AddressesTabProps)
             <Table>
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
-                  <TableHead className="text-xs w-[180px]">Nhãn</TableHead>
-                  <TableHead className="text-xs w-[150px]">Người nhận</TableHead>
-                  <TableHead className="text-xs w-[120px]">Số điện thoại</TableHead>
-                  <TableHead className="text-xs">Địa chỉ chi tiết</TableHead>
-                  <TableHead className="text-xs w-[110px]"></TableHead>
+                  <TableHead className="text-sm font-bold w-[180px]">Nhãn</TableHead>
+                  <TableHead className="text-sm font-bold w-[150px]">Người nhận</TableHead>
+                  <TableHead className="text-sm font-bold w-[120px]">Số điện thoại</TableHead>
+                  <TableHead className="text-sm font-bold">Địa chỉ chi tiết</TableHead>
+                  <TableHead className="text-sm font-bold w-[110px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -226,26 +226,26 @@ export function AddressesTab({ customerId, isActive = true }: AddressesTabProps)
                     key={addr.id}
                     className="hover:bg-muted/50"
                   >
-                    <TableCell className="text-xs font-medium">
+                    <TableCell className="text-sm font-semibold">
                       <div className="flex items-center gap-2">
                         <span>{addr.label}</span>
                         {addr.isDefault && (
                           <Badge
                             variant="secondary"
-                            className="px-1.5 py-0 text-[10px] font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200/50 dark:border-amber-800/50 shrink-0"
+                            className="px-1.5 py-0 text-[10px] font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200/50 dark:border-amber-800/50 shrink-0"
                           >
                             Mặc định
                           </Badge>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="text-xs">
+                    <TableCell className="text-sm font-medium">
                       {addr.recipientName || "—"}
                     </TableCell>
-                    <TableCell className="text-xs font-mono">
+                    <TableCell className="text-sm font-mono font-medium">
                       {addr.recipientPhone || "—"}
                     </TableCell>
-                    <TableCell className="text-xs max-w-[300px] truncate" title={addr.address}>
+                    <TableCell className="text-sm md:text-base font-semibold text-foreground max-w-[500px] truncate" title={addr.address}>
                       {addr.address}
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>

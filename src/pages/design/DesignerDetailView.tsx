@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import {
   Search,
   Filter,
@@ -465,6 +466,81 @@ export default function DesignerDetailPage() {
             </SelectContent>
           </Select>
         </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 mb-3 shrink-0">
+        <Card
+          className={`cursor-pointer transition-all p-1 px-1.5 border hover:border-slate-350 ${statusFilter === "all" ? "ring-2 ring-primary bg-slate-50 dark:bg-slate-900" : "hover:shadow-md bg-card"
+            }`}
+          onClick={() => {
+            setStatusFilter("all");
+            setCurrentPage(1);
+          }}
+        >
+          <CardContent className="p-0 flex items-center justify-between h-full min-h-[26px] px-0.5 gap-1">
+            <span className="text-[10px] font-bold text-foreground truncate">
+              Tổng cộng
+            </span>
+            <span className="text-[11px] font-extrabold text-foreground ml-1 shrink-0 bg-muted px-1.5 py-0.2 rounded">
+              {stats.total}
+            </span>
+          </CardContent>
+        </Card>
+
+        {(Object.keys(designStatusConfig) as DesignStatusKey[]).map((key) => {
+          const config = designStatusConfig[key];
+          const count = stats[key as keyof typeof stats] || 0;
+          const Icon = DESIGN_STATUS_ICONS[key];
+          const isActive = statusFilter === key;
+
+          let cardBgAndBorder = "";
+          let badgeStyle = "bg-muted text-foreground";
+
+          if (key === "confirmed_for_printing") {
+            cardBgAndBorder = isActive
+              ? "ring-2 ring-emerald-500 bg-emerald-50 border-emerald-500 dark:bg-emerald-950/30 dark:border-emerald-600"
+              : "border-emerald-200 bg-emerald-50/30 hover:bg-emerald-50 dark:bg-emerald-950/10 dark:border-emerald-900/40";
+            badgeStyle = "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-200 font-extrabold border border-emerald-200 dark:border-emerald-800";
+          } else if (key === "returned") {
+            cardBgAndBorder = isActive
+              ? "ring-2 ring-red-500 bg-red-50 border-red-500 dark:bg-red-950/30 dark:border-red-600"
+              : "border-red-200 bg-red-50/30 hover:bg-red-50 dark:bg-red-950/10 dark:border-red-900/40";
+            badgeStyle = "bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-200 font-extrabold border border-red-200 dark:border-red-800";
+          } else if (key === "received_info") {
+            cardBgAndBorder = isActive
+              ? "ring-2 ring-blue-500 bg-blue-50 border-blue-500 dark:bg-blue-950/30 dark:border-blue-600"
+              : "border-blue-200 bg-blue-50/30 hover:bg-blue-50 dark:bg-blue-950/10 dark:border-blue-900/40";
+            badgeStyle = "bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200 font-extrabold border border-blue-200 dark:border-blue-800";
+          } else {
+            cardBgAndBorder = isActive
+              ? `ring-2 ring-primary ${config.bgColor}`
+              : `border bg-card/60 hover:bg-card ${config.bgColor}/40`;
+          }
+
+          return (
+            <Card
+              key={key}
+              className={cn("cursor-pointer transition-all p-1 px-1.5", cardBgAndBorder)}
+              onClick={() => {
+                setStatusFilter(key);
+                setCurrentPage(1);
+              }}
+            >
+              <CardContent className="p-0 flex items-center justify-between h-full min-h-[26px] px-0.5 gap-1">
+                <div className="flex items-center gap-1 min-w-0">
+                  <Icon className="w-3 h-3 text-muted-foreground shrink-0" />
+                  <span className="text-[10px] font-bold text-foreground truncate">
+                    {config.label}
+                  </span>
+                </div>
+                <span className={cn("text-[11px] font-extrabold px-1.5 py-0.2 rounded shrink-0", badgeStyle)}>
+                  {count}
+                </span>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Toolbar & Filters */}

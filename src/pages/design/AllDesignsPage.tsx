@@ -73,6 +73,7 @@ export default function AllDesignsPage() {
   const [selectedYear, setSelectedYear] = useState<number | null>(
     new Date().getFullYear()
   );
+  const [selectedDate, setSelectedDate] = useState<string>("");
   const itemsPerPage = 10;
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
@@ -98,8 +99,15 @@ export default function AllDesignsPage() {
       ...(filterState.filters["designTypeId"]?.value
         ? { designTypeId: filterState.filters["designTypeId"].value as number }
         : {}),
-      ...(selectedMonth ? { month: selectedMonth } : {}),
-      ...(selectedYear ? { year: selectedYear } : {}),
+      ...(selectedDate
+        ? {
+            startDate: `${selectedDate}T00:00:00.000Z`,
+            endDate: `${selectedDate}T23:59:59.999Z`,
+          }
+        : {
+            ...(selectedMonth ? { month: selectedMonth } : {}),
+            ...(selectedYear ? { year: selectedYear } : {}),
+          }),
       ...(filterState.sortBy
         ? {
             sortColumn: filterState.sortBy,
@@ -119,12 +127,58 @@ export default function AllDesignsPage() {
       filterState.filters,
       filterState.sortBy,
       filterState.sortOrder,
+      selectedDate,
       selectedMonth,
       selectedYear,
       filterState.searchQuery,
     ]
   );
   const { data, isLoading } = useDesigns(useDesignsParams);
+
+  // --- Quick Stats Queries ---
+  const todayStr = useMemo(() => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }, []);
+
+  const { data: todayDesignsData } = useDesigns({
+    pageNumber: 1,
+    pageSize: 1,
+    startDate: `${todayStr}T00:00:00.000Z`,
+    endDate: `${todayStr}T23:59:59.999Z`,
+  });
+  const todayCreatedCount = todayDesignsData?.total ?? 0;
+
+  const { data: todayConfirmedData } = useDesigns({
+    pageNumber: 1,
+    pageSize: 100,
+    status: "confirmed_for_printing",
+    startDate: `${todayStr}T00:00:00.000Z`,
+    endDate: `${todayStr}T23:59:59.999Z`,
+  });
+  const todayConfirmedCount = todayConfirmedData?.total ?? 0;
+
+  const todayConfirmedByType = useMemo(() => {
+    const counts: Record<string, number> = {};
+    if (todayConfirmedData?.items) {
+      todayConfirmedData.items.forEach((d) => {
+        const typeName = d.designType?.name || d.designTypeName || "Chưa phân loại";
+        counts[typeName] = (counts[typeName] || 0) + 1;
+      });
+    }
+    return counts;
+  }, [todayConfirmedData]);
+
+  const { data: totalReturnedData } = useDesigns({
+    pageNumber: 1,
+    pageSize: 1,
+    status: "returned",
+  });
+  const totalReturnedCount = totalReturnedData?.total ?? 0;
+  // -----------------------------
 
   // Designers list for assignment
   const { data: designersData } = useUsers({ role: "design", pageSize: 100 });
@@ -327,10 +381,67 @@ export default function AllDesignsPage() {
             )}
           </p>
         </div>
+
+        {/* Micro Stats Panel (optimized inside header to save space) */}
+        <div className="flex items-center gap-1.5 p-1 bg-slate-50/50 dark:bg-slate-900/40 border rounded-xl shadow-sm md:mx-4 max-w-full overflow-x-auto shrink-0 select-none">
+          {/* Stat 1: Created Today */}
+          <div className="flex flex-col items-center justify-center min-w-[64px] h-8 px-2 border rounded bg-blue-50/20 border-blue-200/40 dark:bg-blue-950/10 dark:border-blue-900/30">
+            <span className="text-[8px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider leading-none whitespace-nowrap">
+              Tạo hôm nay
+            </span>
+            <span className="text-xs font-black text-blue-600 dark:text-blue-400 mt-0.5 leading-none">
+              {todayCreatedCount}
+            </span>
+          </div>
+
+          {/* Stat 2: Total Returned */}
+          <div className="flex flex-col items-center justify-center min-w-[64px] h-8 px-2 border rounded bg-red-50/20 border-red-200/40 dark:bg-red-950/10 dark:border-red-900/30">
+            <span className="text-[8px] font-bold text-red-500 uppercase tracking-wider leading-none whitespace-nowrap">
+              Bị trả về
+            </span>
+            <span className="text-xs font-black text-red-600 dark:text-red-400 mt-0.5 leading-none">
+              {totalReturnedCount}
+            </span>
+          </div>
+
+          <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 shrink-0 mx-0.5" />
+
+          {/* Stat 3: Total Confirmed Today */}
+          <div className="flex flex-col items-center justify-center min-w-[64px] h-8 px-2 border rounded bg-emerald-100/30 border-emerald-300 dark:bg-emerald-950/20 dark:border-emerald-800">
+            <span className="text-[8px] font-bold text-emerald-850 dark:text-emerald-300 uppercase tracking-wider leading-none whitespace-nowrap">
+              Đã chốt in
+            </span>
+            <span className="text-xs font-black text-emerald-700 dark:text-emerald-400 mt-0.5 leading-none">
+              {todayConfirmedCount}
+            </span>
+          </div>
+
+          <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 shrink-0 mx-0.5" />
+
+          {/* 6 Design Types Stats for Confirmed Today */}
+          {designTypes.map((type: any) => {
+            const count = todayConfirmedByType[type.name] || 0;
+            return (
+              <div
+                key={type.id}
+                className="flex flex-col items-center justify-center min-w-[64px] h-8 px-2 border rounded bg-emerald-50/20 border-emerald-200/40 dark:bg-emerald-950/10 dark:border-emerald-900/30"
+                title={`Chốt in: ${type.name}`}
+              >
+                <span className="text-[8px] font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider leading-none whitespace-nowrap">
+                  {type.name}
+                </span>
+                <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 mt-0.5 leading-none">
+                  {count}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
         {canCreateDesign && (
           <Button
             onClick={() => setCreateDialogOpen(true)}
-            className="gap-2 font-semibold shadow-md shrink-0 animate-in fade-in duration-300"
+            className="gap-2 font-semibold shadow-md shrink-0 animate-in fade-in duration-300 h-9"
           >
             <Plus className="h-4 w-4" />
             Tạo thiết kế mới
@@ -341,7 +452,7 @@ export default function AllDesignsPage() {
       {/* Filters */}
       <Card className="p-3 mb-3 shrink-0">
         <CardContent className="p-0">
-          <div className="grid gap-3 md:grid-cols-6">
+          <div className="grid gap-3 md:grid-cols-7">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -385,6 +496,34 @@ export default function AllDesignsPage() {
                 ))}
               </SelectContent>
             </Select>
+
+            {/* Date filter */}
+            <div className="flex items-center gap-1">
+              <Input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => {
+                  setSelectedDate(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="h-9 text-sm flex-1"
+              />
+              {selectedDate && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setSelectedDate("");
+                    setCurrentPage(1);
+                  }}
+                  className="h-9 w-8 text-red-500 hover:text-red-700 hover:bg-transparent shrink-0"
+                  title="Xóa lọc ngày"
+                >
+                  ✕
+                </Button>
+              )}
+            </div>
+
 
             {/* Month filter */}
             <div className="flex items-center gap-2">

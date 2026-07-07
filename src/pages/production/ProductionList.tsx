@@ -148,55 +148,41 @@ export default function ProductionListPage() {
     return { fromDate: undefined, toDate: undefined };
   }, [dateFilterType, customDate]);
 
-  // Single query to fetch all production list stats in parallel (cached & no refetch on mount)
+  // Fetch summary stats using a single optimized endpoint
   const { data: statsData } = useQuery({
     queryKey: ["production-orders", "summary-stats", todayStart, todayEnd, dateParams.fromDate, dateParams.toDate],
     queryFn: async () => {
-      const fetchCount = async (tab?: string, fromDate?: string, toDate?: string) => {
-        try {
-          const res = await apiRequest.get<any>(
-            API_SUFFIX.PRODUCTION_ORDERS,
-            {
-              params: normalizeParams({
-                pageNumber: 1,
-                pageSize: 1,
-                tab,
-                fromDate,
-                toDate,
-              }),
-            }
-          );
-          return res.data?.total ?? 0;
-        } catch (e) {
-          console.error(`Failed to fetch count for tab: ${tab}`, e);
-          return 0;
-        }
-      };
-
-      const [
-        pendingMaterial,
-        inProduction,
-        inProductionToday,
-        pendingQc,
-        completed,
-        completedToday,
-      ] = await Promise.all([
-        fetchCount("pending_material", dateParams.fromDate, dateParams.toDate),
-        fetchCount("in_production", dateParams.fromDate, dateParams.toDate),
-        fetchCount("in_production", todayStart, todayEnd),
-        fetchCount("pending_qc", dateParams.fromDate, dateParams.toDate),
-        fetchCount("completed", dateParams.fromDate, dateParams.toDate),
-        fetchCount("completed", todayStart, todayEnd),
-      ]);
-
-      return {
-        pendingMaterial,
-        inProduction,
-        inProductionToday,
-        pendingQc,
-        completed,
-        completedToday,
-      };
+      try {
+        const res = await apiRequest.get<any>(
+          `${API_SUFFIX.PRODUCTION_ORDERS}/summary-stats`,
+          {
+            params: normalizeParams({
+              fromDate: dateParams.fromDate,
+              toDate: dateParams.toDate,
+              todayStart,
+              todayEnd,
+            }),
+          }
+        );
+        return {
+          pendingMaterial: res.data?.pendingMaterial ?? 0,
+          inProduction: res.data?.inProduction ?? 0,
+          inProductionToday: res.data?.inProductionToday ?? 0,
+          pendingQc: res.data?.pendingQc ?? 0,
+          completed: res.data?.completed ?? 0,
+          completedToday: res.data?.completedToday ?? 0,
+        };
+      } catch (e) {
+        console.error("Failed to fetch summary stats", e);
+        return {
+          pendingMaterial: 0,
+          inProduction: 0,
+          inProductionToday: 0,
+          pendingQc: 0,
+          completed: 0,
+          completedToday: 0,
+        };
+      }
     },
     staleTime: 5 * 60 * 1000, // cache for 5 minutes
     refetchOnMount: false, // do not refetch when returning to page

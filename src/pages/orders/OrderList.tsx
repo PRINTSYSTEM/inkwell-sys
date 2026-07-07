@@ -266,9 +266,6 @@ export default function OrderList() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4 shrink-0">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Đơn hàng</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Quản lý và theo dõi tất cả đơn hàng
-            </p>
           </div>
           <div className="flex items-center gap-3">
             {canCreateOrder && (
@@ -509,22 +506,20 @@ export default function OrderList() {
                               </TableCell>
                               <TableCell className="text-right py-1.5 align-middle">
                                 <span
-                                  className={`text-sm font-bold ${
-                                    depositAmount > 0
+                                  className={`text-sm font-bold ${depositAmount > 0
                                       ? "text-green-600"
                                       : "text-muted-foreground"
-                                  }`}
+                                    }`}
                                 >
                                   {formatCurrency(depositAmount)}
                                 </span>
                               </TableCell>
                               <TableCell className="text-right py-1.5 align-middle">
                                 <span
-                                  className={`text-sm font-bold ${
-                                    remaining > 0
+                                  className={`text-sm font-bold ${remaining > 0
                                       ? "text-red-600"
                                       : "text-muted-foreground"
-                                  }`}
+                                    }`}
                                 >
                                   {formatCurrency(remaining)}
                                 </span>

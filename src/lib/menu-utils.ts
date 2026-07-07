@@ -47,34 +47,91 @@ export function getAccessibleMenuItems(role: UserRole): MenuItemLeaf[] {
  * Group menu items by their parent group for better organization
  */
 export function getGroupedAccessibleMenuItems(role: UserRole) {
-  const grouped: Array<{
+  const groups: Array<{
+    id: string;
     groupTitle?: string;
     groupIcon?: LucideIcon;
     items: MenuItemLeaf[];
   }> = [];
 
+  // 1. Initialize groups from MENU_ITEMS that have children in the original order
+  MENU_ITEMS.forEach((item) => {
+    if ("children" in item && item.children) {
+      groups.push({
+        id: item.id,
+        groupTitle: item.title,
+        groupIcon: item.icon,
+        items: [],
+      });
+    }
+  });
+
+  const standaloneItems: MenuItemLeaf[] = [];
+
+  // 2. Distribute items logically
   MENU_ITEMS.forEach((item) => {
     if (!hasAccess(item.allowedRoles, role)) return;
 
-    if ("path" in item && item.path && !("children" in item)) {
-      // Leaf item - add directly
-      grouped.push({
-        items: [item as MenuItemLeaf],
-      });
-    } else if ("children" in item && item.children) {
-      // Group item - filter accessible children
+    if ("children" in item && item.children) {
+      // Add accessible children to their group
       const accessibleChildren = item.children.filter(
         (child) => hasAccess(child.allowedRoles, role) && child.path
       );
-      if (accessibleChildren.length > 0) {
-        grouped.push({
-          groupTitle: item.title,
-          groupIcon: item.icon,
-          items: accessibleChildren,
-        });
+      const group = groups.find((g) => g.id === item.id);
+      if (group) {
+        group.items.push(...accessibleChildren);
+      }
+    } else if ("path" in item && item.path && !("children" in item)) {
+      const leafItem = item as MenuItemLeaf;
+
+      // Group leaf items into matching department groups
+      let targetGroupId = "";
+      if (leafItem.id === "customer" || leafItem.id === "orders") {
+        targetGroupId = "sales";
+      } else if (
+        leafItem.id === "design-price-lookup-top" ||
+        leafItem.id === "ready-designs" ||
+        leafItem.id === "proofing"
+      ) {
+        targetGroupId = "design-dept";
+      } else if (
+        leafItem.id === "delivery-notes-list" ||
+        leafItem.id === "stock-summary" ||
+        leafItem.id === "production-stock"
+      ) {
+        targetGroupId = "production-group";
+      } else if (leafItem.id === "notifications") {
+        targetGroupId = "system";
+      }
+
+      const targetGroup = groups.find((g) => g.id === targetGroupId);
+      if (targetGroup) {
+        targetGroup.items.push(leafItem);
+      } else {
+        standaloneItems.push(leafItem);
       }
     }
   });
 
-  return grouped;
+  // 3. Filter out groups with no items
+  const filteredGroups = groups.filter((g) => g.items.length > 0);
+
+  // 4. Return grouped items plus any remaining standalone items
+  const result: Array<{
+    groupTitle?: string;
+    groupIcon?: LucideIcon;
+    items: MenuItemLeaf[];
+  }> = filteredGroups.map((g) => ({
+    groupTitle: g.groupTitle,
+    groupIcon: g.groupIcon,
+    items: g.items,
+  }));
+
+  standaloneItems.forEach((item) => {
+    result.push({
+      items: [item],
+    });
+  });
+
+  return result;
 }
