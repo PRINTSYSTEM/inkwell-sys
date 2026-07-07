@@ -662,18 +662,18 @@ function StepCell({
   );
 }
 
-// Inner component to render each row and fetch proofing details
-function ProductionTableRow({
-  prod,
-  searchTerm,
-  onProductionClick,
-  onStartProduction,
-}: {
-  prod: ProductionOrderResponse;
-  searchTerm: string;
-  onProductionClick: (id: number) => void;
-  onStartProduction: (proofingOrderId: number) => void;
-}) {
+const ProductionTableRow = React.memo(
+  function ProductionTableRow({
+    prod,
+    searchTerm,
+    onProductionClick,
+    onStartProduction,
+  }: {
+    prod: ProductionOrderResponse;
+    searchTerm: string;
+    onProductionClick: (id: number) => void;
+    onStartProduction: (proofingOrderId: number) => void;
+  }) {
   const queryClient = useQueryClient();
   const [openDiePopover, setOpenDiePopover] = useState(false);
   const [openPlatePopover, setOpenPlatePopover] = useState(false);
@@ -2183,7 +2183,34 @@ function ProductionTableRow({
       )}
     </>
   );
-}
+  },
+  (prevProps, nextProps) => {
+    if (prevProps.searchTerm !== nextProps.searchTerm) return false;
+    if (prevProps.onProductionClick !== nextProps.onProductionClick) return false;
+    if (prevProps.onStartProduction !== nextProps.onStartProduction) return false;
+    
+    const p = prevProps.prod;
+    const n = nextProps.prod;
+    
+    if (p.id !== n.id) return false;
+    if (p.status !== n.status) return false;
+    if (p.progressPercent !== n.progressPercent) return false;
+    if (p.proofingOrderId !== n.proofingOrderId) return false;
+    if (p.proofingOrderCode !== n.proofingOrderCode) return false;
+    
+    const pSteps = p.steps || [];
+    const nSteps = n.steps || [];
+    if (pSteps.length !== nSteps.length) return false;
+    for (let i = 0; i < pSteps.length; i++) {
+      if (pSteps[i].id !== nSteps[i].id) return false;
+      if (pSteps[i].status !== nSteps[i].status) return false;
+      if (pSteps[i].outputQty !== nSteps[i].outputQty) return false;
+      if (pSteps[i].defectQty !== nSteps[i].defectQty) return false;
+    }
+    
+    return true;
+  }
+);
 
 export function ProductionListTable({
   isLoading,

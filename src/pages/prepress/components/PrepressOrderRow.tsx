@@ -60,7 +60,7 @@ export function PrepressOrderRow({
   const searchMatchesDesignCode = useMemo(() => {
     const term = debouncedSearchTerm.trim().toLowerCase();
     if (!term) return false;
-    return designs.some((pod: any) => 
+    return designs.some((pod: any) =>
       pod.design?.code?.toLowerCase().includes(term) ||
       pod.design?.designName?.toLowerCase().includes(term)
     );
@@ -267,6 +267,38 @@ export function PrepressOrderRow({
             : order.code}
         </TableCell>
 
+        <TableCell className="py-3 font-semibold text-xs align-top">
+          <div className="flex flex-col gap-1">
+            {Array.from(
+              new Set(
+                designs.map((pod: any) => pod.design?.designType?.name || "—")
+              )
+            ).map((text: any, idx: number) => (
+              <span key={idx} className="block text-slate-800 dark:text-slate-200">
+                {text}
+              </span>
+            ))}
+          </div>
+        </TableCell>
+
+        <TableCell className="py-3 font-medium text-xs align-top max-w-[200px] truncate">
+          <div className="flex flex-col gap-1">
+            {Array.from(
+              new Set(
+                designs.map((pod: any) => {
+                  const materialName = pod.design?.materialType?.name || "—";
+                  const basisWeight = pod.design?.basisWeight;
+                  return `${materialName}${basisWeight ? ` ${basisWeight}gsm` : ""}`;
+                })
+              )
+            ).map((text: any, idx: number) => (
+              <span key={idx} className="block text-muted-foreground">
+                {text}
+              </span>
+            ))}
+          </div>
+        </TableCell>
+
         <TableCell className="py-3 font-bold text-xs align-top text-slate-800 dark:text-slate-200">
           <HoverCard openDelay={300}>
             <HoverCardTrigger asChild>
@@ -339,33 +371,11 @@ export function PrepressOrderRow({
           </HoverCard>
         </TableCell>
 
-        <TableCell className="py-3 font-medium text-xs align-top max-w-[150px] truncate">
-          {order.materialType?.name || "—"}
-        </TableCell>
-        <TableCell className="py-3 font-medium text-xs align-top max-w-[150px] truncate">
+        <TableCell className="py-3 font-medium text-xs align-top text-center">
           {order.paperSize?.name || order.customPaperSize || (order.rollWidth ? `Cuộn (Rộng: ${order.rollWidth} mm)` : "—")}
         </TableCell>
-        <TableCell className="py-3 font-bold text-xs align-top text-right text-rose-600 font-mono">
+        <TableCell className="py-3 font-bold text-xs align-top text-center text-rose-600 font-mono">
           {order.totalQuantity ? order.totalQuantity.toLocaleString("vi-VN") : "0"}
-        </TableCell>
-
-        <TableCell className="py-3 font-semibold text-xs align-top">
-          <div className="flex flex-col gap-1">
-            {Array.from(
-              new Set(
-                designs.map((pod: any) => {
-                  const materialName = pod.design?.materialType?.name || "—";
-                  const basisWeight = pod.design?.basisWeight;
-                  const designType = pod.design?.designType?.name;
-                  return `${materialName}${basisWeight ? ` ${basisWeight}gsm` : ""}${designType ? ` (${designType})` : ""}`;
-                })
-              )
-            ).map((text: any, idx: number) => (
-              <span key={idx} className="text-muted-foreground block">
-                {text}
-              </span>
-            ))}
-          </div>
         </TableCell>
         <TableCell className="py-3 text-xs align-top">
           <div className="flex flex-col gap-1">
@@ -380,7 +390,7 @@ export function PrepressOrderRow({
                       ? specs
                       : d?.processClassification
                         ? processClassificationLabels[d.processClassification] ||
-                          d.processClassification
+                        d.processClassification
                         : d?.length != null
                           ? `${d.length}x${d.height}mm`
                           : "—";
@@ -444,7 +454,7 @@ export function PrepressOrderRow({
           <div className="flex flex-col gap-1 text-slate-700 dark:text-slate-300">
             {order.status === "completed" ? (
               <div>
-                <span className="font-semibold text-slate-500">Hoàn thành: </span>
+                <span className="font-semibold text-slate-500"> </span>
                 {order.completedAt
                   ? format(new Date(order.completedAt), "HH:mm:ss dd/MM/yyyy")
                   : order.updatedAt
