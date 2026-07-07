@@ -58,8 +58,8 @@ export default function ProductionListPage() {
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
   // View tab
-  type ProductionTab = "all" | "pending_material" | "in_production" | "pending_qc" | "completed";
-  const [viewTab, setViewTab] = useState<ProductionTab>("all");
+  type ProductionTab = "active" | "all" | "pending_material" | "in_production" | "pending_qc" | "completed";
+  const [viewTab, setViewTab] = useState<ProductionTab>("active");
 
   // Design Type Filter State & Data Fetching
   const [selectedDesignTypeId, setSelectedDesignTypeId] = useState<number | null>(null);
@@ -314,7 +314,7 @@ export default function ProductionListPage() {
 
   // Unified List: Merged ProductionOrders and filtered ProofingOrders
   const displayProductions = useMemo<ProductionOrderResponse[]>(() => {
-    if (viewTab !== "all") {
+    if (viewTab !== "all" && viewTab !== "active") {
       // In specific tabs, we only show productions fetched from the backend (which matches tab condition)
       // and we just filter by search query. No drafts shown.
       return productions.filter((prod: any) => {
@@ -518,6 +518,17 @@ export default function ProductionListPage() {
                 className="w-fit shrink-0"
               >
                 <TabsList className="h-9 p-1">
+                  <TabsTrigger value="active" className="h-7 text-xs px-3 gap-1.5 flex items-center">
+                    <span>Chưa hoàn thành</span>
+                    <span className={cn(
+                      "px-1.5 py-0.5 rounded-full text-[10px] font-extrabold transition-all",
+                      viewTab === "active" 
+                        ? "bg-primary text-primary-foreground" 
+                        : "bg-slate-100 text-slate-700 dark:bg-slate-900/40 dark:text-slate-300"
+                    )}>
+                      {stats.pendingMaterial + stats.inProduction + stats.pendingQc}
+                    </span>
+                  </TabsTrigger>
                   <TabsTrigger value="all" className="h-7 text-xs px-3">
                     Tất cả
                   </TabsTrigger>
