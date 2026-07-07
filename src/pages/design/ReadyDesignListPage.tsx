@@ -250,7 +250,7 @@ export default function ReadyDesignListPage() {
 
   const sortedDesigns = useMemo(() => {
     if (!designs) return [];
-    
+
     let filtered = [...designs];
 
     // Client-side design type filtering
@@ -493,11 +493,8 @@ export default function ReadyDesignListPage() {
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4 shrink-0">
         <div>
           <h1 className="text-2xl font-bold text-foreground">
-            Kho thiết kế sẵn sàng
+            Kho thiết kế chờ lên đơn hàng
           </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Chọn các thiết kế đã chốt in của khách hàng để tạo đơn hàng mới.
-          </p>
         </div>
 
         <div className="flex items-center gap-2">

@@ -46,28 +46,22 @@ export default function AccountingDashboard() {
                 </h2>
               </div>
             )}
-            <div className="grid gap-2.5 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7">
+            <div className="flex flex-wrap gap-2.5">
               {group.items.map((item) => {
                 const Icon = item.icon;
                 return (
                   <Card
                     key={item.id}
-                    className="transition-all hover:shadow-md hover:border-primary/50 cursor-pointer group border bg-card/50 hover:bg-card"
+                    className="transition-all hover:shadow-md hover:border-primary/60 cursor-pointer group border bg-card/60 hover:bg-card px-3.5 py-2 flex items-center gap-2.5 rounded-lg w-fit h-10"
                     onClick={() => navigate(item.path)}
                   >
-                    <CardContent className="p-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="flex-shrink-0 p-1.5 rounded-md bg-primary/10 text-primary group-hover:bg-primary/20 transition-colors">
-                          <Icon className="h-3.5 w-3.5" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium leading-tight truncate">
-                            {item.title}
-                          </p>
-                        </div>
-                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
-                      </div>
-                    </CardContent>
+                    <div className="flex-shrink-0 p-1 rounded-md bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-200">
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <span className="text-sm font-semibold text-foreground whitespace-nowrap leading-none">
+                      {item.title}
+                    </span>
+                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-primary/70 group-hover:translate-x-0.5 transition-all ml-1 shrink-0" />
                   </Card>
                 );
               })}
