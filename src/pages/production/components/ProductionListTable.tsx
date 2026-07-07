@@ -761,15 +761,23 @@ function ProductionTableRow({
   const orderImages = React.useMemo(() => {
     const urls: string[] = [];
     
+    const formatUrl = (url: string | null | undefined) => {
+      if (!url) return "";
+      if (url.startsWith("http://") || url.startsWith("https://")) return url;
+      const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "");
+      const cleanUrl = url.startsWith("/") ? url : `/${url}`;
+      return baseUrl ? `${baseUrl}${cleanUrl}` : cleanUrl;
+    };
+
     // 1. Get from loaded proofingOrder if available
     if (proofingOrder) {
       if (proofingOrder.imageUrl) {
-        urls.push(proofingOrder.imageUrl);
+        urls.push(formatUrl(proofingOrder.imageUrl));
       }
       if (Array.isArray(proofingOrder.images)) {
         proofingOrder.images.forEach((img: any) => {
           if (img?.imageUrl) {
-            urls.push(img.imageUrl);
+            urls.push(formatUrl(img.imageUrl));
           }
         });
       }
@@ -779,12 +787,12 @@ function ProductionTableRow({
     if (urls.length === 0 && Array.isArray((prod as any).proofingOrderImages)) {
       (prod as any).proofingOrderImages.forEach((img: any) => {
         if (img?.imageUrl) {
-          urls.push(img.imageUrl);
+          urls.push(formatUrl(img.imageUrl));
         }
       });
     }
     
-    return Array.from(new Set(urls));
+    return Array.from(new Set(urls.filter(Boolean)));
   }, [proofingOrder, prod]);
 
   React.useEffect(() => {
@@ -1757,8 +1765,7 @@ function ProductionTableRow({
               <div className="flex justify-center p-2">
                 <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
               </div>
-            ) : proofingOrder?.proofingOrderDesigns &&
-              proofingOrder.proofingOrderDesigns.length > 0 ? (
+            ) : prod.proofingOrderId ? (
               <>
                 {/* Universal Status & Edit/Save Buttons for Packaging column */}
                 <div className={cn("pb-2 mb-2", isExpanded && "border-b border-dashed")}>
@@ -1814,7 +1821,7 @@ function ProductionTableRow({
                   </div>
                 </div>
 
-                {isExpanded && (
+                {isExpanded && proofingOrder?.proofingOrderDesigns && (
                   <div className="flex flex-col gap-2 divide-y divide-dashed">
                     {proofingOrder.proofingOrderDesigns
                       .map((pod: any, idx: number) => {
@@ -2088,7 +2095,7 @@ function ProductionTableRow({
                   <StepItem
                     key={step.id}
                     step={step}
-                    isCheckStep={true}
+                    isCheckStep={isExpanded}
                     isEnabled={isPackagingEnabled}
                     showName={packagingSteps.length > 1}
                     defaultPrintQty={defaultPrintQty}
