@@ -759,15 +759,25 @@ function ProductionTableRow({
   }, [searchHighlight, proofingOrder?.code, proofingOrder?.id, prod.id]);
 
   const orderImages = React.useMemo(() => {
-    if (!proofingOrder) return [];
     const urls: string[] = [];
     
-    if (proofingOrder.imageUrl) {
-      urls.push(proofingOrder.imageUrl);
+    // 1. Get from loaded proofingOrder if available
+    if (proofingOrder) {
+      if (proofingOrder.imageUrl) {
+        urls.push(proofingOrder.imageUrl);
+      }
+      if (Array.isArray(proofingOrder.images)) {
+        proofingOrder.images.forEach((img: any) => {
+          if (img?.imageUrl) {
+            urls.push(img.imageUrl);
+          }
+        });
+      }
     }
     
-    if (Array.isArray(proofingOrder.images)) {
-      proofingOrder.images.forEach((img: any) => {
+    // 2. Fallback to batch-loaded images in prod
+    if (urls.length === 0 && Array.isArray((prod as any).proofingOrderImages)) {
+      (prod as any).proofingOrderImages.forEach((img: any) => {
         if (img?.imageUrl) {
           urls.push(img.imageUrl);
         }
@@ -775,7 +785,7 @@ function ProductionTableRow({
     }
     
     return Array.from(new Set(urls));
-  }, [proofingOrder]);
+  }, [proofingOrder, prod]);
 
   React.useEffect(() => {
     setActiveImageIdx(0);
@@ -1209,11 +1219,11 @@ function ProductionTableRow({
             <div className="flex justify-center mt-2">
               <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
             </div>
-          ) : proofingOrder ? (
+          ) : prod.proofingOrderId ? (
             <div className="flex flex-col items-center justify-center mt-2 gap-1 px-1">
               <div className="flex flex-col items-center gap-1 px-2 py-0.5 text-slate-700 dark:text-slate-300">
                 <span className="font-bold text-slate-900 dark:text-slate-100">
-                  {(proofingOrder as any).code || `BB${(proofingOrder as any).id}`}
+                  {prod.proofingOrderCode || (proofingOrder as any)?.code || `BB${prod.proofingOrderId}`}
                 </span>
                 {!isExpanded && orderImages.length > 0 && (
                   <div 
@@ -1339,7 +1349,12 @@ function ProductionTableRow({
               <div className="h-4 bg-muted rounded w-1/2"></div>
               <div className="h-4 bg-muted rounded w-5/6"></div>
             </div>
-          ) : proofingOrder ? (
+          ) : !prod.proofingOrderId ? (
+            <div className="text-sm font-medium text-muted-foreground flex flex-col items-center justify-center p-4 bg-muted/20 border-2 border-dashed rounded-lg">
+              <Package className="w-6 h-6 mb-2 opacity-50" />
+              Không có thông tin bình bài đính kèm
+            </div>
+          ) : (
             <div className="flex flex-col gap-2.5 text-sm">
               {/* 1. Trạng thái IN (Đưa lên đầu cho đồng bộ) */}
               {printStep && (
@@ -1414,7 +1429,7 @@ function ProductionTableRow({
               )}
 
               {/* 4. Thông tin khuôn bế & Kẽm (Buttons + Popovers) */}
-              {isExpanded && (proofingOrder as any).plateExport && (
+              {isExpanded && proofingOrder?.plateExport && (
                 <div className="flex flex-row gap-2 mt-1">
                   <div className="flex flex-col items-center flex-1">
                     <HoverCard>
@@ -1424,7 +1439,7 @@ function ProductionTableRow({
                         </div>
                       </HoverCardTrigger>
                       <HoverCardContent className="w-[250px] p-2 bg-blue-50/95 dark:bg-blue-950/95 border-blue-200/50 dark:border-blue-800/50" align="start">
-                        {[(proofingOrder as any).plateExport]
+                        {[proofingOrder?.plateExport]
                           .filter(Boolean)
                           .map((plateExport: any, i: number) => {
                             const isInHouse = plateExport.productionMethod === "in_house";
@@ -1511,18 +1526,13 @@ function ProductionTableRow({
                     </HoverCard>
                     <span className={cn(
                       "text-[9px] font-bold mt-1 text-center leading-none",
-                      (proofingOrder as any).plateExport.isReceived ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"
+                      proofingOrder?.plateExport?.isReceived ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"
                     )}>
-                      {(proofingOrder as any).plateExport.isReceived ? "Đã nhận kẽm" : "Chưa nhận kẽm"}
+                      {proofingOrder?.plateExport?.isReceived ? "Đã nhận kẽm" : "Chưa nhận kẽm"}
                     </span>
                   </div>
                 </div>
               )}
-            </div>
-          ) : (
-            <div className="text-sm font-medium text-muted-foreground flex flex-col items-center justify-center p-4 bg-muted/20 border-2 border-dashed rounded-lg">
-              <Package className="w-6 h-6 mb-2 opacity-50" />
-              Không có thông tin bình bài đính kèm
             </div>
           )}
         </TableCell>
