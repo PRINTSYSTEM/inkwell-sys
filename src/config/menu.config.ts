@@ -456,6 +456,8 @@ export const MENU_ITEMS: MenuItem[] = [
       ROLE.MANAGER,
       ROLE.PRODUCTION_LEAD,
       ROLE.PRODUCTION,
+      ROLE.ACCOUNTING,
+      ROLE.ACCOUNTING_LEAD,
     ],
   },
   {
@@ -468,6 +470,8 @@ export const MENU_ITEMS: MenuItem[] = [
       ROLE.MANAGER,
       ROLE.PRODUCTION_LEAD,
       ROLE.PRODUCTION,
+      ROLE.ACCOUNTING,
+      ROLE.ACCOUNTING_LEAD,
     ],
   },
   {

@@ -365,11 +365,7 @@ export function CreateMaterialDirectDialog({
       }
     }
 
-    const isRollType =
-      currentFamilyObj?.code?.includes("roll") ||
-      currentFamilyObj?.code?.includes("cuon") ||
-      currentTemplate?.name?.toLowerCase().includes("cuộn") ||
-      currentTemplate?.code?.toLowerCase().includes("cuon");
+
 
     if (!isGroup3) {
       if (width <= 0) {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { DesignItem } from "@/types/proofing";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -80,6 +80,28 @@ export function DesignTable({
     );
   };
 
+  const sortedDesigns = useMemo(() => {
+    return [...designs].sort((a, b) => {
+      const aUrgent = Boolean(
+        (a as any).urgent ||
+          (a as any).isUrgent ||
+          (a as any).rush ||
+          (a as any).isRushDelivery ||
+          (a as any).urgentDelivery,
+      );
+      const bUrgent = Boolean(
+        (b as any).urgent ||
+          (b as any).isUrgent ||
+          (b as any).rush ||
+          (b as any).isRushDelivery ||
+          (b as any).urgentDelivery,
+      );
+      if (aUrgent && !bUrgent) return -1;
+      if (!aUrgent && bUrgent) return 1;
+      return 0;
+    });
+  }, [designs]);
+
   return (
     <>
       <div className="rounded-md border relative">
@@ -106,7 +128,7 @@ export function DesignTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {designs.map((design) => {
+            {sortedDesigns.map((design) => {
               const isSelected = selectedIds.has(design.id);
               const selectable = canSelect(design);
               const isUrgent = Boolean(
@@ -294,9 +316,11 @@ export function DesignTable({
                     className={cn(
                       "h-14 transition-colors relative",
                       isSelectionEnabled && "cursor-pointer",
-                      isSelected &&
-                      "bg-green-100/90 hover:bg-green-200/80 dark:bg-green-900/40 dark:hover:bg-green-900/60 shadow-[inset_4px_0_0_0_#22c55e]",
-                      isSelectionEnabled && !isSelected && selectable && "hover:bg-muted/50",
+                      isSelected
+                        ? "bg-green-100/90 hover:bg-green-200/80 dark:bg-green-900/40 dark:hover:bg-green-900/60 shadow-[inset_4px_0_0_0_#22c55e]"
+                        : isUrgent
+                          ? "bg-red-50/70 hover:bg-red-100/70 dark:bg-red-950/20 dark:hover:bg-red-900/20 text-red-700 dark:text-red-300 shadow-[inset_4px_0_0_0_#ef4444]"
+                          : isSelectionEnabled && selectable && "hover:bg-muted/50",
                       isSelectionEnabled && !selectable &&
                       !isSelected &&
                       "opacity-50 cursor-not-allowed",
@@ -459,13 +483,20 @@ export function DesignTable({
                       </div>
                     </TableCell>
                     <TableCell className="py-3 text-sm">
-                      {deliveryInfo ? (
-                        <div className="text-sm text-muted-foreground">
-                          {deliveryInfo}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">—</span>
-                      )}
+                      <div className="flex flex-col gap-1">
+                        {isUrgent && (
+                          <span className="font-extrabold text-red-600 dark:text-red-500 text-sm">
+                            Gấp
+                          </span>
+                        )}
+                        {deliveryInfo ? (
+                          <div className="text-sm text-muted-foreground">
+                            {deliveryInfo}
+                          </div>
+                        ) : (
+                          !isUrgent && <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="py-3 text-[11px] text-muted-foreground whitespace-nowrap">
                       {design.createdAt ? (

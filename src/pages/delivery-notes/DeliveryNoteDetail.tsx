@@ -557,27 +557,16 @@ export default function DeliveryNoteDetailPage() {
 
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
           <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl font-semibold">
-                {deliveryNote.code || `Phiếu giao hàng #${deliveryNote.id}`}
+            <div className="flex flex-wrap items-center gap-4">
+              <h1 className="text-2xl font-bold tracking-tight text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-3.5 py-1.5 rounded-lg border border-emerald-200 dark:border-emerald-800 flex items-center gap-2 shadow-sm">
+                <Hash className="w-5 h-5 text-emerald-600 dark:text-emerald-500 shrink-0" />
+                <span>Số phiếu:</span>
+                <span className="font-extrabold">{deliveryNote.code || deliveryNote.id}</span>
               </h1>
-              <div className="flex items-center gap-2 rounded-full bg-card/60 px-3 py-1 text-xs shadow-sm border border-border">
+              <div className="flex items-center gap-2 rounded-full bg-card/60 px-3 py-1.5 text-xs shadow-sm border border-border">
                 <span className="text-muted-foreground mr-1">Trạng thái:</span>
                 {getStatusBadge(currentStatus)}
               </div>
-            </div>
-
-            <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-              <span className="flex items-center gap-1.5">
-                <Calendar className="w-4 h-4" />
-                Tạo: {formatDateTime(deliveryNote.createdAt)}
-              </span>
-              {deliveryNote.createdBy && (
-                <span className="flex items-center gap-1.5">
-                  <User className="w-4 h-4" />
-                  {deliveryNote.createdBy.fullName || "—"}
-                </span>
-              )}
             </div>
 
             <div className="flex items-center gap-4 flex-wrap">
@@ -614,22 +603,6 @@ export default function DeliveryNoteDetailPage() {
                     </Button>
                   ));
                 })()}
-              </div>
-
-              {/* Legend for the user to see the full flow */}
-              <div className="hidden xl:flex items-center gap-1 bg-muted/30 px-3 py-1.5 rounded-full border border-border/50">
-                {Object.keys(nextSteps).map((step, idx) => (
-                  <div key={step} className="flex items-center">
-                    <span
-                      className={`text-xs font-medium ${currentStatus === step ? "text-primary font-bold" : "text-muted-foreground"}`}
-                    >
-                      {deliveryNoteStatusLabels[step]}
-                    </span>
-                    {idx < Object.keys(nextSteps).length - 1 && (
-                      <ChevronRight className="w-3 h-3 text-muted-foreground mx-0.5" />
-                    )}
-                  </div>
-                ))}
               </div>
             </div>
           </div>
@@ -756,31 +729,31 @@ export default function DeliveryNoteDetailPage() {
 
       {/* Summary Stats */}
       {hasLines && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Card className="p-4">
-            <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <Card className="p-2 py-2.5 px-3">
+            <div className="text-[11px] text-muted-foreground mb-0.5 flex items-center gap-1">
               <Package className="h-3 w-3" />
               Tổng SL giao
             </div>
-            <div className="text-xl font-bold text-primary">
+            <div className="text-base font-bold text-primary">
               {totalDeliveryQty.toLocaleString("vi-VN")}
             </div>
           </Card>
-          <Card className="p-4">
-            <div className="text-xs text-muted-foreground mb-1">Chờ giao</div>
-            <div className="text-xl font-bold text-blue-500">
+          <Card className="p-2 py-2.5 px-3">
+            <div className="text-[11px] text-muted-foreground mb-0.5">Chờ giao</div>
+            <div className="text-base font-bold text-blue-500">
               {totalPendingLines ?? "—"}
             </div>
           </Card>
-          <Card className="p-4">
-            <div className="text-xs text-muted-foreground mb-1">Đã giao</div>
-            <div className="text-xl font-bold text-green-500">
+          <Card className="p-2 py-2.5 px-3">
+            <div className="text-[11px] text-muted-foreground mb-0.5">Đã giao</div>
+            <div className="text-base font-bold text-green-500">
               {totalDeliveredLines ?? "—"}
             </div>
           </Card>
-          <Card className="p-4">
-            <div className="text-xs text-muted-foreground mb-1">Thất bại</div>
-            <div className="text-xl font-bold text-red-500">
+          <Card className="p-2 py-2.5 px-3">
+            <div className="text-[11px] text-muted-foreground mb-0.5">Thất bại</div>
+            <div className="text-base font-bold text-red-500">
               {totalFailedLines ?? "—"}
             </div>
           </Card>

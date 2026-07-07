@@ -141,12 +141,9 @@ export default function SaleDesignSearch() {
       <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 py-3.5">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100">
+            <h1 className="text-lg font-bold text-slate-900 dark:text-slate-100" >
               Tra cứu thiết kế & Giá
             </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
-              Tìm mẫu thiết kế và xem báo giá đơn vị gần nhất
-            </p>
           </div>
         </div>
       </div>
@@ -257,10 +254,6 @@ export default function SaleDesignSearch() {
           </div>
         ) : designs.length > 0 ? (
           <>
-            <div className="mb-2 text-xs text-slate-500">
-              Tìm thấy <span className="font-semibold">{totalCount}</span> kết
-              quả
-            </div>
 
             <div className="overflow-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded">
               <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
@@ -281,8 +274,8 @@ export default function SaleDesignSearch() {
               <table className="min-w-full text-left text-sm">
                 <thead className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
                   <tr>
-                    <th className="px-4 py-3 text-center w-16">&nbsp;</th>
-                    <th className="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200">Khách hàng</th>
+                    <th className="px-4 py-3 text-center w-16">Hình ảnh&nbsp;</th>
+                    <th className="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 text-center">Khách hàng</th>
                     <th className="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200">Mã thiết kế</th>
                     <th className="px-4 py-3 min-w-[220px] font-semibold text-slate-700 dark:text-slate-200">Tên thiết kế</th>
                     <th className="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200">Loại</th>
@@ -314,7 +307,7 @@ export default function SaleDesignSearch() {
                           )}
                         </button>
                       </td>
-                      <td className="px-4 py-3 align-middle max-w-[250px] truncate font-medium text-slate-800 dark:text-slate-200">
+                      <td className="px-4 py-3 align-middle max-w-[250px] whitespace-normal break-words font-medium text-slate-800 dark:text-slate-200">
                         {design.customer?.name || "—"}
                       </td>
                       <td className="px-4 py-3 align-middle font-mono font-medium text-slate-800 dark:text-slate-200">
@@ -361,8 +354,8 @@ export default function SaleDesignSearch() {
                       <td className="px-4 py-3 align-middle text-slate-500 text-[13px] w-24 max-w-[90px] truncate">
                         {design.createdAt
                           ? new Date(design.createdAt).toLocaleDateString(
-                              "vi-VN",
-                            )
+                            "vi-VN",
+                          )
                           : "—"}
                       </td>
                       <td className="px-4 py-3 align-middle font-bold text-primary text-[15px]">

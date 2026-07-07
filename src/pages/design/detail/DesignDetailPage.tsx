@@ -41,6 +41,7 @@ import {
   useUpdateDesign,
   useReprintDesign,
   useCancelDesign,
+  useMarkDesignUrgent,
 } from "@/hooks/use-design";
 import { useMaterialsByDesignType } from "@/hooks/use-material-type";
 import { ErrorBoundary, ErrorDisplay } from "@/components/ui/error-components";
@@ -76,6 +77,8 @@ import {
   UploadCloud,
   Image as ImageIcon,
   XCircle,
+  Zap,
+  Flame,
 } from "lucide-react";
 
 import {
@@ -348,6 +351,8 @@ export default function DesignDetailPage() {
   const { mutate: addTimeline } = useAddDesignTimelineEntry();
   const reprintDesignMutation = useReprintDesign();
   const cancelDesign = useCancelDesign();
+  const markUrgentMutation = useMarkDesignUrgent();
+  const [markingUrgent, setMarkingUrgent] = useState(false);
 
   const { data: materialsByDesignType = [], isLoading: materialsLoading } =
     useMaterialsByDesignType(
@@ -455,6 +460,19 @@ export default function DesignDetailPage() {
       });
     } catch {
       // handled in hook
+    }
+  };
+
+  const handleMarkUrgent = async () => {
+    if (!designId) return;
+    setMarkingUrgent(true);
+    try {
+      await markUrgentMutation.mutate(designId);
+      refetchDesign();
+    } catch {
+      // handled in hook
+    } finally {
+      setMarkingUrgent(false);
     }
   };
 
@@ -903,6 +921,24 @@ export default function DesignDetailPage() {
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-end space-y-0 pb-2">
                       <div className="flex items-center gap-2">
+                        {design?.isUrgent ? (
+                          <Badge variant="destructive" className="h-8 gap-1.5 px-3 font-semibold text-xs flex items-center bg-red-600 hover:bg-red-600 text-white shadow-md border-red-500">
+                            <Flame className="h-3.5 w-3.5 text-red-200 animate-bounce" />
+                            <span>HÀNG GẤP</span>
+                          </Badge>
+                        ) : (
+                          currentStatus === "confirmed_for_printing" && (
+                            <Button
+                              size="sm"
+                              className="gap-1.5 h-8 font-semibold bg-amber-500 hover:bg-amber-600 text-white shadow-md"
+                              onClick={handleMarkUrgent}
+                              disabled={markingUrgent}
+                            >
+                              <Zap className="h-3.5 w-3.5 text-amber-100" />
+                              <span>Báo Gấp</span>
+                            </Button>
+                          )
+                        )}
                         {canChangeStatus && currentStatus === "confirmed_for_printing" && (
                           <Button
                             size="sm"

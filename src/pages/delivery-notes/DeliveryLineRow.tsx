@@ -141,6 +141,7 @@ export default function DeliveryLineRow({
         data: {
           status: nextStatus,
           actualDeliveredQty: line.deliveryQty ?? line.netQtyTotal ?? undefined,
+          note: line.note ?? undefined,
         },
       });
       setLocalStatus(nextStatus);
