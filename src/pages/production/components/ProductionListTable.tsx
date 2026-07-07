@@ -701,7 +701,7 @@ function ProductionTableRow({
   const { data: defectRecordsData } = useDefectRecordsByProductionOrder(
     prod.id || null,
     undefined,
-    !!prod.id,
+    !!prod.id && isExpanded,
   );
   const defectRecords = defectRecordsData?.items || [];
 
@@ -740,7 +740,7 @@ function ProductionTableRow({
   const { data: proofingOrderData, isLoading: isProofingLoading } =
     useProofingOrder(
       prod.proofingOrderId || null,
-      !!prod.proofingOrderId,
+      !!prod.proofingOrderId && isExpanded,
     );
   const proofingOrder = (proofingOrderData || prod.proofingOrder) as any;
 
