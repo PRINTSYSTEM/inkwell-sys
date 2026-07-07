@@ -25,11 +25,13 @@ export default function PrintPreviewDialog({
   deliveryNote,
   showPrice = false,
 }: PrintPreviewDialogProps) {
-  const [printType, setPrintType] = useState<"A4" | "A5">("A4");
+  const [printType, setPrintType] = useState<"A4" | "A5">("A5");
 
   const lines = deliveryNote.lines || [];
   const today = new Date();
   const dateFormatted = format(today, "'Ngày' dd 'Tháng' MM 'Năm' yyyy", { locale: vi });
+  const dateObj = deliveryNote.deliveryDate ? new Date(deliveryNote.deliveryDate) : new Date();
+  const deliveryDateFormatted = format(dateObj, "dd/MM/yyyy");
 
   const totalDeliveryQty = lines.reduce((sum, l) => sum + (l.deliveryQty || 0), 0);
   const totalScrapQty = lines.reduce((sum, l) => {
@@ -93,28 +95,35 @@ export default function PrintPreviewDialog({
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        width: 150px;
-        padding-left: 20px;
+        width: 120px;
+        padding-left: 0;
         flex-shrink: 0;
       }
       .logo-image {
-        height: 70px;
+        height: 65px;
         width: auto;
         object-fit: contain;
       }
       .company-info {
-        text-align: center;
+        text-align: left;
         flex: 1;
-        padding-right: 24px;
-        font-size: 12px;
-        line-height: 1.45;
+        padding-left: 15px;
+        padding-right: 15px;
+        font-size: 12.5px;
+        line-height: 1.4;
       }
       .company-name {
-        font-size: 13.5px;
+        font-size: 13px;
         font-weight: bold;
         text-transform: uppercase;
         margin-bottom: 3px;
-        letter-spacing: -0.2px;
+      }
+      .delivery-meta {
+        width: 180px;
+        flex-shrink: 0;
+        text-align: right;
+        font-size: 13px;
+        line-height: 1.5;
       }
       .title-container {
         text-align: center;
@@ -231,17 +240,25 @@ export default function PrintPreviewDialog({
           <div className="flex gap-1.5 bg-muted p-1 rounded-md text-xs font-semibold mr-8">
             <Button
               size="sm"
-              variant={printType === "A4" ? "secondary" : "ghost"}
+              variant={printType === "A4" ? "default" : "ghost"}
               onClick={() => setPrintType("A4")}
-              className="h-7 px-3 text-xs"
+              className={`h-7 px-3 text-xs font-semibold transition-all ${
+                printType === "A4"
+                  ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
             >
               Mẫu A4 (Dọc)
             </Button>
             <Button
               size="sm"
-              variant={printType === "A5" ? "secondary" : "ghost"}
+              variant={printType === "A5" ? "default" : "ghost"}
               onClick={() => setPrintType("A5")}
-              className="h-7 px-3 text-xs"
+              className={`h-7 px-3 text-xs font-semibold transition-all ${
+                printType === "A5"
+                  ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
             >
               Mẫu A5 (Ngang)
             </Button>
@@ -261,23 +278,45 @@ export default function PrintPreviewDialog({
           >
             {/* The Print Area */}
             <div id="delivery-note-print-area">
-              {/* Logo & Company info */}
-              <div className="header-container flex items-center justify-between border-b-2 border-black pb-3">
-                <div className="logo-container flex flex-col items-center justify-center w-[150px] pl-5 shrink-0">
+              {/* Logo & Company info & Delivery Meta layout */}
+              <div className="header-container" style={{ display: "flex", alignItems: "center", borderBottom: "2px solid #000", paddingBottom: "10px", marginBottom: "15px" }}>
+                {/* Logo on the left */}
+                <div className="logo-container" style={{ width: "100px", flexShrink: 0, display: "flex", justifyContent: "flex-start" }}>
                   <img
                     src="/images/logo.png"
                     alt="QUANG DAT LOGO"
-                    className="logo-image h-[70px] w-auto object-contain"
+                    className="logo-image"
+                    style={{ height: "60px", width: "auto", objectFit: "contain" }}
                   />
                 </div>
-                <div className="company-info text-center flex-1 pr-6 text-[12px] leading-relaxed">
-                  <div className="company-name text-[13.5px] font-bold uppercase text-stone-900 tracking-tight">
+                
+                {/* Content on the right: Name, Address + Date, Contact + Code */}
+                <div className="company-info" style={{ flex: 1, paddingLeft: "20px", fontSize: "12.5px", lineHeight: "1.4", color: "#000" }}>
+                  {/* Row 1: Company Name */}
+                  <div className="company-name" style={{ fontSize: "13.5px", fontWeight: "bold", textTransform: "uppercase", marginBottom: "2px" }}>
                     CÔNG TY TNHH SẢN XUẤT THƯƠNG MẠI DỊCH VỤ QUỐC TẾ QUANG ĐẠT
                   </div>
-                  <div>43D Ao Đôi, P. Bình Trị Đông A, Q. Bình Tân, TP. Hồ Chí Minh</div>
-                  <div>MST: 0317703989 - Điện thoại: 0906 649 812</div>
+                  
+                  {/* Row 2: Address (left) & Delivery Date (right) */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "2px" }}>
+                    <div>43D Ao Đôi, P. Bình Trị Đông A, Q. Bình Tân, TP. Hồ Chí Minh</div>
+                    <div className="delivery-meta" style={{ whiteSpace: "nowrap", paddingLeft: "15px", fontSize: "13px" }}>
+                      <span style={{ fontWeight: "bold" }}>Ngày giao: </span>
+                      <span>{deliveryDateFormatted}</span>
+                    </div>
+                  </div>
+                  
+                  {/* Row 3: Contact (left) & Document Code (right) */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+                    <div>MST: 0317703989 - Điện thoại: 0906 649 812</div>
+                    <div className="delivery-meta" style={{ whiteSpace: "nowrap", paddingLeft: "15px", fontSize: "13px" }}>
+                      <span style={{ fontWeight: "bold" }}>Số phiếu: </span>
+                      <span style={{ fontWeight: "bold" }}>{deliveryNote.code || deliveryNote.id}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
+
 
               {/* Title Section */}
               <div className="title-container text-center mt-3 mb-2 relative">
@@ -289,21 +328,6 @@ export default function PrintPreviewDialog({
               {/* Client & Address Info */}
               <table style={{ width: "100%", border: "none", marginBottom: "12px", fontSize: "14.5px", lineHeight: "1.5", borderCollapse: "collapse", fontFamily: '"Times New Roman", Times, serif' }}>
                 <tbody>
-                  <tr>
-                    <td colSpan={2} style={{ padding: "4px 0" }}>
-                      <table style={{ width: "100%", border: "none", borderCollapse: "collapse" }}>
-                        <tbody>
-                          <tr>
-                            <td style={{ padding: 0, textAlign: "left", fontStyle: "italic" }}>{dateFormatted}</td>
-                            <td style={{ padding: 0, textAlign: "right" }}>
-                              <span style={{ fontWeight: "bold" }}>Số phiếu: </span>
-                              <span style={{ fontWeight: "900", fontSize: "16px", textDecorationColor: "#a8a29e", textUnderlineOffset: "2px" }}>{deliveryNote.code || deliveryNote.id}</span>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </td>
-                  </tr>
                   <tr>
                     <td style={{ width: "105px", fontWeight: "bold", verticalAlign: "top", padding: "4px 0" }}>Khách hàng:</td>
                     <td style={{ textAlign: "left", fontWeight: "bold", textTransform: "uppercase", padding: "4px 0" }}>{deliveryNote.orders?.[0]?.customerName || "—"}</td>

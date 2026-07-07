@@ -668,6 +668,62 @@ export const useCancelDesign = () => {
   };
 };
 
+// POST /api/designs/{id}/mark-urgent
+export const useMarkDesignUrgent = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    DesignResponse,
+    [number]
+  >(async (id: number) => {
+    const res = await apiRequest.post<DesignResponse>(
+      API_SUFFIX.DESIGN_MARK_URGENT(id),
+      null
+    );
+    return res.data;
+  });
+
+  const mutate = async (id: number) => {
+    try {
+      const result = await execute(id);
+
+      // Invalidate design detail query
+      queryClient.invalidateQueries({
+        queryKey: designKeys.detail(id),
+      });
+
+      // Invalidate general list queries for designs
+      queryClient.invalidateQueries({
+        queryKey: designKeys.all,
+      });
+
+      toast.success("Thành công", {
+        description: "Đã báo gấp thiết kế thành công",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      const msg = error.response?.data?.message || error.message || "Lỗi không xác định";
+      toast.error("Thất bại", {
+        description: msg,
+      });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
+};
+
 
 
 

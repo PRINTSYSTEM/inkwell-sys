@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -50,7 +50,7 @@ export function InventoryViewDialog({
 
   const [materialType, setMaterialType] = useState<"cuon" | "to" | "all">("all");
   const [vendorId, setVendorId] = useState<number | null>(null);
-  const [showOutOfStock, setShowOutOfStock] = useState(false);
+  const [showOutOfStock, setShowOutOfStock] = useState(true);
 
   const { data: vendorsData } = useActiveVendors();
 
@@ -60,19 +60,66 @@ export function InventoryViewDialog({
   }, [debouncedSearch, materialType, vendorId]);
 
   const { data, isLoading, error } = useMaterials({
-    page: page,
-    size: pageSize,
-    search: debouncedSearch.trim() || undefined,
-    type: materialType === "all" ? undefined : materialType,
-    vendorId: vendorId ?? undefined,
+    page: 1,
+    size: 1000,
   });
 
   const stockItems = data?.items || [];
   const totalCount = data?.total ?? 0;
 
-  const filteredItems = showOutOfStock
-    ? stockItems
-    : stockItems.filter((item: any) => (item.currentStock ?? 0) > 0);
+  const filteredItems = useMemo(() => {
+    return stockItems.filter((item: any) => {
+      // 1. Search term filter
+      if (debouncedSearch.trim()) {
+        const term = debouncedSearch.toLowerCase();
+        const code = (item.code || "").toLowerCase();
+        const name = (item.name || "").toLowerCase();
+        const typeName = (item.materialTypeName || "").toLowerCase();
+        const matchSearch =
+          code.includes(term) ||
+          name.includes(term) ||
+          typeName.includes(term) ||
+          String(item.id).includes(term);
+        if (!matchSearch) return false;
+      }
+
+      // 2. Vendor filter
+      if (vendorId !== null && item.vendorId !== vendorId) {
+        return false;
+      }
+
+      // 3. Out of stock filter
+      const quantity = item.currentStock ?? 0;
+      if (!showOutOfStock && quantity <= 0) {
+        return false;
+      }
+
+      // 4. Type filter (cuon / to)
+      if (materialType !== "all") {
+        const unit = (item.unit || "").toLowerCase();
+        const name = (item.name || "").toLowerCase();
+        const typeName = (item.materialTypeName || "").toLowerCase();
+        const itemType = item.type || "";
+
+        const isRoll =
+          itemType === "cuon" ||
+          unit.includes("cuộn") ||
+          unit.includes("cuon") ||
+          unit.includes("mét") ||
+          unit.includes("met") ||
+          unit.includes("m") ||
+          name.includes("cuộn") ||
+          name.includes("cuon") ||
+          typeName.includes("cuộn") ||
+          typeName.includes("cuon");
+
+        if (materialType === "cuon" && !isRoll) return false;
+        if (materialType === "to" && isRoll) return false;
+      }
+
+      return true;
+    });
+  }, [stockItems, debouncedSearch, vendorId, showOutOfStock, materialType]);
 
   const displayedCount = filteredItems.length;
 
@@ -242,13 +289,30 @@ export function InventoryViewDialog({
                               {item.name || "—"}
                             </TableCell>
                             <TableCell className="py-3 text-sm">
-                              {item.type === "cuon" ? (
-                                <Badge variant="secondary" className="text-xs">Cuộn</Badge>
-                              ) : item.type === "to" ? (
-                                <Badge variant="secondary" className="text-xs">Tờ</Badge>
-                              ) : (
-                                "—"
-                              )}
+                              {(() => {
+                                const unit = (item.unit || "").toLowerCase();
+                                const name = (item.name || "").toLowerCase();
+                                const typeName = (item.materialTypeName || "").toLowerCase();
+                                const itemType = item.type || "";
+
+                                const isRoll =
+                                  itemType === "cuon" ||
+                                  unit.includes("cuộn") ||
+                                  unit.includes("cuon") ||
+                                  unit.includes("mét") ||
+                                  unit.includes("met") ||
+                                  unit.includes("m") ||
+                                  name.includes("cuộn") ||
+                                  name.includes("cuon") ||
+                                  typeName.includes("cuộn") ||
+                                  typeName.includes("cuon");
+
+                                return isRoll ? (
+                                  <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">Cuộn</Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">Tờ</Badge>
+                                );
+                              })()}
                             </TableCell>
                             <TableCell className="py-3 text-sm font-medium">
                               {vendorName}

@@ -261,6 +261,31 @@ export default function AccountingOrderDetail() {
     cashReceiptsData?.items?.some((receipt) => receipt.orderId === order?.id) ||
     false;
 
+  const getOrderDocCode = () => {
+    if (order?.invoiceNumber) return order.invoiceNumber;
+    const firstInvoice = invoicesData?.items?.[0];
+    if (firstInvoice?.invoiceNumber) return firstInvoice.invoiceNumber;
+
+    const dateObj = order?.createdAt ? new Date(order.createdAt) : new Date();
+    const month = format(dateObj, "MM");
+    const year = format(dateObj, "yyyy");
+    const orderIdStr = order?.id ? String(order.id).padStart(4, "0") : "0000";
+    
+    let custCode = order?.customer?.code || "";
+    if (!custCode && (order?.customerName || order?.customer?.name)) {
+      const name = order?.customerName || order?.customer?.name || "";
+      const cleanName = name.replace(/\([^)]*\)/g, "").trim();
+      const words = cleanName.split(/\s+/).filter(Boolean);
+      if (words.length >= 2) {
+        custCode = (words[0][0] + words[1][0]).toUpperCase();
+      } else if (words.length === 1) {
+        custCode = words[0].substring(0, 2).toUpperCase();
+      }
+    }
+    
+    return `${month}/${year} BBG/${orderIdStr}${custCode}`;
+  };
+
   // Fetch customer addresses for the address book selection
   const { data: customerAddresses } = useCustomerAddresses(
     order?.customerId || order?.customer?.id || null,
@@ -2672,7 +2697,7 @@ export default function AccountingOrderDetail() {
           {/* Toolbar */}
           <div className="flex items-center justify-between pl-4 pr-12 py-2.5 border-b bg-muted/30 flex-shrink-0">
             <DialogTitle className="text-sm font-semibold text-foreground">
-              Xem trước đơn hàng — <span className="font-mono text-primary">{order?.code}</span>
+              Xem trước đơn hàng — <span className="font-mono text-primary">{getOrderDocCode()}</span>
             </DialogTitle>
             <div className="flex items-center gap-2">
               <Button
@@ -2764,54 +2789,45 @@ export default function AccountingOrderDetail() {
                         Địa chỉ: 43D Ao Đôi, P. Bình Trị Đông A, Q. Bình Tân, TP. Hồ Chí Minh
                       </div>
                       <div style={{ fontSize: "16px" }}>Điện thoại: 0906 649 812 | MST: 0317703989</div>
-                      <div style={{ display: "flex", alignItems: "center", margin: "3px 60px 4px" }}>
-                        <div style={{ flex: 1, height: "1px", backgroundColor: "#aaa" }} />
-                        <span style={{ padding: "0 10px", fontSize: "11px", color: "#999" }}>o0o</span>
-                        <div style={{ flex: 1, height: "1px", backgroundColor: "#aaa" }} />
-                      </div>
-                      <div style={{ fontWeight: "bold", fontSize: "21px", letterSpacing: "4px", textTransform: "uppercase" }}>Đơn đặt hàng</div>
+                      <div style={{ fontWeight: "bold", fontSize: "21px", letterSpacing: "1px", textTransform: "uppercase", marginTop: "4px" }}>Đơn đặt hàng</div>
                     </div>
                   </div>
 
                   {/* Order code & date */}
                   <div style={{ display: "flex", margin: "4px 0 3px", fontSize: "12.5px" }}>
-                    <span>Số {order?.code || "—"}</span>
+                    <span>Số {getOrderDocCode()}</span>
                     <span style={{ marginLeft: "auto", marginRight: "230px" }}>
                       Ngày {format(order?.createdAt ? new Date(order.createdAt) : new Date(), "dd/MM/yyyy", { locale: vi })}
                     </span>
                   </div>
 
-                  {/* Customer info – label left, value right, no border */}
-                  <table style={{ borderCollapse: "collapse", fontSize: "12.5px", marginBottom: "3px", width: "60%" }}>
-                    <tbody>
-                      <tr>
-                        <td style={{ width: "110px", paddingBottom: "2px", verticalAlign: "top" }}>Kính gửi:</td>
-                        <td style={{ fontWeight: "bold", paddingBottom: "2px" }}>{order?.customerName || order?.customer?.name || "—"}</td>
-                      </tr>
-                      <tr>
-                        <td style={{ paddingBottom: "2px", verticalAlign: "top" }}>Địa chỉ:</td>
-                        <td style={{ paddingBottom: "2px" }}>{order?.customerAddress || order?.customer?.address || "—"}</td>
-                      </tr>
-                      <tr>
-                        <td style={{ paddingBottom: "2px", verticalAlign: "top" }}>ĐC giao hàng:</td>
-                        <td style={{ paddingBottom: "2px" }}>{order?.deliveryAddress || order?.customer?.address || "—"}</td>
-                      </tr>
-                      <tr>
-                        <td style={{ paddingBottom: "2px" }}>Email:</td>
-                        <td style={{ paddingBottom: "2px" }}>{order?.customerEmail || order?.customer?.email || ""}</td>
-                      </tr>
-                      <tr>
-                        <td>Điện thoại:</td>
-                        <td>{order?.customerPhone || order?.customer?.phone || "—"}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-
-                  {/* Bank info */}
-                  <div style={{ fontWeight: "bold", fontSize: "12.5px", marginBottom: "2px" }}>
-                    STK: 63898698 – Tại Ngân hàng ACB – CN Phú Lâm
+                  {/* Customer info – flowing inline text instead of table columns */}
+                  <div style={{ fontSize: "12.5px", marginBottom: "4px", lineHeight: "1.4" }}>
+                    <div style={{ marginBottom: "2px" }}>
+                      <span>Kính gửi: </span>
+                      <span style={{ fontWeight: "bold" }}>{order?.customerName || order?.customer?.name || "—"}</span>
+                    </div>
+                    <div style={{ marginBottom: "2px" }}>
+                      <span>Địa chỉ: </span>
+                      <span>{order?.customerAddress || order?.customer?.address || "—"}</span>
+                    </div>
+                    <div style={{ marginBottom: "2px" }}>
+                      <span>ĐC giao hàng: </span>
+                      <span>{order?.deliveryAddress || order?.customer?.address || "—"}</span>
+                    </div>
+                    <div style={{ display: "flex", marginBottom: "2px" }}>
+                      <div>
+                        <span>Email: </span>
+                        <span>{order?.customerEmail || order?.customer?.email || ""}</span>
+                      </div>
+                      <div style={{ marginLeft: "auto", marginRight: "230px" }}>
+                        <span>Điện thoại: </span>
+                        <span>{order?.customerPhone || order?.customer?.phone || "—"}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div style={{ marginBottom: "4px", fontStyle: "italic", fontSize: "11.5px", textDecoration: "underline" }}>
+
+                  <div style={{ marginBottom: "4px", fontStyle: "italic", fontSize: "11.5px" }}>
                     Căn cứ vào yêu cầu của quý khách. Chúng tôi trân trọng báo giá sản phẩm theo danh mục như sau:
                   </div>
 
@@ -2819,14 +2835,15 @@ export default function AccountingOrderDetail() {
                   <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11.5px", marginBottom: "0", tableLayout: "fixed" }}>
                     <colgroup>
                       <col style={{ width: "32px" }} />
-                      <col style={{ width: "160px" }} />
+                      <col style={{ width: "140px" }} />
                       <col />
                       <col style={{ width: "80px" }} />
-                      <col style={{ width: "68px" }} />
-                      <col style={{ width: "40px" }} />
+                      <col style={{ width: "36px" }} />
+                      <col style={{ width: "58px" }} />
+                      <col style={{ width: "70px" }} />
                       <col style={{ width: "80px" }} />
-                      <col style={{ width: "88px" }} />
-                      <col style={{ width: "96px" }} />
+                      <col style={{ width: "80px" }} />
+                      <col style={{ width: "90px" }} />
                     </colgroup>
                     <thead>
                       <tr style={{ background: "#f2f2f2" }}>
@@ -2834,11 +2851,12 @@ export default function AccountingOrderDetail() {
                         <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>TÊN HÀNG HÓA</th>
                         <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>CHI TIẾT</th>
                         <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>KÍCH THƯỚC (mm)</th>
-                        <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>SỐ LƯỢNG</th>
                         <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>ĐVT</th>
-                        <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>HÌNH ẢNH</th>
-                        <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>ĐƠN GIÁ (ĐỒNG)</th>
+                        <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>SỐ LƯỢNG</th>
+                        <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>ĐƠN GIÁ<br />(ĐỒNG)</th>
                         <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>THÀNH TIỀN</th>
+                        <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>THUẾ<br />VAT<br />8%</th>
+                        <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>TỔNG CỘNG</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2846,6 +2864,8 @@ export default function AccountingOrderDetail() {
                         const unitPrice = item.unitPrice || 0;
                         const qty = item.quantity || 0;
                         const lineTotal = unitPrice * qty;
+                        const lineVat = Math.round(lineTotal * 0.08);
+                        const lineGrandTotal = lineTotal + lineVat;
                         const detail = [
                           item.design?.designType?.name,
                           item.design?.materialType?.name,
@@ -2855,7 +2875,15 @@ export default function AccountingOrderDetail() {
                           <tr key={item.id}>
                             <td style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center" }}>{idx + 1}</td>
                             <td style={{ border: "1px solid #333", padding: "5px 6px", textAlign: "center", wordBreak: "break-word" }}>
-                              {item.design?.designName || item.design?.code || "—"}
+                              <div>{item.design?.designName || item.design?.code || "—"}</div>
+                              {item.design?.designImageUrl && (
+                                <img
+                                  src={item.design.designImageUrl.replace("https://developer.quangdatgroup.com/uploads", "/uploads")}
+                                  alt=""
+                                  crossOrigin="anonymous"
+                                  style={{ width: "64px", height: "44px", objectFit: "cover", display: "block", margin: "4px auto 0" }}
+                                />
+                              )}
                             </td>
                             <td style={{ border: "1px solid #333", padding: "5px 6px", textAlign: "center", wordBreak: "break-word" }}>
                               {detail || "—"}
@@ -2863,19 +2891,9 @@ export default function AccountingOrderDetail() {
                             <td style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center" }}>
                               {item.design?.dimensions || "—"}
                             </td>
+                            <td style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center" }}>Bộ</td>
                             <td style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center" }}>
                               {qty.toLocaleString("vi-VN")}
-                            </td>
-                            <td style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center" }}>Bộ</td>
-                            <td style={{ border: "1px solid #333", padding: "4px 3px", textAlign: "center" }}>
-                              {item.design?.designImageUrl ? (
-                                <img
-                                  src={item.design.designImageUrl.replace("https://developer.quangdatgroup.com/uploads", "/uploads")}
-                                  alt=""
-                                  crossOrigin="anonymous"
-                                  style={{ width: "64px", height: "44px", objectFit: "cover", display: "block", margin: "0 auto" }}
-                                />
-                              ) : ""}
                             </td>
                             <td style={{ border: "1px solid #333", padding: "5px 6px", textAlign: "right" }}>
                               {unitPrice.toLocaleString("vi-VN")}
@@ -2883,30 +2901,20 @@ export default function AccountingOrderDetail() {
                             <td style={{ border: "1px solid #333", padding: "5px 6px", textAlign: "right", fontWeight: "bold" }}>
                               {lineTotal.toLocaleString("vi-VN")}
                             </td>
+                            <td style={{ border: "1px solid #333", padding: "5px 6px", textAlign: "right" }}>
+                              {lineVat.toLocaleString("vi-VN")}
+                            </td>
+                            <td style={{ border: "1px solid #333", padding: "5px 6px", textAlign: "right", fontWeight: "bold" }}>
+                              {lineGrandTotal.toLocaleString("vi-VN")}
+                            </td>
                           </tr>
                         );
                       })}
                     </tbody>
                     <tfoot>
                       <tr>
-                        <td colSpan={8} style={{ border: "1px solid #333", padding: "4px 10px", textAlign: "right", fontWeight: "bold" }}>
+                        <td colSpan={9} style={{ border: "1px solid #333", padding: "4px 10px", textAlign: "center", fontWeight: "bold" }}>
                           CỘNG TIỀN HÀNG
-                        </td>
-                        <td style={{ border: "1px solid #333", padding: "4px 6px", textAlign: "right", fontWeight: "bold" }}>
-                          {(order?.totalAmount || 0).toLocaleString("vi-VN")}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td colSpan={8} style={{ border: "1px solid #333", padding: "4px 10px", textAlign: "right" }}>
-                          TIỀN THUẾ VAT 8%
-                        </td>
-                        <td style={{ border: "1px solid #333", padding: "4px 6px", textAlign: "right" }}>
-                          {Math.round((order?.totalAmount || 0) * 0.08).toLocaleString("vi-VN")}
-                        </td>
-                      </tr>
-                      <tr>
-                        <td colSpan={8} style={{ border: "1px solid #333", padding: "4px 10px", textAlign: "right", fontWeight: "bold" }}>
-                          TỔNG CỘNG TIỀN THANH TOÁN
                         </td>
                         <td style={{ border: "1px solid #333", padding: "4px 6px", textAlign: "right", fontWeight: "bold" }}>
                           {Math.round((order?.totalAmount || 0) * 1.08).toLocaleString("vi-VN")}
@@ -2925,7 +2933,6 @@ export default function AccountingOrderDetail() {
                   <div style={{ fontSize: "11px", lineHeight: 1.6 }}>
                     {/* <div>* Đơn giá trên chưa bao gồm VAT 8%</div> */}
                     <div>* Số lượng giao hàng: +-10%</div>
-                    <div>* Thời gian giao hàng: nhận, decal từ 4-7 ngày; túi từ 6-8 ngày kể từ ngày chốt in (trừ ngày lễ, chủ nhật và ngày duyệt mẫu)</div>
                     {order?.note && <div>* Ghi chú: {order.note}</div>}
                     <div style={{ color: "#cc0000", fontWeight: "bold", marginTop: "2px" }}>
                       *Khách hàng vui lòng kiểm tra kỹ nội dung file và pháp lý, chính tả, bản in thứ (nếu có), thiết kế, kích thước, và các yếu tố kỹ thuật khác trước khi in hàng loạt.
