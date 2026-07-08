@@ -1,8 +1,6 @@
 import { Helmet } from "react-helmet-async";
 import { useMemo, useState, useRef, useEffect } from "react";
 import { FileText, CheckCircle } from "lucide-react";
-import { useOrdersForAccounting } from "@/hooks/use-order";
-import type { OrderResponse } from "@/Schema/order.schema";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -47,7 +45,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TableSkeleton } from "@/components/ui/skeleton-components";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { useInvoices, useExportInvoice } from "@/hooks/use-invoice";
+import { useInvoices, useExportInvoice, useInvoiceSummaryStats } from "@/hooks/use-invoice";
 import { formatCurrency } from "@/lib/status-utils";
 import { CreateInvoiceFromLinesDialog } from "@/components/accounting";
 import { ROUTE_PATHS } from "@/constants";
@@ -68,7 +66,7 @@ function CreatedInvoicesTab() {
   const [isCreateFromLinesDialogOpen, setIsCreateFromLinesDialogOpen] =
     useState(false);
   const tableContainerRef = useRef<HTMLDivElement>(null);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   const {
     data: invoicesData,
@@ -106,11 +104,11 @@ function CreatedInvoicesTab() {
     }
   }, [currentPage, totalPages, invoicesData]);
 
-  // Reset to page 1 when filters change
+  // Reset to page 1 when filters or page size change
   useEffect(() => {
     setCurrentPage(1);
     setPageInput("1");
-  }, [searchQuery, statusFilter]);
+  }, [searchQuery, statusFilter, itemsPerPage]);
 
   // Scroll to top when page changes
   useEffect(() => {
@@ -174,7 +172,7 @@ function CreatedInvoicesTab() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Error Alert */}
       {isError && (
         <Alert
@@ -243,8 +241,8 @@ function CreatedInvoicesTab() {
         <div>
           Hiển thị{" "}
           <span className="font-bold text-stone-850 dark:text-stone-200">
-            {totalItems > 0 
-              ? `${(currentPage - 1) * itemsPerPage + 1}–${Math.min(currentPage * itemsPerPage, totalItems)}` 
+            {totalItems > 0
+              ? `${(currentPage - 1) * itemsPerPage + 1}–${Math.min(currentPage * itemsPerPage, totalItems)}`
               : "0"}
           </span>{" "}
           / <span className="font-bold text-stone-850 dark:text-stone-200">{totalItems}</span> hóa đơn
@@ -284,8 +282,8 @@ function CreatedInvoicesTab() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow
-                    key={i}
-                    className="border-stone-100 dark:border-stone-850"
+                      key={i}
+                      className="border-stone-100 dark:border-stone-850"
                   >
                     {Array.from({ length: 6 }).map((_, j) => (
                       <TableCell key={j} className={j === 0 ? "pl-6" : j === 5 ? "pr-6" : ""}>
@@ -398,33 +396,55 @@ function CreatedInvoicesTab() {
       </Card>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="px-4 py-3 border border-stone-200 dark:border-stone-800 rounded-xl bg-white dark:bg-stone-900 flex items-center justify-between flex-wrap gap-4 shadow-xs mt-3">
+      {totalItems > 0 && (
+        <div className="px-4 py-3 border border-stone-200 dark:border-stone-800 rounded-xl bg-white dark:bg-stone-900 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xs mt-3">
           <div className="text-xs text-stone-500 font-medium">
-             Hiển thị <span className="font-bold text-stone-850 dark:text-stone-200">{(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, totalItems)}</span> trong tổng số <span className="font-bold text-stone-850 dark:text-stone-200">{totalItems}</span> hóa đơn
+            Hiển thị <span className="font-bold text-stone-850 dark:text-stone-200">{(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, totalItems)}</span> trong tổng số <span className="font-bold text-stone-850 dark:text-stone-200">{totalItems}</span> hóa đơn
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handlePreviousPage}
-              disabled={currentPage === 1 || isLoading}
-              className="h-8 w-8 p-0 border-stone-200"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <div className="text-xs font-semibold bg-stone-50 border px-3 py-1.5 rounded-md min-w-[80px] text-center dark:bg-stone-800 dark:border-stone-700">
-              Trang {currentPage} / {totalPages}
+          
+          <div className="flex items-center gap-6 flex-wrap">
+            {/* Page Size Selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-stone-500 font-medium whitespace-nowrap">Số dòng mỗi trang:</span>
+              <Select
+                value={itemsPerPage.toString()}
+                onValueChange={(val) => setItemsPerPage(Number(val))}
+              >
+                <SelectTrigger className="h-8 w-[70px] border-stone-200 dark:border-stone-800 rounded-lg text-xs">
+                  <SelectValue placeholder="10" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleNextPage}
-              disabled={currentPage === totalPages || isLoading}
-              className="h-8 w-8 p-0 border-stone-200"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+
+            {/* Navigation buttons */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePreviousPage}
+                disabled={currentPage === 1 || isLoading}
+                className="h-9 w-9 p-0 border-stone-200 dark:border-stone-800 hover:shadow-sm hover:border-primary/45 hover:text-primary transition-all duration-200 rounded-lg"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="text-xs font-bold bg-stone-50 dark:bg-stone-800 dark:border-stone-700 border px-3.5 py-2 rounded-lg min-w-[90px] text-center">
+                Trang {currentPage} / {totalPages}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNextPage}
+                disabled={currentPage === totalPages || isLoading}
+                className="h-9 w-9 p-0 border-stone-200 dark:border-stone-800 hover:shadow-sm hover:border-primary/45 hover:text-primary transition-all duration-200 rounded-lg"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       )}
@@ -439,46 +459,15 @@ function CreatedInvoicesTab() {
 }
 
 export default function InvoicePage() {
-  // Fetch not issued orders for stats
-  const { data: notIssuedOrders } = useOrdersForAccounting({
-    pageNumber: 1,
-    pageSize: 1,
-    filterType: "invoice",
-    status: "not_issued",
-  });
-
-  // Calculate start and end of today in ISO string
-  const { startOfTodayStr, endOfTodayStr } = useMemo(() => {
-    const today = new Date();
-    const start = new Date(today);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(today);
-    end.setHours(23, 59, 59, 999);
-    return {
-      startOfTodayStr: start.toISOString(),
-      endOfTodayStr: end.toISOString(),
-    };
-  }, []);
-
-  // Fetch issued invoices today for stats
-  const { data: issuedTodayInvoices } = useInvoices({
-    pageNumber: 1,
-    pageSize: 1,
-    status: "issued",
-    FromDate: startOfTodayStr,
-    ToDate: endOfTodayStr,
-    // Add camelCase versions to ensure compatibility with useInvoices hook normalizer
-    fromDate: startOfTodayStr,
-    toDate: endOfTodayStr,
-  } as any);
+  const { data: statsData } = useInvoiceSummaryStats();
 
   // Summary stats
   const summaryStats = useMemo(() => {
     return {
-      notIssued: notIssuedOrders?.total || 0,
-      issuedToday: issuedTodayInvoices?.total || 0,
+      notIssued: statsData?.pendingInvoiceCount ?? 0,
+      issuedToday: statsData?.issuedTodayCount ?? 0,
     };
-  }, [notIssuedOrders?.total, issuedTodayInvoices?.total]);
+  }, [statsData]);
 
   return (
     <>
@@ -492,55 +481,46 @@ export default function InvoicePage() {
 
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">
-              Hóa đơn
-            </h1>
-            <p className="text-sm text-stone-500 mt-1">
-              Theo dõi tình trạng hóa đơn, xuất hóa đơn và quản lý công nợ.
-            </p>
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <h1 className="text-2xl font-bold tracking-tight">
+            Hóa đơn
+          </h1>
+
+          <div className="flex gap-3">
+            <Card className="w-44 border-0 shadow-sm">
+              <CardContent className="flex items-center gap-3 p-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-50">
+                  <FileText className="h-4 w-4 text-amber-500" />
+                </div>
+
+                <div>
+                  <p className="text-xs text-muted-foreground">
+                    Chưa xuất HĐ
+                  </p>
+                  <p className="text-lg font-bold">
+                    {summaryStats.notIssued}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="w-44 border-0 shadow-sm">
+              <CardContent className="flex items-center gap-3 p-3">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50">
+                  <CheckCircle className="h-4 w-4 text-emerald-500" />
+                </div>
+
+                <div>
+                  <p className="text-xs text-muted-foreground">
+                    Xuất hôm nay
+                  </p>
+                  <p className="text-lg font-bold">
+                    {summaryStats.issuedToday}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 max-w-md">
-          <Card className="border-0 shadow-sm bg-white dark:bg-stone-900">
-            <CardContent className="p-2.5 flex items-center gap-2.5">
-              <div className="h-7 w-7 rounded-full bg-amber-50 dark:bg-amber-950/20 flex items-center justify-center shrink-0">
-                <FileText className="h-3.5 w-3.5 text-amber-500" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
-                  Chưa xuất HĐ
-                </p>
-                <p className="text-sm sm:text-base font-bold mt-0.5 leading-none text-stone-900 dark:text-stone-50">
-                  {summaryStats.notIssued}
-                </p>
-                <p className="text-[9px] text-muted-foreground font-medium mt-0.5 leading-none truncate">
-                  Cần xuất hóa đơn
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-sm bg-white dark:bg-stone-900">
-            <CardContent className="p-2.5 flex items-center gap-2.5 flex-row">
-              <div className="h-7 w-7 rounded-full bg-emerald-50 dark:bg-emerald-950/20 flex items-center justify-center shrink-0">
-                <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
-                  Xuất hôm nay
-                </p>
-                <p className="text-sm sm:text-base font-bold mt-0.5 leading-none text-stone-900 dark:text-stone-50">
-                  {summaryStats.issuedToday}
-                </p>
-                <p className="text-[9px] text-muted-foreground font-medium mt-0.5 leading-none truncate">
-                  Đã hoàn tất
-                </p>
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
         <CreatedInvoicesTab />

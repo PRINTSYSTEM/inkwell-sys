@@ -18,7 +18,9 @@ import {
 
 // ===== InvoiceItemResponse =====
 export const InvoiceItemResponseSchema =
-  GenInvoiceItemResponseSchema.passthrough();
+  GenInvoiceItemResponseSchema.extend({
+    dimensions: z.string().nullable().optional(),
+  }).passthrough();
 export type InvoiceItemResponse = z.infer<typeof InvoiceItemResponseSchema>;
 
 // ===== InvoiceOrderResponse =====
@@ -66,7 +68,9 @@ export type UpdateInvoiceRequest = z.infer<typeof UpdateInvoiceRequestSchema>;
 
 // ===== BillableItemResponse =====
 export const BillableItemResponseSchema =
-  GenBillableItemResponseSchema.passthrough();
+  GenBillableItemResponseSchema.extend({
+    dimensions: z.string().nullable().optional(),
+  }).passthrough();
 export type BillableItemResponse = z.infer<typeof BillableItemResponseSchema>;
 
 // ===== InvoiceLineInput =====

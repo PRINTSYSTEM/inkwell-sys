@@ -50,6 +50,7 @@ export default function DeliveryLinesCard({
                 <TableRow className="bg-muted/30">
                   <TableHead className="pl-4">Mã hàng / Đơn</TableHead>
                   <TableHead>Sản phẩm</TableHead>
+                  <TableHead>Mã bài</TableHead>
                   <TableHead>Ghi chú</TableHead>
                   <TableHead className="text-right">SL đặt hàng</TableHead>
                   <TableHead className="text-right">SL giao</TableHead>

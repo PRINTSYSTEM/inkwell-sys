@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/status-utils";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -22,10 +22,113 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronRight, XCircle, Loader2, Image as ImageIcon, RotateCcw, FileEdit, Check, X } from "lucide-react";
+import { ChevronRight, XCircle, Loader2, Image as ImageIcon, RotateCcw, FileEdit, Check, X, ExternalLink } from "lucide-react";
 import { useUpdateDeliveryLineResult, useFailureReasons } from "@/hooks/use-delivery-note";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { Input } from "@/components/ui/input";
+import { Link } from "react-router-dom";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import { useProductionOrders } from "@/hooks/use-production";
+
+interface ProofingCodeProps {
+  code: string;
+}
+
+function ProofingCodeWithProductions({ code }: ProofingCodeProps) {
+  const match = code.match(/\d+/);
+  const proofingOrderId = match ? parseInt(match[0], 10) : null;
+
+  const { data: productionsResp, isLoading } = useProductionOrders(
+    proofingOrderId ? { proofingOrderId, pageSize: 50 } : undefined
+  );
+
+  const productions = useMemo(() => {
+    if (!productionsResp) return [];
+    if (Array.isArray(productionsResp)) return productionsResp;
+    if (typeof productionsResp === "object" && "items" in productionsResp) {
+      return (productionsResp.items || []) as any[];
+    }
+    return [];
+  }, [productionsResp]);
+
+  if (!proofingOrderId) {
+    return <span className="font-extrabold text-amber-600 dark:text-amber-400 font-mono">{code}</span>;
+  }
+
+  return (
+    <HoverCard openDelay={200} closeDelay={150}>
+      <HoverCardTrigger asChild>
+        <Link
+          to={`/delivery-notes?tab=completed-qc&search=${code}`}
+          className="font-extrabold text-amber-600 dark:text-amber-400 font-mono hover:underline inline-flex items-center gap-0.5 cursor-pointer"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {code}
+          <ExternalLink className="h-3.5 w-3.5 inline opacity-70" />
+        </Link>
+      </HoverCardTrigger>
+      <HoverCardContent 
+        className="w-80 p-3 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-lg rounded-lg text-left"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="space-y-2">
+          <div className="font-bold text-xs text-stone-500 uppercase tracking-wider">
+            Lệnh sản xuất liên quan ({code})
+          </div>
+          {isLoading ? (
+            <div className="flex items-center gap-2 text-stone-400 text-xs py-1">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Đang tải lệnh sản xuất...
+            </div>
+          ) : productions.length === 0 ? (
+            <div className="text-stone-400 text-xs py-1 italic">
+              Chưa có lệnh sản xuất nào cho bài này
+            </div>
+          ) : (
+            <div className="divide-y divide-stone-100 dark:divide-stone-800 max-h-48 overflow-y-auto pr-1">
+              {productions.map((prod: any) => (
+                <div key={prod.id} className="py-2 first:pt-0 last:pb-0 flex flex-col gap-1 text-[11px]">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-stone-500">Mã lệnh:</span>
+                    <Link
+                      to={`/productions/${prod.id}`}
+                      className="font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5"
+                    >
+                      PO{String(prod.id).padStart(4, '0')}
+                      <ExternalLink className="h-2.5 w-2.5" />
+                    </Link>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-stone-500">Người phụ trách:</span>
+                    <span className="font-medium text-stone-700 dark:text-stone-300">
+                      {prod.productionLeadName || "—"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-stone-500">Tiến độ / SL sản xuất:</span>
+                    <span className="font-bold text-stone-800 dark:text-stone-200">
+                      {prod.progressPercent || 0}% ({prod.producedQty || 0} tờ)
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-stone-500">Trạng thái:</span>
+                    <span className="font-semibold text-stone-700 dark:text-stone-300">
+                      {prod.status || "—"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </HoverCardContent>
+    </HoverCard>
+  );
+}
 
 // ── Status display ──────────────────────────────────────────────────────────
 
@@ -234,6 +337,19 @@ export default function DeliveryLineRow({
           <div className="text-sm font-medium line-clamp-2">
             {line.designName || "—"}
           </div>
+        </TableCell>
+
+        {/* Mã bài */}
+        <TableCell>
+          {line.proofingOrderCodes && line.proofingOrderCodes.length > 0 ? (
+            <div className="flex flex-wrap gap-1">
+              {line.proofingOrderCodes.map((code: string) => (
+                <ProofingCodeWithProductions key={code} code={code} />
+              ))}
+            </div>
+          ) : (
+            <span className="text-muted-foreground">—</span>
+          )}
         </TableCell>
 
         {/* Ghi chú */}

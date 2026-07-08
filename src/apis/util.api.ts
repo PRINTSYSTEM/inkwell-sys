@@ -73,6 +73,7 @@ export const API_SUFFIX = {
   // ========== INVOICE ==========
   // Note: GET /invoices (list) may not be defined in OpenAPI schema yet
   INVOICES: "/invoices",
+  INVOICE_SUMMARY_STATS: "/invoices/summary-stats",
   INVOICE_BY_ID: (id: number) => `/invoices/${id}`,
   INVOICE_BY_ORDER: (orderId: number) => `/invoices/order/${orderId}`, // Legacy: GET returns string (URL)
   INVOICES_BY_ORDER: (orderId: number) => `/invoices/by-order/${orderId}`, // GET with pagination
@@ -109,6 +110,7 @@ export const API_SUFFIX = {
   //     name
   //   )}`,
   CUSTOMER_DEBT_HISTORY: (id: number) => `/customers/${id}/debt-history`,
+  CUSTOMER_DEBT_STATEMENT: (id: number) => `/customers/${id}/debt-statement`,
   CUSTOMER_MONTHLY_DEBT: (id: number) => `/customers/${id}/monthly-debt`,
   CUSTOMER_DEBT_SUMMARY: (id: number) => `/customers/${id}/debt-summary`,
   CUSTOMER_STATISTICS: (id: number) => `/customers/${id}/statistics`,

@@ -272,3 +272,35 @@ export type CustomerFavoriteStatsResponse = z.infer<
   typeof CustomerFavoriteStatsResponseSchema
 >;
 
+// ===== CustomerDebtStatementResponse =====
+export const DebtStatementItemSchema = z.object({
+  id: z.number().int().optional(),
+  date: z.string().optional(),
+  deliveryNoteCode: z.string().nullable().optional(),
+  invoiceDate: z.string().nullable().optional(),
+  invoiceCode: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  quantity: z.number().nullable().optional(),
+  unitPrice: z.number().nullable().optional(),
+  increaseAmount: z.number().optional(),
+  decreaseAmount: z.number().optional(),
+  runningBalance: z.number().optional(),
+  notes: z.string().nullable().optional(),
+});
+export type DebtStatementItem = z.infer<typeof DebtStatementItemSchema>;
+
+export const CustomerDebtStatementResponseSchema = z.object({
+  customerId: z.number().int(),
+  customerName: z.string().nullable().optional(),
+  month: z.number().int(),
+  year: z.number().int(),
+  beginningBalance: z.number(),
+  totalIncrease: z.number(),
+  totalDecrease: z.number(),
+  endingBalance: z.number(),
+  items: z.array(DebtStatementItemSchema),
+});
+export type CustomerDebtStatementResponse = z.infer<
+  typeof CustomerDebtStatementResponseSchema
+>;
+

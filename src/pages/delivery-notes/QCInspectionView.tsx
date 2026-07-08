@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { useDebounce } from "use-debounce";
 import {
@@ -811,9 +812,34 @@ interface QCInspectionViewProps {
 }
 
 export function QCInspectionView({ tab }: QCInspectionViewProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [currentPage, setCurrentPage] = useState(1);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(() => {
+    return searchParams.get("search") || "";
+  });
   const [debouncedSearch] = useDebounce(searchQuery, 400);
+
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    setSearchParams(
+      (prev) => {
+        if (val.trim()) {
+          prev.set("search", val.trim());
+        } else {
+          prev.delete("search");
+        }
+        return prev;
+      },
+      { replace: true }
+    );
+  };
+
+  useEffect(() => {
+    const searchVal = searchParams.get("search") || "";
+    if (searchVal !== searchQuery) {
+      setSearchQuery(searchVal);
+    }
+  }, [searchParams, searchQuery]);
 
   const queryParams = useMemo(() => {
     const params: any = {
@@ -822,7 +848,12 @@ export function QCInspectionView({ tab }: QCInspectionViewProps) {
       tab: tab,
     };
     if (debouncedSearch.trim()) {
-      params.search = debouncedSearch.trim();
+      const isPrepressCode = /^\s*[a-zA-Z]*\d+\s*$/.test(debouncedSearch);
+      if (isPrepressCode) {
+        params.proofingOrderCode = debouncedSearch.trim();
+      } else {
+        params.search = debouncedSearch.trim();
+      }
     }
     return params;
   }, [currentPage, tab, debouncedSearch]);
@@ -862,7 +893,7 @@ export function QCInspectionView({ tab }: QCInspectionViewProps) {
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Tìm theo mã bài, tên khách hàng..."
             className="pl-9 h-9"
           />

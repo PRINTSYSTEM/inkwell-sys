@@ -71,6 +71,7 @@ import {
   useExportDeliveryNotePDF,
   useRecreateDeliveryNote,
   useUpdateDeliveryLineResult,
+  useUpdateDeliveryNote,
 } from "@/hooks/use-delivery-note";
 import {
   useCreateReturnNote,
@@ -178,6 +179,28 @@ export default function DeliveryNoteDetailPage() {
   const exportPDFMutation = useExportDeliveryNotePDF();
   const recreateMutation = useRecreateDeliveryNote();
   const updateLineResultMutation = useUpdateDeliveryLineResult();
+  const updateDeliveryNoteMutation = useUpdateDeliveryNote();
+
+  const [isEditingCode, setIsEditingCode] = useState(false);
+  const [editCodeValue, setEditCodeValue] = useState("");
+
+  const handleStartEditCode = () => {
+    setEditCodeValue(deliveryNote?.code || "");
+    setIsEditingCode(true);
+  };
+
+  const handleSaveCode = async () => {
+    if (!editCodeValue.trim()) return;
+    try {
+      await updateDeliveryNoteMutation.mutateAsync({
+        id: deliveryNoteId,
+        data: { code: editCodeValue.trim() },
+      });
+      setIsEditingCode(false);
+    } catch (e) {
+      // Handled by hook
+    }
+  };
 
   // Return Notes states and hooks
   const [isReturnDialogOpen, setIsReturnDialogOpen] = useState(false);
@@ -561,7 +584,50 @@ export default function DeliveryNoteDetailPage() {
               <h1 className="text-2xl font-bold tracking-tight text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-3.5 py-1.5 rounded-lg border border-emerald-200 dark:border-emerald-800 flex items-center gap-2 shadow-sm">
                 <Hash className="w-5 h-5 text-emerald-600 dark:text-emerald-500 shrink-0" />
                 <span>Số phiếu:</span>
-                <span className="font-extrabold">{deliveryNote.code || deliveryNote.id}</span>
+                {isEditingCode ? (
+                  <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="text"
+                      value={editCodeValue}
+                      onChange={(e) => setEditCodeValue(e.target.value)}
+                      className="bg-background border border-emerald-300 rounded px-1.5 py-0.5 text-sm font-extrabold text-foreground focus:outline-none focus:ring-1 focus:ring-emerald-500 w-28 h-7"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") handleSaveCode();
+                        if (e.key === "Escape") setIsEditingCode(false);
+                      }}
+                      autoFocus
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100"
+                      onClick={handleSaveCode}
+                    >
+                      <Check className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-red-500 hover:text-red-650 hover:bg-red-50"
+                      onClick={() => setIsEditingCode(false)}
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-extrabold">{deliveryNote.code || deliveryNote.id}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700 rounded-full"
+                      onClick={handleStartEditCode}
+                      title="Sửa số phiếu"
+                    >
+                      <FileEdit className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                )}
               </h1>
               <div className="flex items-center gap-2 rounded-full bg-card/60 px-3 py-1.5 text-xs shadow-sm border border-border">
                 <span className="text-muted-foreground mr-1">Trạng thái:</span>

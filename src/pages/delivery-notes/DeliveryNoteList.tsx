@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import React, { useState, useMemo, useEffect, useRef } from "react";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { useDebounce } from "use-debounce";
@@ -195,7 +195,7 @@ function ProofingCodeWithProductions({ code }: ProofingCodeProps) {
     <HoverCard openDelay={200} closeDelay={150}>
       <HoverCardTrigger asChild>
         <Link
-          to={`/productions?search=${code}`}
+          to={`/delivery-notes?tab=completed-qc&search=${code}`}
           className="font-extrabold text-amber-600 dark:text-amber-400 font-mono hover:underline inline-flex items-center gap-0.5 cursor-pointer"
           onClick={(e) => e.stopPropagation()}
         >
@@ -583,13 +583,41 @@ export default function DeliveryNoteListPage() {
     setPreviewImageUrl(url);
   };
 
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const [viewMode, setViewMode] = useState<"orders" | "delivery-notes" | "pending-qc" | "completed-qc">(
-    "delivery-notes",
+    () => {
+      const tabParam = new URLSearchParams(window.location.search).get("tab");
+      if (tabParam && ["orders", "delivery-notes", "pending-qc", "completed-qc"].includes(tabParam)) {
+        sessionStorage.setItem("delivery_note_view_mode", tabParam);
+        return tabParam as any;
+      }
+      const saved = sessionStorage.getItem("delivery_note_view_mode");
+      if (saved && ["orders", "delivery-notes", "pending-qc", "completed-qc"].includes(saved)) {
+        return saved as any;
+      }
+      return "delivery-notes";
+    }
   );
 
   // Orders state
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState<number>(() => {
+    const pageParam = new URLSearchParams(window.location.search).get("ordersPage");
+    if (pageParam) {
+      const p = parseInt(pageParam, 10);
+      if (!isNaN(p) && p > 0) {
+        sessionStorage.setItem("delivery_note_orders_page", String(p));
+        return p;
+      }
+    }
+    const saved = sessionStorage.getItem("delivery_note_orders_page");
+    if (saved) {
+      const p = parseInt(saved, 10);
+      if (!isNaN(p) && p > 0) return p;
+    }
+    return 1;
+  });
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [notes, setNotes] = useState("");
   // Per-line selected address id map: orderDetailId -> customerAddressId
@@ -602,10 +630,68 @@ export default function DeliveryNoteListPage() {
     useState<string>("all");
   const [deliveryNoteSearchQuery, setDeliveryNoteSearchQuery] = useState("");
   const [debouncedDeliveryNoteSearchQuery] = useDebounce(deliveryNoteSearchQuery, 300);
-  const [deliveryNotePage, setDeliveryNotePage] = useState(1);
+  const [deliveryNotePage, setDeliveryNotePage] = useState<number>(() => {
+    const pageParam = new URLSearchParams(window.location.search).get("page");
+    if (pageParam) {
+      const p = parseInt(pageParam, 10);
+      if (!isNaN(p) && p > 0) {
+        sessionStorage.setItem("delivery_note_page", String(p));
+        return p;
+      }
+    }
+    const saved = sessionStorage.getItem("delivery_note_page");
+    if (saved) {
+      const p = parseInt(saved, 10);
+      if (!isNaN(p) && p > 0) return p;
+    }
+    return 1;
+  });
+
+  useEffect(() => {
+    sessionStorage.setItem("delivery_note_view_mode", viewMode);
+    setSearchParams(
+      (prev) => {
+        prev.set("tab", viewMode);
+        if (viewMode === "delivery-notes") {
+          prev.set("page", String(deliveryNotePage));
+          prev.delete("ordersPage");
+        } else if (viewMode === "orders") {
+          prev.set("ordersPage", String(currentPage));
+          prev.delete("page");
+        } else {
+          prev.delete("page");
+          prev.delete("ordersPage");
+        }
+        return prev;
+      },
+      { replace: true }
+    );
+  }, [viewMode, deliveryNotePage, currentPage, setSearchParams]);
+
+  useEffect(() => {
+    const tabParam = searchParams.get("tab");
+    if (tabParam && ["orders", "delivery-notes", "pending-qc", "completed-qc"].includes(tabParam)) {
+      if (tabParam !== viewMode) {
+        setViewMode(tabParam as any);
+      }
+    }
+  }, [searchParams, viewMode]);
+
+  useEffect(() => {
+    sessionStorage.setItem("delivery_note_page", String(deliveryNotePage));
+  }, [deliveryNotePage]);
+
+  useEffect(() => {
+    sessionStorage.setItem("delivery_note_orders_page", String(currentPage));
+  }, [currentPage]);
 
   // Reset page when search or status filters change to avoid page offset issues
+  const isFirstRender = useRef(true);
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
     setDeliveryNotePage(1);
   }, [debouncedDeliveryNoteSearchQuery, deliveryNoteStatusFilter]);
 
@@ -1325,14 +1411,16 @@ export default function DeliveryNoteListPage() {
             <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
               <Package className="h-3.5 w-3.5 text-primary" />
             </div>
-            <div className="min-w-0">
-              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
-                Tổng phiếu
-              </p>
-              <p className="text-sm sm:text-base font-bold mt-0.5 leading-none text-stone-900 dark:text-stone-50">
-                {stats.total}
-              </p>
-              <p className="text-[9px] text-muted-foreground font-medium mt-0.5 leading-none truncate">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline gap-1.5 flex-wrap">
+                <span className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none">
+                  Tổng phiếu:
+                </span>
+                <span className="text-sm sm:text-base font-bold leading-none text-stone-900 dark:text-stone-50">
+                  {stats.total}
+                </span>
+              </div>
+              <p className="text-[9px] text-muted-foreground font-medium mt-1.5 leading-none truncate">
                 30 ngày gần nhất
               </p>
             </div>
@@ -1345,14 +1433,16 @@ export default function DeliveryNoteListPage() {
             <div className="h-7 w-7 rounded-full bg-blue-50 dark:bg-blue-950/20 flex items-center justify-center shrink-0">
               <Plus className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
             </div>
-            <div className="min-w-0">
-              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
-                Tạo hôm nay
-              </p>
-              <p className="text-sm sm:text-base font-bold mt-0.5 leading-none text-stone-900 dark:text-stone-50">
-                {stats.todayCount}
-              </p>
-              <p className="text-[9px] text-muted-foreground font-medium mt-0.5 leading-none truncate">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline gap-1.5 flex-wrap">
+                <span className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none">
+                  Tạo hôm nay:
+                </span>
+                <span className="text-sm sm:text-base font-bold leading-none text-stone-900 dark:text-stone-50">
+                  {stats.todayCount}
+                </span>
+              </div>
+              <p className="text-[9px] text-muted-foreground font-medium mt-1.5 leading-none truncate">
                 {format(new Date(), "dd/MM/yyyy")}
               </p>
             </div>
@@ -1365,14 +1455,16 @@ export default function DeliveryNoteListPage() {
             <div className="h-7 w-7 rounded-full bg-emerald-50 dark:bg-emerald-950/20 flex items-center justify-center shrink-0">
               <Check className="h-3.5 w-3.5 text-emerald-500" />
             </div>
-            <div className="min-w-0">
-              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
-                Đã giao
-              </p>
-              <p className="text-sm sm:text-base font-bold mt-0.5 leading-none text-emerald-600 dark:text-emerald-400">
-                {stats.deliveredCount}
-              </p>
-              <p className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold mt-0.5 leading-none truncate">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline gap-1.5 flex-wrap">
+                <span className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none">
+                  Đã giao:
+                </span>
+                <span className="text-sm sm:text-base font-bold leading-none text-emerald-600 dark:text-emerald-400">
+                  {stats.deliveredCount}
+                </span>
+              </div>
+              <p className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold mt-1.5 leading-none truncate">
                 {stats.successRate}% thành công
               </p>
             </div>
@@ -1385,14 +1477,16 @@ export default function DeliveryNoteListPage() {
             <div className="h-7 w-7 rounded-full bg-stone-100 dark:bg-stone-800 flex items-center justify-center shrink-0">
               <RefreshCw className="h-3 w-3 text-stone-600 dark:text-stone-400" />
             </div>
-            <div className="min-w-0">
-              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
-                Chờ / Đang giao
-              </p>
-              <p className="text-sm sm:text-base font-bold mt-0.5 leading-none text-stone-900 dark:text-stone-50">
-                {stats.pendingCount}
-              </p>
-              <p className="text-[9px] text-muted-foreground font-medium mt-0.5 leading-none truncate">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline gap-1.5 flex-wrap">
+                <span className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none">
+                  Chờ / Đang giao:
+                </span>
+                <span className="text-sm sm:text-base font-bold leading-none text-stone-900 dark:text-stone-50">
+                  {stats.pendingCount}
+                </span>
+              </div>
+              <p className="text-[9px] text-muted-foreground font-medium mt-1.5 leading-none truncate">
                 Cần xử lý
               </p>
             </div>
@@ -1405,14 +1499,16 @@ export default function DeliveryNoteListPage() {
             <div className="h-7 w-7 rounded-full bg-destructive/10 dark:bg-red-950/20 flex items-center justify-center shrink-0">
               <X className="h-3.5 w-3.5 text-destructive" />
             </div>
-            <div className="min-w-0">
-              <p className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none truncate">
-                Thất bại
-              </p>
-              <p className="text-sm sm:text-base font-bold mt-0.5 leading-none text-destructive">
-                {stats.failedCount}
-              </p>
-              <p className="text-[9px] text-destructive font-medium mt-0.5 leading-none truncate">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-baseline gap-1.5 flex-wrap">
+                <span className="text-[10px] sm:text-xs text-muted-foreground font-medium leading-none">
+                  Thất bại:
+                </span>
+                <span className="text-sm sm:text-base font-bold leading-none text-destructive">
+                  {stats.failedCount}
+                </span>
+              </div>
+              <p className="text-[9px] text-destructive font-medium mt-1.5 leading-none truncate">
                 Cần hẹn lại / hủy
               </p>
             </div>
@@ -1776,8 +1872,9 @@ function OrdersView({
                           <TableHead className="w-12">Hình</TableHead>
                           <TableHead className="w-[120px] font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Mã thiết kế</TableHead>
                           <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Tên sản phẩm</TableHead>
+                          <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Khách hàng</TableHead>
                           <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Địa chỉ giao</TableHead>
-                          <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-40">Đơn hàng</TableHead>
+                          <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-32">Đơn hàng</TableHead>
                           <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-24">Số lượng</TableHead>
                           <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider pr-4 w-32">Thành tiền</TableHead>
                         </TableRow>
@@ -1836,14 +1933,14 @@ function OrdersView({
                               <TableCell className="text-[11px] text-stone-500 font-medium truncate max-w-[150px] md:max-w-[200px] text-left" title={detail.designName}>
                                 {detail.designName}
                               </TableCell>
-                              <TableCell className="text-[11px] text-stone-500 font-medium truncate max-w-[150px] md:max-w-[200px]" title={detail.deliveryAddress || ""}>
+                              <TableCell className="text-[11px] text-stone-500 font-semibold text-left truncate max-w-[120px] md:max-w-[150px]" title={detail.customerName || ""}>
+                                {detail.customerName || "—"}
+                              </TableCell>
+                              <TableCell className="text-[11px] text-stone-500 font-medium truncate max-w-[120px] md:max-w-[150px]" title={detail.deliveryAddress || ""}>
                                 {detail.deliveryAddress || "—"}
                               </TableCell>
-                              <TableCell className="text-right text-xs font-semibold text-stone-600 dark:text-stone-400 w-40">
-                                <div className="flex flex-col items-end">
-                                  <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{detail.orderCode}</span>
-                                  <span className="text-[10px] text-muted-foreground">{detail.customerName}</span>
-                                </div>
+                              <TableCell className="text-right text-xs font-semibold text-stone-600 dark:text-stone-400 w-32">
+                                <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{detail.orderCode}</span>
                               </TableCell>
                               <TableCell className="text-right text-xs font-bold text-stone-800 dark:text-stone-200 tabular-nums w-24">
                                 {new Intl.NumberFormat('vi-VN').format(getRemainingQty(detail) ?? 0)}
@@ -2441,81 +2538,88 @@ function DeliveryNotesView({
                                     <TableHead className="w-12 pl-4">Hình</TableHead>
                                     <TableHead className="w-[120px] font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Mã thiết kế</TableHead>
                                     <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Tên sản phẩm</TableHead>
+                                    <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Khách hàng</TableHead>
                                     <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Địa chỉ giao</TableHead>
                                     <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Mã bài</TableHead>
-                                    <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-40">Đơn hàng</TableHead>
+                                    <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-32">Đơn hàng</TableHead>
                                     <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-24">SL giao</TableHead>
                                     <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider pr-4 w-32">Thành tiền</TableHead>
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
                                   {deliveryNote.lines && deliveryNote.lines.length > 0 ? (
-                                    deliveryNote.lines.map((line: any, idx: number) => (
-                                      <TableRow
-                                        key={line.id || idx}
-                                        className="border-stone-100 dark:border-stone-850 hover:bg-stone-50/30 dark:hover:bg-stone-950/20"
-                                      >
-                                        <TableCell className="pl-4 w-12" onClick={(e) => e.stopPropagation()}>
-                                          <div className="h-8 w-8 rounded-lg bg-stone-100 dark:bg-stone-800 border flex items-center justify-center overflow-hidden relative">
-                                            {line.designImageUrl ? (
-                                              <img
-                                                src={line.designImageUrl}
-                                                alt={line.designCode || "Thiết kế"}
-                                                className="h-full w-full object-cover cursor-zoom-in"
-                                                onClick={(e) => onImageClick(line.designImageUrl!, e)}
-                                              />
-                                            ) : (
-                                              <ImageIcon className="h-4 w-4 text-stone-400" />
-                                            )}
-                                          </div>
-                                        </TableCell>
-                                        <TableCell className="w-[120px] font-mono font-black text-[11px] uppercase text-stone-800 dark:text-stone-200">
-                                          {line.designCode}
-                                        </TableCell>
-                                        <TableCell className="text-[11px] text-stone-500 font-medium truncate max-w-[150px] md:max-w-[200px]" title={line.designName}>
-                                          {line.designName}
-                                        </TableCell>
-                                        <TableCell
-                                          className="text-[11px] text-stone-500 font-medium truncate max-w-[150px] md:max-w-[200px]"
-                                          title={
-                                            line.customerAddress
-                                              ? [
-                                                  line.customerAddress.recipientName,
-                                                  line.customerAddress.recipientPhone,
-                                                  line.customerAddress.address,
-                                                ]
-                                                  .filter(Boolean)
-                                                  .join(" - ")
-                                              : ""
-                                          }
+                                    deliveryNote.lines.map((line: any, idx: number) => {
+                                      const lineCustomerName = ((deliveryNote as any).orders || []).find((o: any) => o.orderCode === line.orderCode)?.customerName || uniqueCustomers[0] || "—";
+                                      return (
+                                        <TableRow
+                                          key={line.id || idx}
+                                          className="border-stone-100 dark:border-stone-850 hover:bg-stone-50/30 dark:hover:bg-stone-950/20"
                                         >
-                                          {line.customerAddress?.address || "—"}
-                                        </TableCell>
-                                        <TableCell className="text-[11px] font-medium text-stone-700 dark:text-stone-300">
-                                          {line.proofingOrderCodes && line.proofingOrderCodes.length > 0 ? (
-                                            <div className="flex flex-wrap gap-1">
-                                              {line.proofingOrderCodes.map((code: string) => (
-                                                <ProofingCodeWithProductions key={code} code={code} />
-                                              ))}
+                                          <TableCell className="pl-4 w-12" onClick={(e) => e.stopPropagation()}>
+                                            <div className="h-8 w-8 rounded-lg bg-stone-100 dark:bg-stone-800 border flex items-center justify-center overflow-hidden relative">
+                                              {line.designImageUrl ? (
+                                                <img
+                                                  src={line.designImageUrl}
+                                                  alt={line.designCode || "Thiết kế"}
+                                                  className="h-full w-full object-cover cursor-zoom-in"
+                                                  onClick={(e) => onImageClick(line.designImageUrl!, e)}
+                                                />
+                                              ) : (
+                                                <ImageIcon className="h-4 w-4 text-stone-400" />
+                                              )}
                                             </div>
-                                          ) : (
-                                            <span className="text-muted-foreground">—</span>
-                                          )}
-                                        </TableCell>
-                                        <TableCell className="text-right text-xs font-semibold text-stone-600 dark:text-stone-400 w-40">
-                                          <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{line.orderCode}</span>
-                                        </TableCell>
-                                        <TableCell className="text-right text-xs font-bold text-stone-850 dark:text-stone-200 tabular-nums w-24">
-                                          {new Intl.NumberFormat('vi-VN').format(line.deliveryQty ?? 0)}
-                                        </TableCell>
-                                        <TableCell className="text-right font-extrabold text-stone-800 dark:text-stone-200 text-xs pr-4 w-32 tabular-nums">
-                                          {formatCurrency(line.lineAmount ?? 0)}
-                                        </TableCell>
-                                      </TableRow>
-                                    ))
+                                          </TableCell>
+                                          <TableCell className="w-[120px] font-mono font-black text-[11px] uppercase text-stone-800 dark:text-stone-200">
+                                            {line.designCode}
+                                          </TableCell>
+                                          <TableCell className="text-[11px] text-stone-500 font-medium truncate max-w-[150px] md:max-w-[200px]" title={line.designName}>
+                                            {line.designName}
+                                          </TableCell>
+                                          <TableCell className="text-[11px] text-stone-500 font-semibold truncate max-w-[120px] md:max-w-[150px]" title={lineCustomerName}>
+                                            {lineCustomerName}
+                                          </TableCell>
+                                          <TableCell
+                                            className="text-[11px] text-stone-500 font-medium truncate max-w-[120px] md:max-w-[150px]"
+                                            title={
+                                              line.customerAddress
+                                                ? [
+                                                    line.customerAddress.recipientName,
+                                                    line.customerAddress.recipientPhone,
+                                                    line.customerAddress.address,
+                                                  ]
+                                                    .filter(Boolean)
+                                                    .join(" - ")
+                                                : ""
+                                            }
+                                          >
+                                            {line.customerAddress?.address || "—"}
+                                          </TableCell>
+                                          <TableCell className="text-[11px] font-medium text-stone-700 dark:text-stone-300">
+                                            {line.proofingOrderCodes && line.proofingOrderCodes.length > 0 ? (
+                                              <div className="flex flex-wrap gap-1">
+                                                {line.proofingOrderCodes.map((code: string) => (
+                                                  <ProofingCodeWithProductions key={code} code={code} />
+                                                ))}
+                                              </div>
+                                            ) : (
+                                              <span className="text-muted-foreground">—</span>
+                                            )}
+                                          </TableCell>
+                                          <TableCell className="text-right text-xs font-semibold text-stone-650 dark:text-stone-400 w-32">
+                                            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{line.orderCode}</span>
+                                          </TableCell>
+                                          <TableCell className="text-right text-xs font-bold text-stone-850 dark:text-stone-200 tabular-nums w-24">
+                                            {new Intl.NumberFormat('vi-VN').format(line.deliveryQty ?? 0)}
+                                          </TableCell>
+                                          <TableCell className="text-right font-extrabold text-stone-800 dark:text-stone-200 text-xs pr-4 w-32 tabular-nums">
+                                            {formatCurrency(line.lineAmount ?? 0)}
+                                          </TableCell>
+                                        </TableRow>
+                                      );
+                                    })
                                   ) : (
                                     <TableRow>
-                                      <TableCell colSpan={8} className="text-center py-4 text-stone-400 text-xs italic">
+                                      <TableCell colSpan={9} className="text-center py-4 text-stone-400 text-xs italic">
                                         Không có chi tiết sản phẩm nào
                                       </TableCell>
                                     </TableRow>

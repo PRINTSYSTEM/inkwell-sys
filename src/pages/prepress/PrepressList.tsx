@@ -867,13 +867,13 @@ export default function PrepressList() {
               <Card
                 className={cn(
                   "h-full overflow-hidden",
-                  isConfiguring ? "w-2/3 min-w-0 flex-none" : "w-full",
+                  isConfiguring ? "w-[72%] min-w-0 flex-none" : "w-full",
                 )}
               >
                 <CardContent className="h-full p-0">
                   <div className="flex h-full flex-col gap-4 overflow-y-auto p-4">
                     <header className="shrink-0 space-y-4">
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-3">
                         <Button
                           variant="outline"
                           size="sm"
@@ -892,6 +892,21 @@ export default function PrepressList() {
                           <Package className="h-4 w-4" />
                           Xem kho hàng
                         </Button>
+
+                        {/* Search Input on the same row, next to buttons */}
+                        <div className="relative w-80 max-w-sm ml-1">
+                          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input
+                            placeholder="Tìm theo mã hàng...."
+                            className="h-9 pl-10 text-xs"
+                            value={designCode}
+                            onChange={(e) => {
+                              setDesignCode(e.target.value);
+                              setIncompleteOrdersPage(1);
+                              setCompletedOrdersPage(1);
+                            }}
+                          />
+                        </div>
                       </div>
 
                       <PrepressOrdersHeader
@@ -974,8 +989,9 @@ export default function PrepressList() {
                         onReject={isProofer ? openRejectDialog : undefined}
                         isRejecting={isRejecting}
                         onFindDie={handleFindDie}
-                        isSelectionEnabled={isProofer && isConfiguring}
+                        isSelectionEnabled={isProofer}
                         isConfiguring={isConfiguring}
+                        selectedDesigns={selectedDesigns}
                         // Designs Pagination props
                         designsPage={designsPage}
                         setDesignsPage={setDesignsPage}
@@ -1014,7 +1030,7 @@ export default function PrepressList() {
 
               {/* Right panel: config panel when creating new order */}
               {isConfiguring && (
-                <div className="w-1/3 min-w-0 shrink-0 h-full flex flex-col">
+                <div className="w-[28%] min-w-[320px] shrink-0 h-full flex flex-col">
                   <DetailEmptyOrderView
                     selectedDesigns={selectedDesigns}
                     selectedCount={configSelectedCount}
