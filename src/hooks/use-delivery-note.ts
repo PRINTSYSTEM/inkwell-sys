@@ -12,6 +12,7 @@ import type {
   RecreateDeliveryNoteRequest,
   CreateDeliveryNoteRequest,
   OrderForDeliveryResponse,
+  OrderForDeliveryResponsePaginate,
   OrderDetailForDeliveryResponse,
   FailureReasonResponse,
   DeliveryNoteLineResponse,
@@ -287,17 +288,18 @@ export const useUpdateDeliveryLineResult = () => {
 // ================== GET AVAILABLE ORDERS FOR DELIVERY ==================
 // GET /delivery-notes/available-orders
 export const useAvailableOrdersForDelivery = (
-  params?: { customerId?: number },
+  params?: { customerId?: number; pageNumber?: number; pageSize?: number },
   options?: { enabled?: boolean }
 ) => {
   return useQuery({
     queryKey: ["availableOrdersForDelivery", params],
     enabled: options?.enabled ?? true,
     queryFn: async () => {
-      const normalizedParams = normalizeParams(
-        (params ?? {}) as Record<string, unknown>
-      );
-      const res = await apiRequest.get<OrderForDeliveryResponse[]>(
+      const normalizedParams = normalizeParams({
+        pageSize: 1000, // Fetch up to 1000 orders to avoid pagination truncating results on matching
+        ...(params ?? {}),
+      } as Record<string, unknown>);
+      const res = await apiRequest.get<OrderForDeliveryResponsePaginate>(
         API_SUFFIX.DELIVERY_NOTE_AVAILABLE_ORDERS,
         { params: normalizedParams }
       );

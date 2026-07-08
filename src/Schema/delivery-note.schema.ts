@@ -14,6 +14,7 @@ import {
   FailureReasonResponseSchema as GenFailureReasonResponseSchema,
   OrderDetailForDeliveryResponseSchema as GenOrderDetailForDeliveryResponseSchema,
   OrderForDeliveryResponseSchema as GenOrderForDeliveryResponseSchema,
+  OrderForDeliveryResponsePaginateSchema as GenOrderForDeliveryResponsePaginateSchema,
   UpdateDeliveryLineResultRequestSchema as GenUpdateDeliveryLineResultRequestSchema,
 } from "./generated";
 
@@ -168,6 +169,13 @@ export const OrderForDeliveryResponseSchema =
   GenOrderForDeliveryResponseSchema.passthrough();
 export type OrderForDeliveryResponse = z.infer<
   typeof OrderForDeliveryResponseSchema
+>;
+
+// ===== OrderForDeliveryResponsePaginate =====
+export const OrderForDeliveryResponsePaginateSchema =
+  GenOrderForDeliveryResponsePaginateSchema.passthrough();
+export type OrderForDeliveryResponsePaginate = z.infer<
+  typeof OrderForDeliveryResponsePaginateSchema
 >;
 
 // ===== UpdateDeliveryLineResultRequest =====

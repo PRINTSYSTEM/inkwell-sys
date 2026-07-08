@@ -211,6 +211,29 @@ export default function DeliveryLineRow({
   const { data: failureReasonsApi } = useFailureReasons();
   const reasonsList = failureReasonsApi || FAILURE_REASONS;
 
+  const filteredReasons = useMemo(() => {
+    const resch = reasonsList.find(
+      (r) => 
+        (r as any).code === "RESCHEDULED_BY_BUYER" || 
+        (r as any).code === "RESCHEDULE" || 
+        (r as any).name?.toLowerCase().includes("hẹn giao lại") || 
+        r.id === 1
+    ) || { id: 1, name: "Khách hẹn giao lại", code: "RESCHEDULED_BY_BUYER", allowRedelivery: true };
+
+    const other = reasonsList.find(
+      (r) => 
+        (r as any).code === "OTHER" || 
+        (r as any).code === "OTHER_REASON" || 
+        (r as any).name?.toLowerCase().includes("lý do khác") ||
+        (r as any).name?.toLowerCase().includes("lí do khác")
+    ) || { id: 12, name: "Lý do khác", code: "OTHER", allowRedelivery: false };
+
+    return [resch, other];
+  }, [reasonsList]);
+
+  const rescheduleReasonId = filteredReasons[0]?.id || null;
+  const otherReasonId = filteredReasons[1]?.id || null;
+
   const noteStatusLower = (noteStatus || "").toLowerCase();
   // Phiếu phải đang trong trạng thái giao hàng hoặc giao một phần
   const noteIsShipping = [
@@ -260,23 +283,13 @@ export default function DeliveryLineRow({
     const selectedReason = reasonsList.find((r) => r.id === failureReasonId);
 
     if (selectedReason) {
-      if ("allowRedelivery" in selectedReason) {
-        // dynamic logic from API
-        if ((selectedReason as any).allowRedelivery) {
-          targetStatus = "failed_reschedule";
-        } else if ((selectedReason as any).code === "BUYER_REJECT" || failureReasonId === 11) {
-          targetStatus = "cancelled";
-        } else {
-          targetStatus = "returned";
-        }
-      } else {
-        // fallback hardcoded logic
-        if (failureReasonId >= 6 && failureReasonId <= 10) {
-          targetStatus = "returned";
-        } else if (failureReasonId === 11) {
-          targetStatus = "cancelled";
-        }
-      }
+      const code = (selectedReason as any).code;
+      const isResched = 
+        code === "RESCHEDULED_BY_BUYER" || 
+        code === "RESCHEDULE" || 
+        (selectedReason as any).allowRedelivery === true;
+      
+      targetStatus = isResched ? "failed_reschedule" : "returned";
     }
 
     try {
@@ -462,7 +475,16 @@ export default function DeliveryLineRow({
 
         {/* Cột Trạng thái */}
         <TableCell>
-          <LineStatusBadge status={localStatus} />
+          <div className="flex flex-col gap-1 items-start">
+            <LineStatusBadge status={localStatus} />
+            {((localStatus === "failed_reschedule" || localStatus === "returned") && 
+              (line.failureNotes || line.failureReasonName)) && (
+              <div className="text-[11px] font-medium text-destructive bg-destructive/10 px-1.5 py-0.5 rounded border border-destructive/20 max-w-[150px] break-words mt-1">
+                {line.failureReasonName || "Thất bại"}
+                {line.failureNotes && `: ${line.failureNotes}`}
+              </div>
+            )}
+          </div>
         </TableCell>
 
         {/* Cột Thao tác */}
@@ -534,13 +556,19 @@ export default function DeliveryLineRow({
               </Label>
               <Select
                 value={failureReasonId ? String(failureReasonId) : ""}
-                onValueChange={(v) => setFailureReasonId(Number(v) || null)}
+                onValueChange={(v) => {
+                  const rId = Number(v) || null;
+                  setFailureReasonId(rId);
+                  if (rId !== otherReasonId) {
+                    setFailureNotes("");
+                  }
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Chọn lý do..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {reasonsList.map((r) => (
+                  {filteredReasons.map((r) => (
                     <SelectItem key={r.id} value={String(r.id)}>
                       {r.name}
                     </SelectItem>
@@ -549,16 +577,31 @@ export default function DeliveryLineRow({
               </Select>
             </div>
 
-            <div className="space-y-1.5">
-              <Label>Ghi chú</Label>
-              <Textarea
-                value={failureNotes}
-                onChange={(e) => setFailureNotes(e.target.value)}
-                placeholder="Ghi chú thêm (tuỳ chọn)"
-                rows={2}
-                className="resize-none"
-              />
-            </div>
+            {failureReasonId === otherReasonId ? (
+              <div className="space-y-1.5">
+                <Label>
+                  Nhập lý do <span className="text-destructive">*</span>
+                </Label>
+                <Textarea
+                  value={failureNotes}
+                  onChange={(e) => setFailureNotes(e.target.value)}
+                  placeholder="Nhập chi tiết lý do giao hàng thất bại..."
+                  rows={3}
+                  className="resize-none text-xs"
+                />
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Label>Ghi chú</Label>
+                <Textarea
+                  value={failureNotes}
+                  onChange={(e) => setFailureNotes(e.target.value)}
+                  placeholder="Ghi chú thêm (tuỳ chọn)"
+                  rows={2}
+                  className="resize-none text-xs"
+                />
+              </div>
+            )}
           </div>
 
           <DialogFooter>
@@ -574,7 +617,11 @@ export default function DeliveryLineRow({
               variant="destructive"
               size="sm"
               onClick={handleFail}
-              disabled={!failureReasonId || updateLineResultMutation.isPending}
+              disabled={
+                !failureReasonId || 
+                (failureReasonId === otherReasonId && !failureNotes.trim()) || 
+                updateLineResultMutation.isPending
+              }
               className="gap-1"
             >
               {updateLineResultMutation.isPending && (

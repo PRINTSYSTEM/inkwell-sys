@@ -3512,6 +3512,12 @@ const ReadyDesignResponse = z
     designId: z.number().int(),
     designCode: z.string().nullable(),
     designName: z.string().nullable(),
+    designerId: z.number().int().nullable(),
+    designer: z.object({
+      userId: z.number().int(),
+      username: z.string().nullable(),
+      fullName: z.string().nullable(),
+    }).nullable(),
     customerId: z.number().int(),
     customerName: z.string().nullable(),
     quantity: z.number().int(),

@@ -57,7 +57,7 @@ export default function InventorySummaryPage() {
     to: new Date(),
   });
 
-  const [hideEmpty, setHideEmpty] = useState<boolean>(false);
+  const [hideEmpty, setHideEmpty] = useState<boolean>(true);
   const [sortColumn, setSortColumn] = useState<string>("ClosingQuantity");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
@@ -172,10 +172,21 @@ export default function InventorySummaryPage() {
   const selectedOrdersForDialog = useMemo(() => {
     const results: SelectedOrderDetail[] = [];
     selectedItemCodes.forEach((code) => {
-      results.push(...getOrderDetailsForItem(code));
+      const invItem = summaryData?.items?.find(
+        (item) => (item.itemCode || item.materialTypeCode) === code
+      );
+      const closingQty = invItem?.closingQuantity ?? 0;
+
+      const details = getOrderDetailsForItem(code);
+      details.forEach((det) => {
+        results.push({
+          ...det,
+          maxDeliveryQty: closingQty,
+        });
+      });
     });
     return results;
-  }, [selectedItemCodes, availableOrdersRaw]);
+  }, [selectedItemCodes, availableOrdersRaw, summaryData]);
 
   const handleToggleSelectItem = (itemCode: string) => {
     setSelectedItemCodes((prev) => {
@@ -235,7 +246,8 @@ export default function InventorySummaryPage() {
     const rNotes: Record<number, string> = {};
     selectedOrdersForDialog.forEach((od) => {
       if (od.orderDetailId != null) {
-        qtys[od.orderDetailId] = od.remainingToDeliver || 0;
+        const maxQty = (od as any).maxDeliveryQty !== undefined ? (od as any).maxDeliveryQty : Infinity;
+        qtys[od.orderDetailId] = Math.min(od.remainingToDeliver || 0, maxQty);
         rNotes[od.orderDetailId] = getDefaultLineNote(od.designName);
       }
     });
@@ -262,12 +274,22 @@ export default function InventorySummaryPage() {
       return;
     }
 
+    const overStockLimit = selectedOrdersForDialog.filter((od) => {
+      const qty = deliveryQtys[od.orderDetailId!] || 0;
+      const closingQty = (od as any).maxDeliveryQty !== undefined ? (od as any).maxDeliveryQty : Infinity;
+      return qty > closingQty;
+    });
+    if (overStockLimit.length > 0) {
+      toast.error("Số lượng giao vượt quá số lượng tồn kho khả dụng.");
+      return;
+    }
+
     const overLimit = selectedOrdersForDialog.filter((od) => {
       const qty = deliveryQtys[od.orderDetailId!] || 0;
       return qty > (od.remainingToDeliver || 0);
     });
     if (overLimit.length > 0) {
-      toast.error("Số lượng giao vượt quá số còn lại. Vui lòng kiểm tra lại.");
+      toast.error("Số lượng giao vượt quá số còn lại của đơn hàng. Vui lòng kiểm tra lại.");
       return;
     }
 

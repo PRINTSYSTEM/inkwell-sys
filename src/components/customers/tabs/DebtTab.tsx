@@ -18,7 +18,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FileSpreadsheet, Loader2 } from "lucide-react";
-import { useCustomerDebtStatement, useExportDebtComparison } from "@/hooks/use-customer";
+import {
+  useCustomerDebtStatement,
+  useExportDebtComparison,
+} from "@/hooks/use-customer";
 
 interface DebtTabProps {
   customerId: number;
@@ -26,8 +29,12 @@ interface DebtTabProps {
 }
 
 export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
-  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
-  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(
+    new Date().getMonth() + 1,
+  );
+  const [selectedYear, setSelectedYear] = useState<number>(
+    new Date().getFullYear(),
+  );
 
   const { data: statementData, isLoading } = useCustomerDebtStatement(
     customerId,
@@ -35,10 +42,11 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
       month: selectedMonth,
       year: selectedYear,
     },
-    isActive
+    isActive,
   );
 
-  const { mutate: exportDebtComparison, loading: exporting } = useExportDebtComparison();
+  const { mutate: exportDebtComparison, loading: exporting } =
+    useExportDebtComparison();
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("vi-VN", {
@@ -129,22 +137,26 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
         <Card className="border-0 bg-slate-50 dark:bg-stone-900 shadow-xs">
           <CardContent className="p-3">
-            <p className="text-[11px] font-medium text-slate-500">Số dư cuối kỳ</p>
+            <p className="text-[11px] font-medium text-slate-500">
+              Số dư đầu kỳ
+            </p>
             {isLoading ? (
               <Skeleton className="h-7 w-24 mt-1" />
             ) : (
               <p className="text-lg font-bold text-slate-900 dark:text-stone-50 mt-0.5">
-                {formatCurrency(endingBalance)}
+                {formatCurrency(beginningBalance)}
               </p>
             )}
           </CardContent>
         </Card>
         <Card className="border-0 bg-emerald-50/50 dark:bg-emerald-950/10 shadow-xs">
           <CardContent className="p-3">
-            <p className="text-[11px] font-medium text-emerald-600">Phát sinh tăng (Giao hàng)</p>
+            <p className="text-[11px] font-medium text-emerald-600">
+              Phát sinh tăng
+            </p>
             {isLoading ? (
               <Skeleton className="h-7 w-24 mt-1" />
             ) : (
@@ -156,12 +168,28 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
         </Card>
         <Card className="border-0 bg-red-50/50 dark:bg-red-950/10 shadow-xs">
           <CardContent className="p-3">
-            <p className="text-[11px] font-medium text-red-600">Phát sinh giảm (Thanh toán)</p>
+            <p className="text-[11px] font-medium text-red-600">
+              Phát sinh giảm (Thanh toán)
+            </p>
             {isLoading ? (
               <Skeleton className="h-7 w-24 mt-1" />
             ) : (
               <p className="text-lg font-bold text-red-600 mt-0.5">
                 {formatCurrency(totalDecrease)}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+        <Card className="border-0 bg-slate-50 dark:bg-stone-900 shadow-xs">
+          <CardContent className="p-3">
+            <p className="text-[11px] font-medium text-slate-500">
+              Số dư cuối kỳ
+            </p>
+            {isLoading ? (
+              <Skeleton className="h-7 w-24 mt-1" />
+            ) : (
+              <p className="text-lg font-bold text-slate-900 dark:text-stone-50 mt-0.5">
+                {formatCurrency(endingBalance)}
               </p>
             )}
           </CardContent>
@@ -189,66 +217,156 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
                   <Table className="min-w-[1300px] border-collapse">
                     <TableHeader className="sticky top-0 bg-slate-50 dark:bg-stone-900 border-b border-slate-200 dark:border-stone-800 z-10">
                       <TableRow className="hover:bg-transparent border-b border-slate-200 dark:border-stone-800">
-                        <TableHead className="text-[11px] font-bold text-slate-600 dark:text-stone-300 border border-slate-200 dark:border-stone-800 text-center py-2 h-9 w-[50px] bg-slate-50 dark:bg-stone-900">STT</TableHead>
-                        <TableHead className="text-[11px] font-bold text-slate-600 dark:text-stone-300 border border-slate-200 dark:border-stone-800 text-center py-2 h-9 w-[90px] bg-slate-50 dark:bg-stone-900">NGÀY</TableHead>
-                        <TableHead className="text-[11px] font-bold text-slate-600 dark:text-stone-300 border border-slate-200 dark:border-stone-800 text-center py-2 h-9 w-[110px] bg-slate-50 dark:bg-stone-900">SỐ PHIẾU GH</TableHead>
-                        <TableHead className="text-[11px] font-bold text-slate-600 dark:text-stone-300 border border-slate-200 dark:border-stone-800 text-center py-2 h-9 w-[100px] bg-slate-50 dark:bg-stone-900">NGÀY HĐ</TableHead>
-                        <TableHead className="text-[11px] font-bold text-slate-600 dark:text-stone-300 border border-slate-200 dark:border-stone-800 text-center py-2 h-9 w-[100px] bg-slate-50 dark:bg-stone-900">SỐ HÓA ĐƠN</TableHead>
-                        <TableHead className="text-[11px] font-bold text-slate-600 dark:text-stone-300 border border-slate-200 dark:border-stone-800 text-left py-2 h-9 min-w-[220px] bg-slate-50 dark:bg-stone-900">DIỄN GIẢI</TableHead>
-                        <TableHead className="text-[11px] font-bold text-slate-600 dark:text-stone-300 border border-slate-200 dark:border-stone-800 text-right py-2 h-9 w-[80px] bg-slate-50 dark:bg-stone-900">SỐ LƯỢNG</TableHead>
-                        <TableHead className="text-[11px] font-bold text-slate-600 dark:text-stone-300 border border-slate-200 dark:border-stone-800 text-right py-2 h-9 w-[95px] bg-slate-50 dark:bg-stone-900">ĐƠN GIÁ</TableHead>
-                        <TableHead className="text-[11px] font-bold text-slate-600 dark:text-stone-300 border border-slate-200 dark:border-stone-800 text-right py-2 h-9 w-[115px] bg-slate-50 dark:bg-stone-900">THÀNH TIỀN</TableHead>
-                        <TableHead className="text-[11px] font-bold text-slate-600 dark:text-stone-300 border border-slate-200 dark:border-stone-800 text-right py-2 h-9 w-[115px] bg-slate-50 dark:bg-stone-900">THANH TOÁN</TableHead>
-                        <TableHead className="text-[11px] font-bold text-slate-600 dark:text-stone-300 border border-slate-200 dark:border-stone-800 text-right py-2 h-9 w-[130px] bg-slate-50 dark:bg-stone-900">TỒN NỢ LŨY KẾ</TableHead>
-                        <TableHead className="text-[11px] font-bold text-slate-600 dark:text-stone-300 border border-slate-200 dark:border-stone-800 text-left py-2 h-9 min-w-[150px] bg-slate-50 dark:bg-stone-900">GHI CHÚ</TableHead>
+                        <TableHead className="text-[11px] font-bold text-slate-600 dark:text-stone-300 border border-slate-200 dark:border-stone-800 text-center py-2 h-9 w-[50px] bg-slate-50 dark:bg-stone-900">
+                          STT
+                        </TableHead>
+                        <TableHead className="text-[11px] font-bold text-slate-600 dark:text-stone-300 border border-slate-200 dark:border-stone-800 text-center py-2 h-9 w-[90px] bg-slate-50 dark:bg-stone-900">
+                          NGÀY
+                        </TableHead>
+                        <TableHead className="text-[11px] font-bold text-slate-600 dark:text-stone-300 border border-slate-200 dark:border-stone-800 text-center py-2 h-9 w-[110px] bg-slate-50 dark:bg-stone-900">
+                          SỐ PHIẾU GH
+                        </TableHead>
+                        <TableHead className="text-[11px] font-bold text-slate-600 dark:text-stone-300 border border-slate-200 dark:border-stone-800 text-center py-2 h-9 w-[100px] bg-slate-50 dark:bg-stone-900">
+                          NGÀY HĐ
+                        </TableHead>
+                        <TableHead className="text-[11px] font-bold text-slate-600 dark:text-stone-300 border border-slate-200 dark:border-stone-800 text-center py-2 h-9 w-[100px] bg-slate-50 dark:bg-stone-900">
+                          SỐ HÓA ĐƠN
+                        </TableHead>
+                        <TableHead className="text-[11px] font-bold text-slate-600 dark:text-stone-300 border border-slate-200 dark:border-stone-800 text-left py-2 h-9 min-w-[220px] bg-slate-50 dark:bg-stone-900">
+                          DIỄN GIẢI
+                        </TableHead>
+                        <TableHead className="text-[11px] font-bold text-slate-600 dark:text-stone-300 border border-slate-200 dark:border-stone-800 text-right py-2 h-9 w-[80px] bg-slate-50 dark:bg-stone-900">
+                          SỐ LƯỢNG
+                        </TableHead>
+                        <TableHead className="text-[11px] font-bold text-slate-600 dark:text-stone-300 border border-slate-200 dark:border-stone-800 text-right py-2 h-9 w-[95px] bg-slate-50 dark:bg-stone-900">
+                          ĐƠN GIÁ
+                        </TableHead>
+                        <TableHead className="text-[11px] font-bold text-slate-600 dark:text-stone-300 border border-slate-200 dark:border-stone-800 text-right py-2 h-9 w-[115px] bg-slate-50 dark:bg-stone-900">
+                          THÀNH TIỀN
+                        </TableHead>
+                        <TableHead className="text-[11px] font-bold text-slate-600 dark:text-stone-300 border border-slate-200 dark:border-stone-800 text-right py-2 h-9 w-[115px] bg-slate-50 dark:bg-stone-900">
+                          THANH TOÁN
+                        </TableHead>
+                        <TableHead className="text-[11px] font-bold text-slate-600 dark:text-stone-300 border border-slate-200 dark:border-stone-800 text-right py-2 h-9 w-[130px] bg-slate-50 dark:bg-stone-900">
+                          TỒN NỢ LŨY KẾ
+                        </TableHead>
+                        <TableHead className="text-[11px] font-bold text-slate-600 dark:text-stone-300 border border-slate-200 dark:border-stone-800 text-left py-2 h-9 min-w-[150px] bg-slate-50 dark:bg-stone-900">
+                          GHI CHÚ
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {/* SỐ DƯ ĐẦU KỲ */}
                       <TableRow className="bg-slate-50/70 dark:bg-stone-900/40 font-bold border-b border-slate-200 dark:border-stone-800 hover:bg-slate-50/70">
-                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs font-mono text-slate-400">—</TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">—</TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">—</TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">—</TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">—</TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 py-2.5 text-xs text-slate-900 dark:text-stone-100 font-semibold">SỐ DƯ ĐẦU KỲ</TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">—</TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">—</TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">—</TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">—</TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs font-mono text-slate-400">
+                          —
+                        </TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">
+                          —
+                        </TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">
+                          —
+                        </TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">
+                          —
+                        </TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">
+                          —
+                        </TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 py-2.5 text-xs text-slate-900 dark:text-stone-100 font-semibold">
+                          SỐ DƯ ĐẦU KỲ
+                        </TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">
+                          —
+                        </TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">
+                          —
+                        </TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">
+                          —
+                        </TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">
+                          —
+                        </TableCell>
                         <TableCell className="border border-slate-200 dark:border-stone-800 text-right py-2.5 text-xs font-semibold font-mono text-slate-900 dark:text-stone-100">
                           {formatRawNumber(beginningBalance)}
                         </TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 py-2.5 text-xs text-slate-400">—</TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 py-2.5 text-xs text-slate-400">
+                          —
+                        </TableCell>
                       </TableRow>
 
                       {/* List items */}
                       {items.map((item, idx) => {
                         const stt = idx + 1;
                         const dateStr = item.date ? formatDate(item.date) : "—";
-                        const invoiceDateStr = item.invoiceDate ? formatDate(item.invoiceDate) : "—";
-                        
-                        const qtyStr = item.quantity != null ? formatRawNumber(item.quantity) : "—";
-                        const priceStr = item.unitPrice != null ? formatRawNumber(item.unitPrice) : "—";
-                        
-                        const increaseAmtStr = item.increaseAmount && item.increaseAmount > 0 ? formatRawNumber(item.increaseAmount) : "—";
-                        const decreaseAmtStr = item.decreaseAmount && item.decreaseAmount > 0 ? formatRawNumber(item.decreaseAmount) : "—";
-                        const runningBalStr = item.runningBalance != null ? formatRawNumber(item.runningBalance) : "—";
+                        const invoiceDateStr = item.invoiceDate
+                          ? formatDate(item.invoiceDate)
+                          : "—";
+
+                        const qtyStr =
+                          item.quantity != null
+                            ? formatRawNumber(item.quantity)
+                            : "—";
+                        const priceStr =
+                          item.unitPrice != null
+                            ? formatRawNumber(item.unitPrice)
+                            : "—";
+
+                        const increaseAmtStr =
+                          item.increaseAmount && item.increaseAmount > 0
+                            ? formatRawNumber(item.increaseAmount)
+                            : "—";
+                        const decreaseAmtStr =
+                          item.decreaseAmount && item.decreaseAmount > 0
+                            ? formatRawNumber(item.decreaseAmount)
+                            : "—";
+                        const runningBalStr =
+                          item.runningBalance != null
+                            ? formatRawNumber(item.runningBalance)
+                            : "—";
 
                         return (
-                          <TableRow key={item.id || idx} className="hover:bg-slate-50/50 dark:hover:bg-stone-850/30 border-b border-slate-100 dark:border-stone-850">
-                            <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs font-mono text-slate-500">{stt}</TableCell>
-                            <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-700 dark:text-stone-300">{dateStr}</TableCell>
-                            <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs font-mono text-slate-700 dark:text-stone-300">{item.deliveryNoteCode || "—"}</TableCell>
-                            <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-700 dark:text-stone-300">{invoiceDateStr}</TableCell>
-                            <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs font-mono text-slate-700 dark:text-stone-300">{item.invoiceCode || "—"}</TableCell>
-                            <TableCell className="border border-slate-200 dark:border-stone-800 py-2.5 text-xs text-slate-800 dark:text-stone-200">{item.description || "—"}</TableCell>
-                            <TableCell className="border border-slate-200 dark:border-stone-800 text-right py-2.5 text-xs font-mono text-slate-750 dark:text-stone-350">{qtyStr}</TableCell>
-                            <TableCell className="border border-slate-200 dark:border-stone-800 text-right py-2.5 text-xs font-mono text-slate-750 dark:text-stone-350">{priceStr}</TableCell>
-                            <TableCell className="border border-slate-200 dark:border-stone-800 text-right py-2.5 text-xs font-mono text-emerald-600 font-medium">{increaseAmtStr}</TableCell>
-                            <TableCell className="border border-slate-200 dark:border-stone-800 text-right py-2.5 text-xs font-mono text-red-600 font-medium">{decreaseAmtStr}</TableCell>
-                            <TableCell className="border border-slate-200 dark:border-stone-800 text-right py-2.5 text-xs font-mono text-slate-900 dark:text-stone-100 font-medium">{runningBalStr}</TableCell>
-                            <TableCell className="border border-slate-200 dark:border-stone-800 py-2.5 text-xs text-slate-500 dark:text-stone-400 max-w-[200px] truncate">{item.notes || "—"}</TableCell>
+                          <TableRow
+                            key={item.id || idx}
+                            className="hover:bg-slate-50/50 dark:hover:bg-stone-850/30 border-b border-slate-100 dark:border-stone-850"
+                          >
+                            <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs font-mono text-slate-500">
+                              {stt}
+                            </TableCell>
+                            <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-700 dark:text-stone-300">
+                              {dateStr}
+                            </TableCell>
+                            <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs font-mono text-slate-700 dark:text-stone-300">
+                              {item.deliveryNoteCode || "—"}
+                            </TableCell>
+                            <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-700 dark:text-stone-300">
+                              {invoiceDateStr}
+                            </TableCell>
+                            <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs font-mono text-slate-700 dark:text-stone-300">
+                              {item.invoiceCode || "—"}
+                            </TableCell>
+                            <TableCell className="border border-slate-200 dark:border-stone-800 py-2.5 text-xs text-slate-800 dark:text-stone-200">
+                              {item.description || "—"}
+                            </TableCell>
+                            <TableCell className="border border-slate-200 dark:border-stone-800 text-right py-2.5 text-xs font-mono text-slate-750 dark:text-stone-350">
+                              {qtyStr}
+                            </TableCell>
+                            <TableCell className="border border-slate-200 dark:border-stone-800 text-right py-2.5 text-xs font-mono text-slate-750 dark:text-stone-350">
+                              {priceStr}
+                            </TableCell>
+                            <TableCell className="border border-slate-200 dark:border-stone-800 text-right py-2.5 text-xs font-mono text-emerald-600 font-medium">
+                              {increaseAmtStr}
+                            </TableCell>
+                            <TableCell className="border border-slate-200 dark:border-stone-800 text-right py-2.5 text-xs font-mono text-red-600 font-medium">
+                              {decreaseAmtStr}
+                            </TableCell>
+                            <TableCell className="border border-slate-200 dark:border-stone-800 text-right py-2.5 text-xs font-mono text-slate-900 dark:text-stone-100 font-medium">
+                              {runningBalStr}
+                            </TableCell>
+                            <TableCell className="border border-slate-200 dark:border-stone-800 py-2.5 text-xs text-slate-500 dark:text-stone-400 max-w-[200px] truncate">
+                              {item.notes || "—"}
+                            </TableCell>
                           </TableRow>
                         );
                       })}
@@ -256,11 +374,17 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
                       {/* Empty state */}
                       {!items.length && (
                         <TableRow>
-                          <TableCell colSpan={12} className="text-center py-12 border border-slate-200 dark:border-stone-800">
+                          <TableCell
+                            colSpan={12}
+                            className="text-center py-12 border border-slate-200 dark:border-stone-800"
+                          >
                             <div className="flex flex-col items-center gap-1.5 text-muted-foreground">
-                              <p className="text-sm font-semibold">Chưa có lịch sử công nợ trong tháng</p>
+                              <p className="text-sm font-semibold">
+                                Chưa có lịch sử công nợ trong tháng
+                              </p>
                               <p className="text-xs">
-                                Dữ liệu sẽ hiển thị khi có phát sinh giao hàng, VAT hoặc thanh toán trong tháng đã chọn
+                                Dữ liệu sẽ hiển thị khi có phát sinh giao hàng,
+                                VAT hoặc thanh toán trong tháng đã chọn
                               </p>
                             </div>
                           </TableCell>
@@ -269,40 +393,82 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
 
                       {/* CỘNG PHÁT SINH */}
                       <TableRow className="bg-slate-50/70 dark:bg-stone-900/40 font-bold border-b border-slate-200 dark:border-stone-800 hover:bg-slate-50/70">
-                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs font-mono text-slate-400">—</TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">—</TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">—</TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">—</TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">—</TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 py-2.5 text-xs text-slate-900 dark:text-stone-100 font-semibold">CỘNG PHÁT SINH TRONG KỲ</TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">—</TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">—</TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs font-mono text-slate-400">
+                          —
+                        </TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">
+                          —
+                        </TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">
+                          —
+                        </TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">
+                          —
+                        </TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">
+                          —
+                        </TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 py-2.5 text-xs text-slate-900 dark:text-stone-100 font-semibold">
+                          CỘNG PHÁT SINH TRONG KỲ
+                        </TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">
+                          —
+                        </TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">
+                          —
+                        </TableCell>
                         <TableCell className="border border-slate-200 dark:border-stone-800 text-right py-2.5 text-xs font-semibold font-mono text-emerald-600">
                           {formatRawNumber(totalIncrease)}
                         </TableCell>
                         <TableCell className="border border-slate-200 dark:border-stone-800 text-right py-2.5 text-xs font-semibold font-mono text-red-600">
                           {formatRawNumber(totalDecrease)}
                         </TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">—</TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 py-2.5 text-xs text-slate-400">—</TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">
+                          —
+                        </TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 py-2.5 text-xs text-slate-400">
+                          —
+                        </TableCell>
                       </TableRow>
 
                       {/* SỐ DƯ CUỐI KỲ */}
                       <TableRow className="bg-slate-50/70 dark:bg-stone-900/40 font-bold border-b border-slate-200 dark:border-stone-800 hover:bg-slate-50/70">
-                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs font-mono text-slate-400">—</TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">—</TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">—</TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">—</TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">—</TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 py-2.5 text-xs text-slate-900 dark:text-stone-100 font-semibold">SỐ DƯ CUỐI KỲ</TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">—</TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">—</TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">—</TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">—</TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs font-mono text-slate-400">
+                          —
+                        </TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">
+                          —
+                        </TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">
+                          —
+                        </TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">
+                          —
+                        </TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">
+                          —
+                        </TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 py-2.5 text-xs text-slate-900 dark:text-stone-100 font-semibold">
+                          SỐ DƯ CUỐI KỲ
+                        </TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">
+                          —
+                        </TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">
+                          —
+                        </TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">
+                          —
+                        </TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-400">
+                          —
+                        </TableCell>
                         <TableCell className="border border-slate-200 dark:border-stone-800 text-right py-2.5 text-xs font-semibold font-mono text-slate-900 dark:text-stone-100">
                           {formatRawNumber(endingBalance)}
                         </TableCell>
-                        <TableCell className="border border-slate-200 dark:border-stone-800 py-2.5 text-xs text-slate-400">—</TableCell>
+                        <TableCell className="border border-slate-200 dark:border-stone-800 py-2.5 text-xs text-slate-400">
+                          —
+                        </TableCell>
                       </TableRow>
                     </TableBody>
                   </Table>
