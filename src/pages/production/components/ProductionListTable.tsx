@@ -1447,6 +1447,23 @@ const ProductionTableRow = React.memo(
                         </span>
                       </div>
 
+                      {(() => {
+                        const method = (proofingOrder?.plateExport?.productionMethod || "").toLowerCase();
+                        const isOutsource = method === "outsource";
+                        const partnerName = proofingOrder?.plateExport?.printingVendorName || proofingOrder?.plateExport?.printingVendor?.name;
+                        if (isOutsource && partnerName) {
+                          return (
+                            <div className="border-t border-dashed border-muted/50 pt-1 mt-0.5">
+                              <span className="text-muted-foreground font-medium">In gia công: </span>
+                              <span className="font-bold text-orange-600">
+                                {partnerName}
+                              </span>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+
                       {(prod.notes || proofingOrder?.notes || proofingOrder?.additionalNotes) && (
                         <div className="flex flex-col border-t border-dashed border-muted/50 pt-1.5 mt-0.5">
                           <span className="text-muted-foreground font-medium mb-0.5">
@@ -1482,7 +1499,7 @@ const ProductionTableRow = React.memo(
                           {[proofingOrder?.plateExport]
                             .filter(Boolean)
                             .map((plateExport: any, i: number) => {
-                              const isInHouse = plateExport.productionMethod === "in_house";
+                              const isInHouse = (plateExport.productionMethod || "").toLowerCase() !== "outsource";
                               const partnerName = plateExport.printingVendorName || plateExport.printingVendor?.name;
                               const receiveTime = plateExport.isReceived && plateExport.receivedAt
                                 ? formatDate(plateExport.receivedAt)

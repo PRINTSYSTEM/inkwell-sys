@@ -177,9 +177,9 @@ export function DetailPlateExportCard({
                         <div className="flex items-center gap-1 col-span-2">
                           <span className="text-slate-400 dark:text-slate-500">Hình thức:</span>
                           <span className="font-semibold">
-                            {exportItem?.productionMethod === "outsource" ? (
+                            {(exportItem?.productionMethod || "").toLowerCase() === "outsource" ? (
                               <span className={isLatest ? "text-orange-600 dark:text-orange-400" : "text-orange-600/80"}>
-                                {exportItem?.printingVendorName || exportItem?.printingVendor?.name || exportItem?.productionMethodName || "In gia công ngoài"}
+                                In gia công: {exportItem?.printingVendorName || exportItem?.printingVendor?.name || "ngoài"}
                               </span>
                             ) : (
                               <span className={isLatest ? "text-blue-600 dark:text-blue-400" : "text-blue-600/80"}>
@@ -189,7 +189,7 @@ export function DetailPlateExportCard({
                           </span>
                         </div>
 
-                        {exportItem?.productionMethod === "outsource" && (exportItem?.outsourceCost > 0) && (
+                        {((exportItem?.productionMethod || "").toLowerCase() === "outsource") && (exportItem?.outsourceCost > 0) && (
                           <div className="flex items-center gap-1">
                             <span className="text-slate-400 dark:text-slate-500">Chi phí:</span>
                             <span className={cn(

@@ -143,7 +143,9 @@ export function PlateExportDialog({
           convertISOToLocalDateTime(plateExport.receivedAt ?? plateExport.estimatedReceiveAt)
         );
         setNotes(plateExport.notes ?? "");
-        setProductionMethod((plateExport as any).productionMethod ?? "in_house");
+        const rawMethod = plateExport.productionMethod || "in_house";
+        const normalizedMethod = rawMethod.toLowerCase() === "outsource" ? "outsource" : "in_house";
+        setProductionMethod(normalizedMethod);
         setPrintingVendorId((plateExport as any).printingVendorId ?? null);
         setPrintingVendorName("");
         setIsCreatingPrintingVendor(false);

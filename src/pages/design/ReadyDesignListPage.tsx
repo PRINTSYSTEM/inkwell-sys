@@ -114,6 +114,18 @@ function DesignImageThumbnail({ designId }: { designId: number }) {
   );
 }
 
+// Component to fetch and render designer name for each ready design
+function DesignerNameCell({ designId }: { designId: number }) {
+  const { data: design, isLoading } = useDesign(designId, !!designId);
+
+  if (isLoading) {
+    return <div className="h-4 w-16 bg-muted animate-pulse rounded" />;
+  }
+
+  const designerName = design?.designer?.fullName || design?.designer?.username || "—";
+  return <span title={designerName}>{designerName}</span>;
+}
+
 // Render a status badge for design statuses (keeps label mapping consistent)
 function renderStatusBadge(status: string | null | undefined) {
   if (!status) return <StatusBadge status="unknown" label="—" />;
@@ -682,6 +694,7 @@ export default function ReadyDesignListPage() {
                   <TableHead className="h-9 text-sm font-bold w-[75px] text-center">Hình ảnh</TableHead>
                   <TableHead className="h-9 text-sm font-bold">Mã thiết kế</TableHead>
                   <TableHead className="h-9 text-sm font-bold">Tên thiết kế</TableHead>
+                  <TableHead className="h-9 text-sm font-bold">Người thiết kế</TableHead>
                   <TableHead className="h-9 text-sm font-bold">Khách hàng</TableHead>
                   <TableHead className="h-9 text-sm font-bold text-right">SL chốt in</TableHead>
                   <TableHead className="h-9 text-sm font-bold text-center">Trạng thái</TableHead>
@@ -727,6 +740,15 @@ export default function ReadyDesignListPage() {
                         </TableCell>
                         <TableCell className="py-2 text-sm font-semibold break-words max-w-[240px]" title={design.designName || ""}>
                           {design.designName}
+                        </TableCell>
+                        <TableCell
+                          className="py-2 text-sm font-medium max-w-[160px] truncate"
+                        >
+                          {design.designId ? (
+                            <DesignerNameCell designId={design.designId} />
+                          ) : (
+                            "—"
+                          )}
                         </TableCell>
                         <TableCell className="py-2 text-sm font-medium break-words max-w-[200px]">
                           {design.customerName}

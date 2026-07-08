@@ -3235,6 +3235,14 @@ export function SelectedOrderCard({
                     {new Intl.NumberFormat("vi-VN").format(getRemainingQty(od) || 0)}
                   </span>
                 </span>
+                {(od as any).maxDeliveryQty !== undefined && (
+                  <span className="ml-2 pl-2 border-l border-slate-200">
+                    Tồn kho khả dụng:{" "}
+                    <span className="font-bold text-amber-600">
+                      {new Intl.NumberFormat("vi-VN").format((od as any).maxDeliveryQty)}
+                    </span>
+                  </span>
+                )}
                 {od.proofingOrderCodes && od.proofingOrderCodes.length > 0 && (
                   <span className="flex items-center gap-1">
                     <span className="text-slate-400 font-medium">| Mã bài:</span>
@@ -3256,12 +3264,15 @@ export function SelectedOrderCard({
               <Input
                 type="number"
                 min="1"
-                max={getRemainingQty(od) || 1}
+                max={((od as any).maxDeliveryQty !== undefined ? Math.min(getRemainingQty(od) || 0, (od as any).maxDeliveryQty) : getRemainingQty(od)) || 1}
                 value={deliveryQtys[od.orderDetailId] || ""}
                 onChange={(e) => {
                   let val = parseInt(e.target.value, 10);
                   if (isNaN(val)) val = 0;
-                  const maxVal = getRemainingQty(od);
+                  let maxVal = getRemainingQty(od) || 0;
+                  if ((od as any).maxDeliveryQty !== undefined) {
+                    maxVal = Math.min(maxVal, (od as any).maxDeliveryQty);
+                  }
                   if (val > maxVal) val = maxVal;
                   setDeliveryQtys((prev) => ({
                     ...prev,

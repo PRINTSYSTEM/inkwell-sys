@@ -1,5 +1,6 @@
 // src/components/accounting/CreateInvoiceFromLinesDialog.tsx
 import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -55,6 +56,7 @@ export function CreateInvoiceFromLinesDialog({
   onOpenChange,
   customerId,
 }: CreateInvoiceFromLinesDialogProps) {
+  const navigate = useNavigate();
   // Load customer data
   const { data: customersData } = useCustomers({ pageSize: 1000 });
   const customers = (customersData as any)?.items || [];
@@ -328,8 +330,11 @@ export function CreateInvoiceFromLinesDialog({
     };
 
     try {
-      await createInvoiceMutation.mutateAsync(requestData);
+      const result = await createInvoiceMutation.mutateAsync(requestData);
       handleOpenChange(false);
+      if (result && result.id) {
+        navigate(`/invoices/${result.id}`);
+      }
     } catch (error) {
       // Error is handled by the hook
     }
