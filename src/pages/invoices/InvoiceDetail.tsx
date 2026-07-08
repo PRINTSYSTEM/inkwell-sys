@@ -260,36 +260,38 @@ export default function InvoiceDetailPage() {
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="text-center space-y-3">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-          <p className="text-muted-foreground">Ã„Âang tÃ¡ÂºÂ£i Hóa đơn...</p>
-        </div>
+ if (isLoading) {
+  return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="text-center space-y-3">
+        <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
+        <p className="text-muted-foreground">Đang tải hóa đơn...</p>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
-  if (isError || !invoice) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <AlertCircle className="h-12 w-12 mx-auto text-destructive" />
-          <h1 className="text-xl font-semibold">
-            KhÃƒÂ´ng tÃƒÂ¬m thÃ¡ÂºÂ¥y Hóa đơn
-          </h1>
-          <p className="text-muted-foreground">
-            Hóa đơn khÃƒÂ´ng tÃ¡Â»â€œn tÃ¡ÂºÂ¡i hoÃ¡ÂºÂ·c Ã„â€˜ÃƒÂ£ bÃ¡Â»â€¹
-            xÃƒÂ³a
-          </p>
-          <Link to="/accounting">
-            <Button>Quay lÃ¡ÂºÂ¡i</Button>
-          </Link>
-        </div>
+if (isError || !invoice) {
+  return (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="text-center space-y-4">
+        <AlertCircle className="h-12 w-12 mx-auto text-destructive" />
+
+        <h1 className="text-xl font-semibold">
+          Không tìm thấy hóa đơn
+        </h1>
+
+        <p className="text-muted-foreground">
+          Hóa đơn không tồn tại hoặc đã bị xóa
+        </p>
+
+        <Link to="/accounting">
+          <Button>Quay lại</Button>
+        </Link>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   const totalAmount = invoice.totalAmount || 0;
   const taxAmount = invoice.taxAmount || 0;
