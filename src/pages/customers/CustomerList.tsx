@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/table";
 import { TableSkeleton } from "@/components/ui/skeleton-components";
 import { useState, useRef, useEffect } from "react";
+import { useDebounce } from "use-debounce";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { customerTypeLabels } from "@/lib/status-utils";
 import { useNavigate } from "react-router-dom";
@@ -42,7 +43,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useListState } from "@/hooks/use-list-state";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -60,18 +60,13 @@ export default function Customers() {
     userRole === ROLE.SALE ||
     userRole === ROLE.ADMIN;
 
-  const {
-    currentPage,
-    setCurrentPage,
-    searchTerm,
-    setSearchTerm,
-    debouncedSearchTerm: debouncedSearch,
-    sortColumn,
-    setSortColumn,
-    sortOrder,
-    setSortOrder,
-    resetPage,
-  } = useListState({ defaultSortOrder: "asc" });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch] = useDebounce(searchTerm, 300);
+  const [sortColumn, setSortColumn] = useState("");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+
+  const resetPage = () => setCurrentPage(1);
 
   const itemsPerPage = 10;
   const searchInputRef = useRef<HTMLInputElement>(null);
