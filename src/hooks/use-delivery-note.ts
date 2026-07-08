@@ -92,6 +92,37 @@ export const useUpdateDeliveryNoteStatus = (
   });
 };
 
+// ================== UPDATE DELIVERY NOTE GENERAL ==================
+// PUT /delivery-notes/{id}
+export const useUpdateDeliveryNote = (
+  options?: UseMutationOptions<DeliveryNoteResponse, Error, { id: number; data: Partial<DeliveryNoteResponse> }>
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation<DeliveryNoteResponse, Error, { id: number; data: Partial<DeliveryNoteResponse> }>({
+    ...options,
+    mutationFn: async ({ id, data }) => {
+      const res = await apiRequest.put<DeliveryNoteResponse>(
+        API_SUFFIX.DELIVERY_NOTE_BY_ID(id),
+        data
+      );
+      return res.data;
+    },
+    onSuccess: (updatedData, variables, context) => {
+      const deliveryNoteId = Number(variables.id);
+      queryClient.setQueryData(["deliveryNote", deliveryNoteId], updatedData);
+      queryClient.invalidateQueries({ queryKey: ["deliveryNote", deliveryNoteId] });
+      queryClient.invalidateQueries({ queryKey: ["deliveryNotes"] });
+      toast.success("Cập nhật phiếu giao hàng thành công");
+      if (options?.onSuccess) options.onSuccess(updatedData, variables, context as any);
+    },
+    onError: (error: Error, variables, context) => {
+      toast.error(`Lỗi cập nhật phiếu giao hàng: ${error.message}`);
+      if (options?.onError) options.onError(error, variables, context as any);
+    },
+  });
+};
+
 const getCachedDeliveryNote = (queryClient: any, id: number) => {
   let note = queryClient.getQueryData<any>(["deliveryNote", id]);
   if (!note) {

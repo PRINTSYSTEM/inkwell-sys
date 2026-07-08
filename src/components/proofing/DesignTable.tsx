@@ -32,6 +32,8 @@ interface DesignTableProps {
   onFindDie?: (design: DesignItem, dimensions: string) => void;
   isSelectionEnabled?: boolean;
   searchTerm?: string;
+  isConfiguring?: boolean;
+  selectedDesigns?: DesignItem[];
 }
 
 export function DesignTable({
@@ -44,6 +46,8 @@ export function DesignTable({
   onFindDie,
   isSelectionEnabled = true,
   searchTerm = "",
+  isConfiguring = false,
+  selectedDesigns = [],
 }: DesignTableProps) {
   const [viewingImage, setViewingImage] = useState<{
     url: string;
@@ -109,18 +113,19 @@ export function DesignTable({
           <TableHeader>
             <TableRow>
               <TableHead className="w-16 h-10 text-sm font-bold">Ảnh</TableHead>
-              <TableHead className="h-10 text-sm font-bold">Đơn hàng</TableHead>
+              {!isConfiguring && (
+                <TableHead className="h-10 text-sm font-bold">Đơn hàng</TableHead>
+              )}
               <TableHead className="h-10 text-sm font-bold">Mã hàng</TableHead>
               <TableHead className="h-10 text-sm font-bold">
-                Kích thước
+                Kích thước (mm)
               </TableHead>
               <TableHead className="h-10 text-sm font-bold">SL đặt</TableHead>
               <TableHead className="h-10 text-sm font-bold">
                 Chất liệu
               </TableHead>
-              <TableHead className="h-10 text-sm font-bold">Số mặt</TableHead>
               <TableHead className="h-10 text-sm font-bold">Quy cách</TableHead>
-                <TableHead className="h-10 text-sm font-bold">Giao hàng</TableHead>
+              <TableHead className="h-10 text-sm font-bold">Giao hàng</TableHead>
               <TableHead className="h-10 text-sm font-bold">Ngày tạo</TableHead>
               <TableHead className="h-10 text-sm font-bold text-right sticky right-0 bg-background z-20">
                 Thao tác
@@ -130,6 +135,7 @@ export function DesignTable({
           <TableBody>
             {sortedDesigns.map((design) => {
               const isSelected = selectedIds.has(design.id);
+              const selectedIndex = selectedDesigns ? selectedDesigns.findIndex((d) => d.id === design.id) : -1;
               const selectable = canSelect(design);
               const isUrgent = Boolean(
                 (design as any).urgent ||
@@ -146,13 +152,13 @@ export function DesignTable({
 
               // Build full info for tooltip
               const fullInfo = (
-                <div className="w-[350px] space-y-4 p-1 text-sm">
-                  <div className="w-full">
+                <div className="w-[280px] space-y-3 p-1 text-xs">
+                  <div className="w-full flex justify-center">
                     {design.thumbnailUrl ? (
                       <img
                         src={design.thumbnailUrl}
                         alt={design.name}
-                        className="w-full aspect-video object-cover rounded-lg border shadow-sm"
+                        className="max-h-[140px] w-auto object-contain rounded-lg border shadow-sm bg-muted/50"
                       />
                     ) : (
                       <div className="w-full aspect-video bg-muted rounded-lg border flex items-center justify-center">
@@ -163,10 +169,10 @@ export function DesignTable({
 
                   <div className="space-y-3">
                     <div className="border-b pb-2">
-                      <h4 className="font-bold text-base text-foreground leading-tight">
+                      <h4 className="font-bold text-sm text-foreground leading-tight">
                         {highlightText(design.name, searchTerm)}
                         {(design.customerCompanyName || design.customerName) && (
-                          <span className="text-sm font-normal text-muted-foreground ml-1">
+                          <span className="text-xs font-normal text-muted-foreground ml-1">
                             — {design.customerCompanyName || design.customerName}
                           </span>
                         )}
@@ -314,7 +320,7 @@ export function DesignTable({
                 >
                   <TableRow
                     className={cn(
-                      "h-14 transition-colors relative",
+                      "h-11 transition-colors relative",
                       isSelectionEnabled && "cursor-pointer",
                       isSelected
                         ? "bg-green-100/90 hover:bg-green-200/80 dark:bg-green-900/40 dark:hover:bg-green-900/60 shadow-[inset_4px_0_0_0_#22c55e]"
@@ -332,57 +338,63 @@ export function DesignTable({
                       }
                     }}
                   >
-                    <TableCell>
-                      {design.thumbnailUrl ? (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setViewingImage({
-                              url: design.thumbnailUrl,
-                              title: design.name,
-                            });
-                          }}
-                          className="w-10 h-10 rounded object-cover bg-muted overflow-hidden hover:opacity-80 transition-opacity"
-                        >
-                          <img
-                            src={design.thumbnailUrl}
-                            alt={design.name}
-                            className="w-full h-full object-cover"
-                          />
-                        </button>
-                      ) : (
-                        <div className="w-10 h-10 rounded bg-muted" />
-                      )}
-                    </TableCell>
-                    <TableCell className="py-3">
+                    <TableCell className="py-1">
                       <div className="flex items-center gap-1.5">
-                        {isUrgent && (
-                          <Badge variant="destructive" className="text-xs">
-                            GẤP
-                          </Badge>
-                        )}
-                        {design.queueItemId?.startsWith("RD_") ? (
-                          <Badge
-                            variant="secondary"
-                            className="bg-gray-100 text-gray-600 border-none font-normal text-xs py-0.5 px-2 hover:bg-gray-100"
-                          >
-                            Chưa lên đơn
-                          </Badge>
-                        ) : design.orderCode ? (
-                          <div className="flex items-center gap-1.5">
-                            <FileText className="h-3 w-3 text-muted-foreground" />
-                            <span className="font-semibold text-sm text-primary">
-                              {design.orderCode}
-                            </span>
+                        {selectedIndex !== -1 ? (
+                          <div className="w-5 h-5 shrink-0 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] font-extrabold shadow-sm">
+                            {selectedIndex + 1}
                           </div>
                         ) : (
-                          <span className="text-muted-foreground text-sm font-semibold">
-                            -
-                          </span>
+                          <div className="w-5 h-5 shrink-0" />
+                        )}
+                        {design.thumbnailUrl ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setViewingImage({
+                                url: design.thumbnailUrl,
+                                title: design.name,
+                              });
+                            }}
+                            className="w-10 h-10 rounded border bg-muted overflow-hidden hover:opacity-80 transition-opacity"
+                          >
+                            <img
+                              src={design.thumbnailUrl}
+                              alt={design.name}
+                              className="w-full h-full object-cover"
+                            />
+                          </button>
+                        ) : (
+                          <div className="w-10 h-10 rounded border bg-muted" />
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="py-3 font-mono text-sm font-semibold">
+                    {!isConfiguring && (
+                      <TableCell className="py-1">
+                        <div className="flex items-center gap-1.5">
+                          {design.queueItemId?.startsWith("RD_") ? (
+                            <Badge
+                              variant="secondary"
+                              className="bg-gray-100 text-gray-600 border-none font-normal text-xs py-0.5 px-2 hover:bg-gray-100"
+                            >
+                              Chưa lên đơn
+                            </Badge>
+                          ) : design.orderCode ? (
+                            <div className="flex items-center gap-1.5">
+                              <FileText className="h-3 w-3 text-muted-foreground" />
+                              <span className="font-semibold text-sm text-primary">
+                                {design.orderCode}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm font-semibold">
+                              -
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                    )}
+                    <TableCell className="py-1 font-mono text-sm font-semibold">
                       <div className="flex items-center gap-1.5">
                         <span>{highlightText(design.code, searchTerm)}</span>
                         <Button
@@ -396,13 +408,13 @@ export function DesignTable({
                         </Button>
                       </div>
                     </TableCell>
-                    <TableCell className="py-3">
+                    <TableCell className="py-1">
                       <div className="text-sm text-muted-foreground">
                         {design.length} × {design.height}
-                        {design.width ? ` × ${design.width}` : ""} mm
+                        {design.width ? ` × ${design.width}` : ""}
                       </div>
                     </TableCell>
-                    <TableCell className="py-3">
+                    <TableCell className="py-1">
                       <div className="text-sm font-semibold">
                         {((design.designTypeName?.toLowerCase().includes("decal") ||
                           design.materialTypeName?.toLowerCase().includes("decal")) &&
@@ -417,36 +429,16 @@ export function DesignTable({
                         </div>
                       )}
                     </TableCell>
-                    <TableCell className="py-3 max-w-[200px]">
+                    <TableCell className="py-1">
                       <div
                         title={design.materialTypeName}
-                        className={cn(
-                          isSelectionEnabled
-                            ? "line-clamp-2 whitespace-normal break-words"
-                            : "truncate"
-                        )}
+                        className="whitespace-normal break-words min-w-[120px]"
                       >
                         {design.materialTypeName}
                         {design.basisWeight && design.basisWeight > 0 ? ` (${design.basisWeight} gsm)` : ""}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1.5">
-                        {design.sidesClassification && (
-                          <Badge variant="outline" className="text-xs">
-                            {sidesClassificationLabels[
-                              design.sidesClassification
-                            ] || design.sidesClassification}
-                          </Badge>
-                        )}
-                        {!design.sidesClassification && (
-                          <span className="text-muted-foreground text-xs">
-                            —
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
+                    <TableCell className="py-1">
                       <div className="flex flex-wrap gap-1">
                         {(() => {
                           const specs = design.specification as any;
@@ -482,7 +474,7 @@ export function DesignTable({
                         })()}
                       </div>
                     </TableCell>
-                    <TableCell className="py-3 text-sm">
+                    <TableCell className="py-1 text-sm">
                       <div className="flex flex-col gap-1">
                         {isUrgent && (
                           <span className="font-extrabold text-red-600 dark:text-red-500 text-sm">
@@ -498,7 +490,7 @@ export function DesignTable({
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="py-3 text-[11px] text-muted-foreground whitespace-nowrap">
+                    <TableCell className="py-1 text-[11px] text-muted-foreground">
                       {design.createdAt ? (
                         (() => {
                           const date = new Date(design.createdAt);
@@ -509,7 +501,12 @@ export function DesignTable({
                           const hours = String(date.getHours()).padStart(2, "0");
                           const minutes = String(date.getMinutes()).padStart(2, "0");
                           const seconds = String(date.getSeconds()).padStart(2, "0");
-                          return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+                          return (
+                            <div className="flex flex-col text-left">
+                              <span>{day}/{month}/{year}</span>
+                              <span className="text-muted-foreground/80">{hours}:{minutes}:{seconds}</span>
+                            </div>
+                          );
                         })()
                       ) : (
                         "—"
@@ -517,7 +514,7 @@ export function DesignTable({
                     </TableCell>
                     <TableCell
                       className={cn(
-                        "py-2 text-right sticky right-0 z-10 transition-colors",
+                        "py-1 text-right sticky right-0 z-10 transition-colors",
                         isSelected
                           ? "bg-green-100/90 group-hover:bg-green-200/80 dark:bg-green-900/40"
                           : "bg-background",

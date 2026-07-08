@@ -34,10 +34,12 @@ export function useProofingSelection(): UseProofingSelectionResult {
     (design: DesignItem) => {
       // Can always select if nothing is selected yet
       if (selectedDesigns.length === 0) return true;
+      // If different design type, selecting it will clear previous selections, so it is allowed
+      if (design.designTypeId !== selectedDesigns[0].designTypeId) return true;
       // Can only select if same materialTypeId
       return design.materialTypeId === currentMaterialTypeId;
     },
-    [selectedDesigns.length, currentMaterialTypeId]
+    [selectedDesigns, currentMaterialTypeId]
   );
 
   const toggleSelection = useCallback((design: DesignItem) => {
@@ -49,10 +51,16 @@ export function useProofingSelection(): UseProofingSelectionResult {
         return prev.filter((d) => d.id !== design.id);
       } else {
         // Add to selection (only if same materialType or first selection)
-        if (
-          prev.length === 0 ||
-          design.materialTypeId === prev[0].materialTypeId
-        ) {
+        if (prev.length === 0) {
+          return [design];
+        }
+
+        // If different design type, clear previous selections and start new with this one
+        if (design.designTypeId !== prev[0].designTypeId) {
+          return [design];
+        }
+
+        if (design.materialTypeId === prev[0].materialTypeId) {
           return [...prev, design];
         }
         return prev;

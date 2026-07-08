@@ -14,6 +14,7 @@ import type {
   CreateCustomerAddressRequest,
   UpdateCustomerAddressRequest,
   CustomerFavoriteStatsResponse,
+  CustomerDebtStatementResponse,
 } from "@/Schema/customer.schema";
 import { createCrudHooks } from "./use-base";
 import {
@@ -409,6 +410,28 @@ export const useSetDefaultCustomerAddress = (customerId: number) => {
     onError: (error: Error) => {
       toast.error(`Lỗi: ${error.message}`);
     },
+  });
+};
+
+// ================== GET CUSTOMER DEBT STATEMENT ==================
+// GET /customers/{id}/debt-statement
+export const useCustomerDebtStatement = (
+  customerId: number | null,
+  params?: { month?: number; year?: number },
+  enabled: boolean = true
+) => {
+  return useQuery({
+    queryKey: ["customers", customerId, "debt-statement", params],
+    enabled: enabled && !!customerId,
+    queryFn: async () => {
+      const normalizedParams = normalizeParams((params ?? {}) as Record<string, unknown>);
+      const res = await apiRequest.get<CustomerDebtStatementResponse>(
+        API_SUFFIX.CUSTOMER_DEBT_STATEMENT(customerId as number),
+        { params: normalizedParams }
+      );
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
   });
 };
 

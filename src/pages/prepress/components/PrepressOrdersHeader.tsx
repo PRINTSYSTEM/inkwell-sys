@@ -101,9 +101,8 @@ interface PrepressOrdersHeaderProps {
   designsTotalCount?: number;
   designsPageSize?: number;
   expandedOrderIds?: Set<number>;
-  isSelectionEnabled?: boolean;
-  shouldShowExpand?: boolean;
   isConfiguring?: boolean;
+  selectedDesigns?: any[];
 }
 
 export function PrepressOrdersHeader({
@@ -176,6 +175,7 @@ export function PrepressOrdersHeader({
   expandedOrderIds = new Set(),
   isSelectionEnabled = true,
   isConfiguring = false,
+  selectedDesigns = [],
 }: PrepressOrdersHeaderProps) {
   const [materialTypeSearchOpen, setMaterialTypeSearchOpen] = useState(false);
 
@@ -190,109 +190,6 @@ export function PrepressOrdersHeader({
 
   return (
     <div className="relative shrink-0">
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="relative flex-1 min-w-[280px] max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Tìm theo mã hàng...."
-            className="h-9 pl-10"
-            value={designCode}
-            onChange={(e) => {
-              setDesignCode(e.target.value);
-              setIncompletePage(1);
-              setCompletedPage(1);
-            }}
-          />
-        </div>
-        <Popover
-          open={materialTypeSearchOpen}
-          onOpenChange={setMaterialTypeSearchOpen}
-        >
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              role="combobox"
-              className="h-9 w-[200px] justify-between"
-            >
-              {selectedMaterialTypeId
-                ? materialTypeOptionsForOrders.find(
-                  (mt) => mt.id === selectedMaterialTypeId,
-                )?.name || "Loại chất liệu  của bình bài"
-                : "Loại chất liệu  của bình bài"}
-              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[200px] p-0">
-            <Command>
-              <CommandInput placeholder="Tìm kiếm loại chất liệu..." />
-              <CommandList>
-                <CommandEmpty>Không tìm thấy loại chất liệu</CommandEmpty>
-                <CommandGroup>
-                  <CommandItem
-                    value="all"
-                    onSelect={() => {
-                      setSelectedMaterialTypeId(null);
-                      setMaterialTypeSearchOpen(false);
-                      setIncompletePage(1);
-                      setCompletedPage(1);
-                    }}
-                  >
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        selectedMaterialTypeId === null
-                          ? "opacity-100"
-                          : "opacity-0",
-                      )}
-                    />
-                    Tất cả loại chất liệu
-                  </CommandItem>
-                  {materialTypeOptionsForOrders.map((mt) => (
-                    <CommandItem
-                      key={mt.id}
-                      value={mt.name}
-                      onSelect={() => {
-                        setSelectedMaterialTypeId(mt.id);
-                        setMaterialTypeSearchOpen(false);
-                        setIncompletePage(1);
-                        setCompletedPage(1);
-                      }}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          selectedMaterialTypeId === mt.id
-                            ? "opacity-100"
-                            : "opacity-0",
-                        )}
-                      />
-                      {mt.name}
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
-        {(selectedMaterialTypeId || designCode.trim()) && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9 gap-2"
-            onClick={() => {
-              setDesignCode("");
-              setSelectedMaterialTypeId(null);
-              setIncompletePage(1);
-              setCompletedPage(1);
-            }}
-          >
-            <X className="h-4 w-4" />
-            Xóa bộ lọc
-          </Button>
-        )}
-
-      </div>
-
       {/* FilterSection */}
       <FilterSection
         designTypeOptions={designTypeOptions}
@@ -304,6 +201,7 @@ export function PrepressOrdersHeader({
         onMaterialTypeChange={onMaterialTypeChange}
         onClearFilters={onClearFilters}
         hasActiveFilters={hasActiveFilters}
+        isConfiguring={isConfiguring}
       />
 
       {/* DesignTable - shown when filters are active or search matches no orders */}
@@ -323,6 +221,7 @@ export function PrepressOrdersHeader({
               <DesignTable
                 designs={designs}
                 selectedIds={selectedIds}
+                selectedDesigns={selectedDesigns}
                 canSelect={canSelect}
                 onToggle={onToggle}
                 onReject={onReject}
@@ -330,6 +229,7 @@ export function PrepressOrdersHeader({
                 onFindDie={onFindDie}
                 isSelectionEnabled={isSelectionEnabled}
                 searchTerm={designCode}
+                isConfiguring={isConfiguring}
               />
               {/* Designs Pagination */}
               {designsTotalCount > designsPageSize &&

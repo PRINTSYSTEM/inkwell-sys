@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useState, useMemo } from "react";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import {
@@ -22,6 +22,7 @@ import {
   Package,
   Receipt,
   FileSpreadsheet,
+  Trash2,
 } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,21 +50,24 @@ import {
   useInvoice,
   useExportInvoice,
   useVoidInvoice,
+  useDeleteInvoice,
 } from "@/hooks/use-invoice";
+import { useOrder } from "@/hooks/use-order";
 import { formatCurrency } from "@/lib/status-utils";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   IssueInvoiceDialog,
   UpdateEInvoiceDialog,
 } from "@/components/accounting";
+import { cn } from "@/lib/utils";
 
 const formatDate = (dateStr: string | null | undefined) => {
-  if (!dateStr) return "—";
+  if (!dateStr) return "Ã¢â‚¬â€";
   return format(new Date(dateStr), "dd/MM/yyyy", { locale: vi });
 };
 
 const formatDateTime = (dateStr: string | null | undefined) => {
-  if (!dateStr) return "—";
+  if (!dateStr) return "Ã¢â‚¬â€";
   return format(new Date(dateStr), "dd/MM/yyyy HH:mm", { locale: vi });
 };
 
@@ -80,11 +84,162 @@ export default function InvoiceDetailPage() {
 
   const exportInvoiceMutation = useExportInvoice();
   const voidInvoiceMutation = useVoidInvoice();
+  const deleteInvoiceMutation = useDeleteInvoice();
+  const navigate = useNavigate();
 
   const [isIssueDialogOpen, setIsIssueDialogOpen] = useState(false);
   const [isUpdateEInvoiceDialogOpen, setIsUpdateEInvoiceDialogOpen] =
     useState(false);
   const [isVoidDialogOpen, setIsVoidDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  const orderIds = useMemo(() => {
+    if (!invoice?.orders) return [];
+    return Array.from(
+      new Set(invoice.orders.map((o) => o.orderId).filter(Boolean)),
+    );
+  }, [invoice?.orders]);
+
+  const orderId1 = orderIds[0] || null;
+  const orderId2 = orderIds[1] || null;
+  const { data: order1 } = useOrder(orderId1, !!orderId1);
+  const { data: order2 } = useOrder(orderId2, !!orderId2);
+
+  const orderDetailsMap = useMemo(() => {
+    const map = new Map<number, any>();
+    const addOrder = (order: any) => {
+      if (!order?.orderDetails) return;
+      for (const d of order.orderDetails) {
+        if (d.id) {
+          map.set(d.id, d);
+        }
+      }
+    };
+    addOrder(order1);
+    addOrder(order2);
+    return map;
+  }, [order1, order2]);
+  function InfoItem({
+    label,
+    value,
+    className,
+  }: {
+    label: string;
+    value?: React.ReactNode;
+    className?: string;
+  }) {
+    if (!value) return null;
+
+    return (
+      <div className={cn("min-w-0", className)}>
+        <div className="text-[11px] leading-4 text-muted-foreground">
+          {label}
+        </div>
+        <div className="font-semibold leading-5 break-words">{value}</div>
+      </div>
+    );
+  }
+
+  function MoneyRow({
+    label,
+    value,
+    className,
+  }: {
+    label: string;
+    value: React.ReactNode;
+    className?: string;
+  }) {
+    return (
+      <div className={cn("flex items-center justify-between gap-4", className)}>
+        <span className="text-muted-foreground">{label}:</span>
+        <span className="w-32 text-right font-semibold tabular-nums">
+          {value}
+        </span>
+      </div>
+    );
+  }
+  const convertMmToCmDimensions = (dims: string | null | undefined): string => {
+    if (!dims) return "";
+    const clean = dims.replace(/^\(|\)$/g, "").trim();
+    if (!clean) return "";
+
+    const lowerClean = clean.toLowerCase();
+    const hasCm = lowerClean.includes("cm");
+    const hasDecimals = clean.split(/[xX*]/).some(part => part.includes("."));
+
+    if (hasCm || hasDecimals) {
+      const cleanNoCm = clean.replace(/cm/gi, "").trim();
+      return `(${cleanNoCm}cm)`;
+    }
+
+    const parts = clean.split(/[xX*]/);
+    const convertedParts = parts.map(part => {
+      const trimmed = part.trim();
+      const num = parseFloat(trimmed);
+      if (!isNaN(num)) {
+        return (num / 10).toString().replace(/\.0$/, "");
+      }
+      return trimmed;
+    });
+
+    return `(${convertedParts.join("x")}cm)`;
+  };
+
+  const getFormattedDimensions = (design: any) => {
+    if (!design) return "";
+    
+    if (design.dimensions) {
+      return convertMmToCmDimensions(design.dimensions);
+    }
+
+    const parts: number[] = [];
+    if (design.length) parts.push(design.length);
+    if (design.width) parts.push(design.width);
+    if (design.height) parts.push(design.height);
+
+    if (parts.length > 0) {
+      const cmParts = parts.map((num) =>
+        (num / 10).toString().replace(/\.0$/, ""),
+      );
+      return `(${cmParts.join("x")}cm)`;
+    }
+    return "";
+  };
+
+  const getFormattedDescription = (item: any) => {
+    const desc = item.description || "";
+    
+    let sizeStr = "";
+    if (item.dimensions) {
+      sizeStr = convertMmToCmDimensions(item.dimensions);
+    }
+
+    if (!sizeStr && item.orderDetailId) {
+      const detail = orderDetailsMap.get(item.orderDetailId);
+      if (detail && detail.design) {
+        sizeStr = getFormattedDimensions(detail.design);
+      }
+    }
+
+    if (!sizeStr) return desc;
+
+    const detail = item.orderDetailId ? orderDetailsMap.get(item.orderDetailId) : null;
+    const code = detail?.design?.code;
+    if (code) {
+      const escCode = code.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+      const codeRegex = new RegExp(`\\s*\\(${escCode}\\)`);
+      if (codeRegex.test(desc)) {
+        return desc.replace(codeRegex, ` ${sizeStr} (${code})`);
+      }
+    }
+
+    const genericCodeRegex = /\s*(\([A-Za-z0-9-]+\))$/;
+    if (genericCodeRegex.test(desc)) {
+      return desc.replace(genericCodeRegex, ` ${sizeStr} $1`);
+    }
+
+    return `${desc} ${sizeStr}`;
+  };
 
   const handleExportPDF = async () => {
     if (!invoice?.id) return;
@@ -95,12 +250,22 @@ export default function InvoiceDetailPage() {
     }
   };
 
+  const handleDeleteInvoice = async () => {
+    try {
+      await deleteInvoiceMutation.mutateAsync(invoiceId);
+      setIsDeleteDialogOpen(false);
+      navigate("/accounting/invoice");
+    } catch (e) {
+      // Error is handled by the hook
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center space-y-3">
           <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-          <p className="text-muted-foreground">Đang tải hóa đơn...</p>
+          <p className="text-muted-foreground">Ã„Âang tÃ¡ÂºÂ£i Hóa đơn...</p>
         </div>
       </div>
     );
@@ -111,12 +276,15 @@ export default function InvoiceDetailPage() {
       <div className="min-h-[60vh] flex items-center justify-center">
         <div className="text-center space-y-4">
           <AlertCircle className="h-12 w-12 mx-auto text-destructive" />
-          <h1 className="text-xl font-semibold">Không tìm thấy hóa đơn</h1>
+          <h1 className="text-xl font-semibold">
+            KhÃƒÂ´ng tÃƒÂ¬m thÃ¡ÂºÂ¥y Hóa đơn
+          </h1>
           <p className="text-muted-foreground">
-            Hóa đơn không tồn tại hoặc đã bị xóa
+            Hóa đơn khÃƒÂ´ng tÃ¡Â»â€œn tÃ¡ÂºÂ¡i hoÃ¡ÂºÂ·c Ã„â€˜ÃƒÂ£ bÃ¡Â»â€¹
+            xÃƒÂ³a
           </p>
           <Link to="/accounting">
-            <Button>Quay lại</Button>
+            <Button>Quay lÃ¡ÂºÂ¡i</Button>
           </Link>
         </div>
       </div>
@@ -142,36 +310,29 @@ export default function InvoiceDetailPage() {
           </Button>
         </Link>
 
-        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl font-bold tracking-tight">
-                Hóa đơn {invoice.invoiceNumber || `#${invoice.id}`}
-              </h1>
-              <span className="text-sm text-muted-foreground">
-                Trạng thái hiện tại:
-              </span>{" "}
-              {invoice.status && (
-                <StatusBadge
-                  status={invoice.status}
-                  label={invoice.statusName || invoice.status}
-                />
-              )}
-            </div>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-              <span className="flex items-center gap-1.5">
-                <Calendar className="w-4 h-4" />
-                {invoice.issuedAt && !invoice.issuedAt.startsWith("0001-01-01")
-                  ? formatDate(invoice.issuedAt)
-                  : formatDateTime(invoice.createdAt)}
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl font-bold tracking-tight">
+              Hóa đơn {invoice.invoiceNumber || `#${invoice.id}`}
+            </h1>
+            {invoice.status && (
+              <StatusBadge
+                status={invoice.status}
+                label={invoice.statusName || invoice.status}
+              />
+            )}
+            <span className="text-xs text-muted-foreground border-l pl-3 flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-muted-foreground/75" />
+              {invoice.issuedAt && !invoice.issuedAt.startsWith("0001-01-01")
+                ? formatDate(invoice.issuedAt)
+                : formatDateTime(invoice.createdAt)}
+            </span>
+            {invoice.createdBy && (
+              <span className="text-xs text-muted-foreground border-l pl-3 flex items-center gap-1.5">
+                <User className="w-3.5 h-3.5 text-muted-foreground/75" />
+                {invoice.createdBy.fullName || "Ã¢â‚¬â€"}
               </span>
-              {invoice.createdBy && (
-                <span className="flex items-center gap-1.5">
-                  <User className="w-4 h-4" />
-                  {invoice.createdBy.fullName || "—"}
-                </span>
-              )}
-            </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
@@ -203,7 +364,7 @@ export default function InvoiceDetailPage() {
                 className="gap-2 text-destructive hover:text-destructive"
               >
                 <X className="w-4 h-4" />
-                Hủy HĐ
+                Hủy hóa đơn
               </Button>
             )}
             <Button
@@ -215,405 +376,233 @@ export default function InvoiceDetailPage() {
               <FileSpreadsheet className="w-4 h-4" />
               Xuất Excel
             </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setIsDeleteDialogOpen(true)}
+              className="gap-2"
+            >
+              <Trash2 className="w-4 h-4" />
+              Xóa Hóa đơn
+            </Button>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Items */}
-          {invoice.items && invoice.items.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Receipt className="w-5 h-5" />
-                  Chi tiết sản phẩm ({invoice.items.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">STT</TableHead>
-                      <TableHead>Mô tả sản phẩm</TableHead>
-                      <TableHead className="text-center w-20">ĐVT</TableHead>
-                      <TableHead className="text-right w-24">SL</TableHead>
-                      <TableHead className="text-right w-32">Đơn giá</TableHead>
-
-                      <TableHead className="text-right w-28">
-                        Giảm giá
-                      </TableHead>
-                      <TableHead className="text-right w-32">
-                        Thành tiền
-                      </TableHead>
-                      <TableHead className="text-right w-32">
-                        Tổng cộng
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {invoice.items.map((item, index) => {
-                      const hasDiscount =
-                        (item.discountPercent && item.discountPercent > 0) ||
-                        (item.discountAmount && item.discountAmount > 0);
-
-                      // Handle unitPrice: display "—" for null, undefined, 0, or NaN
-                      const unitPriceValue = item.unitPrice;
-                      const isNullOrUndefined = unitPriceValue == null;
-                      const numericValue =
-                        typeof unitPriceValue === "number"
-                          ? unitPriceValue
-                          : Number(unitPriceValue);
-                      const isZero = numericValue === 0 || isNaN(numericValue);
-                      const isValidPrice = !isNullOrUndefined && !isZero;
-                      const unitPriceCheckResult = isValidPrice
-                        ? formatCurrency(numericValue)
-                        : "—";
-
-                      return (
-                        <TableRow key={item.id || index}>
-                          <TableCell className="font-medium">
-                            {item.sortOrder || index + 1}
-                          </TableCell>
-                          <TableCell>
-                            <div className="font-medium">
-                              {item.description || "—"}
-                            </div>
-                            {item.orderDetailId && (
-                              <div className="text-xs text-muted-foreground mt-0.5">
-                                Mã chi tiết: #{item.orderDetailId}
-                              </div>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {item.unit || "—"}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums font-medium">
-                            {item.quantity
-                              ? item.quantity.toLocaleString("vi-VN")
-                              : "—"}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {unitPriceCheckResult}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums text-orange-600">
-                            {item.discountPercent && item.discountPercent > 0
-                              ? `-${item.discountPercent}%`
-                              : item.discountAmount && item.discountAmount > 0
-                                ? formatCurrency(item.discountAmount)
-                                : "—"}
-                          </TableCell>
-                          <TableCell className="text-right font-medium tabular-nums">
-                            {item.amountAfterDiscount
-                              ? formatCurrency(item.amountAfterDiscount)
-                              : item.amount
-                                ? formatCurrency(item.amount)
-                                : "—"}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            <div className="font-bold">
-                              {(item as any).grandTotal
-                                ? formatCurrency((item as any).grandTotal)
-                                : (item.amountAfterDiscount || item.amount)
-                                  ? formatCurrency(
-                                      (item.amountAfterDiscount || item.amount || 0) *
-                                        (1 + (invoice.taxRate || 0))
-                                    )
-                                  : "—"}
-                            </div>
-                            {((item as any).vatAmount !== undefined && (item as any).vatAmount !== null) ||
-                            ((item.amountAfterDiscount || item.amount) &&
-                              invoice.taxRate && invoice.taxRate > 0) ? (
-                              <div className="text-[10px] text-muted-foreground">
-                                VAT:{" "}
-                                {(item as any).vatAmount !== undefined && (item as any).vatAmount !== null
-                                  ? formatCurrency((item as any).vatAmount)
-                                  : formatCurrency(
-                                      (item.amountAfterDiscount || item.amount || 0) *
-                                        (invoice.taxRate || 0)
-                                    )}
-                              </div>
-                            ) : null}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Orders */}
-          {invoice.orders && invoice.orders.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="w-5 h-5" />
-                  Danh sách đơn hàng ({invoice.orders.length})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {invoice.orders.map((order) => (
-                    <div
-                      key={order.orderId}
-                      className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Package className="w-4 h-4 text-muted-foreground" />
-                        <div>
-                          <div className="font-medium font-mono">
-                            {order.orderCode || `Đơn #${order.orderId}`}
-                          </div>
-                          {order.orderId && (
-                            <Link
-                              to={`/accounting/orders/${order.orderId}`}
-                              className="text-xs text-primary hover:underline flex items-center gap-1 mt-1"
-                            >
-                              Xem chi tiết
-                              <ExternalLink className="w-3 h-3" />
-                            </Link>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-medium tabular-nums">
-                          {order.amount ? formatCurrency(order.amount) : "—"}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Notes */}
-          {invoice.notes && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Ghi chú</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm whitespace-pre-wrap">{invoice.notes}</p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Seller Info */}
-          {(invoice.sellerName ||
-            invoice.sellerTaxCode ||
-            invoice.sellerAddress ||
-            invoice.sellerPhone ||
-            invoice.sellerBankAccount) && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Building2 className="w-5 h-5" />
-                  Thông tin người bán
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {invoice.sellerName && (
-                  <div>
-                    <div className="text-sm font-medium">
-                      {invoice.sellerName}
-                    </div>
-                  </div>
-                )}
-                {invoice.sellerTaxCode && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Hash className="w-4 h-4 text-muted-foreground" />
-                    <span>MST: {invoice.sellerTaxCode}</span>
-                  </div>
-                )}
-                {invoice.sellerAddress && (
-                  <div className="flex items-start gap-2 text-sm">
-                    <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
-                    <span>{invoice.sellerAddress}</span>
-                  </div>
-                )}
-                {invoice.sellerPhone && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Phone className="w-4 h-4 text-muted-foreground" />
-                    <span>{invoice.sellerPhone}</span>
-                  </div>
-                )}
-                {invoice.sellerBankAccount && (
-                  <div className="text-sm">
-                    <div className="text-muted-foreground">Tài khoản:</div>
-                    <div className="font-medium">
-                      {invoice.sellerBankAccount}
-                    </div>
-                    {invoice.sellerBankName && (
-                      <div className="text-xs text-muted-foreground">
-                        {invoice.sellerBankName}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Buyer Info */}
-          {(invoice.buyerName ||
-            invoice.buyerCompanyName ||
-            invoice.buyerTaxCode ||
-            invoice.buyerAddress ||
-            invoice.buyerEmail ||
-            invoice.buyerBankAccount) && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="w-5 h-5" />
-                  Thông tin người mua
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {invoice.buyerCompanyName && (
-                  <div>
-                    <div className="text-sm font-medium">
-                      {invoice.buyerCompanyName}
-                    </div>
-                  </div>
-                )}
-                {invoice.buyerName && (
-                  <div className="text-sm">
-                    <div className="font-medium">{invoice.buyerName}</div>
-                  </div>
-                )}
-                {invoice.buyerTaxCode && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Hash className="w-4 h-4 text-muted-foreground" />
-                    <span>MST: {invoice.buyerTaxCode}</span>
-                  </div>
-                )}
-                {invoice.buyerAddress && (
-                  <div className="flex items-start gap-2 text-sm">
-                    <MapPin className="w-4 h-4 text-muted-foreground mt-0.5" />
-                    <span>{invoice.buyerAddress}</span>
-                  </div>
-                )}
-                {invoice.buyerEmail && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="w-4 h-4 text-muted-foreground" />
-                    <span>{invoice.buyerEmail}</span>
-                  </div>
-                )}
-                {invoice.buyerBankAccount && (
-                  <div className="text-sm">
-                    <div className="text-muted-foreground">Tài khoản:</div>
-                    <div className="font-medium">
-                      {invoice.buyerBankAccount}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Summary */}
+      <div className="w-full max-w-6xl mx-auto space-y-3">
+        {/* Compact Parties Bar */}
+        {(invoice.sellerName ||
+          invoice.sellerTaxCode ||
+          invoice.sellerAddress ||
+          invoice.buyerName ||
+          invoice.buyerCompanyName ||
+          invoice.buyerAddress) && (
           <Card>
-            <CardHeader>
-              <CardTitle>Tổng kết</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Tổng tiền hàng:</span>
-                <span className="font-medium tabular-nums">
-                  {formatCurrency(invoice.subTotal || totalAmount)}
-                </span>
-              </div>
-              {(invoice.discountPercent && invoice.discountPercent > 0) ||
-              (invoice.discountAmount && invoice.discountAmount > 0) ? (
-                <>
-                  <Separator />
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      Giảm giá
-                      {invoice.discountPercent && invoice.discountPercent > 0
-                        ? ` (${(invoice.discountPercent * 100).toFixed(0)}%)`
-                        : ""}
-                      :
-                    </span>
-                    <span className="font-medium tabular-nums text-orange-600">
-                      -{formatCurrency(invoice.discountAmount || 0)}
-                    </span>
+            <CardContent className="px-4 py-3">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 text-sm">
+                <div className="min-w-0">
+                  <div className="mb-1 flex items-center gap-2 font-bold text-emerald-800">
+                    <Building2 className="h-4 w-4" />
+                    Người bán
                   </div>
-                  {invoice.discountReason && (
-                    <div className="text-xs text-muted-foreground pl-2">
-                      Lý do: {invoice.discountReason}
-                    </div>
-                  )}
-                  <Separator />
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Sau giảm giá:</span>
-                    <span className="font-medium tabular-nums">
-                      {formatCurrency(
-                        invoice.totalAfterDiscount || totalAmount
-                      )}
-                    </span>
+
+                  <div className="font-semibold truncate">
+                    {invoice.sellerName || "â€”"}
                   </div>
-                </>
-              ) : null}
-              {invoice.taxRate && invoice.taxRate > 0 && (
-                <>
-                  <Separator />
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">
-                      VAT ({((invoice.taxRate || 0) * 100).toFixed(0)}%):
-                    </span>
-                    <span className="font-medium tabular-nums">
-                      {formatCurrency(invoice.vatAmount || taxAmount)}
-                    </span>
-                  </div>
-                </>
-              )}
-              <Separator />
-              <div className="flex items-center justify-between text-base font-bold">
-                <span>Tổng thanh toán:</span>
-                <span className="tabular-nums">
-                  {formatCurrency(grandTotal)}
-                </span>
-              </div>
-              {invoice.paymentMethod && (
-                <>
-                  <Separator />
-                  <div className="text-sm">
-                    <div className="text-muted-foreground">
-                      Phương thức thanh toán:
-                    </div>
-                    <div className="font-medium">{invoice.paymentMethod}</div>
-                  </div>
-                </>
-              )}
-              {invoice.eInvoiceNumber && (
-                <>
-                  <Separator />
-                  <div className="text-sm">
-                    <div className="text-muted-foreground">
-                      Số hóa đơn điện tử:
-                    </div>
-                    <div className="font-medium font-mono">
-                      {invoice.eInvoiceNumber}
-                    </div>
-                    {invoice.eInvoiceSerial && (
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        Số seri: {invoice.eInvoiceSerial}
-                      </div>
+
+                  <div className="mt-0.5 text-xs text-muted-foreground truncate">
+                    {invoice.sellerAddress && (
+                      <>
+                        <span className="mx-2">Địa chỉ</span>
+                        {invoice.sellerAddress}
+                      </>
                     )}
                   </div>
-                </>
-              )}
+                </div>
+
+                <div className="min-w-0 lg:border-l lg:pl-4">
+                  <div className="mb-1 flex items-center gap-2 font-bold text-emerald-800">
+                    <User className="h-4 w-4" />
+                    Người mua
+                  </div>
+
+                  <div className="font-semibold truncate">
+                    {invoice.buyerCompanyName || invoice.buyerName || "â€”"}
+                  </div>
+
+                  <div className="mt-0.5 text-xs text-muted-foreground truncate">
+                    Địa chỉ: {invoice.buyerAddress || "Chưa có địa chỉ"}
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
-        </div>
+        )}
+
+        {/* Items Table */}
+        {invoice.items && invoice.items.length > 0 && (
+          <Card>
+            <CardContent className="p-0 overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="w-10">STT</TableHead>
+                    <TableHead>Tên sản phẩm</TableHead>
+                    <TableHead className="text-center w-16">ĐVT</TableHead>
+                    <TableHead className="text-right w-20">SL</TableHead>
+                    <TableHead className="text-right w-28">Đơn giá</TableHead>
+                    <TableHead className="text-right w-28">
+                      Thành tiền
+                    </TableHead>
+                    <TableHead className="text-right w-24">
+                      VAT{" "}
+                      {invoice.taxRate
+                        ? `${(invoice.taxRate * 100).toFixed(0)}%`
+                        : "8%"}
+                    </TableHead>
+                    <TableHead className="text-right w-28">Tổng cộng</TableHead>
+                  </TableRow>
+                </TableHeader>
+
+                <TableBody>
+                  {invoice.items.map((item, index) => {
+                    const unitPriceValue = item.unitPrice;
+                    const numericValue =
+                      typeof unitPriceValue === "number"
+                        ? unitPriceValue
+                        : Number(unitPriceValue);
+
+                    const isValidPrice =
+                      unitPriceValue != null &&
+                      numericValue !== 0 &&
+                      !Number.isNaN(numericValue);
+
+                    const lineAmount =
+                      item.amountAfterDiscount || item.amount || 0;
+
+                    const vatAmount =
+                      (item as any).vatAmount !== undefined &&
+                      (item as any).vatAmount !== null
+                        ? (item as any).vatAmount
+                        : lineAmount * (invoice.taxRate || 0);
+
+                    const grandTotalVal =
+                      (item as any).grandTotal !== undefined &&
+                      (item as any).grandTotal !== null
+                        ? (item as any).grandTotal
+                        : lineAmount + vatAmount;
+
+                    return (
+                      <TableRow key={item.id || index}>
+                        <TableCell className="font-medium">
+                          {item.sortOrder || index + 1}
+                        </TableCell>
+
+                        <TableCell>
+                          <div className="font-medium whitespace-pre-wrap leading-snug">
+                            {getFormattedDescription(item)}
+                          </div>
+                        </TableCell>
+
+                        <TableCell className="text-center">
+                          {item.unit || "Ã¢â‚¬â€"}
+                        </TableCell>
+
+                        <TableCell className="text-right tabular-nums font-medium">
+                          {item.quantity
+                            ? item.quantity.toLocaleString("vi-VN")
+                            : "Ã¢â‚¬â€"}
+                        </TableCell>
+
+                        <TableCell className="text-right tabular-nums">
+                          {isValidPrice
+                            ? formatCurrency(numericValue)
+                            : "Ã¢â‚¬â€"}
+                        </TableCell>
+
+                        <TableCell className="text-right tabular-nums font-medium">
+                          {formatCurrency(lineAmount)}
+                          {item.discountPercent && item.discountPercent > 0 && (
+                            <div className="text-[10px] text-orange-600 font-normal">
+                              GiÃ¡ÂºÂ£m {item.discountPercent}%
+                            </div>
+                          )}
+                        </TableCell>
+
+                        <TableCell className="text-right tabular-nums text-muted-foreground">
+                          {formatCurrency(vatAmount)}
+                        </TableCell>
+
+                        <TableCell className="text-right tabular-nums font-bold">
+                          {formatCurrency(grandTotalVal)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Orders */}
+        {invoice.orders && invoice.orders.length > 0 && (
+          <Card>
+            <CardHeader className="py-3">
+              <CardTitle className="flex items-center gap-2 text-base text-emerald-800">
+                <Package className="w-4.5 h-4.5" />
+                Danh sách đơn hàng ({invoice.orders.length})
+              </CardTitle>
+            </CardHeader>
+
+            <CardContent className="space-y-2 py-3 border-t">
+              {invoice.orders.map((order) => (
+                <div
+                  key={order.orderId}
+                  className="flex items-center justify-between rounded-lg border p-2 text-sm transition-colors hover:bg-muted/50"
+                >
+                  <div className="flex items-center gap-3">
+                    <Package className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <div className="font-medium font-mono">
+                        {order.orderCode || `Đơn #${order.orderId}`}
+                      </div>
+
+                      {order.orderId && (
+                        <Link
+                          to={`/accounting/orders/${order.orderId}`}
+                          className="mt-0.5 flex items-center gap-1 text-xs text-primary hover:underline"
+                        >
+                          Xem chi tiết
+                          <ExternalLink className="h-3 w-3" />
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="text-right font-medium tabular-nums">
+                    {order.amount ? formatCurrency(order.amount) : "Ã¢â‚¬â€"}
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Notes */}
+        {invoice.notes && (
+          <Card>
+            <CardHeader className="py-3">
+              <CardTitle className="text-base text-emerald-800">
+                Ghi chú
+              </CardTitle>
+            </CardHeader>
+
+            <CardContent className="py-3 border-t">
+              <p className="text-sm whitespace-pre-wrap">{invoice.notes}</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Dialogs */}
@@ -638,10 +627,10 @@ export default function InvoiceDetailPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2 text-destructive">
                 <X className="w-5 h-5" />
-                Hủy hóa đơn
+                HÃ¡Â»Â§y Hóa đơn
               </DialogTitle>
               <DialogDescription>
-                Bạn có chắc chắn muốn hủy hóa đơn này? Hành động này không thể
+                Bạn có chắc chắn muốn hủy Hóa đơn này? Hành động này không thể
                 hoàn tác.
               </DialogDescription>
             </DialogHeader>
@@ -651,7 +640,7 @@ export default function InvoiceDetailPage() {
                 onClick={() => setIsVoidDialogOpen(false)}
                 disabled={voidInvoiceMutation.isPending}
               >
-                Hủy
+                HÃ¡Â»Â§y
               </Button>
               <Button
                 variant="destructive"
@@ -674,6 +663,47 @@ export default function InvoiceDetailPage() {
                   </>
                 ) : (
                   "Xác nhận hủy"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Delete Invoice Dialog */}
+      {isDeleteDialogOpen && (
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-destructive">
+                <Trash2 className="w-5 h-5" />
+                Xóa Hóa đơn
+              </DialogTitle>
+              <DialogDescription>
+                Bạn có chắc chắn muốn xóa Hóa đơn này khỏi hệ thống? Hành động
+                này không thể hoàn tác.{" "}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setIsDeleteDialogOpen(false)}
+                disabled={deleteInvoiceMutation.isPending}
+              >
+                Hủy
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDeleteInvoice}
+                disabled={deleteInvoiceMutation.isPending}
+              >
+                {deleteInvoiceMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Đang xóa...
+                  </>
+                ) : (
+                  "Xác nhận xóa"
                 )}
               </Button>
             </DialogFooter>

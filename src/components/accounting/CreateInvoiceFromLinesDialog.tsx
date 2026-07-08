@@ -75,7 +75,13 @@ export function CreateInvoiceFromLinesDialog({
 
   // Use local selection billToCustomerId if available, otherwise fall back to customerId prop
   const { data: billableItems, isLoading, refetch } = useBillableItems(
-    billToCustomerId || customerId ? { customerId: billToCustomerId || customerId } : undefined
+    {
+      customerId: billToCustomerId || customerId || undefined,
+      sortColumn: "DeliveredAt",
+      sortOrder: "desc",
+      SortColumn: "DeliveredAt",
+      SortOrder: "desc",
+    }
   );
 
   // Refetch billable items when dialog opens & when customer changes
@@ -127,6 +133,68 @@ export function CreateInvoiceFromLinesDialog({
     setBuyerAddress(cust.address || "");
     setBuyerEmail(cust.email || "");
     setCustomerSearchOpen(false);
+  };
+
+  const convertMmToCmDimensions = (dims: string | null | undefined): string => {
+    if (!dims) return "";
+    const clean = dims.replace(/^\(|\)$/g, "").trim();
+    if (!clean) return "";
+
+    const lowerClean = clean.toLowerCase();
+    const hasCm = lowerClean.includes("cm");
+    const hasDecimals = clean.split(/[xX*]/).some(part => part.includes("."));
+
+    if (hasCm || hasDecimals) {
+      const cleanNoCm = clean.replace(/cm/gi, "").trim();
+      return `(${cleanNoCm}cm)`;
+    }
+
+    const parts = clean.split(/[xX*]/);
+    const convertedParts = parts.map(part => {
+      const trimmed = part.trim();
+      const num = parseFloat(trimmed);
+      if (!isNaN(num)) {
+        return (num / 10).toString().replace(/\.0$/, "");
+      }
+      return trimmed;
+    });
+
+    return `(${convertedParts.join("x")}cm)`;
+  };
+
+  const getFormattedItemName = (item: BillableItemResponse) => {
+    const name = item.designName || "";
+    const code = item.designCode || "";
+    const dimensions = (item as any).dimensions;
+
+    let sizeStr = "";
+    if (dimensions) {
+      sizeStr = convertMmToCmDimensions(dimensions);
+    }
+
+    if (!name) {
+      return item.designCode || "—";
+    }
+
+    if (code) {
+      const escCode = code.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+      const codeRegex = new RegExp(`\\s*\\(${escCode}\\)`);
+      if (sizeStr) {
+        if (codeRegex.test(name)) {
+          return name.replace(codeRegex, ` ${sizeStr} (${code})`);
+        }
+        return `${name} ${sizeStr} (${code})`;
+      }
+      if (codeRegex.test(name)) {
+        return name;
+      }
+      return `${name} (${code})`;
+    }
+
+    if (sizeStr) {
+      return `${name} ${sizeStr}`;
+    }
+    return name;
   };
 
   const toggleLine = (item: BillableItemResponse) => {
@@ -181,12 +249,16 @@ export function CreateInvoiceFromLinesDialog({
   // Filter billable items
   const filteredItems = useMemo(() => {
     if (!billableItems) return [];
-    
-    const items = billableItems;
-    
+
+    const sorted = [...billableItems].sort((a, b) => {
+      const dateA = a.deliveredAt ? new Date(a.deliveredAt).getTime() : 0;
+      const dateB = b.deliveredAt ? new Date(b.deliveredAt).getTime() : 0;
+      return dateB - dateA;
+    });
+
     const query = searchQuery.trim().toLowerCase();
-    if (!query) return items;
-    return items.filter((item) => {
+    if (!query) return sorted;
+    return sorted.filter((item) => {
       return (
         (item.customerName || "").toLowerCase().includes(query) ||
         (item.designName || "").toLowerCase().includes(query) ||
@@ -265,101 +337,135 @@ export function CreateInvoiceFromLinesDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+      <DialogContent className="max-w-6xl h-[88vh] p-0 overflow-hidden flex flex-col">
+        {/* Header */}
+        <DialogHeader className="px-5 py-4 border-b">
+          <DialogTitle className="flex items-center gap-2 text-lg">
             <ShoppingCart className="w-5 h-5" />
-            Tạo hóa đơn từ dòng hàng
+            Tạo hóa đơn
           </DialogTitle>
-          <DialogDescription>
-            Chọn các dòng hàng có thể xuất hóa đơn và điền thông tin hóa đơn
-          </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-hidden grid grid-cols-2 gap-4">
-          {/* Left: Billable Items List */}
-          <div className="flex flex-col min-h-0">
-            <div className="mb-2 space-y-2">
-              <h3 className="text-sm font-semibold">
-                Dòng hàng có thể xuất hóa đơn ({filteredItems.length})
-              </h3>
+        {/* Body */}
+        <div className="flex-1 min-h-0 grid grid-cols-[1.05fr_0.95fr]">
+          {/* LEFT */}
+          <div className="min-h-0 flex flex-col border-r bg-muted/20">
+            <div className="p-4 border-b bg-background">
+              <div className="flex items-center justify-between gap-3 mb-3">
+                <h3 className="text-sm font-semibold">
+                  Dòng hàng có thể xuất HĐ
+                  <span className="ml-1 text-muted-foreground">
+                    ({filteredItems.length})
+                  </span>
+                </h3>
+
+                <Badge variant="outline" className="text-xs">
+                  Đã chọn: {selectedLines.size}
+                </Badge>
+              </div>
+
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
-                  placeholder="Tìm theo khách hàng, sản phẩm, mã đơn..."
+                  placeholder="Tìm khách hàng, sản phẩm, mã đơn..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8 h-8 text-xs rounded-lg bg-white"
+                  className="pl-8 h-9 text-sm bg-white"
                 />
               </div>
             </div>
-            <ScrollArea className="flex-1 border rounded-lg p-2 bg-slate-50/30">
-              {isLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                </div>
-              ) : filteredItems.length === 0 ? (
-                <div className="text-center py-8 text-sm text-muted-foreground">
-                  {billToCustomerId 
-                    ? "Không có dòng hàng nào cho khách hàng này." 
-                    : "Không có dòng hàng nào có thể xuất hóa đơn."}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {filteredItems.map((item) => {
-                    const isSelected = selectedLines.has(
-                      item.deliveryLineId || 0
-                    );
-                    const lineData = selectedLines.get(
-                      item.deliveryLineId || 0
-                    );
+
+            <ScrollArea className="flex-1">
+              <div className="p-3 space-y-2">
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-10">
+                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : filteredItems.length === 0 ? (
+                  <div className="text-center py-10 text-sm text-muted-foreground">
+                    {billToCustomerId
+                      ? "Không có dòng hàng nào cho khách hàng này."
+                      : "Không có dòng hàng nào có thể xuất hóa đơn."}
+                  </div>
+                ) : (
+                  filteredItems.map((item) => {
+                    const lineId = item.deliveryLineId || 0;
+                    const isSelected = selectedLines.has(lineId);
 
                     return (
-                      <Card
+                      <button
                         key={item.deliveryLineId}
-                        className={`cursor-pointer transition-colors ${
-                          isSelected
-                            ? "border-primary bg-primary/5 shadow-sm"
-                            : "hover:bg-muted/50"
-                        }`}
+                        type="button"
                         onClick={() => toggleLine(item)}
+                        className={cn(
+                          "w-full text-left rounded-lg border bg-background p-3 transition-all",
+                          "hover:border-primary/50 hover:bg-primary/5",
+                          isSelected && "border-primary bg-primary/5 shadow-sm"
+                        )}
                       >
-                        <CardContent className="p-3">
-                          <div className="flex items-start gap-2.5">
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={() => toggleLine(item)}
-                              onClick={(e) => e.stopPropagation()}
-                              className="mt-1"
-                            />
-                            <div className="flex-1 space-y-1">
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="font-bold text-sm text-foreground leading-snug">
-                                  {item.designName || item.designCode || "—"}
+                        <div className="flex items-start gap-3">
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => toggleLine(item)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="mt-0.5"
+                          />
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <div className="font-semibold text-sm leading-snug line-clamp-2">
+                                  {getFormattedItemName(item)}
                                 </div>
-                                <Badge variant="secondary" className="text-[10px] font-bold shrink-0">
-                                  {item.orderCode}
-                                </Badge>
+
+                                {item.customerName && (
+                                  <div className="mt-0.5 text-xs font-medium text-blue-600 truncate">
+                                    {item.customerName}
+                                  </div>
+                                )}
                               </div>
-                              
-                              {item.customerName && (
-                                <div className="text-xs text-blue-600 font-semibold uppercase tracking-tight">
-                                  Khách: {item.customerName}
+
+                              <Badge
+                                variant="secondary"
+                                className="shrink-0 text-[10px] font-semibold"
+                              >
+                                {item.orderCode}
+                              </Badge>
+                            </div>
+
+                            <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+                              <div>
+                                <div className="text-muted-foreground">Đơn giá</div>
+                                <div className="font-semibold tabular-nums">
+                                  {formatCurrency(item.unitPrice || 0)}
                                 </div>
-                              )}
-                              
-                              <div className="grid grid-cols-2 gap-1 text-[11px] text-muted-foreground pt-1 border-t border-dashed mt-1.5">
-                                <div>Đơn giá: <span className="font-semibold text-foreground">{formatCurrency(item.unitPrice || 0)}</span></div>
-                                <div>Số lượng: <span className="font-semibold text-foreground">{item.remainingToInvoice || 0} {(item.unit as string | undefined) || "Tờ"}</span></div>
+                              </div>
+
+                              <div>
+                                <div className="text-muted-foreground">SL còn</div>
+                                <div className="font-semibold tabular-nums">
+                                  {item.remainingToInvoice || 0}{" "}
+                                  {(item.unit as string | undefined) || "Tờ"}
+                                </div>
+                              </div>
+
+                              <div className="text-right">
+                                <div className="text-muted-foreground">Tạm tính</div>
+                                <div className="font-bold tabular-nums">
+                                  {formatCurrency(
+                                    (item.unitPrice || 0) *
+                                    (item.remainingToInvoice || 0)
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </CardContent>
-                      </Card>
+                        </div>
+                      </button>
                     );
-                  })}
-                </div>
-              )}
+                  })
+                )}
+              </div>
             </ScrollArea>
           </div>
 
@@ -402,10 +508,10 @@ export function CreateInvoiceFromLinesDialog({
                           className="h-9 w-full justify-between text-xs font-normal border-slate-200 hover:bg-slate-50 cursor-pointer bg-white"
                         >
                           <span className="truncate">
-                            {billToCustomerId 
-                              ? customers.find((c: any) => c.id === billToCustomerId)?.companyName || 
-                                customers.find((c: any) => c.id === billToCustomerId)?.name || 
-                                "Khách hàng đã chọn"
+                            {billToCustomerId
+                              ? customers.find((c: any) => c.id === billToCustomerId)?.companyName ||
+                              customers.find((c: any) => c.id === billToCustomerId)?.name ||
+                              "Khách hàng đã chọn"
                               : "Nhấn để chọn khách hàng..."}
                           </span>
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 text-slate-500" />
@@ -419,8 +525,8 @@ export function CreateInvoiceFromLinesDialog({
                             <CommandGroup>
                               {customers.map((c: any) => {
                                 const isSelected = billToCustomerId === c.id;
-                                const displayName = c.companyName 
-                                  ? `${c.companyName} (${c.name || ""})` 
+                                const displayName = c.companyName
+                                  ? `${c.companyName} (${c.name || ""})`
                                   : c.name || "";
                                 return (
                                   <CommandItem
@@ -462,7 +568,7 @@ export function CreateInvoiceFromLinesDialog({
                         className="h-8 text-xs font-semibold bg-white"
                       />
                     </div>
-                    
+
                     <div className="space-y-1">
                       <Label className="text-[11px] text-muted-foreground font-medium">Họ tên người mua</Label>
                       <Input

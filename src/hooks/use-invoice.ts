@@ -359,6 +359,39 @@ export const useVoidInvoice = () => {
   });
 };
 
+// ================== DELETE INVOICE ==================
+// DELETE /invoices/{id}
+export const useDeleteInvoice = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, number>({
+    mutationFn: async (id: number) => {
+      await apiRequest.delete(API_SUFFIX.INVOICE_BY_ID(id));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["invoices"] });
+      toast.success("Xóa hóa đơn thành công");
+    },
+    onError: (error: Error) => {
+      toast.error(`Lỗi xóa hóa đơn: ${error.message}`);
+    },
+  });
+};
+
+// ================== GET INVOICE SUMMARY STATS ==================
+// GET /invoices/summary-stats
+export const useInvoiceSummaryStats = () => {
+  return useQuery({
+    queryKey: ["invoiceSummaryStats"],
+    queryFn: async () => {
+      const res = await apiRequest.get<{ pendingInvoiceCount: number; issuedTodayCount: number }>(
+        API_SUFFIX.INVOICE_SUMMARY_STATS
+      );
+      return res.data;
+    },
+  });
+};
+
 // ================== ALIASES FOR COMPATIBILITY ==================
 // These are aliases for backward compatibility with existing UI components
 export const useOrderInvoice = useInvoiceByOrder;

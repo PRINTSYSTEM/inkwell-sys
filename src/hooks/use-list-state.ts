@@ -9,36 +9,119 @@ export interface ListStateOptions {
   defaultStatus?: string;
   defaultSortColumn?: string;
   defaultSortOrder?: SortOrder;
+  storageKey?: string;
 }
 
 export function useListState(options: ListStateOptions = {}) {
   const [searchParams, setSearchParams] = useSearchParams();
 
+  // Storage key prefix to separate list pages state
+  const prefix = options.storageKey || `list_state_${window.location.pathname}`;
+
+  // Helper to read initial values from URL search parameters OR sessionStorage
+  const getInitialValue = useCallback((paramKey: string, defaultValue: string) => {
+    const urlVal = new URLSearchParams(window.location.search).get(paramKey);
+    if (urlVal !== null) return urlVal;
+    const savedVal = sessionStorage.getItem(`${prefix}_${paramKey}`);
+    if (savedVal !== null) return savedVal;
+    return defaultValue;
+  }, [prefix]);
+
   // Page reads directly from URL — this is the single source of truth.
-  // When the user navigates back, the browser restores the URL (?page=2)
-  // and this value is automatically correct without any reset risk.
   const currentPage = parseInt(
-    searchParams.get("page") || options.defaultPage?.toString() || "1",
+    getInitialValue("page", options.defaultPage?.toString() || "1"),
     10
   );
 
-  // Other filters kept in local state (initialized once from URL on mount)
+  // Other filters kept in local state
   const [searchTerm, setSearchTerm] = useState(
-    () => searchParams.get("search") || options.defaultSearch || ""
+    () => getInitialValue("search", options.defaultSearch || "")
   );
   const [debouncedSearchTerm] = useDebounce(searchTerm, 300);
+  
   const [statusFilter, setStatusFilter] = useState(
-    () => searchParams.get("status") || options.defaultStatus || "all"
+    () => getInitialValue("status", options.defaultStatus || "all")
   );
   const [sortColumn, setSortColumn] = useState(
-    () => searchParams.get("sortCol") || options.defaultSortColumn || ""
+    () => getInitialValue("sortCol", options.defaultSortColumn || "")
   );
   const [sortOrder, setSortOrder] = useState<SortOrder>(
-    () =>
-      (searchParams.get("sortOrder") as SortOrder) ||
-      options.defaultSortOrder ||
-      "desc"
+    () => getInitialValue("sortOrder", options.defaultSortOrder || "desc") as SortOrder
   );
+
+  // Sync initial state values to URL if they aren't there
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    let changed = false;
+
+    const initPage = getInitialValue("page", options.defaultPage?.toString() || "1");
+    if (!params.has("page") && initPage !== "1") {
+      params.set("page", initPage);
+      changed = true;
+    }
+    const initSearch = getInitialValue("search", options.defaultSearch || "");
+    if (!params.has("search") && initSearch !== "") {
+      params.set("search", initSearch);
+      changed = true;
+    }
+    const initStatus = getInitialValue("status", options.defaultStatus || "all");
+    if (!params.has("status") && initStatus !== "all") {
+      params.set("status", initStatus);
+      changed = true;
+    }
+    const initSortCol = getInitialValue("sortCol", options.defaultSortColumn || "");
+    if (!params.has("sortCol") && initSortCol !== "") {
+      params.set("sortCol", initSortCol);
+      changed = true;
+    }
+    const initSortOrder = getInitialValue("sortOrder", options.defaultSortOrder || "desc");
+    if (!params.has("sortOrder") && initSortOrder !== "desc") {
+      params.set("sortOrder", initSortOrder);
+      changed = true;
+    }
+
+    if (changed) {
+      setSearchParams(params, { replace: true });
+    }
+  }, [getInitialValue, options.defaultPage, options.defaultSearch, options.defaultStatus, options.defaultSortColumn, options.defaultSortOrder, setSearchParams]);
+
+  // Keep local states in sync with URL search params (e.g. for browser back/forward)
+  useEffect(() => {
+    const searchVal = searchParams.get("search") || options.defaultSearch || "";
+    setSearchTerm(searchVal);
+
+    const statusVal = searchParams.get("status") || options.defaultStatus || "all";
+    setStatusFilter(statusVal);
+
+    const sortColVal = searchParams.get("sortCol") || options.defaultSortColumn || "";
+    setSortColumn(sortColVal);
+
+    const sortOrderVal = (searchParams.get("sortOrder") as SortOrder) || options.defaultSortOrder || "desc";
+    setSortOrder(sortOrderVal);
+  }, [searchParams, options.defaultSearch, options.defaultStatus, options.defaultSortColumn, options.defaultSortOrder]);
+
+  // Sync URL search params → sessionStorage
+  useEffect(() => {
+    const page = searchParams.get("page");
+    if (page) sessionStorage.setItem(`${prefix}_page`, page);
+    else sessionStorage.removeItem(`${prefix}_page`);
+
+    const search = searchParams.get("search");
+    if (search) sessionStorage.setItem(`${prefix}_search`, search);
+    else sessionStorage.removeItem(`${prefix}_search`);
+
+    const status = searchParams.get("status");
+    if (status) sessionStorage.setItem(`${prefix}_status`, status);
+    else sessionStorage.removeItem(`${prefix}_status`);
+
+    const sortCol = searchParams.get("sortCol");
+    if (sortCol) sessionStorage.setItem(`${prefix}_sortCol`, sortCol);
+    else sessionStorage.removeItem(`${prefix}_sortCol`);
+
+    const sortOrder = searchParams.get("sortOrder");
+    if (sortOrder) sessionStorage.setItem(`${prefix}_sortOrder`, sortOrder);
+    else sessionStorage.removeItem(`${prefix}_sortOrder`);
+  }, [searchParams, prefix]);
 
   // -- Page setter: writes page to URL --
   const setCurrentPage = useCallback(
@@ -72,13 +155,9 @@ export function useListState(options: ListStateOptions = {}) {
   }, [setSearchParams]);
 
   // -- Sync debouncedSearchTerm → URL, reset page on change --
-  // Use null sentinel so the effect skips the FIRST mount.
-  // This is critical: on back navigation the component remounts, and we must
-  // NOT reset page to 1 just because the effect fires for the first time.
   const prevDebouncedSearch = useRef<string | null>(null);
   useEffect(() => {
     if (prevDebouncedSearch.current === null) {
-      // First mount — record current value, do nothing
       prevDebouncedSearch.current = debouncedSearchTerm;
       return;
     }

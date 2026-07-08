@@ -242,11 +242,10 @@ export default function PrintPreviewDialog({
               size="sm"
               variant={printType === "A4" ? "default" : "ghost"}
               onClick={() => setPrintType("A4")}
-              className={`h-7 px-3 text-xs font-semibold transition-all ${
-                printType === "A4"
+              className={`h-7 px-3 text-xs font-semibold transition-all ${printType === "A4"
                   ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
-              }`}
+                }`}
             >
               Mẫu A4 (Dọc)
             </Button>
@@ -254,11 +253,10 @@ export default function PrintPreviewDialog({
               size="sm"
               variant={printType === "A5" ? "default" : "ghost"}
               onClick={() => setPrintType("A5")}
-              className={`h-7 px-3 text-xs font-semibold transition-all ${
-                printType === "A5"
+              className={`h-7 px-3 text-xs font-semibold transition-all ${printType === "A5"
                   ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
-              }`}
+                }`}
             >
               Mẫu A5 (Ngang)
             </Button>
@@ -289,14 +287,20 @@ export default function PrintPreviewDialog({
                     style={{ height: "60px", width: "auto", objectFit: "contain" }}
                   />
                 </div>
-                
-                {/* Content on the right: Name, Address + Date, Contact + Code */}
+
+                {/* Content on the right: Name + Code, Address + Date, Contact */}
                 <div className="company-info" style={{ flex: 1, paddingLeft: "20px", fontSize: "12.5px", lineHeight: "1.4", color: "#000" }}>
-                  {/* Row 1: Company Name */}
-                  <div className="company-name" style={{ fontSize: "13.5px", fontWeight: "bold", textTransform: "uppercase", marginBottom: "2px" }}>
-                    CÔNG TY TNHH SẢN XUẤT THƯƠNG MẠI DỊCH VỤ QUỐC TẾ QUANG ĐẠT
+                  {/* Row 1: Company Name & Document Code (right) */}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "2px" }}>
+                    <div className="company-name" style={{ fontSize: "13.5px", fontWeight: "bold", textTransform: "uppercase" }}>
+                      CÔNG TY TNHH SẢN XUẤT THƯƠNG MẠI DỊCH VỤ QUỐC TẾ QUANG ĐẠT
+                    </div>
+                    <div className="delivery-meta" style={{ whiteSpace: "nowrap", paddingLeft: "15px", fontSize: "13px" }}>
+                      <span style={{ fontWeight: "bold" }}>Số phiếu: </span>
+                      <span style={{ fontWeight: "bold" }}>{deliveryNote.code || deliveryNote.id}</span>
+                    </div>
                   </div>
-                  
+
                   {/* Row 2: Address (left) & Delivery Date (right) */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "2px" }}>
                     <div>43D Ao Đôi, P. Bình Trị Đông A, Q. Bình Tân, TP. Hồ Chí Minh</div>
@@ -305,14 +309,10 @@ export default function PrintPreviewDialog({
                       <span>{deliveryDateFormatted}</span>
                     </div>
                   </div>
-                  
-                  {/* Row 3: Contact (left) & Document Code (right) */}
+
+                  {/* Row 3: Contact (left) */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                     <div>MST: 0317703989 - Điện thoại: 0906 649 812</div>
-                    <div className="delivery-meta" style={{ whiteSpace: "nowrap", paddingLeft: "15px", fontSize: "13px" }}>
-                      <span style={{ fontWeight: "bold" }}>Số phiếu: </span>
-                      <span style={{ fontWeight: "bold" }}>{deliveryNote.code || deliveryNote.id}</span>
-                    </div>
                   </div>
                 </div>
               </div>

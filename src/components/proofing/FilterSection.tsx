@@ -21,6 +21,7 @@ interface FilterSectionProps {
   onMaterialTypeChange: (ids: number[]) => void;
   onClearFilters: () => void;
   hasActiveFilters?: boolean;
+  isConfiguring?: boolean;
 }
 
 export function FilterSection({
@@ -33,6 +34,7 @@ export function FilterSection({
   onMaterialTypeChange,
   onClearFilters,
   hasActiveFilters = false,
+  isConfiguring = false,
 }: FilterSectionProps) {
   const isAnyFilterActive =
     selectedDesignTypes.length > 0 ||
@@ -69,10 +71,6 @@ export function FilterSection({
       <div className="flex flex-wrap items-center gap-3">
         {/* Design Type Button Group */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-muted-foreground">
-            Loại thiết kế:
-          </span>
-
           {designTypeOptions.map((option) => {
             const isSelected =
               selectedDesignTypes.length === 1 &&
@@ -82,14 +80,16 @@ export function FilterSection({
                 key={option.id}
                 variant={isSelected ? "default" : "outline"}
                 size="sm"
-                className="h-8 text-xs"
+                className={cn(
+                  isConfiguring ? "h-7 px-2 text-[11px]" : "h-8 text-xs",
+                )}
                 onClick={() => toggleDesignType(option.id)}
               >
                 <span className="truncate">{option.name}</span>
                 <Badge
                   variant={option.count > 0 ? "secondary" : "outline"}
                   className={cn(
-                    "ml-2 h-5 px-1.5 text-[10px]",
+                    isConfiguring ? "ml-1 h-4 px-1 text-[9px]" : "ml-2 h-5 px-1.5 text-[10px]",
                     isSelected && "bg-background/20 text-primary-foreground",
                   )}
                 >
@@ -133,58 +133,21 @@ export function FilterSection({
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
 
-      {/* Active Filter Tags */}
-      {isAnyFilterActive && (
-        <div className="flex flex-wrap items-center gap-2">
-          {selectedDesignTypes.map((id) => {
-            const option = designTypeOptions.find((o) => o.id === id);
-            return option ? (
-              <Badge
-                key={`dt-${id}`}
-                variant="secondary"
-                className="gap-1 pr-1"
-              >
-                {option.name}
-                <button
-                  onClick={() => toggleDesignType(id)}
-                  className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            ) : null;
-          })}
-          {!currentMaterialTypeId &&
-            selectedMaterialTypes.map((id) => {
-              const option = materialTypeOptions.find((o) => o.id === id);
-              return option ? (
-                <Badge
-                  key={`mt-${id}`}
-                  variant="outline"
-                  className="gap-1 pr-1"
-                >
-                  {option.name}
-                  <button
-                    onClick={() => toggleMaterialType(id)}
-                    className="ml-1 rounded-full hover:bg-muted-foreground/20 p-0.5"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              ) : null;
-            })}
+        {/* Clear all filters button - big green button with red border */}
+        {isAnyFilterActive && (
           <Button
-            variant="ghost"
             size="sm"
             onClick={onClearFilters}
-            className="text-muted-foreground"
+            className={cn(
+              "bg-green-600 text-white hover:bg-green-700 border-2 border-red-500 font-extrabold shadow-md transition-all active:scale-95",
+              isConfiguring ? "h-8 text-[12px] px-3.5" : "h-10 text-sm px-5"
+            )}
           >
             Xóa tất cả
           </Button>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

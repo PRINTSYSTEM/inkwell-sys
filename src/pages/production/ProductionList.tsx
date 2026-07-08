@@ -205,7 +205,12 @@ export default function ProductionListPage() {
       params.sortOrder = sortOrder;
     }
     if (debouncedSearch.trim()) {
-      params.search = debouncedSearch.trim();
+      const isPrepressCode = /^\s*[a-zA-Z]*\d+\s*$/.test(debouncedSearch);
+      if (isPrepressCode) {
+        (params as any).proofingOrderCode = debouncedSearch.trim();
+      } else {
+        params.search = debouncedSearch.trim();
+      }
     }
     if (dateParams.fromDate) {
       params.fromDate = dateParams.fromDate;
