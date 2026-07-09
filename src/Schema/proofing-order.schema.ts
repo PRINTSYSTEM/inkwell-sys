@@ -17,24 +17,38 @@ import {
   UpdateProofingOrderRequestSchema as GenUpdateProofingOrderRequestSchema,
   AddDesignsToProofingOrderRequestSchema as GenAddDesignsToProofingOrderRequestSchema,
   AddProofingOrderDetailItemSchema as GenAddProofingOrderDetailItemSchema,
+  ProofingOrderImageResponseSchema as GenProofingOrderImageResponseSchema,
 } from "./generated";
 
 // ===== ProofingOrderDesignResponse =====
 export const ProofingOrderDesignResponseSchema =
-  GenProofingOrderDesignResponseSchema.passthrough();
+  GenProofingOrderDesignResponseSchema.extend({
+    designThumbnailUrl: z.string().nullable().optional(),
+  }).passthrough();
 export type ProofingOrderDesignResponse = z.infer<
   typeof ProofingOrderDesignResponseSchema
 >;
 
 // ===== ProofingOrderResponse =====
 export const ProofingOrderResponseSchema =
-  GenProofingOrderResponseSchema.passthrough();
+  GenProofingOrderResponseSchema.extend({
+    thumbnailUrl: z.string().nullable().optional(),
+  }).passthrough();
 export type ProofingOrderResponse = z.infer<typeof ProofingOrderResponseSchema>;
 
 // ===== ProofingOrderListResponse =====
 export const ProofingOrderListResponseSchema =
-  GenProofingOrderListResponseSchema.passthrough();
+  GenProofingOrderListResponseSchema.extend({
+    thumbnailUrl: z.string().nullable().optional(),
+  }).passthrough();
 export type ProofingOrderListResponse = z.infer<typeof ProofingOrderListResponseSchema>;
+
+// ===== ProofingOrderImageResponse =====
+export const ProofingOrderImageResponseSchema =
+  GenProofingOrderImageResponseSchema.extend({
+    thumbnailUrl: z.string().nullable().optional(),
+  }).passthrough();
+export type ProofingOrderImageResponse = z.infer<typeof ProofingOrderImageResponseSchema>;
 
 // ===== ProofingOrderListResponsePaginate =====
 export const ProofingOrderListResponsePaginateSchema =
@@ -75,10 +89,22 @@ export type UpdateProofingOrderRequest = z.infer<
 
 // ===== AddDesignsToProofingOrderRequest =====
 export const AddDesignsToProofingOrderRequestSchema =
-  GenAddDesignsToProofingOrderRequestSchema.passthrough();
+  GenAddDesignsToProofingOrderRequestSchema.extend({
+    materialTypeId: z.number().int().nullable().optional(),
+  }).passthrough();
 export type AddDesignsToProofingOrderRequest = z.infer<
   typeof AddDesignsToProofingOrderRequestSchema
 >;
+
+// ===== AvailableBinResponse =====
+export const AvailableBinResponseSchema = z.object({
+  id: z.number().int(),
+  code: z.string().nullable(),
+  materialTypeId: z.number().int().nullable().optional(),
+  materialTypeName: z.string().nullable().optional(),
+  status: z.string().nullable().optional(),
+}).passthrough();
+export type AvailableBinResponse = z.infer<typeof AvailableBinResponseSchema>;
 
 // ===== AvailableQuantityResponse =====
 // Custom schema - not in generated

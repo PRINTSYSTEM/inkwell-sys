@@ -22,6 +22,8 @@ interface FilterSectionProps {
   onClearFilters: () => void;
   hasActiveFilters?: boolean;
   isConfiguring?: boolean;
+  selectedCount?: number;
+  onAddToExistingClick?: () => void;
 }
 
 export function FilterSection({
@@ -35,6 +37,8 @@ export function FilterSection({
   onClearFilters,
   hasActiveFilters = false,
   isConfiguring = false,
+  selectedCount = 0,
+  onAddToExistingClick,
 }: FilterSectionProps) {
   const isAnyFilterActive =
     selectedDesignTypes.length > 0 ||
@@ -145,6 +149,19 @@ export function FilterSection({
             )}
           >
             Xóa tất cả
+          </Button>
+        )}
+
+        {selectedCount > 0 && !isConfiguring && (
+          <Button
+            size="sm"
+            onClick={onAddToExistingClick}
+            className={cn(
+              "bg-blue-600 text-white hover:bg-blue-700 font-bold shadow-md transition-all active:scale-95",
+              isConfiguring ? "h-8 text-[12px] px-3.5" : "h-10 text-sm px-5"
+            )}
+          >
+            Thêm vào bài có sẵn
           </Button>
         )}
       </div>

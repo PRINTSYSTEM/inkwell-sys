@@ -49,8 +49,13 @@ export function useListState(options: ListStateOptions = {}) {
     () => getInitialValue("sortOrder", options.defaultSortOrder || "desc") as SortOrder
   );
 
+  const initialSyncRef = useRef(false);
+
   // Sync initial state values to URL if they aren't there
   useEffect(() => {
+    if (initialSyncRef.current) return;
+    initialSyncRef.current = true;
+
     const params = new URLSearchParams(window.location.search);
     let changed = false;
 
@@ -98,7 +103,7 @@ export function useListState(options: ListStateOptions = {}) {
 
     const sortOrderVal = (searchParams.get("sortOrder") as SortOrder) || options.defaultSortOrder || "desc";
     setSortOrder(sortOrderVal);
-  }, [searchParams, options.defaultSearch, options.defaultStatus, options.defaultSortColumn, options.defaultSortOrder]);
+  }, [window.location.search, options.defaultSearch, options.defaultStatus, options.defaultSortColumn, options.defaultSortOrder]);
 
   // Sync URL search params → sessionStorage
   useEffect(() => {

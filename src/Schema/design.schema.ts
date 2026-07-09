@@ -45,7 +45,9 @@ export type DesignTimelineEntryResponsePaginate = z.infer<
 >;
 
 // ===== DesignResponse =====
-export const DesignResponseSchema = GenDesignResponseSchema.passthrough();
+export const DesignResponseSchema = GenDesignResponseSchema.extend({
+  designThumbnailUrl: z.string().nullable().optional(),
+}).passthrough();
 export type DesignResponse = z.infer<typeof DesignResponseSchema>;
 
 // ===== PagedResponse =====

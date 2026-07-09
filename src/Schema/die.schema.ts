@@ -12,7 +12,9 @@ import {
 } from "./generated";
 
 // ===== DieResponse =====
-export const DieResponseSchema = GenDieResponseSchema.passthrough();
+export const DieResponseSchema = GenDieResponseSchema.extend({
+  thumbnailUrl: z.string().nullable().optional(),
+}).passthrough();
 export type DieResponse = z.infer<typeof DieResponseSchema>;
 
 // ===== DieResponsePaginate =====

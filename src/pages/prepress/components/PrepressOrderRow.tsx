@@ -26,6 +26,123 @@ import {
 } from "@/lib/status-utils";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 
+function DesignHoverContent({ design, pod }: { design: any; pod: any }) {
+  return (
+    <div className="flex gap-4 p-2 text-xs">
+      <div className="w-28 h-28 shrink-0 rounded-md border bg-muted overflow-hidden">
+        {design?.designThumbnailUrl ? (
+          <img
+            src={design.designThumbnailUrl}
+            alt={design.code}
+            className="w-full h-full object-cover"
+          />
+        ) : design?.designImageUrl ? (
+          <img
+            src={design.designImageUrl}
+            alt={design.code}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <FileImage className="h-8 w-8 text-muted-foreground opacity-40" />
+          </div>
+        )}
+      </div>
+      <div className="flex-1 min-w-0 space-y-1.5 text-left">
+        <h4 className="font-bold text-sm text-foreground truncate">
+          {design?.code || "—"}
+        </h4>
+        <p className="text-[11px] text-muted-foreground font-medium truncate">
+          {design?.designName || "—"}
+        </p>
+        <div className="space-y-1 pt-1 border-t border-dashed">
+          <div className="flex justify-between gap-2">
+            <span className="text-muted-foreground">Đơn hàng:</span>
+            <span className="font-mono font-semibold text-foreground truncate max-w-[120px]">
+              {design?.latestOrderCode || design?.orderCode || "—"}
+            </span>
+          </div>
+          <div className="flex justify-between gap-2">
+            <span className="text-muted-foreground">Người tạo:</span>
+            <span className="font-semibold text-foreground truncate max-w-[120px]">
+              {design?.designer?.fullName || design?.designer?.username || "—"}
+            </span>
+          </div>
+          <div className="flex justify-between gap-2">
+            <span className="text-muted-foreground">Số lượng bình:</span>
+            <span className="font-bold text-blue-600">
+              {(pod.quantity || 0).toLocaleString("vi-VN")}
+            </span>
+          </div>
+          {design?.notes && (
+            <div className="text-[10px] text-muted-foreground mt-1 bg-muted/40 p-1 rounded italic truncate" title={design.notes}>
+              Ghi chú: {design.notes}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DesignCodeHoverCard({
+  pod,
+  idx,
+  debouncedSearchTerm,
+  highlightText,
+}: {
+  pod: any;
+  idx: number;
+  debouncedSearchTerm: string;
+  highlightText: (text: string, term: string) => any;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const code = pod.design?.code || "—";
+
+  return (
+    <HoverCard openDelay={300} onOpenChange={setIsOpen}>
+      <HoverCardTrigger asChild>
+        <div className="flex items-center gap-1.5 min-h-5 flex-wrap cursor-help">
+          <span className="text-blue-600 dark:text-blue-400 hover:underline">
+            {highlightText(code, debouncedSearchTerm.trim())}
+          </span>
+          {pod.isUrgent && (
+            <span className="bg-red-500 text-white text-[9px] px-1 py-0.5 rounded font-bold uppercase tracking-wide shrink-0">
+              Gấp
+            </span>
+          )}
+          {code !== "—" && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-4.5 w-4.5 p-0 shrink-0 text-muted-foreground hover:text-foreground"
+              onClick={(e) => {
+                e.stopPropagation();
+                navigator.clipboard.writeText(code);
+                toast.success("Đã sao chép mã hàng", {
+                  description: code,
+                  duration: 1500,
+                });
+              }}
+              title="Sao chép mã hàng"
+            >
+              <Copy className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
+      </HoverCardTrigger>
+      <HoverCardContent
+        className="w-[420px] p-3 bg-popover/95 backdrop-blur-sm border shadow-2xl ring-1 ring-black/5 rounded-xl"
+        side="right"
+        align="start"
+        sideOffset={10}
+      >
+        {isOpen && <DesignHoverContent design={pod.design} pod={pod} />}
+      </HoverCardContent>
+    </HoverCard>
+  );
+}
+
 interface PrepressOrderRowProps {
   order: any;
   shouldShowExpand: boolean;
@@ -54,8 +171,8 @@ export function PrepressOrderRow({
   const [isDesignsExpanded, setIsDesignsExpanded] = useState(false);
 
   const proofingImgUrl = useMemo(() => {
-    return order.proofingImageUrl || order.proofingImageUrlConverted || designs[0]?.design?.designImageUrl || null;
-  }, [order.proofingImageUrl, order.proofingImageUrlConverted, designs]);
+    return order.thumbnailUrl || order.proofingImageUrl || order.proofingImageUrlConverted || order.imageUrl || null;
+  }, [order.thumbnailUrl, order.proofingImageUrl, order.proofingImageUrlConverted, order.imageUrl]);
 
   const searchMatchesDesignCode = useMemo(() => {
     const term = debouncedSearchTerm.trim().toLowerCase();
@@ -106,121 +223,7 @@ export function PrepressOrderRow({
     );
   };
 
-  const tooltipContent = (
-    <div className="w-[380px] space-y-4 p-1 max-h-[80vh] overflow-y-auto custom-scrollbar">
-      <div className="border-b pb-2 sticky top-0 bg-popover z-10 space-y-1.5">
-        <h4 className="font-bold text-base text-foreground leading-tight">
-          Mã bài: {order.code}
-        </h4>
-        <div className="text-[11px] text-muted-foreground space-y-0.5 font-medium">
-          <div>
-            <span className="font-semibold text-foreground">Người tạo lệnh:</span>{" "}
-            {order.createdBy?.fullName || order.createdBy?.username || "—"}
-          </div>
-          <div>
-            <span className="font-semibold text-foreground">Người tạo đơn hàng:</span>{" "}
-            {order.order?.creator?.fullName || order.order?.creator?.username || order.creator?.fullName || order.creator?.username || "—"}
-          </div>
-          {order.designType?.name && (
-            <div>
-              <span className="font-semibold text-foreground">Loại thiết kế:</span>{" "}
-              {order.designType.name}
-            </div>
-          )}
-          {order.notes && (
-            <div>
-              <span className="font-semibold text-foreground">Ghi chú lệnh:</span>{" "}
-              {order.notes}
-            </div>
-          )}
-        </div>
-      </div>
 
-      <div className="space-y-6">
-        {designs.map((pod: any, idx: number) => {
-          const d = pod.design;
-          return (
-            <div
-              key={pod.id || idx}
-              className="space-y-2 pb-4 border-b last:border-0 border-dashed"
-            >
-              <div className="w-full">
-                {d?.designImageUrl ? (
-                  <img
-                    src={d.designImageUrl}
-                    alt={d.code}
-                    className="w-full aspect-video object-cover rounded-lg border shadow-sm"
-                  />
-                ) : (
-                  <div className="w-full aspect-video bg-muted rounded-lg border flex items-center justify-center">
-                    <FileImage className="h-10 w-10 text-muted-foreground opacity-40" />
-                  </div>
-                )}
-              </div>
-              <div className="space-y-1">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5 flex-wrap">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                  <span>Thiết kế {idx + 1}: {d?.designName || d?.code || "—"}</span>
-                  {pod.isUrgent && (
-                    <span className="bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-400 text-[9px] px-1 py-0.5 rounded font-bold uppercase tracking-wide border border-red-300">
-                      Gấp
-                    </span>
-                  )}
-                  {d?.customer && (
-                    <span className="text-muted-foreground font-normal text-[10px]">
-                      {" - "}{d.customer.companyName || d.customer.name}
-                    </span>
-                  )}
-                </p>
-                <div className="bg-muted/30 rounded-md p-2.5 space-y-1.5 border text-xs">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground font-medium">
-                      Đơn hàng:
-                    </span>
-                    <span className="font-mono font-semibold text-slate-700 dark:text-slate-300">
-                      {d?.latestOrderCode || d?.orderCode || "—"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground font-medium">
-                      Người tạo thiết kế:
-                    </span>
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">
-                      {d?.designer?.fullName || d?.designer?.username || "—"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground font-medium">
-                      Số lượng bình:
-                    </span>
-                    <span className="font-bold text-blue-600 dark:text-blue-400">
-                      {(pod.quantity || 0).toLocaleString("vi-VN")}
-                    </span>
-                  </div>
-                  {(d?.notes || d?.latestRequirements) && (
-                    <div className="pt-1.5 border-t border-muted-foreground/10 space-y-1">
-                      {d?.notes && (
-                        <div className="text-[11px] text-slate-600 dark:text-slate-400">
-                          <span className="font-semibold text-slate-700 dark:text-slate-300">Ghi chú thiết kế: </span>
-                          <span className="italic">{d.notes}</span>
-                        </div>
-                      )}
-                      {d?.latestRequirements && (
-                        <div className="text-[11px] text-slate-600 dark:text-slate-400">
-                          <span className="font-semibold text-slate-700 dark:text-slate-300">Yêu cầu đơn hàng: </span>
-                          <span className="italic">{d.latestRequirements}</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
 
   return (
     <>
@@ -300,75 +303,41 @@ export function PrepressOrderRow({
         </TableCell>
 
         <TableCell className="py-3 font-bold text-xs align-top text-slate-800 dark:text-slate-200">
-          <HoverCard openDelay={300}>
-            <HoverCardTrigger asChild>
-              <div className="flex flex-col gap-1 cursor-help">
-                {(showAllDesigns ? designs : designs.slice(0, 1)).map((pod: any, idx: number) => {
-                  const code = pod.design?.code || "—";
-                  return (
-                    <div key={pod.id || idx} className="flex items-center gap-1.5 min-h-5 flex-wrap">
-                      <span>{highlightText(code, debouncedSearchTerm.trim())}</span>
-                      {pod.isUrgent && (
-                        <span className="bg-red-500 text-white text-[9px] px-1 py-0.5 rounded font-bold uppercase tracking-wide shrink-0">
-                          Gấp
-                        </span>
-                      )}
-                      {code !== "—" && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-4.5 w-4.5 p-0 shrink-0 text-muted-foreground hover:text-foreground"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigator.clipboard.writeText(code);
-                            toast.success("Đã sao chép mã hàng", {
-                              description: code,
-                              duration: 1500,
-                            });
-                          }}
-                          title="Sao chép mã hàng"
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </div>
-                  );
-                })}
-                {!showAllDesigns && designs.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsDesignsExpanded(true);
-                    }}
-                    className="text-left text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:underline mt-0.5"
-                  >
-                    +{designs.length - 1} mã khác
-                  </button>
-                )}
-                {isDesignsExpanded && !searchMatchesDesignCode && (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsDesignsExpanded(false);
-                    }}
-                    className="text-left text-[10px] font-bold text-slate-500 hover:text-slate-600 hover:underline mt-0.5"
-                  >
-                    Thu gọn
-                  </button>
-                )}
-              </div>
-            </HoverCardTrigger>
-            <HoverCardContent
-              className="w-[400px] p-3 bg-popover/95 backdrop-blur-sm border shadow-2xl ring-1 ring-black/5 rounded-xl max-h-[80vh] overflow-y-auto custom-scrollbar"
-              side="right"
-              align="start"
-              sideOffset={10}
-            >
-              {tooltipContent}
-            </HoverCardContent>
-          </HoverCard>
+          <div className="flex flex-col gap-1.5">
+            {(showAllDesigns ? designs : designs.slice(0, 1)).map((pod: any, idx: number) => (
+              <DesignCodeHoverCard
+                key={pod.id || idx}
+                pod={pod}
+                idx={idx}
+                debouncedSearchTerm={debouncedSearchTerm}
+                highlightText={highlightText}
+              />
+            ))}
+            {!showAllDesigns && designs.length > 1 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsDesignsExpanded(true);
+                }}
+                className="text-left text-[11px] font-bold text-blue-600 hover:text-blue-700 hover:underline mt-0.5"
+              >
+                +{designs.length - 1} mã khác
+              </button>
+            )}
+            {isDesignsExpanded && !searchMatchesDesignCode && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsDesignsExpanded(false);
+                }}
+                className="text-left text-[10px] font-bold text-slate-500 hover:text-slate-600 hover:underline mt-0.5"
+              >
+                Thu gọn
+              </button>
+            )}
+          </div>
         </TableCell>
 
         <TableCell className="py-3 font-medium text-xs align-top text-center">

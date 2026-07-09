@@ -15,6 +15,7 @@ type ApiError = {
 import type {
   ProofingOrderResponse,
   ProofingOrderResponsePaginate,
+  AvailableBinResponse,
 } from "@/Schema/proofing-order.schema";
 import { ProofingOrderResponseSchema } from "@/Schema/proofing-order.schema";
 import type {
@@ -212,7 +213,8 @@ export const useAvailableOrderDetailsForProofing = (
               design.processClassification || undefined,
             sidesClassification: design.sidesClassification || undefined,
             laminationType: design.laminationType || undefined,
-            thumbnailUrl: design.designImageUrl || "",
+            thumbnailUrl: (design as any).designThumbnailUrl || design.designImageUrl || "",
+            largeImageUrl: design.designImageUrl || "",
             createdAt: od.createdAt || design.createdAt || "",
             designId: design.id, // Store designId for fallback fetching if needed
              isUrgent: (od as any).isUrgent ?? (od as any).readyDesign?.isUrgent ?? (design as any).isUrgent ?? false,
@@ -1457,6 +1459,21 @@ export const useCancelProofingOrder = () => {
       toast.error("Hủy hình bài thất bại", {
         description: error.response?.data?.message || error.message,
       });
+    },
+  });
+};
+
+// ================== GET AVAILABLE BINS ==================
+// GET /proofing-orders/available-bins
+export const useAvailableBins = (enabled: boolean = true) => {
+  return useQuery<AvailableBinResponse[]>({
+    queryKey: [proofingKeys.all[0], "available-bins"],
+    enabled,
+    queryFn: async () => {
+      const res = await apiRequest.get<AvailableBinResponse[]>(
+        API_SUFFIX.PROOFING_AVAILABLE_BINS
+      );
+      return res.data;
     },
   });
 };

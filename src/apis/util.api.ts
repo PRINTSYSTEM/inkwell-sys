@@ -188,6 +188,7 @@ export const API_SUFFIX = {
   PROOFING_ORDERS: "/proofing-orders",
   PROOFING_ORDER_BY_ID: (id: number) => `/proofing-orders/${id}`,
   PROOFING_FROM_DESIGNS: "/proofing-orders/from-designs",
+  PROOFING_AVAILABLE_BINS: "/proofing-orders/available-bins",
   PROOFING_AVAILABLE_ORDER_DETAILS: "/proofing-orders/available-order-details",
   PROOFING_BY_ORDER: (orderId: number) =>
     `/proofing-orders/by-order/${orderId}`,

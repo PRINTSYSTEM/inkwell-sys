@@ -105,6 +105,8 @@ interface PrepressOrdersHeaderProps {
   selectedDesigns?: any[];
   shouldShowExpand?: boolean;
   isSelectionEnabled?: boolean;
+  selectedCount?: number;
+  onAddToExistingClick?: () => void;
 }
 
 export function PrepressOrdersHeader({
@@ -178,6 +180,8 @@ export function PrepressOrdersHeader({
   isSelectionEnabled = true,
   isConfiguring = false,
   selectedDesigns = [],
+  selectedCount = 0,
+  onAddToExistingClick,
 }: PrepressOrdersHeaderProps) {
   const [materialTypeSearchOpen, setMaterialTypeSearchOpen] = useState(false);
 
@@ -204,6 +208,8 @@ export function PrepressOrdersHeader({
         onClearFilters={onClearFilters}
         hasActiveFilters={hasActiveFilters}
         isConfiguring={isConfiguring}
+        selectedCount={selectedCount}
+        onAddToExistingClick={onAddToExistingClick}
       />
 
       {/* DesignTable - shown when filters are active or search matches no orders */}
@@ -410,73 +416,7 @@ export function PrepressOrdersHeader({
               onNavigate={onNavigate}
               showAllDesignsByDefault={true}
             />
-            {incompleteTotalCount > itemsPerPage && (
-              <div className="flex items-center justify-between gap-3 bg-background px-1 py-1 border rounded-lg shadow-sm">
-                <div className="text-xs text-muted-foreground ml-2">
-                  Hiển thị{" "}
-                  <span className="font-semibold text-foreground">
-                    {(incompletePage - 1) * itemsPerPage + 1}
-                  </span>
-                  {" - "}
-                  <span className="font-semibold text-foreground">
-                    {Math.min(
-                      incompletePage * itemsPerPage,
-                      incompleteTotalCount,
-                    )}
-                  </span>{" "}
-                  /{" "}
-                  <span className="font-semibold text-foreground">
-                    {incompleteTotalCount}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8"
-                    onClick={() =>
-                      setIncompletePage(Math.max(1, incompletePage - 1))
-                    }
-                    disabled={incompletePage === 1 || loadingIncomplete}
-                  >
-                    <ChevronLeft className="h-3.5 w-3.5" />
-                  </Button>
-                  <div className="flex items-center gap-1">
-                    <Input
-                      type="number"
-                      min={1}
-                      max={incompleteTotalPages}
-                      value={incompleteOrdersPageInput}
-                      onChange={(e) =>
-                        setIncompleteOrdersPageInput(e.target.value)
-                      }
-                      onBlur={handleIncompletePageInputBlur}
-                      className="h-8 w-12 text-center text-xs"
-                      disabled={loadingIncomplete}
-                    />
-                    <span className="text-xs text-muted-foreground">
-                      / {incompleteTotalPages}
-                    </span>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8"
-                    onClick={() =>
-                      setIncompletePage(
-                        Math.min(incompleteTotalPages, incompletePage + 1),
-                      )
-                    }
-                    disabled={
-                      incompletePage >= incompleteTotalPages ||
-                      loadingIncomplete
-                    }
-                  >
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-            )}
+
           </div>
 
           {/* Completed Orders Section */}

@@ -146,6 +146,8 @@ import { DetailOrderInfoCard } from "./detail-components/DetailOrderInfoCard";
 import { DetailDesignsListCard } from "./detail-components/DetailDesignsListCard";
 import { DetailPlateExportCard } from "./detail-components/DetailPlateExportCard";
 import { DetailDieExportCard } from "./detail-components/DetailDieExportCard";
+import { CartBanner } from "./detail-components/CartBanner";
+import { useProofingCart } from "@/context/proofing-cart-context";
 import { DetailEmptyOrderView } from "./detail-components/DetailEmptyOrderView";
 import { PrepressDetailDialogs } from "./detail-components/PrepressDetailDialogs";
 // PrepressDesignTable removed
@@ -347,6 +349,7 @@ export default function ProofingOrderDetailPage() {
   const highlightSearchTerm = searchParams.get("search") || "";
 
   const { user } = useAuth();
+  const { cartItems } = useProofingCart();
   const isProofer = user?.role === ROLE.ADMIN || user?.role === ROLE.MANAGER || user?.role === ROLE.PROOFER;
 
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
@@ -2373,33 +2376,38 @@ export default function ProofingOrderDetailPage() {
                 isProofer={isProofer}
               />
 
-              <DetailDesignsListCard
-                order={order}
-                orderDesigns={orderDesigns}
-                editingQuantityDesignId={editingQuantityDesignId}
-                setEditingQuantityDesignId={setEditingQuantityDesignId}
-                inlineQuantityValue={inlineQuantityValue}
-                setInlineQuantityValue={setInlineQuantityValue}
-                handleUpdateDesignQuantity={handleUpdateDesignQuantity}
-                updatingDesignId={updatingDesignId}
-                setIsAddDesignDialogOpen={setIsAddDesignDialogOpen}
-                setRemoveDesignTarget={setRemoveDesignTarget}
-                setIsConfirmRemoveDesignDialogOpen={
-                  setIsConfirmRemoveDesignDialogOpen
-                }
-                isRemovingDesign={isRemovingDesign}
-                setImageViewerOpen={setImageViewerOpen}
-                setViewingImageUrl={setViewingImageUrl}
-                setSelectedDesignForRelatedDies={
-                  setSelectedDesignForRelatedDies
-                }
-                setIsRelatedDiesDialogOpen={setIsRelatedDiesDialogOpen}
-                onReject={handleOpenRejectDialog}
-                isRejecting={isRejecting}
-                onFindDie={handleFindDie}
-                highlightSearchTerm={highlightSearchTerm}
-                isProofer={isProofer}
-              />
+              <div className="space-y-4">
+                {order && order.status !== "completed" && cartItems.length > 0 && (
+                  <CartBanner proofingOrderId={order.id} />
+                )}
+                <DetailDesignsListCard
+                  order={order}
+                  orderDesigns={orderDesigns}
+                  editingQuantityDesignId={editingQuantityDesignId}
+                  setEditingQuantityDesignId={setEditingQuantityDesignId}
+                  inlineQuantityValue={inlineQuantityValue}
+                  setInlineQuantityValue={setInlineQuantityValue}
+                  handleUpdateDesignQuantity={handleUpdateDesignQuantity}
+                  updatingDesignId={updatingDesignId}
+                  setIsAddDesignDialogOpen={setIsAddDesignDialogOpen}
+                  setRemoveDesignTarget={setRemoveDesignTarget}
+                  setIsConfirmRemoveDesignDialogOpen={
+                    setIsConfirmRemoveDesignDialogOpen
+                  }
+                  isRemovingDesign={isRemovingDesign}
+                  setImageViewerOpen={setImageViewerOpen}
+                  setViewingImageUrl={setViewingImageUrl}
+                  setSelectedDesignForRelatedDies={
+                    setSelectedDesignForRelatedDies
+                  }
+                  setIsRelatedDiesDialogOpen={setIsRelatedDiesDialogOpen}
+                  onReject={handleOpenRejectDialog}
+                  isRejecting={isRejecting}
+                  onFindDie={handleFindDie}
+                  highlightSearchTerm={highlightSearchTerm}
+                  isProofer={isProofer}
+                />
+              </div>
 
               <DetailPlateExportCard
                 order={order}
