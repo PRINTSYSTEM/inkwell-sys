@@ -22,6 +22,7 @@ export type DesignSaleParams = z.infer<typeof DesignSaleParamsSchema>;
 import {
   MaterialListParamsSchema as GenMaterialListParamsSchema,
   DesignListParamsSchema as GenDesignListParamsSchema,
+  ProofingOrderListParamsSchema as GenProofingOrderListParamsSchema,
 } from "./generated-params";
 
 export const DesignListParamsSchema = GenDesignListParamsSchema.extend({
@@ -36,3 +37,8 @@ export const MaterialListParamsSchema = GenMaterialListParamsSchema.extend({
   quantityMin: z.number().nullable().optional(),
 });
 export type MaterialListParams = z.infer<typeof MaterialListParamsSchema>;
+
+export const ProofingOrderListParamsSchema = GenProofingOrderListParamsSchema.extend({
+  code: z.string().nullable().optional(),
+});
+export type ProofingOrderListParams = z.infer<typeof ProofingOrderListParamsSchema>;

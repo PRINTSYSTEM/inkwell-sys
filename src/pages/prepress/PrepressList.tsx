@@ -179,7 +179,7 @@ export default function PrepressList() {
   const incompleteQueryParams = useMemo(() => {
     const raw = {
       status: "not_completed",
-      designCode: debouncedDesignCode.trim() || null,
+      code: debouncedDesignCode.trim() || null,
       materialTypeId: selectedMaterialTypeId,
       pageSize: itemsPerPage,
       pageNumber: incompleteOrdersPage,
@@ -191,7 +191,7 @@ export default function PrepressList() {
   const completedQueryParams = useMemo(() => {
     const raw = {
       status: "completed",
-      designCode: debouncedDesignCode.trim() || null,
+      code: debouncedDesignCode.trim() || null,
       materialTypeId: selectedMaterialTypeId,
       pageSize: itemsPerPage,
       pageNumber: completedOrdersPage,
@@ -203,7 +203,7 @@ export default function PrepressList() {
   const productionReturnedQueryParams = useMemo(() => {
     const raw = {
       status: "production_returned",
-      designCode: debouncedDesignCode.trim() || null,
+      code: debouncedDesignCode.trim() || null,
       materialTypeId: selectedMaterialTypeId,
       pageSize: itemsPerPage,
       pageNumber: productionReturnedOrdersPage,
@@ -897,7 +897,7 @@ export default function PrepressList() {
                         <div className="relative w-80 max-w-sm ml-1">
                           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                           <Input
-                            placeholder="Tìm theo mã hàng...."
+                            placeholder="Tìm mã bình bài hoặc mã thiết kế..."
                             className="h-9 pl-10 text-xs"
                             value={designCode}
                             onChange={(e) => {
