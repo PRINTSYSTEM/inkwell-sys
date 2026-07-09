@@ -55,6 +55,7 @@ const {
   useDetail: useProofingOrderDetailBase,
   useCreate: useCreateProofingOrderBase,
   useUpdate: useUpdateProofingOrderBase,
+  useDelete: useDeleteProofingOrderBase,
 } = createCrudHooks<
   ProofingOrderResponse,
   unknown,
@@ -69,6 +70,7 @@ const {
   messages: {
     createSuccess: "Đã tạo bình bài thành công",
     updateSuccess: "Đã cập nhật bình bài thành công",
+    deleteSuccess: "Đã xóa bình bài thành công",
   },
 });
 
@@ -80,6 +82,7 @@ export const useProofingOrder = (id: number | null, enabled = true) =>
 
 export const useCreateProofingOrder = () => useCreateProofingOrderBase();
 export const useUpdateProofingOrder = () => useUpdateProofingOrderBase();
+export const useDeleteProofingOrder = () => useDeleteProofingOrderBase();
 
 // Note: POST /proofing-orders/from-designs endpoint has been removed from the API.
 // Use the two-step approach instead:
@@ -212,7 +215,7 @@ export const useAvailableOrderDetailsForProofing = (
             thumbnailUrl: design.designImageUrl || "",
             createdAt: od.createdAt || design.createdAt || "",
             designId: design.id, // Store designId for fallback fetching if needed
-             isUrgent: (od as any).isUrgent ?? (od as any).readyDesign?.isUrgent ?? design.isUrgent ?? (design as any).isUrgent ?? false,
+             isUrgent: (od as any).isUrgent ?? (od as any).readyDesign?.isUrgent ?? (design as any).isUrgent ?? false,
             orderCode: od.orderCode || undefined,
             customerName:
               (design as any).customer?.name ||
@@ -817,7 +820,7 @@ export const useUpdateProofingImage = () => {
 };
 
 const getCachedProofingOrder = (queryClient: any, id: number) => {
-  let order = queryClient.getQueryData<any>(["proofing-orders", "detail", id]);
+  let order = queryClient.getQueryData(["proofing-orders", "detail", id]) as any;
   if (!order) {
     const queries = queryClient.getQueryCache().findAll({ queryKey: ["proofing-orders"] });
     for (const query of queries) {

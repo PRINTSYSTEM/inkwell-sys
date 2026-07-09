@@ -103,6 +103,8 @@ interface PrepressOrdersHeaderProps {
   expandedOrderIds?: Set<number>;
   isConfiguring?: boolean;
   selectedDesigns?: any[];
+  shouldShowExpand?: boolean;
+  isSelectionEnabled?: boolean;
 }
 
 export function PrepressOrdersHeader({

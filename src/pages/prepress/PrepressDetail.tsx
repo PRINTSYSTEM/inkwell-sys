@@ -81,6 +81,7 @@ import {
   useCancelProofingOrder,
   useRejectDesignFromProofingOrder,
   proofingKeys,
+  useDeleteProofingOrder,
 } from "@/hooks/use-proofing-order";
 import { useProductionOrders } from "@/hooks/use-production";
 import { useAvailableOrderDetailsForProofing, useAuth } from "@/hooks";
@@ -395,6 +396,7 @@ export default function ProofingOrderDetailPage() {
   // Confirm remove design dialog
   const [isConfirmRemoveDesignDialogOpen, setIsConfirmRemoveDesignDialogOpen] =
     useState(false);
+  const [isConfirmDeleteDialogOpen, setIsConfirmDeleteDialogOpen] = useState(false);
   const [removeDesignTarget, setRemoveDesignTarget] = useState<{
     proofingOrderDesignId: number;
     designCode?: string;
@@ -627,6 +629,20 @@ export default function ProofingOrderDetailPage() {
   const { mutateAsync: removeDieMutate, isPending: isRemovingDie } =
     useRemoveDieFromProofingOrder();
 
+  const { mutateAsync: deleteProofingOrder, isPending: isDeleting } =
+    useDeleteProofingOrder();
+
+  const handleConfirmDelete = async () => {
+    if (!order?.id) return;
+    try {
+      await deleteProofingOrder(order.id);
+      setIsConfirmDeleteDialogOpen(false);
+      navigate("/proofing");
+    } catch (err) {
+      console.error("Delete proofing order failed:", err);
+    }
+  };
+
   const closeRejectDialog = () => {
     setIsRejectDialogOpen(false);
     setRejectTarget(null);
@@ -836,6 +852,38 @@ export default function ProofingOrderDetailPage() {
 
     return result;
   }, [designTypesData, availableDesignsData?.designs, designTypesCount]);
+
+  const [hasAutoSelected, setHasAutoSelected] = useState(false);
+
+  // Reset auto-selected flag when switching orders
+  useEffect(() => {
+    setHasAutoSelected(false);
+  }, [order?.id]);
+
+  // Auto-select the design type with the highest count when loading an empty proofing order
+  useEffect(() => {
+    if (
+      isEmptyOrder &&
+      !hasAutoSelected &&
+      selectedDesignTypes.length === 0 &&
+      designTypeOptions.length > 0
+    ) {
+      let maxCount = 0;
+      let targetId: number | null = null;
+
+      designTypeOptions.forEach((option) => {
+        if (option.count > maxCount) {
+          maxCount = option.count;
+          targetId = option.id;
+        }
+      });
+
+      if (targetId !== null && maxCount > 0) {
+        setSelectedDesignTypes([targetId]);
+        setHasAutoSelected(true);
+      }
+    }
+  }, [isEmptyOrder, designTypeOptions, selectedDesignTypes, hasAutoSelected]);
 
   // Helper functions to check design type
   const isNhanDesignType = (designTypeName: string): boolean => {
@@ -2149,6 +2197,8 @@ export default function ProofingOrderDetailPage() {
         handleStartEditField={handleStartEditField}
         handleCancelEditField={handleCancelEditField}
         handleSaveField={handleSaveField}
+        onDeleteClick={() => setIsConfirmDeleteDialogOpen(true)}
+        isDeleting={isDeleting}
       />
 
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
@@ -2394,6 +2444,10 @@ export default function ProofingOrderDetailPage() {
         setCancelReason={setCancelReason}
         handleConfirmCancel={handleConfirmCancel}
         isCanceling={isCanceling}
+        isConfirmDeleteDialogOpen={isConfirmDeleteDialogOpen}
+        setIsConfirmDeleteDialogOpen={setIsConfirmDeleteDialogOpen}
+        handleConfirmDelete={handleConfirmDelete}
+        isDeleting={isDeleting}
         isUploadDialogOpen={isUploadDialogOpen}
         setIsUploadDialogOpen={setIsUploadDialogOpen}
         uploadFiles={uploadFiles}

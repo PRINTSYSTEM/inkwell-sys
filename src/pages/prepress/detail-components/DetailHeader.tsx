@@ -38,6 +38,8 @@ interface DetailHeaderProps {
   ) => void;
   handleCancelEditField: () => void;
   handleSaveField: () => void;
+  onDeleteClick?: () => void;
+  isDeleting?: boolean;
 }
 
 export function DetailHeader({
@@ -61,11 +63,13 @@ export function DetailHeader({
   handleStartEditField,
   handleCancelEditField,
   handleSaveField,
+  onDeleteClick,
+  isDeleting = false,
 }: DetailHeaderProps) {
   if (!order) return null;
 
   return (
-    <div className="relative mb-4 shrink-0 p-2">
+    <div className="relative mb-4 shrink-0 p-2 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -242,6 +246,18 @@ export function DetailHeader({
               )}
             </div>
           </>
+        )}
+        {isEmptyOrder && isProofer && (
+          <Button
+            variant="destructive"
+            size="sm"
+            className="gap-1.5 h-8 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm"
+            onClick={onDeleteClick}
+            disabled={isDeleting}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Xóa bình bài
+          </Button>
         )}
       </div>
   );

@@ -155,6 +155,11 @@ interface PrepressDetailDialogsProps {
   setRejectReason: (val: string) => void;
   handleConfirmReject: () => void;
   isRejecting: boolean;
+  // Delete proofing order
+  isConfirmDeleteDialogOpen: boolean;
+  setIsConfirmDeleteDialogOpen: (val: boolean) => void;
+  handleConfirmDelete: () => void;
+  isDeleting: boolean;
 }
 
 export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
@@ -240,6 +245,10 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
     setRejectReason,
     handleConfirmReject,
     isRejecting,
+    isConfirmDeleteDialogOpen,
+    setIsConfirmDeleteDialogOpen,
+    handleConfirmDelete,
+    isDeleting,
   } = props;
 
   const [dieExportInitialSelectedIds, setDieExportInitialSelectedIds] =
@@ -967,6 +976,50 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
               disabled={isRejecting || !rejectTarget}
             >
               {isRejecting ? "Đang xử lý..." : "Xác nhận"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirm Delete Proofing Order Dialog */}
+      <AlertDialog
+        open={isConfirmDeleteDialogOpen}
+        onOpenChange={setIsConfirmDeleteDialogOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              Xác nhận xóa bình bài
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Bạn có chắc chắn muốn xóa bài bình rỗng này? Hành động này sẽ thực hiện xóa vĩnh viễn và không thể khôi phục.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={() => setIsConfirmDeleteDialogOpen(false)}
+              disabled={isDeleting}
+            >
+              Hủy
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleConfirmDelete();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin mr-2" />
+                  Đang xóa...
+                </>
+              ) : (
+                "Xác nhận xóa"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
