@@ -249,11 +249,8 @@ export default function ReadyDesignListPage() {
       pageSize: 10000,
       customerId: selectedCustomer?.id || undefined,
       search: debouncedSearchQuery.trim() || undefined,
-      designType: selectedTypeName || undefined,
-      materialType: materialFilter || undefined,
-      dimensions: debouncedDimensions.trim() || undefined,
     };
-  }, [selectedCustomer, debouncedSearchQuery, selectedTypeName, materialFilter, debouncedDimensions]);
+  }, [selectedCustomer, debouncedSearchQuery]);
 
   const { data: readyDesignsData, isLoading: loadingDesigns, refetch: refetchDesigns } = useReadyDesigns(
     readyDesignsParams
@@ -265,11 +262,26 @@ export default function ReadyDesignListPage() {
 
     let filtered = [...designs];
 
-    // Client-side design type filtering
+    const normalize = (value: unknown) =>
+      String(value ?? "")
+        .trim()
+        .toLowerCase();
+
+    const selectedTypeMaterials = new Set(
+      selectedTypeName
+        ? materialOptions.map((m: any) => normalize(m.name))
+        : []
+    );
+
+    // Client-side design type filtering. ReadyDesign does not always include
+    // designTypeName, so fall back to the material list for the selected type.
     if (selectedTypeName) {
       filtered = filtered.filter((d) => {
         const typeName = (d as any).designTypeName || (d as any).designType?.name;
-        return typeName === selectedTypeName;
+        if (typeName) return normalize(typeName) === normalize(selectedTypeName);
+
+        const matName = d.materialTypeName || (d as any).materialType?.name;
+        return selectedTypeMaterials.has(normalize(matName));
       });
     }
 
@@ -277,15 +289,15 @@ export default function ReadyDesignListPage() {
     if (materialFilter) {
       filtered = filtered.filter((d) => {
         const matName = d.materialTypeName || (d as any).materialType?.name;
-        return matName === materialFilter;
+        return normalize(matName) === normalize(materialFilter);
       });
     }
 
     // Client-side dimensions filtering
-    if (dimensionsFilter.trim()) {
-      const dimSearch = dimensionsFilter.trim().toLowerCase();
+    if (debouncedDimensions.trim()) {
+      const dimSearch = normalize(debouncedDimensions);
       filtered = filtered.filter((d) => {
-        return d.dimensions?.toLowerCase().includes(dimSearch);
+        return normalize(d.dimensions).includes(dimSearch);
       });
     }
 
@@ -294,7 +306,7 @@ export default function ReadyDesignListPage() {
       const uB = b.isUrgent ? 1 : 0;
       return uB - uA; // Urgent first
     });
-  }, [designs, selectedTypeName, materialFilter, dimensionsFilter]);
+  }, [designs, selectedTypeName, materialFilter, debouncedDimensions, materialOptions]);
 
   const totalCount = sortedDesigns.length;
 
@@ -341,7 +353,7 @@ export default function ReadyDesignListPage() {
   // Reset selected checkboxes if the page or customer filter changes
   useEffect(() => {
     setSelectedIds([]);
-  }, [currentPage, selectedCustomer]);
+  }, [currentPage, selectedCustomer, debouncedSearchQuery, selectedTypeName, materialFilter, debouncedDimensions]);
 
   // Refetch designs every time the page is entered/mounted
   useEffect(() => {

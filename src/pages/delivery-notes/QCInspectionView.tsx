@@ -839,7 +839,7 @@ export function QCInspectionView({ tab }: QCInspectionViewProps) {
     if (searchVal !== searchQuery) {
       setSearchQuery(searchVal);
     }
-  }, [searchParams, searchQuery]);
+  }, [window.location.search]);
 
   const queryParams = useMemo(() => {
     const params: any = {

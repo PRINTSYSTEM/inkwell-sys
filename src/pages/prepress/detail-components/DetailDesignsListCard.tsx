@@ -401,9 +401,9 @@ export function DetailDesignsListCard({
                           </p>
                         </TableCell>
                         <TableCell className="px-2 py-1">
-                          {pod.design?.designImageUrl ? (
+                          {pod.design?.designThumbnailUrl || pod.design?.designImageUrl ? (
                             <img
-                              src={pod.design.designImageUrl}
+                              src={pod.design.designThumbnailUrl || pod.design.designImageUrl}
                               alt={pod.design.designName}
                               className="w-10 h-10 object-cover rounded border cursor-pointer"
                               onClick={(e) => {

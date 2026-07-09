@@ -100,6 +100,7 @@ import { PrepressOrderRow } from "./components/PrepressOrderRow";
 import { DetailEmptyOrderView } from "./detail-components/DetailEmptyOrderView";
 import { DieListDialog } from "@/components/dies/DieListDialog";
 import { InventoryViewDialog } from "@/components/inventory/InventoryViewDialog";
+import { useProofingCart } from "@/context/proofing-cart-context";
 
 import type { DesignItem } from "@/types/proofing";
 import { useMaterialTypeList, useAuth } from "@/hooks";
@@ -124,6 +125,7 @@ export default function PrepressList() {
   const { user } = useAuth();
   const role = user?.role as UserRole | undefined;
   const isProofer = role === ROLE.ADMIN || role === ROLE.MANAGER || role === ROLE.PROOFER;
+  const { addToCart } = useProofingCart();
 
   // ===== Mode: Orders list (default) vs Waiting designs (when filters active) =====
   const [selectedDesignTypes, setSelectedDesignTypes] = useState<number[]>([]);
@@ -992,6 +994,24 @@ export default function PrepressList() {
                         isSelectionEnabled={isProofer}
                         isConfiguring={isConfiguring}
                         selectedDesigns={selectedDesigns}
+                        selectedCount={selectedIds.size}
+                        onAddToExistingClick={() => {
+                          addToCart(
+                            selectedDesigns.map((d) => ({
+                              readyDesignId: d.readyDesignId ?? d.id,
+                              orderDetailId: d.id,
+                              designCode: d.code,
+                              designName: d.name,
+                              designImageUrl: d.thumbnailUrl,
+                              designTypeName: d.designTypeName,
+                              materialTypeName: d.materialTypeName,
+                              availableQuantity: d.availableQuantity,
+                              quantity: null,
+                            }))
+                          );
+                          toast.success(`Đã thêm ${selectedDesigns.length} thiết kế vào giỏ`);
+                          clearSelection();
+                        }}
                         // Designs Pagination props
                         designsPage={designsPage}
                         setDesignsPage={setDesignsPage}

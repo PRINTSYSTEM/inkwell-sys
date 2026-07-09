@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { RouterProvider } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "./providers/AuthProvider";
+import { ProofingCartProvider } from "./context/proofing-cart-context";
 import { router } from "./routes";
 import { NotificationProvider } from "./providers/NotificationProvider";
 
@@ -44,6 +45,7 @@ const App = () => (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <AuthProvider>
+          <ProofingCartProvider>
           <NotificationProvider>
             <RouterProvider router={router} />
             <Sonner 
@@ -55,6 +57,7 @@ const App = () => (
               duration={2000}
             />
           </NotificationProvider>
+          </ProofingCartProvider>
         </AuthProvider>
       </TooltipProvider>
     </QueryClientProvider>
