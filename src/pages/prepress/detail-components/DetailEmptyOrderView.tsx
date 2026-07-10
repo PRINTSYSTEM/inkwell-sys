@@ -1,4 +1,5 @@
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { SearchableSelect } from "@/components/forms/SearchableSelect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -234,37 +235,23 @@ export function DetailEmptyOrderView({
                         Khổ giấy in (cm)
                       </Label>
                       <div className="flex gap-1.5">
-                        <Select
+                        <SearchableSelect
                           value={paperSizeId}
                           onValueChange={setPaperSizeId}
                           disabled={!isProofer}
-                        >
-                          <SelectTrigger
-                            id="paper-size"
-                            className="h-8.5 text-xs font-medium border-muted-foreground/20"
-                          >
-                            <SelectValue placeholder="Chọn khổ giấy" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">
-                              -- Để trống --
-                            </SelectItem>
-                            <SelectItem value="custom">
-                              -- Nhập mới (nếu chưa có sẵn) --
-                            </SelectItem>
-                            {paperSizes.map((ps) => (
-                              <SelectItem
-                                key={ps.id}
-                                value={ps.id.toString()}
-                              >
-                                {ps.name}
-                                {ps.width && ps.height
-                                  ? ` (${ps.width}×${ps.height})`
-                                  : ""} cm
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          className="h-8.5 text-xs font-medium border-muted-foreground/20"
+                          placeholder="Chọn khổ giấy..."
+                          searchPlaceholder="Tìm khổ giấy..."
+                          popoverWidth="w-[280px]"
+                          options={[
+                            { value: "none", label: "-- Để trống --" },
+                            { value: "custom", label: "-- Nhập mới (nếu chưa có sẵn) --" },
+                            ...paperSizes.map((ps) => ({
+                              value: ps.id.toString(),
+                              label: `${ps.name}${ps.width && ps.height ? ` (${ps.width}×${ps.height})` : ""} cm`
+                            }))
+                          ]}
+                        />
 
                         {showCreateButton && isProofer && (
                           <Button

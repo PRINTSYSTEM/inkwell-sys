@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { SearchableSelect } from "@/components/forms/SearchableSelect";
 import type { DesignItem } from "@/types/proofing";
 import type { PaperSizeResponse } from "@/Schema/paper-size.schema";
 import type { AddProofingOrderDetailItem } from "@/Schema/proofing-order.schema";
@@ -196,9 +197,14 @@ export function CreateProofingOrderModal({
           const height = parseInt(match[2], 10);
           if (!isNaN(width) && !isNaN(height) && width > 0 && height > 0) {
             // Check if paper size already exists
-            const existing = paperSizes.find(
-              (ps) => ps.width === width && ps.height === height
-            );
+            const existing = paperSizes.find((ps) => {
+              const psW = ps.width !== null && ps.width !== undefined ? Number(ps.width) : 0;
+              const psH = ps.height !== null && ps.height !== undefined ? Number(ps.height) : 0;
+              return (
+                (psW === width && psH === height) ||
+                (psW === height && psH === width)
+              );
+            });
 
             if (existing) {
               finalPaperSizeId = existing.id;
@@ -520,31 +526,21 @@ export function CreateProofingOrderModal({
                       >
                         Khổ giấy in
                       </Label>
-                      <Select
+                      <SearchableSelect
                         value={paperSizeId}
                         onValueChange={setPaperSizeId}
-                      >
-                        <SelectTrigger id="paperSizeId" className="h-10">
-                          <Maximize2 className="h-4 w-4 mr-2 text-muted-foreground" />
-                          <SelectValue
-                            defaultValue="custom"
-                            placeholder="Chọn khổ giấy"
-                          />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="custom">
-                            -- Nhập thủ công --
-                          </SelectItem>
-                          {paperSizes?.map((ps) => (
-                            <SelectItem key={ps.id} value={ps.id.toString()}>
-                              {ps.name}{" "}
-                              {ps.width && ps.height
-                                ? `(${ps.width}×${ps.height})`
-                                : ""} cm
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        className="h-10 text-slate-700 font-normal"
+                        placeholder="Chọn khổ giấy..."
+                        searchPlaceholder="Tìm khổ giấy..."
+                        popoverWidth="w-[300px]"
+                        options={[
+                          { value: "custom", label: "-- Nhập thủ công --" },
+                          ...(paperSizes || []).map((ps) => ({
+                            value: ps.id.toString(),
+                            label: `${ps.name}${ps.width && ps.height ? ` (${ps.width}×${ps.height})` : ""} cm`
+                          }))
+                        ]}
+                      />
                     </div>
 
                     {/* Custom Paper Size */}

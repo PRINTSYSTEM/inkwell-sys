@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { SearchableSelect } from "@/components/forms/SearchableSelect";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -363,24 +364,21 @@ export function DetailOrderInfoCard({
               <div className="flex items-center gap-1">
                 {editingField === "all" ? (
                   <div className="flex gap-1.5 items-center">
-                    <Select
+                    <SearchableSelect
                       value={inlinePaperSizeId}
                       onValueChange={setInlinePaperSizeId}
-                    >
-                      <SelectTrigger className="h-6 text-xs px-2 min-w-[100px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="custom">
-                          -- Nhập thủ công --
-                        </SelectItem>
-                        {paperSizes.map((ps) => (
-                          <SelectItem key={ps.id} value={ps.id.toString()}>
-                            {ps.name} cm
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      className="h-6 text-xs px-2 w-[120px] bg-slate-50 hover:bg-slate-100"
+                      placeholder="Chọn khổ..."
+                      searchPlaceholder="Tìm khổ..."
+                      popoverWidth="w-[200px]"
+                      options={[
+                        { value: "custom", label: "-- Nhập thủ công --" },
+                        ...paperSizes.map((ps) => ({
+                          value: ps.id.toString(),
+                          label: `${ps.name} cm`
+                        }))
+                      ]}
+                    />
                     {inlinePaperSizeId === "custom" && (
                       <Input
                         value={inlineCustomPaperSize}
