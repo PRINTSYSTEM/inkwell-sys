@@ -360,6 +360,8 @@ export default function StockOutPrintPreviewDialog({
                     </th>
                     <th className="border border-black text-center p-1 w-16">ĐVT</th>
                     <th className="border border-black text-right p-1 w-24">SỐ LƯỢNG</th>
+                    <th className="border border-black text-center p-1 w-22">KT cắt (cm)</th>
+                    <th className="border border-black text-right p-1 w-18">Hao hụt</th>
                     <th className="border border-black text-left p-1 w-36">GHI CHÚ</th>
                   </tr>
                 </thead>
@@ -373,12 +375,23 @@ export default function StockOutPrintPreviewDialog({
                       <tr key={item.id || index}>
                         <td className="border border-black text-center p-1.5">{index + 1}</td>
                         <td className="border border-black p-1.5 font-bold">
-                          {item.itemName || "—"}
+                          <div>{item.itemName || "—"}</div>
+                          {item.jobCode && (
+                            <div className="text-[10px] font-mono text-stone-500 font-normal mt-0.5">
+                              Mã bài: {item.jobCode}
+                            </div>
+                          )}
                           {isOutsourcePrint && isCuonItem ? " (m tới)" : ""}
                         </td>
                         <td className="border border-black text-center p-1.5">{item.unit || "—"}</td>
                         <td className="border border-black text-right p-1.5 font-bold">
                           {(item.quantity || 0).toLocaleString("vi-VN")}
+                        </td>
+                        <td className="border border-black text-center p-1.5">
+                          {item.cutLength != null ? `${item.cutLength} × ${item.cutWidth}` : "—"}
+                        </td>
+                        <td className="border border-black text-right p-1.5 font-mono">
+                          {item.cutLength != null ? (item.wasteQuantity?.toLocaleString() ?? "0") : "—"}
                         </td>
                         <td className="border border-black p-1.5 italic text-stone-700">
                           {item.notes || "—"}
@@ -387,7 +400,7 @@ export default function StockOutPrintPreviewDialog({
                     );
                   })}
                   <tr className="font-bold bg-stone-50">
-                    <td className="border border-black text-center p-1.5" colSpan={3}>
+                    <td className="border border-black text-center p-1.5" colSpan={5}>
                       Cộng
                     </td>
                     <td className="border border-black text-right p-1.5">

@@ -171,8 +171,13 @@ export function PrepressOrderRow({
   const [isDesignsExpanded, setIsDesignsExpanded] = useState(false);
 
   const proofingImgUrl = useMemo(() => {
-    return order.thumbnailUrl || order.proofingImageUrl || order.proofingImageUrlConverted || order.imageUrl || null;
-  }, [order.thumbnailUrl, order.proofingImageUrl, order.proofingImageUrlConverted, order.imageUrl]);
+    const orderImg = order.thumbnailUrl || order.proofingImageUrl || order.proofingImageUrlConverted || order.imageUrl;
+    if (orderImg) return orderImg;
+
+    // Fallback to the first design's image/thumbnail in the proofing order
+    const firstDesign = designs[0]?.design;
+    return firstDesign?.designThumbnailUrl || firstDesign?.designImageUrl || null;
+  }, [order.thumbnailUrl, order.proofingImageUrl, order.proofingImageUrlConverted, order.imageUrl, designs]);
 
   const searchMatchesDesignCode = useMemo(() => {
     const term = debouncedSearchTerm.trim().toLowerCase();

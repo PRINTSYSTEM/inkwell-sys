@@ -238,6 +238,11 @@ export function CreateMaterialDialog({
   }, [currentFamilyObj]);
 
   const isRoll = useMemo(() => {
+    const unitLower = (unit || "").toLowerCase().trim();
+    if (unitLower) {
+      return unitLower === "cuộn" || unitLower === "cuon" || unitLower === "mét" || unitLower === "met" || unitLower === "m";
+    }
+
     if (!currentTemplate) return false;
     const nameLower = currentTemplate.name?.toLowerCase() || "";
     const codeLower = currentTemplate.code?.toLowerCase() || "";
@@ -250,9 +255,7 @@ export function CreateMaterialDialog({
       codeLower.includes("cuon") ||
       codeLower.includes("roll") ||
       familyCodeLower.includes("roll") ||
-      familyCodeLower.includes("cuon") ||
-      unit === "cuộn" ||
-      unit === "cuon"
+      familyCodeLower.includes("cuon")
     );
   }, [currentTemplate, currentFamilyObj, unit]);
 
@@ -375,11 +378,7 @@ export function CreateMaterialDialog({
       specDict["gsm"] = basisWeight.toString();
     }
 
-    const isRollType =
-      currentFamilyObj?.code?.includes("roll") ||
-      currentFamilyObj?.code?.includes("cuon") ||
-      currentTemplate?.name?.toLowerCase().includes("cuộn") ||
-      currentTemplate?.code?.toLowerCase().includes("cuon");
+    const isRollType = isRoll;
 
     createMaterial(
       {

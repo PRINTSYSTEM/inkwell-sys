@@ -262,6 +262,7 @@ export const API_SUFFIX = {
   STOCK_IN_CANCEL: (id: number) => `/stock-ins/${id}/cancel`,
   STOCK_IN_COMPLETE: (id: number) => `/stock-ins/${id}/complete`,
   STOCK_IN_FROM_VENDOR: "/stock-ins/from-vendor",
+  STOCK_IN_AUXILIARY: "/stock-ins/auxiliary",
   STOCK_IN_FROM_PRODUCTION: "/stock-ins/from-production",
   STOCK_IN_FROM_DELIVERY_RETURN: "/stock-ins/from-delivery-return",
   STOCK_IN_FROM_CUT: "/stock-ins/from-cut",
@@ -292,6 +293,9 @@ export const API_SUFFIX = {
   STOCK_OUT_OUTSOURCE: "/stock-outs/outsource",
   STOCK_OUT_RETURN_VENDOR: "/stock-outs/return-vendor",
   STOCK_OUT_ADJUSTMENT: "/stock-outs/adjustment",
+  STOCK_OUT_FOR_PRODUCTION_ORDER: (productionOrderId: number) =>
+    `/stock-outs/production-order/${productionOrderId}`,
+  STOCK_OUT_BY_VENDOR_EXCEL: (vendorId: number) => `/stock-outs/by-vendor/${vendorId}/excel`,
   MATERIAL_CUTS: "/material-cuts",
   MATERIAL_CUT_BY_ID: (id: number) => `/material-cuts/${id}`,
   MATERIAL_CUT_COMPLETE: (id: number) => `/material-cuts/${id}/complete`,
@@ -415,6 +419,10 @@ export const API_SUFFIX = {
     `/debt-reports/ap-detail-ledger/${vendorId}`,
   AP_DETAIL_LEDGER_EXPORT: (vendorId: number) =>
     `/debt-reports/ap-detail-ledger/${vendorId}/export`,
+  AP_RECONCILIATION: (vendorId: number) =>
+    `/debt-reports/ap-reconciliation/${vendorId}`,
+  AP_RECONCILIATION_EXPORT: (vendorId: number) =>
+    `/debt-reports/ap-reconciliation/${vendorId}/export`,
   AP_OVERDUE: "/debt-reports/ap-overdue",
   AP_ITEMS: "/debt-reports/ap-items",
   CUSTOMER_RECONCILIATION_EXPORT: "/debt-reports/customer-reconciliation/export",

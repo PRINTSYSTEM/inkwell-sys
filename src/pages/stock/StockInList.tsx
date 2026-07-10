@@ -84,6 +84,7 @@ export default function StockInListPage() {
 
   const [pageSize] = useState(10);
   const [typeFilter, setTypeFilter] = useState<string>("");
+  const [itemTypeFilter, setItemTypeFilter] = useState<string>("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: addDays(new Date(), -30),
     to: new Date(),
@@ -93,6 +94,7 @@ export default function StockInListPage() {
   const handleResetFilters = () => {
     setSearch("");
     setTypeFilter("");
+    setItemTypeFilter("");
     setVendorFilter("");
     setStatusFilter("");
     setDateRange(undefined);
@@ -107,6 +109,7 @@ export default function StockInListPage() {
     search: debouncedSearchTerm || undefined,
     type: typeFilter || undefined,
     status: statusFilter === "all" ? undefined : statusFilter || undefined,
+    itemType: itemTypeFilter || undefined,
   });
 
   const { mutate: deleteStockIn } = useDeleteStockIn();
@@ -319,6 +322,26 @@ export default function StockInListPage() {
                     <SelectItem value="pending">Chờ xử lý</SelectItem>
                     <SelectItem value="completed">Hoàn thành</SelectItem>
                     <SelectItem value="cancelled">Đã hủy</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Item Type Selector */}
+              <div className="w-full sm:w-[150px]">
+                <Select
+                  value={itemTypeFilter || "all"}
+                  onValueChange={(v) => {
+                    setItemTypeFilter(v === "all" ? "" : v);
+                    setPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-9 text-xs bg-white border-slate-200 rounded-lg cursor-pointer">
+                    <SelectValue placeholder="Dạng vật tư" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả vật tư</SelectItem>
+                    <SelectItem value="material">Chất liệu / Vật tư chính</SelectItem>
+                    <SelectItem value="auxiliary">Vật tư phụ trợ</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

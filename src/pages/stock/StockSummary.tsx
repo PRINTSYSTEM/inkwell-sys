@@ -5,6 +5,15 @@ import { format } from "date-fns";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -23,13 +32,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { 
-  Search, 
-  RefreshCw, 
-  Loader2, 
-  Building2, 
-  Filter, 
-  ChevronLeft, 
+import {
+  Search,
+  RefreshCw,
+  Loader2,
+  Building2,
+  Filter,
+  ChevronLeft,
   ChevronRight,
   Info,
   FileText,
@@ -40,7 +49,9 @@ import {
   Boxes,
   Download,
   Eye,
-  Layers
+  Layers,
+  Droplets,
+  Wrench,
 } from "lucide-react";
 import { useMaterials } from "@/hooks/use-material";
 import { useActiveVendors } from "@/hooks/use-vendor";
@@ -53,6 +64,7 @@ import { CreateMaterialDirectDialog } from "./components/CreateMaterialDirectDia
 import { StockOutByVendorDialog } from "./components/StockOutByVendorDialog";
 import { PendingExportsDialog } from "./components/PendingExportsDialog";
 import { RecentStockOutsDialog } from "./components/RecentStockOutsDialog";
+import { StockOutByProductionOrderDialog } from "./components/StockOutByProductionOrderDialog";
 import { downloadBlob } from "@/lib/download-utils";
 import { buildFilename, formatDateForFilename } from "@/utils/file-name";
 import { apiRequest } from "@/lib/http";
@@ -71,6 +83,8 @@ export default function StockSummary() {
   // Independent Client-side Pagination States for the two columns
   const [rollPage, setRollPage] = useState(1);
   const [sheetPage, setSheetPage] = useState(1);
+  const [inkChemPage, setInkChemPage] = useState(1);
+  const [accessoryPage, setAccessoryPage] = useState(1);
   const [stockOutPage, setStockOutPage] = useState(1);
 
   // Fetch Vendors (All active suppliers)
@@ -85,12 +99,12 @@ export default function StockSummary() {
   }, [vendorsData]);
 
   // Fetch ALL materials for the selected query (up to 1000 items)
-  const { 
-    data: materialsData, 
-    isLoading: isLoadingMaterials, 
-    isError, 
-    error, 
-    refetch 
+  const {
+    data: materialsData,
+    isLoading: isLoadingMaterials,
+    isError,
+    error,
+    refetch
   } = useMaterials({
     page: 1,
     size: 1000, // Fetch up to 1000 items to get complete dataset
@@ -140,6 +154,8 @@ export default function StockSummary() {
   useEffect(() => {
     setRollPage(1);
     setSheetPage(1);
+    setInkChemPage(1);
+    setAccessoryPage(1);
   }, [selectedVendorId, materialSearchQuery, pageSize]);
 
   // Create Material Dialog States
@@ -152,13 +168,65 @@ export default function StockSummary() {
   const [isPendingExportsOpen, setIsPendingExportsOpen] = useState(false);
   const [prefillStockOutItems, setPrefillStockOutItems] = useState<any[] | undefined>(undefined);
 
+  // Stock Out by Production Order Dialog State
+  const [isProductionOrderStockOutOpen, setIsProductionOrderStockOutOpen] = useState(false);
+
   // Recent Stock Outs Dialog States
   const [isRecentStockOutsOpen, setIsRecentStockOutsOpen] = useState(false);
 
   // Vendor Reconciliation Excel Export States
   const [isExportingReconciliation, setIsExportingReconciliation] = useState(false);
+  const [isExportingStockOutByVendor, setIsExportingStockOutByVendor] = useState(false);
+  const [exportMonth, setExportMonth] = useState<string>(format(new Date(), "yyyy-MM"));
+  const [isExportMonthDialogOpen, setIsExportMonthDialogOpen] = useState(false);
 
 
+
+  // Handle exporting stock-out history by vendor
+  const handleExportStockOutByVendor = async () => {
+    if (selectedVendorId === "all") {
+      toast.error("Vui lòng chọn một Nhà cung cấp ở bộ lọc trước khi xuất lịch sử xuất!");
+      return;
+    }
+
+    setIsExportingStockOutByVendor(true);
+    const vendorId = Number(selectedVendorId);
+    const foundVendor = vendorsData?.find((v) => v.id === vendorId);
+    const vendorName = foundVendor?.name || `NCC-${vendorId}`;
+
+    try {
+      const params: Record<string, string> = {};
+      if (exportMonth) {
+        const [year, month] = exportMonth.split("-").map(Number);
+        const lastDay = new Date(year, month, 0).getDate();
+        const lastDayStr = String(lastDay).padStart(2, "0");
+        params.fromDate = `${exportMonth}-01`;
+        params.toDate = `${exportMonth}-${lastDayStr}`;
+      }
+
+      const response = await apiRequest.get(
+        API_SUFFIX.STOCK_OUT_BY_VENDOR_EXCEL(vendorId),
+        { responseType: "blob", params: Object.keys(params).length > 0 ? params : undefined }
+      );
+
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const monthLabel = exportMonth ? `_${exportMonth}` : "";
+      const excelName = buildFilename(
+        ["Lịch sử xuất NCC", vendorName + monthLabel, formatDateForFilename(new Date())],
+        "xlsx"
+      );
+      downloadBlob(blob, excelName);
+      toast.success(`Đã xuất file lịch sử xuất kho cho ${vendorName} thành công!`);
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Không thể xuất file lịch sử xuất kho. Vui lòng thử lại!");
+    } finally {
+      setIsExportingStockOutByVendor(false);
+    }
+  };
 
   // Handle exporting Vendor Reconciliation Excel
   const handleExportVendorReconciliation = async () => {
@@ -166,12 +234,12 @@ export default function StockSummary() {
       toast.error("Vui lòng chọn một Nhà cung cấp ở bộ lọc trước khi xuất đối soát!");
       return;
     }
-    
+
     setIsExportingReconciliation(true);
     const vendorId = Number(selectedVendorId);
     const foundVendor = vendorsData?.find(v => v.id === vendorId);
     const vendorName = foundVendor?.name || `NCC-${vendorId}`;
-    
+
     try {
       const response = await apiRequest.get(
         API_SUFFIX.VENDOR_RECONCILIATION_EXCEL(vendorId),
@@ -179,11 +247,11 @@ export default function StockSummary() {
           responseType: "blob",
         }
       );
-      
+
       const blob = new Blob([response.data], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       });
-      
+
       const excelName = buildFilename(["Đối soát nhà cung cấp", vendorName, formatDateForFilename(new Date())], "xlsx");
       downloadBlob(blob, excelName);
       toast.success(`Đã xuất file đối soát cho ${vendorName} thành công!`);
@@ -197,20 +265,36 @@ export default function StockSummary() {
 
 
 
-  // Classify materials: Roll (Cuộn) vs Sheet (Tờ / Khác)
+  // Classify materials: Ink & Chemical (Mực & Hóa chất)
+  const INK_CHEM_FAMILY_IDS = [5, 6, 9, 10];
+  const allInkChemMaterials = useMemo(() => {
+    return materials.filter(item => INK_CHEM_FAMILY_IDS.includes(item.materialFamilyId));
+  }, [materials]);
+
+  // Classify materials: Accessories (Phụ tùng)
+  const ACCESSORY_FAMILY_IDS = [7, 8, 11];
+  const allAccessoryMaterials = useMemo(() => {
+    return materials.filter(item => ACCESSORY_FAMILY_IDS.includes(item.materialFamilyId));
+  }, [materials]);
+
+  // Classify materials: Roll (Cuộn) vs Sheet (Tờ) - excluding ink/chem and accessories
   const allRollMaterials = useMemo(() => {
     return materials.filter(item => {
-      const unit = (item.unit || "").toLowerCase();
-      const name = (item.name || "").toLowerCase();
-      return unit.includes("cuộn") || unit.includes("cuon") || name.includes("cuộn") || name.includes("cuon");
+      if (INK_CHEM_FAMILY_IDS.includes(item.materialFamilyId) || ACCESSORY_FAMILY_IDS.includes(item.materialFamilyId)) {
+        return false;
+      }
+      const type = (item.type || "").toLowerCase().trim();
+      return type === "cuon";
     });
   }, [materials]);
 
   const allSheetMaterials = useMemo(() => {
     return materials.filter(item => {
-      const unit = (item.unit || "").toLowerCase();
-      const name = (item.name || "").toLowerCase();
-      const isRoll = unit.includes("cuộn") || unit.includes("cuon") || name.includes("cuộn") || name.includes("cuon");
+      if (INK_CHEM_FAMILY_IDS.includes(item.materialFamilyId) || ACCESSORY_FAMILY_IDS.includes(item.materialFamilyId)) {
+        return false;
+      }
+      const type = (item.type || "").toLowerCase().trim();
+      const isRoll = type === "cuon";
       return !isRoll;
     });
   }, [materials]);
@@ -228,6 +312,20 @@ export default function StockSummary() {
     const startIndex = (sheetPage - 1) * pageSize;
     return allSheetMaterials.slice(startIndex, startIndex + pageSize);
   }, [allSheetMaterials, sheetPage, pageSize]);
+
+  // Paginated Slices for Ink & Chemical
+  const totalInkChemPages = Math.ceil(allInkChemMaterials.length / pageSize) || 1;
+  const paginatedInkChemMaterials = useMemo(() => {
+    const startIndex = (inkChemPage - 1) * pageSize;
+    return allInkChemMaterials.slice(startIndex, startIndex + pageSize);
+  }, [allInkChemMaterials, inkChemPage, pageSize]);
+
+  // Paginated Slices for Accessories
+  const totalAccessoryPages = Math.ceil(allAccessoryMaterials.length / pageSize) || 1;
+  const paginatedAccessoryMaterials = useMemo(() => {
+    const startIndex = (accessoryPage - 1) * pageSize;
+    return allAccessoryMaterials.slice(startIndex, startIndex + pageSize);
+  }, [allAccessoryMaterials, accessoryPage, pageSize]);
 
   // Helper to find vendor name by ID
   const getVendorName = (vendorId: number | null | undefined, defaultName: string | null | undefined) => {
@@ -250,20 +348,17 @@ export default function StockSummary() {
 
       <div className="min-h-screen bg-background">
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-4">
-          
+
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-100 pb-4">
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-foreground">
                 Tồn kho tổng hợp
               </h1>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Danh sách tổng hợp tồn kho vật tư cuộn và tờ
-              </p>
             </div>
 
             <div className="flex gap-2 flex-wrap">
-              <Button 
+              <Button
                 onClick={() => {
                   if (selectedVendorId === "all") {
                     toast.error("Vui lòng chọn một Nhà cung cấp ở bộ lọc trước khi nhập vật tư mới!");
@@ -278,22 +373,17 @@ export default function StockSummary() {
                 <Plus className="h-3.5 w-3.5 mr-1.5" />
                 Nhập vật tư mới
               </Button>
-              <Button 
+              <Button
                 onClick={() => {
-                  if (selectedVendorId === "all") {
-                    setIsPendingExportsOpen(true);
-                    return;
-                  }
                   setIsStockOutOpen(true);
                 }}
                 variant="outline"
                 size="sm"
                 className="cursor-pointer border-slate-200 text-xs h-9 rounded-lg hover:bg-slate-50 text-foreground"
               >
-                <Minus className="h-3.5 w-3.5 mr-1.5 text-rose-600" />
                 Xuất kho NCC
               </Button>
-              <Button 
+              <Button
                 onClick={() => setIsPendingExportsOpen(true)}
                 variant="outline"
                 size="sm"
@@ -302,18 +392,16 @@ export default function StockSummary() {
                 <Layers className="h-3.5 w-3.5 mr-1.5 text-rose-500" />
                 Bài chưa xuất kho
               </Button>
-              <Button 
-                onClick={handleRefreshAll}
-                disabled={isLoadingMaterials || isLoadingStockOuts}
+              <Button
+                onClick={() => setIsProductionOrderStockOutOpen(true)}
                 variant="outline"
                 size="sm"
-                className="cursor-pointer border-slate-200 text-xs h-9 rounded-lg"
+                className="cursor-pointer border-slate-200 text-xs h-9 rounded-lg hover:bg-slate-50 text-foreground"
               >
-                <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isLoadingMaterials || isLoadingStockOuts ? "animate-spin" : ""}`} />
-                Làm mới
+                Xuất kho theo bài
               </Button>
 
-              <Button 
+              <Button
                 onClick={() => setIsRecentStockOutsOpen(true)}
                 variant="outline"
                 size="sm"
@@ -322,7 +410,7 @@ export default function StockSummary() {
                 <FileText className="h-3.5 w-3.5 mr-1.5 text-slate-500" />
                 Danh sách xuất
               </Button>
-              <Button 
+              <Button
                 onClick={handleExportVendorReconciliation}
                 disabled={isExportingReconciliation}
                 variant="outline"
@@ -335,6 +423,26 @@ export default function StockSummary() {
                   <Download className="h-3.5 w-3.5 mr-1.5" />
                 )}
                 Đối soát NCC (Excel)
+              </Button>
+              <Button
+                onClick={() => {
+                  if (selectedVendorId === "all") {
+                    toast.error("Vui lòng chọn một Nhà cung cấp ở bộ lọc trước khi xuất lịch sử xuất!");
+                    return;
+                  }
+                  setIsExportMonthDialogOpen(true);
+                }}
+                disabled={isExportingStockOutByVendor}
+                variant="outline"
+                size="sm"
+                className="cursor-pointer border-slate-200 text-xs h-9 rounded-lg hover:bg-slate-50 text-foreground"
+              >
+                {isExportingStockOutByVendor ? (
+                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                ) : (
+                  <Download className="h-3.5 w-3.5 mr-1.5" />
+                )}
+                Lịch sử xuất (Excel)
               </Button>
 
             </div>
@@ -418,7 +526,7 @@ export default function StockSummary() {
 
           {/* TWO COLUMNS DISPLAY SIDE-BY-SIDE (Cuộn vs Tờ) */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
-            
+
             {/* COLUMN 1: ROLL MATERIALS (CUỘN) */}
             <Card className="border-slate-200/60 shadow-sm rounded-xl overflow-hidden flex flex-col">
               <CardHeader className="bg-slate-50/50 border-b border-slate-100 py-3.5 px-4 flex flex-row items-center justify-between">
@@ -437,7 +545,7 @@ export default function StockSummary() {
                   {allRollMaterials.length} loại
                 </Badge>
               </CardHeader>
-              
+
               <CardContent className="p-0 flex-1">
                 {isLoadingMaterials ? (
                   <TableSkeletonRows cols={3} />
@@ -458,8 +566,8 @@ export default function StockSummary() {
                       </TableHeader>
                       <TableBody>
                         {paginatedRollMaterials.map((item, idx) => (
-                          <TableRow 
-                            key={`${item.id}-${idx}`} 
+                          <TableRow
+                            key={`${item.id}-${idx}`}
                             className="hover:bg-slate-50 border-b border-slate-100 text-xs cursor-pointer transition-colors duration-150"
                             onClick={() => navigate(`/stock/materials/${item.id}/history`)}
                           >
@@ -524,7 +632,7 @@ export default function StockSummary() {
                   </div>
                   <div>
                     <CardTitle className="text-sm font-bold text-foreground">
-                      VẬT TƯ DẠNG TỜ / KHÁC
+                      VẬT TƯ DẠNG TỜ
                     </CardTitle>
                     {/* <CardDescription className="text-[10px]">Giấy tờ, decal phẳng, bản kẽm, khuôn mẫu...</CardDescription> */}
                   </div>
@@ -533,7 +641,7 @@ export default function StockSummary() {
                   {allSheetMaterials.length} loại
                 </Badge>
               </CardHeader>
-              
+
               <CardContent className="p-0 flex-1">
                 {isLoadingMaterials ? (
                   <TableSkeletonRows cols={3} />
@@ -554,8 +662,8 @@ export default function StockSummary() {
                       </TableHeader>
                       <TableBody>
                         {paginatedSheetMaterials.map((item, idx) => (
-                          <TableRow 
-                            key={`${item.id}-${idx}`} 
+                          <TableRow
+                            key={`${item.id}-${idx}`}
                             className="hover:bg-slate-50 border-b border-slate-100 text-xs cursor-pointer transition-colors duration-150"
                             onClick={() => navigate(`/stock/materials/${item.id}/history`)}
                           >
@@ -612,7 +720,209 @@ export default function StockSummary() {
             </Card>
           </div>
 
+          {/* TWO COLUMNS: Mực & Hóa chất + Phụ tùng */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
 
+            {/* COLUMN 3: MỰC & HÓA CHẤT */}
+            <Card className="border-slate-200/60 shadow-sm rounded-xl overflow-hidden flex flex-col">
+              <CardHeader className="bg-blue-50/50 border-b border-blue-100 py-3.5 px-4 flex flex-row items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="h-7.5 w-7.5 rounded-md bg-blue-100 flex items-center justify-center text-blue-600">
+                    <Droplets className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-sm font-bold text-foreground">
+                      MỰC & HÓA CHẤT
+                    </CardTitle>
+                  </div>
+                </div>
+                <Badge variant="secondary" className="text-[10px] px-2 py-0.5 rounded-full font-semibold border-none">
+                  {allInkChemMaterials.length} loại
+                </Badge>
+              </CardHeader>
+
+              <CardContent className="p-0 flex-1">
+                {isLoadingMaterials ? (
+                  <TableSkeletonRows cols={4} />
+                ) : paginatedInkChemMaterials.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-slate-400 text-xs">
+                    <Info className="h-6 w-6 mb-2 text-slate-300" />
+                    <p className="font-medium">Không tìm thấy mực / hóa chất nào</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-blue-50/30 whitespace-nowrap text-xs border-b border-slate-200/60">
+                          <TableHead className="w-[50px] font-bold py-2.5 pl-4">Mã</TableHead>
+                          <TableHead className="min-w-[120px] font-bold py-2.5">Tên</TableHead>
+                          <TableHead className="font-bold py-2.5">NCC</TableHead>
+                          <TableHead className="w-[80px] text-right font-bold py-2.5 pr-4">Tồn kho</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {paginatedInkChemMaterials.map((item, idx) => (
+                          <TableRow
+                            key={`${item.id}-${idx}`}
+                            className="hover:bg-blue-50/30 border-b border-slate-100 text-xs cursor-pointer transition-colors duration-150"
+                            onClick={() => navigate(`/stock/materials/${item.id}/history`)}
+                          >
+                            <TableCell className="font-mono font-semibold py-3 pl-4 text-slate-500">
+                              #{item.id}
+                            </TableCell>
+                            <TableCell className="py-3">
+                              <div className="font-bold text-slate-800 leading-tight">
+                                {item.name}
+                              </div>
+                              {item.materialTypeName && (
+                                <div className="text-[10px] text-slate-400 mt-0.5">
+                                  {item.materialTypeName}
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell className="py-3 text-slate-600">
+                              {getVendorName(item.vendorId, item.vendorName)}
+                            </TableCell>
+                            <TableCell className="text-right py-3 pr-4 font-bold tabular-nums text-slate-800">
+                              {(item.currentStock || 0).toLocaleString()} {item.unit || ""}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+
+                {totalInkChemPages > 1 && (
+                  <div className="flex items-center justify-between p-3 border-t border-slate-100 bg-slate-50/50">
+                    <span className="text-[11px] font-medium text-slate-500">
+                      Trang {inkChemPage} / {totalInkChemPages}
+                    </span>
+                    <div className="flex gap-1.5">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-[10px] px-2.5 cursor-pointer font-semibold"
+                        onClick={() => setInkChemPage(p => Math.max(1, p - 1))}
+                        disabled={inkChemPage === 1 || isLoadingMaterials}
+                      >
+                        Trước
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-[10px] px-2.5 cursor-pointer font-semibold"
+                        onClick={() => setInkChemPage(p => Math.min(totalInkChemPages, p + 1))}
+                        disabled={inkChemPage === totalInkChemPages || isLoadingMaterials}
+                      >
+                        Sau
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* COLUMN 4: PHỤ TÙNG */}
+            <Card className="border-slate-200/60 shadow-sm rounded-xl overflow-hidden flex flex-col">
+              <CardHeader className="bg-amber-50/50 border-b border-amber-100 py-3.5 px-4 flex flex-row items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="h-7.5 w-7.5 rounded-md bg-amber-100 flex items-center justify-center text-amber-600">
+                    <Wrench className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-sm font-bold text-foreground">
+                      PHỤ TÙNG & VẬT TƯ TIÊU HAO
+                    </CardTitle>
+                  </div>
+                </div>
+                <Badge variant="secondary" className="text-[10px] px-2 py-0.5 rounded-full font-semibold border-none">
+                  {allAccessoryMaterials.length} loại
+                </Badge>
+              </CardHeader>
+
+              <CardContent className="p-0 flex-1">
+                {isLoadingMaterials ? (
+                  <TableSkeletonRows cols={4} />
+                ) : paginatedAccessoryMaterials.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 text-slate-400 text-xs">
+                    <Info className="h-6 w-6 mb-2 text-slate-300" />
+                    <p className="font-medium">Không tìm thấy phụ tùng / vật tư tiêu hao nào</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-amber-50/30 whitespace-nowrap text-xs border-b border-slate-200/60">
+                          <TableHead className="w-[50px] font-bold py-2.5 pl-4">Mã</TableHead>
+                          <TableHead className="min-w-[120px] font-bold py-2.5">Tên</TableHead>
+                          <TableHead className="font-bold py-2.5">NCC</TableHead>
+                          <TableHead className="w-[80px] text-right font-bold py-2.5 pr-4">Tồn kho</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {paginatedAccessoryMaterials.map((item, idx) => (
+                          <TableRow
+                            key={`${item.id}-${idx}`}
+                            className="hover:bg-amber-50/30 border-b border-slate-100 text-xs cursor-pointer transition-colors duration-150"
+                            onClick={() => navigate(`/stock/materials/${item.id}/history`)}
+                          >
+                            <TableCell className="font-mono font-semibold py-3 pl-4 text-slate-500">
+                              #{item.id}
+                            </TableCell>
+                            <TableCell className="py-3">
+                              <div className="font-bold text-slate-800 leading-tight">
+                                {item.name}
+                              </div>
+                              {item.materialTypeName && (
+                                <div className="text-[10px] text-slate-400 mt-0.5">
+                                  {item.materialTypeName}
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell className="py-3 text-slate-600">
+                              {getVendorName(item.vendorId, item.vendorName)}
+                            </TableCell>
+                            <TableCell className="text-right py-3 pr-4 font-bold tabular-nums text-slate-800">
+                              {(item.currentStock || 0).toLocaleString()} {item.unit || ""}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+
+                {totalAccessoryPages > 1 && (
+                  <div className="flex items-center justify-between p-3 border-t border-slate-100 bg-slate-50/50">
+                    <span className="text-[11px] font-medium text-slate-500">
+                      Trang {accessoryPage} / {totalAccessoryPages}
+                    </span>
+                    <div className="flex gap-1.5">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-[10px] px-2.5 cursor-pointer font-semibold"
+                        onClick={() => setAccessoryPage(p => Math.max(1, p - 1))}
+                        disabled={accessoryPage === 1 || isLoadingMaterials}
+                      >
+                        Trước
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-[10px] px-2.5 cursor-pointer font-semibold"
+                        onClick={() => setAccessoryPage(p => Math.min(totalAccessoryPages, p + 1))}
+                        disabled={accessoryPage === totalAccessoryPages || isLoadingMaterials}
+                      >
+                        Sau
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
         </div>
       </div>
@@ -648,7 +958,7 @@ export default function StockSummary() {
         vendors={vendorsData || []}
         onInitiateStockOut={(vendorId, jobCode, quantity, paperName, isBoxCarton) => {
           const prefillItems = [];
-          
+
           // Row 1: The paper (e.g. Duplex/D)
           prefillItems.push({
             materialId: null,
@@ -699,6 +1009,56 @@ export default function StockSummary() {
         translatePurpose={translatePurpose}
         getStatusBadge={getStatusBadge}
       />
+
+      {/* Dialog Xuất kho theo lệnh SX */}
+      <StockOutByProductionOrderDialog
+        open={isProductionOrderStockOutOpen}
+        onOpenChange={setIsProductionOrderStockOutOpen}
+        refetch={refetch}
+      />
+
+      {/* Month Selection Dialog for Export */}
+      <Dialog open={isExportMonthDialogOpen} onOpenChange={setIsExportMonthDialogOpen}>
+        <DialogContent className="max-w-md w-[95vw] rounded-xl border-slate-200 shadow-xl p-5 bg-white">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-slate-800">
+              Chọn tháng xuất lịch sử
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Vui lòng chọn tháng cần xuất lịch sử xuất kho của nhà cung cấp.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-2">
+            <Label className="text-xs font-bold text-slate-700">Chọn tháng</Label>
+            <Input
+              type="month"
+              value={exportMonth}
+              onChange={(e) => setExportMonth(e.target.value)}
+              className="h-10 text-xs border-slate-200 rounded-lg focus-visible:ring-rose-500 w-full bg-white"
+            />
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsExportMonthDialogOpen(false)}
+              className="text-xs h-9 rounded-lg cursor-pointer"
+            >
+              Hủy
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                setIsExportMonthDialogOpen(false);
+                handleExportStockOutByVendor();
+              }}
+              className="text-xs h-9 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold cursor-pointer"
+            >
+              Xuất Excel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
     </>
   );

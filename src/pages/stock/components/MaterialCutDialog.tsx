@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Scissors } from "lucide-react";
+import { Scissors, Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,8 +22,23 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useCreateMaterialCut, useUpdateMaterialCut } from "@/hooks/use-stock";
+import { usePendingMaterialProductionOrders } from "@/hooks/use-production";
+import { useProofingOrders } from "@/hooks/use-proofing-order";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 
 interface MaterialCutDialogProps {
   open: boolean;
@@ -52,6 +67,153 @@ const getLocalDatetimeString = (date = new Date()) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
+const parseDimensions = (sizeStr: string) => {
+  if (!sizeStr) return { width: 0, length: 0 };
+  const match = sizeStr.match(/(\d+(?:\.\d+)?)\s*[xX*×]\s*(\d+(?:\.\d+)?)/);
+  if (match) {
+    return {
+      width: parseFloat(match[1]) || 0,
+      length: parseFloat(match[2]) || 0,
+    };
+  }
+  return { width: 0, length: 0 };
+};
+
+function JobCodeSelector({
+  value,
+  onChange,
+  productionOrders,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  productionOrders: any[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const filteredOrders = useMemo(() => {
+    if (!search) return productionOrders;
+    const s = search.toLowerCase();
+    return productionOrders.filter((po) =>
+      (po.proofingOrderCode || "").toLowerCase().includes(s) ||
+      (po.customerName || "").toLowerCase().includes(s) ||
+      (po.paperName || "").toLowerCase().includes(s)
+    );
+  }, [productionOrders, search]);
+
+  const hasExactMatch = useMemo(() => {
+    const s = search.trim().toLowerCase();
+    if (!s) return true;
+    return productionOrders.some((po) => (po.proofingOrderCode || "").toLowerCase() === s);
+  }, [productionOrders, search]);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="h-10 w-full justify-between text-xs bg-white border-slate-200 rounded-lg font-normal hover:bg-slate-50/50 cursor-pointer px-3"
+        >
+          <span className="truncate">{value || "Nhập hoặc chọn mã bài..."}</span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 text-slate-500" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[450px] p-0" align="start">
+        <Command className="w-full" shouldFilter={false}>
+          <CommandInput
+            placeholder="Tìm hoặc nhập mã bài..."
+            value={search}
+            onValueChange={setSearch}
+            className="h-9 w-full bg-transparent text-xs border-none focus:ring-0 focus-visible:ring-0"
+          />
+          <CommandList className="max-h-[350px]">
+            {search.trim() && !hasExactMatch && (
+              <CommandGroup heading="Mã tự nhập">
+                <CommandItem
+                  value={search}
+                  onSelect={() => {
+                    onChange(search.trim());
+                    setOpen(false);
+                  }}
+                  className="text-xs cursor-pointer text-blue-600 font-bold"
+                >
+                  Sử dụng: "{search}"
+                </CommandItem>
+              </CommandGroup>
+            )}
+            <CommandGroup heading="Danh sách lệnh sản xuất túi">
+              {filteredOrders.map((po) => (
+                <CommandItem
+                  key={po.id}
+                  value={`${po.proofingOrderCode || ""} ${po.customerName || ""} ${po.id}`}
+                  onSelect={() => {
+                    onChange(po.proofingOrderCode || "");
+                    setOpen(false);
+                  }}
+                  className="text-xs cursor-pointer flex flex-col items-start gap-1 py-2.5 px-3 hover:bg-slate-50 border-b border-slate-100 last:border-0"
+                >
+                  <div className="flex items-center w-full justify-between">
+                    <span className="font-bold font-mono text-slate-700 text-sm">
+                      {po.proofingOrderCode || `PO-${po.id}`}
+                    </span>
+                    {value === po.proofingOrderCode && (
+                      <Check className="h-3.5 w-3.5 text-[#93631F] shrink-0" />
+                    )}
+                  </div>
+                  {po.customerName && (
+                    <span className="text-[10px] text-slate-500 font-medium">
+                      KH: {po.customerName}
+                    </span>
+                  )}
+                  {po.totalQuantity !== undefined && (
+                    <div className="mt-2 w-full bg-amber-50/50 dark:bg-slate-900 rounded-lg p-2 space-y-1.5 text-[10px] text-slate-700 dark:text-slate-400 border border-amber-100 dark:border-slate-800">
+                      <div className="font-bold text-amber-800 dark:text-amber-400 mb-0.5 border-b border-amber-100 pb-0.5">Thông tin bình bài:</div>
+                      <div className="grid grid-cols-2 gap-x-2 gap-y-1 w-full font-sans">
+                        <div>
+                          <span className="text-slate-500 font-medium font-sans">Số giấy in:</span>
+                          <span className="font-bold ml-1 text-slate-800">{po.totalQuantity?.toLocaleString()} tờ</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 font-medium font-sans">Mã hàng:</span>
+                          <span className="font-bold ml-1 text-slate-800">{po.designCount || 0} mã</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 font-medium font-sans">Khổ giấy:</span>
+                          <span className="font-bold ml-1 text-slate-800">{po.paperSizeName || "—"}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 font-medium font-sans">Định lượng:</span>
+                          <span className="font-bold ml-1 text-slate-800">{po.basisWeight || "—"} gsm</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-slate-500 font-medium font-sans">Chất liệu:</span>
+                          <span className="font-semibold ml-1 text-slate-800">{po.paperName} {po.materialCode ? `(${po.materialCode})` : ""}</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-slate-500 font-medium font-sans">Loại thiết kế:</span>
+                          <span className="font-semibold ml-1 text-slate-800">{po.designTypeName || "—"}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </CommandItem>
+              ))}
+              {filteredOrders.length === 0 && (
+                <div className="py-6 text-center text-xs text-slate-500">
+                  Không tìm thấy lệnh sản xuất nào.
+                </div>
+              )}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function MaterialCutDialog({
   open,
   onOpenChange,
@@ -66,6 +228,87 @@ export function MaterialCutDialog({
 }: MaterialCutDialogProps) {
   const { mutateAsync: createMaterialCut } = useCreateMaterialCut();
   const { mutateAsync: updateMaterialCut } = useUpdateMaterialCut();
+
+  const { data: pendingProdOrdersData } = usePendingMaterialProductionOrders({
+    pageSize: 1000,
+  });
+  const pendingProdOrders = pendingProdOrdersData?.items || [];
+
+  const { data: proofingResp } = useProofingOrders({
+    pageSize: 1000,
+  });
+  const proofingOrders = proofingResp?.items || [];
+
+  const proofingMap = useMemo(() => {
+    const map = new Map<number, any>();
+    proofingOrders.forEach((po) => {
+      if (po.id) {
+        map.set(po.id, po);
+      }
+    });
+    return map;
+  }, [proofingOrders]);
+
+  const enrichedProductionOrders = useMemo(() => {
+    return pendingProdOrders.map((po) => {
+      const proofing = po.proofingOrderId ? proofingMap.get(po.proofingOrderId) : null;
+      return {
+        ...po,
+        paperName: proofing?.materialType?.name || "Giấy in",
+        materialCode: proofing?.materialType?.code || "",
+        totalQuantity: proofing?.totalQuantity || 0,
+        paperSizeName: proofing?.rollWidth 
+          ? `Cuộn (Rộng: ${proofing.rollWidth} mm)` 
+          : (proofing?.paperSize?.name || proofing?.customPaperSize || "—"),
+        designTypeName: proofing?.designType?.name || "—",
+        basisWeight: proofing?.basisWeight || po.basisWeight || 0,
+        designCount: po.items?.length || proofing?.proofingOrderDesigns?.length || 0,
+      };
+    });
+  }, [pendingProdOrders, proofingMap]);
+
+  const isTuiDesignType = (name: string): boolean => {
+    if (!name) return false;
+    const n = name.toLowerCase();
+    return (
+      n.includes("túi") ||
+      n.includes("tui") ||
+      n.includes("bag") ||
+      n.includes("pe") ||
+      n.includes("pa") ||
+      n.includes("metaline")
+    );
+  };
+
+  const bagProdOrders = useMemo(() => {
+    return enrichedProductionOrders.filter((po) => {
+      const designType = po.designTypeName || "";
+      const code = po.proofingOrderCode || "";
+      return isTuiDesignType(designType) || isTuiDesignType(code);
+    });
+  }, [enrichedProductionOrders]);
+
+  const handleSelectJobCode = (jobCodeVal: string) => {
+    const po = bagProdOrders.find((p) => p.proofingOrderCode === jobCodeVal);
+    if (po) {
+      const sizeStr = po.paperSizeName || "";
+      const { width: parsedWidth, length: parsedLength } = parseDimensions(sizeStr);
+      
+      setCutForm((prev) => ({
+        ...prev,
+        jobCode: jobCodeVal,
+        quantityProduced: po.totalQuantity || prev.quantityProduced || 0,
+        width: parsedWidth || prev.width || 0,
+        length: parsedLength || prev.length || 0,
+        isManuallyEditedUsed: false,
+      }));
+    } else {
+      setCutForm((prev) => ({
+        ...prev,
+        jobCode: jobCodeVal,
+      }));
+    }
+  };
 
   const isInitialLoadRef = useRef(true);
   useEffect(() => {
@@ -310,11 +553,10 @@ export function MaterialCutDialog({
             {/* Mã bài */}
             <div className="space-y-1.5">
               <Label className="font-semibold text-slate-700">Mã bài sản xuất</Label>
-              <Input
-                placeholder="Nhập mã bài..."
+              <JobCodeSelector
                 value={cutForm.jobCode}
-                onChange={(e) => setCutForm((prev) => ({ ...prev, jobCode: e.target.value }))}
-                className="rounded-md border-slate-200 h-10 text-xs focus-visible:ring-[#93631F]"
+                onChange={handleSelectJobCode}
+                productionOrders={bagProdOrders}
               />
             </div>
 
