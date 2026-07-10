@@ -56,17 +56,18 @@ type MaterialsByDesignTypeResponse = MaterialTypeResponse[] | {
 
 export const useMaterialsByDesignType = (
   designTypeId?: number,
-  status?: string
+  status?: string,
+  isSystem?: boolean
 ) => {
   return useQuery<MaterialTypeResponse[]>({
-    queryKey: ["materials-by-design-type", designTypeId, status],
+    queryKey: ["materials-by-design-type", designTypeId, status, isSystem],
 
     enabled: !!designTypeId,
 
     queryFn: async () => {
       const res = await apiRequest.get<MaterialsByDesignTypeResponse>(
         API_SUFFIX.MATERIAL_TYPES_BY_DESIGN_TYPE(designTypeId!),
-        { params: { status: status || "" } }
+        { params: { status: status || "", isSystem } }
       );
       
       // Handle paginated response: extract items array

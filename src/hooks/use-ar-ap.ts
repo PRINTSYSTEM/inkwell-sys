@@ -1524,4 +1524,106 @@ export const useAPItems = (params?: DebtReportApItemsParams) => {
   });
 };
 
+// ===== GET /api/debt-reports/ap-reconciliation/{vendorId} =====
+// Bảng đối chiếu công nợ phải trả theo nhà cung cấp
+
+export interface APReconciliationRow {
+  date?: string | null;
+  documentNumber?: string | null;
+  documentType?: string | null;
+  description?: string | null;
+  spec1?: string | null;
+  spec2?: string | null;
+  spec3?: string | null;
+  unit?: string | null;
+  unitPrice?: number | null;
+  amount?: number | null;
+  vat?: number | null;
+  payment?: number | null;
+  balanceAfter?: number | null;
+}
+
+export interface APReconciliationResponse {
+  vendorName?: string | null;
+  vendorAddress?: string | null;
+  fromDate?: string | null;
+  toDate?: string | null;
+  openingBalance?: number | null;
+  totalDebit?: number | null;
+  totalCredit?: number | null;
+  closingBalance?: number | null;
+  supplierTypeCode?: string | null;
+  specHeaders?: string[] | null;
+  rows?: APReconciliationRow[] | null;
+}
+
+export const useAPReconciliation = (
+  vendorId: number | null,
+  params?: { fromDate?: string; toDate?: string },
+  enabled: boolean = true
+) => {
+  return useQuery({
+    queryKey: ["ap-reconciliation", vendorId, params],
+    enabled: enabled && !!vendorId,
+    queryFn: async () => {
+      const res = await apiRequest.get<APReconciliationResponse>(
+        API_SUFFIX.AP_RECONCILIATION(vendorId as number),
+        { params }
+      );
+      return res.data;
+    },
+  });
+};
+
+// ===== GET /api/debt-reports/ap-reconciliation/{vendorId}/export =====
+// Xuất Excel bảng đối chiếu công nợ phải trả
+
+export const useExportAPReconciliation = () => {
+  const { loading, error, execute } = useAsyncCallback<
+    ArrayBuffer,
+    [number, { fromDate?: string; toDate?: string; vendorName?: string }?]
+  >(async (vendorId: number, params?: { fromDate?: string; toDate?: string; vendorName?: string }) => {
+    const { vendorName, ...apiParams } = params ?? {};
+    const res = await apiRequest.get<ArrayBuffer>(
+      API_SUFFIX.AP_RECONCILIATION_EXPORT(vendorId),
+      {
+        params: apiParams,
+        responseType: "arraybuffer",
+      }
+    );
+    return res.data;
+  });
+
+  const mutate = async (
+    vendorId: number,
+    params?: { fromDate?: string; toDate?: string; vendorName?: string }
+  ) => {
+    try {
+      const blob = await execute(vendorId, params);
+      const fileBlob = new Blob([blob], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(fileBlob);
+      const link = document.createElement("a");
+      link.href = url;
+
+      const dateSuffix = params?.fromDate || params?.toDate
+        ? `Từ ${params.fromDate || ""} Đến ${params.toDate || ""}`
+        : "";
+      link.download = `Bảng đối chiếu công nợ ${params?.vendorName || "NCC"}_${dateSuffix}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast.success("Xuất Excel đối chiếu thành công");
+    } catch (err: any) {
+      toast.error(err?.message || "Không thể xuất file đối chiếu");
+    }
+  };
+
+  return { mutate, loading, error };
+};
+
+
 

@@ -42,6 +42,11 @@ import {
   Printer,
 } from "lucide-react";
 import { usePlateExports, useUpdatePlateExport, useReceivePlate } from "@/hooks/use-plate-export";
+import {
+  useOutsourceOrders,
+  useUpdateOutsourceOrder,
+  type OutsourceOrderResponse,
+} from "@/hooks/use-outsource-order";
 import { useDies, useUpdateDie } from "@/hooks/use-die";
 import { useActiveVendors } from "@/hooks/use-vendor";
 import type { PlateExportResponse } from "@/Schema";
@@ -66,6 +71,20 @@ function formatDateTime(dateStr?: string | null) {
   } catch {
     return "—";
   }
+}
+
+function toDateInputValue(dateStr?: string | null) {
+  if (!dateStr) return "";
+  try {
+    return format(new Date(dateStr), "yyyy-MM-dd");
+  } catch {
+    return "";
+  }
+}
+
+function toDatePayload(dateValue: string) {
+  if (!dateValue) return null;
+  return new Date(`${dateValue}T00:00:00`).toISOString();
 }
 
 // ───────────────────────────────────────────────────────
@@ -198,6 +217,18 @@ interface PrinterFilterState {
   toDate: string;
 }
 
+type PlateRowDraft = {
+  name: string;
+  size: string;
+  unitPrice: string;
+  accountingConfirmedAt: string;
+};
+
+type OutsourceRowDraft = {
+  name: string;
+  outsourceCost: string;
+};
+
 // ───────────────────────────────────────────────────────
 // Kẽm (Plate Exports) Tab
 // ───────────────────────────────────────────────────────
@@ -205,6 +236,7 @@ function PlateTab({ filter }: { filter: PlateFilterState }) {
   const [page, setPage] = useState(1);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [receivingPlateId, setReceivingPlateId] = useState<number | null>(null);
+  const [drafts, setDrafts] = useState<Record<number, PlateRowDraft>>({});
 
   // Reset page to 1 when filters change
   useEffect(() => {
@@ -227,8 +259,6 @@ function PlateTab({ filter }: { filter: PlateFilterState }) {
     try {
       await receivePlate(id);
       refetch();
-    } catch (e: any) {
-      // Handled globally by useReceivePlate's onError handler
     } finally {
       setReceivingPlateId(null);
     }
@@ -248,9 +278,43 @@ function PlateTab({ filter }: { filter: PlateFilterState }) {
   const totalPages = Math.ceil(items.length / pageSize) || 1;
   const displayItems = items.slice((page - 1) * pageSize, page * pageSize);
 
-  const handleSavePrice = async (id: number, price: number) => {
+  const getPlateDraft = (plate: PlateExportResponse) => {
+    const id = plate.id!;
+    const plateAny = plate as PlateExportResponse & {
+      name?: string | null;
+      size?: string | null;
+      accountingConfirmedAt?: string | null;
+    };
+
+    return drafts[id] ?? {
+      name: plateAny.name ?? "",
+      size: plateAny.size ?? "",
+      unitPrice: String((plate as { unitPrice?: number }).unitPrice ?? DEFAULT_PLATE_PRICE),
+      accountingConfirmedAt: toDateInputValue(plateAny.accountingConfirmedAt),
+    };
+  };
+
+  const updatePlateDraft = (id: number, patch: Partial<PlateRowDraft>) => {
+    const plate = allItems.find((p: any) => p.id === id) as PlateExportResponse | undefined;
+    if (!plate) return;
+    setDrafts((current) => ({
+      ...current,
+      [id]: {
+        ...getPlateDraft(plate),
+        ...patch,
+      },
+    }));
+  };
+
+  const handleSavePlateRow = async (id: number) => {
     const plate = allItems.find((p: any) => p.id === id);
     if (!plate) return;
+    const draft = getPlateDraft(plate as PlateExportResponse);
+    const unitPrice = parseFloat(draft.unitPrice.replace(/,/g, ""));
+    if (isNaN(unitPrice) || unitPrice < 0) {
+      toast.error("Đơn giá kẽm không hợp lệ");
+      return;
+    }
 
     setSavingId(id);
     try {
@@ -258,12 +322,20 @@ function PlateTab({ filter }: { filter: PlateFilterState }) {
         id,
         data: {
           plateCount: plate.plateCount ?? 0,
-          unitPrice: price,
+          unitPrice,
+          name: draft.name.trim() || null,
+          size: draft.size.trim() || null,
+          accountingConfirmedAt: toDatePayload(draft.accountingConfirmedAt),
           estimatedReceiveAt: plate.estimatedReceiveAt || undefined,
-          receivedAt: plate.receivedAt || undefined,
+          receivedAt: plate.receivedAt || null,
         } as any,
       });
-      toast.success(`Đã cập nhật giá kẽm: ${formatVND(price)}`);
+      setDrafts((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
+      toast.success("Đã lưu thông tin kẽm");
     } finally {
       setSavingId(null);
     }
@@ -291,118 +363,185 @@ function PlateTab({ filter }: { filter: PlateFilterState }) {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50 hover:bg-muted/50">
-                      <TableHead className="font-semibold text-slate-700">
-                        Mã bình bài
+                      <TableHead className="w-[64px] min-w-[64px] font-semibold text-slate-700">
+                        Mã bài
                       </TableHead>
-                      <TableHead className="font-semibold text-slate-700">
-                        Nhà cung cấp kẽm
+
+                      <TableHead className="w-[210px] min-w-[210px] font-semibold text-slate-700">
+                        Tên kẽm
                       </TableHead>
-                      <TableHead className="text-center font-semibold text-slate-700 w-[100px]">
-                        Số bản
+
+                      <TableHead className="w-[170px] min-w-[170px] font-semibold text-slate-700">
+                        Kích thước
                       </TableHead>
-                      <TableHead className="font-semibold text-slate-700">
-                        Ngày gửi
+
+                      <TableHead className="w-[90px] min-w-[90px] font-semibold text-slate-700">
+                        NCC kẽm
                       </TableHead>
-                      <TableHead className="font-semibold text-slate-700">
-                        Ngày nhận
+
+                      <TableHead className="w-[58px] min-w-[58px] text-center font-semibold text-slate-700">
+                        Số lượng
                       </TableHead>
-                      <TableHead className="font-semibold text-slate-700 w-[280px]">
-                        Đơn giá / bản
+
+                      <TableHead className="w-[96px] min-w-[96px] font-semibold text-slate-700">
+                        Đơn giá
                       </TableHead>
-                      <TableHead className="font-semibold text-slate-700 text-right">
+
+                      <TableHead className="w-[125px] min-w-[125px] text-right font-semibold text-slate-700">
                         Thành tiền
                       </TableHead>
-                      <TableHead className="font-semibold text-slate-700 text-center">
-                        Trạng thái giá
+
+                      <TableHead className="w-[95px] min-w-[95px] font-semibold text-slate-700">
+                        Ngày gửi
+                      </TableHead>
+
+                      <TableHead className="w-[112px] min-w-[112px] font-semibold text-slate-700">
+                        Hẹn nhận
+                      </TableHead>
+
+                      <TableHead className="w-[112px] min-w-[112px] font-semibold text-slate-700">
+                        Nhận kẽm
+                      </TableHead>
+
+                      <TableHead className="w-[56px] min-w-[56px] text-center font-semibold text-slate-700">
+                        Lưu
                       </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {displayItems.map((plate: PlateExportResponse) => {
+                      const draft = getPlateDraft(plate);
+                      const draftPrice = parseFloat(draft.unitPrice.replace(/,/g, ""));
                       const effectivePrice =
-                        (plate as { unitPrice?: number }).unitPrice ?? DEFAULT_PLATE_PRICE;
-                      const totalCost =
-                        effectivePrice * (plate.plateCount ?? 1);
+                        !isNaN(draftPrice) && draftPrice >= 0
+                          ? draftPrice
+                          : DEFAULT_PLATE_PRICE;
+
+                      const totalCost = effectivePrice * (plate.plateCount ?? 1);
+
+                      const hasEnoughInfo = Boolean(
+                        draft.name.trim() &&
+                        draft.size.trim() &&
+                        effectivePrice > 0 &&
+                        plate.receivedAt
+                      );
+
                       return (
                         <TableRow
                           key={plate.id}
-                          className="group hover:bg-[#93631F]/5 transition-colors border-b border-slate-100"
+                          className="group h-[64px] hover:bg-[#93631F]/5 transition-colors border-b border-slate-100"
                         >
-                          <TableCell className="font-mono font-medium text-sm">
+                          <TableCell className="w-[64px] min-w-[64px] font-mono text-base font-bold text-slate-900">
                             {plate.proofingOrderCode || `PX-${plate.id}`}
                           </TableCell>
-                          <TableCell className="text-sm text-slate-700">
-                            {plate.vendorName ||
-                              plate.plateVendor?.name ||
-                              "—"}
+
+                          <TableCell className="w-[210px] min-w-[210px]">
+                            <Input
+                              value={draft.name}
+                              placeholder="Tên kẽm"
+                              onChange={(e) =>
+                                updatePlateDraft(plate.id!, { name: e.target.value })
+                              }
+                              className="h-8 w-full text-sm text-slate-700"
+                              disabled={savingId === plate.id}
+                            />
                           </TableCell>
-                          <TableCell className="text-center">
+
+                          <TableCell className="w-[170px] min-w-[170px]">
+                            <Input
+                              value={draft.size}
+                              placeholder="Kích thước"
+                              onChange={(e) =>
+                                updatePlateDraft(plate.id!, { size: e.target.value })
+                              }
+                              className="h-8 w-full text-sm text-slate-700"
+                              disabled={savingId === plate.id}
+                            />
+                          </TableCell>
+
+                          <TableCell className="w-[90px] min-w-[90px] text-sm font-medium text-slate-700 truncate">
+                            {plate.vendorName || plate.plateVendor?.name || "—"}
+                          </TableCell>
+
+                          <TableCell className="w-[58px] min-w-[58px] text-center">
                             <Badge
                               variant="secondary"
-                              className="bg-blue-50 text-blue-700 border-blue-200"
+                              className="bg-blue-50 text-blue-800 border-blue-200 font-bold text-sm px-2.5"
                             >
                               {plate.plateCount ?? "—"}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-sm text-slate-600">
-                            {formatDateTime(plate.sentAt)}
-                          </TableCell>
-                          <TableCell className="text-sm text-slate-600">
-                            {plate.isReceived ? (
-                              <div className="flex flex-col gap-0.5">
-                                <span className="font-semibold text-green-700 dark:text-green-400">Đã nhận</span>
-                                <span className="text-xs text-slate-500">{formatDateTime(plate.receivedAt)}</span>
-                              </div>
-                            ) : (
-                              <div className="flex flex-col gap-1.5 items-start">
-                                <span className="text-xs text-slate-500 font-medium">
-                                  {plate.estimatedReceiveAt 
-                                    ? `Dự kiến: ${formatDateTime(plate.estimatedReceiveAt)}` 
-                                    : "Chưa hẹn ngày"}
-                                </span>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  className="h-7 text-[11px] font-semibold text-green-700 bg-green-50 hover:bg-green-100 hover:text-green-800 border-green-200"
-                                  onClick={() => handleReceivePlate(plate.id!)}
-                                  disabled={receivingPlateId === plate.id}
-                                >
-                                  {receivingPlateId === plate.id ? (
-                                    <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                                  ) : (
-                                    <Check className="h-3 w-3 mr-1" />
-                                  )}
-                                  Nhận kẽm
-                                </Button>
-                              </div>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <InlinePriceCell
-                              id={plate.id!}
-                              currentPrice={effectivePrice}
-                              defaultValue={DEFAULT_PLATE_PRICE}
-                              onSave={handleSavePrice}
-                              isSaving={savingId === plate.id}
+
+                          <TableCell className="w-[96px] min-w-[96px]">
+                            <Input
+                              type="number"
+                              min="0"
+                              step="1000"
+                              value={draft.unitPrice}
+                              onChange={(e) =>
+                                updatePlateDraft(plate.id!, { unitPrice: e.target.value })
+                              }
+                              className="h-9 w-[88px] px-2 text-sm font-bold tabular-nums border-[#93631F]/30 focus-visible:ring-[#93631F]/30"
+                              disabled={savingId === plate.id}
                             />
                           </TableCell>
-                          <TableCell className="text-right font-semibold text-slate-800 tabular-nums">
+
+                          <TableCell className="w-[125px] min-w-[125px] text-right text-base font-bold text-slate-900 tabular-nums whitespace-nowrap">
                             {formatVND(totalCost)}
                           </TableCell>
-                          <TableCell className="text-center">
-                            {(plate as { unitPrice?: number }).unitPrice ? (
-                              <Badge className="bg-green-100 text-green-700 border-green-200 border">
-                                Đã có giá
-                              </Badge>
+
+                          <TableCell className="w-[95px] min-w-[95px] text-sm text-slate-600 whitespace-nowrap">
+                            {formatDateTime(plate.sentAt)}
+                          </TableCell>
+
+                          <TableCell className="w-[112px] min-w-[112px] text-sm text-slate-600 whitespace-nowrap">
+                            {plate.estimatedReceiveAt
+                              ? formatDateTime(plate.estimatedReceiveAt)
+                              : "—"}
+                          </TableCell>
+
+                          <TableCell className="w-[112px] min-w-[112px] text-sm text-slate-600 whitespace-nowrap">
+                            {plate.receivedAt ? (
+                              <span className="font-medium text-green-700">
+                                {formatDateTime(plate.receivedAt)}
+                              </span>
                             ) : (
-                              <Badge
+                              <Button
+                                size="sm"
                                 variant="outline"
-                                className="text-orange-600 border-orange-300 bg-orange-50"
-                                title="Đang dùng giá mặc định"
+                                className="h-7 px-2 text-[11px] font-semibold text-green-700 bg-green-50 hover:bg-green-100 hover:text-green-800 border-green-200"
+                                onClick={() => handleReceivePlate(plate.id!)}
+                                disabled={receivingPlateId === plate.id}
+                                title="Ghi nhận thời gian nhận kẽm hiện tại"
                               >
-                                Giá mặc định
-                              </Badge>
+                                {receivingPlateId === plate.id ? (
+                                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                ) : (
+                                  <Check className="h-3 w-3 mr-1" />
+                                )}
+                                Nhận kẽm
+                              </Button>
                             )}
+                          </TableCell>
+
+                          <TableCell className="w-[56px] min-w-[56px] text-center">
+                            <Button
+                              size="sm"
+                              className={
+                                hasEnoughInfo
+                                  ? "h-8 w-8 p-0 bg-[#93631F] hover:bg-[#7A521A] text-white"
+                                  : "h-8 w-8 p-0 bg-orange-500 hover:bg-orange-600 text-white"
+                              }
+                              onClick={() => handleSavePlateRow(plate.id!)}
+                              disabled={savingId === plate.id}
+                              title={hasEnoughInfo ? "Lưu" : "Lưu, còn thiếu thông tin"}
+                            >
+                              {savingId === plate.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Check className="h-3.5 w-3.5" />
+                              )}
+                            </Button>
                           </TableCell>
                         </TableRow>
                       );
@@ -623,8 +762,8 @@ function DieTab({ filter }: { filter: DieFilterState }) {
                           ) : (
                             <div className="flex flex-col gap-1.5 items-start">
                               <span className="text-xs text-slate-500 font-medium">
-                                {die.estimatedReceiveAt 
-                                  ? `Dự kiến: ${formatDateTime(die.estimatedReceiveAt)}` 
+                                {die.estimatedReceiveAt
+                                  ? `Dự kiến: ${formatDateTime(die.estimatedReceiveAt)}`
                                   : `Tạo lúc: ${formatDateTime(die.createdAt)}`}
                               </span>
                               {die.usageType === "new" && (
@@ -723,56 +862,103 @@ function DieTab({ filter }: { filter: DieFilterState }) {
 function PrinterTab({ filter }: { filter: PrinterFilterState }) {
   const [page, setPage] = useState(1);
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [drafts, setDrafts] = useState<Record<number, OutsourceRowDraft>>({});
 
   // Reset page to 1 when filters change
   useEffect(() => {
     setPage(1);
   }, [filter.search, filter.vendorId, filter.fromDate, filter.toDate]);
 
-  const { data, isLoading } = usePlateExports({
+  const { data, isLoading, refetch } = useOutsourceOrders({
     pageNumber: 1,
     pageSize: 1000,
     search: filter.search || undefined,
+    vendorId: filter.vendorId ? parseInt(filter.vendorId) : undefined,
     fromDate: filter.fromDate || undefined,
     toDate: filter.toDate || undefined,
-  } as any);
-  const { mutateAsync: updatePlate } = useUpdatePlateExport();
+  });
+  const { mutateAsync: updateOutsourceOrder } = useUpdateOutsourceOrder();
+
+  const [completingOutsourceId, setCompletingOutsourceId] = useState<number | null>(null);
+
+  const handleCompleteOutsource = async (id: number) => {
+    setCompletingOutsourceId(id);
+    try {
+      await updateOutsourceOrder({
+        id,
+        data: {
+          completedAt: new Date().toISOString(),
+        },
+      });
+      refetch();
+    } finally {
+      setCompletingOutsourceId(null);
+    }
+  };
 
   const allItems = data?.items ?? [];
   const items = allItems.filter(
-    (p: any) =>
-      (p.productionMethod === "outsource" || p.printingVendorId || p.printingVendorName) &&
-      p.isPaid !== true &&
-      p.paymentStatus !== "paid" &&
-      p.status !== "paid"
+    (p: OutsourceOrderResponse) =>
+      p.isPaid !== true && p.paymentStatus !== "paid" && p.status !== "paid"
   );
 
-  const displayItems = items.filter((p: any) => {
+  const displayItems = items.filter((p: OutsourceOrderResponse) => {
     if (!filter.vendorId || filter.vendorId === "all") return true;
-    return p.printingVendorId?.toString() === filter.vendorId;
+    return (
+      p.printingVendorId?.toString() === filter.vendorId ||
+      p.vendorId?.toString() === filter.vendorId
+    );
   });
 
   const pageSize = 10;
   const totalPages = Math.max(1, Math.ceil(displayItems.length / pageSize));
   const currentItems = displayItems.slice((page - 1) * pageSize, page * pageSize);
 
-  const handleSavePrice = async (id: number, price: number) => {
-    const plate = items.find((p: any) => p.id === id);
-    if (!plate) return;
+  const getOutsourceDraft = (order: OutsourceOrderResponse) => {
+    const id = order.id!;
+    return drafts[id] ?? {
+      name: order.name ?? "",
+      outsourceCost: String(order.outsourceCost ?? 0),
+    };
+  };
+
+  const updateOutsourceDraft = (id: number, patch: Partial<OutsourceRowDraft>) => {
+    const order = allItems.find((p) => p.id === id);
+    if (!order) return;
+    setDrafts((current) => ({
+      ...current,
+      [id]: {
+        ...getOutsourceDraft(order),
+        ...patch,
+      },
+    }));
+  };
+
+  const handleSaveOutsourceRow = async (id: number) => {
+    const order = allItems.find((p) => p.id === id);
+    if (!order) return;
+    const draft = getOutsourceDraft(order);
+    const outsourceCost = parseFloat(draft.outsourceCost.replace(/,/g, ""));
+    if (isNaN(outsourceCost) || outsourceCost < 0) {
+      toast.error("Chi phí nhà in không hợp lệ");
+      return;
+    }
 
     setSavingId(id);
     try {
-      await updatePlate({
+      await updateOutsourceOrder({
         id,
         data: {
-          plateCount: plate.plateCount ?? 0,
-          unitPrice: plate.unitPrice ?? 0,
-          outsourceCost: price,
-          estimatedReceiveAt: plate.estimatedReceiveAt || undefined,
-          receivedAt: plate.receivedAt || undefined,
-        } as any,
+          name: draft.name.trim() || null,
+          outsourceCost,
+        },
       });
-      toast.success(`Đã cập nhật chi phí nhà in: ${formatVND(price)}`);
+      setDrafts((current) => {
+        const next = { ...current };
+        delete next[id];
+        return next;
+      });
+      toast.success("Đã lưu thông tin nhà in");
     } finally {
       setSavingId(null);
     }
@@ -800,67 +986,93 @@ function PrinterTab({ filter }: { filter: PrinterFilterState }) {
                   <TableHeader>
                     <TableRow className="bg-muted/50 hover:bg-muted/50">
                       <TableHead className="font-semibold text-slate-700">
-                        Mã bình bài
+                        Mã bài
                       </TableHead>
                       <TableHead className="font-semibold text-slate-700">
                         Nhà in
                       </TableHead>
-                      <TableHead className="font-semibold text-slate-700">
-                        Ngày nhận
+                      <TableHead className="font-semibold text-slate-700 w-[180px]">
+                        Chi phí in
                       </TableHead>
-                      <TableHead className="font-semibold text-slate-700 w-[280px]">
-                        Chi phí thuê ngoài
+                      <TableHead className="font-semibold text-slate-700 min-w-[190px]">
+                        Ngày in xong
                       </TableHead>
-                      <TableHead className="font-semibold text-slate-700 text-center">
-                        Trạng thái giá
+                      <TableHead className="font-semibold text-slate-700 text-center w-[90px]">
+                        Lưu
                       </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {currentItems.map((plate: any) => {
-                      const cost = plate.outsourceCost ?? 0;
+                    {currentItems.map((order: OutsourceOrderResponse) => {
+                      const draft = getOutsourceDraft(order);
                       return (
                         <TableRow
-                          key={plate.id}
+                          key={order.id}
                           className="group hover:bg-[#93631F]/5 transition-colors border-b border-slate-100"
                         >
                           <TableCell className="font-mono font-medium text-sm">
                             <Link
-                              to={`/proofing/${plate.proofingOrderId}`}
+                              to={`/proofing/${order.proofingOrderId}`}
                               className="text-[#93631F] hover:text-[#7A521A] hover:underline transition-colors"
                               target="_blank"
                             >
-                              {plate.proofingOrderCode || `BB-${plate.proofingOrderId}`}
+                              {order.proofingOrderCode || `BB-${order.proofingOrderId || order.id}`}
                             </Link>
                           </TableCell>
                           <TableCell className="text-sm text-slate-700">
-                            {plate.printingVendorName || "—"}
-                          </TableCell>
-                          <TableCell className="text-sm text-slate-600">
-                            {formatDateTime(plate.receivedAt || plate.estimatedReceiveAt)}
+                            {order.printingVendorName || order.vendorName || "—"}
                           </TableCell>
                           <TableCell>
-                            <InlinePriceCell
-                              id={plate.id!}
-                              currentPrice={cost}
-                              defaultValue={0}
-                              onSave={handleSavePrice}
-                              isSaving={savingId === plate.id}
+                            <Input
+                              type="number"
+                              min="0"
+                              step="1000"
+                              value={draft.outsourceCost}
+                              onChange={(e) =>
+                                updateOutsourceDraft(order.id!, {
+                                  outsourceCost: e.target.value,
+                                })
+                              }
+                              className="h-8 min-w-[150px] text-sm font-semibold tabular-nums"
+                              disabled={savingId === order.id}
                             />
                           </TableCell>
-                          <TableCell className="text-center">
-                            {cost > 0 ? (
-                              <Badge className="bg-green-100 text-green-700 border-green-200 border">
-                                Đã có giá
-                              </Badge>
+                          <TableCell className="text-sm text-slate-600 whitespace-nowrap">
+                            {order.completedAt ? (
+                              <span className="font-medium text-green-700">
+                                {formatDateTime(order.completedAt)}
+                              </span>
                             ) : (
-                              <Badge
+                              <Button
+                                size="sm"
                                 variant="outline"
-                                className="text-orange-600 border-orange-300 bg-orange-50"
+                                className="h-7 px-2 text-[11px] font-semibold text-green-700 bg-green-50 hover:bg-green-100 hover:text-green-800 border-green-200"
+                                onClick={() => handleCompleteOutsource(order.id!)}
+                                disabled={completingOutsourceId === order.id}
+                                title="Ghi nhận thời gian hoàn thành hiện tại"
                               >
-                                Chưa có giá
-                              </Badge>
+                                {completingOutsourceId === order.id ? (
+                                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                ) : (
+                                  <Check className="h-3 w-3 mr-1" />
+                                )}
+                                Đã in xong
+                              </Button>
                             )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Button
+                              size="sm"
+                              className="h-8 bg-[#93631F] hover:bg-[#7A521A] text-white"
+                              onClick={() => handleSaveOutsourceRow(order.id!)}
+                              disabled={savingId === order.id}
+                            >
+                              {savingId === order.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Check className="h-3.5 w-3.5" />
+                              )}
+                            </Button>
                           </TableCell>
                         </TableRow>
                       );

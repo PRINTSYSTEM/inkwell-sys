@@ -114,12 +114,9 @@ export default function PlateExportListPage() {
 
   const receivedCount = useMemo(() => {
     return statsList.filter((p) => {
-      const isPastEstimated = p.estimatedReceiveAt
-        ? new Date() > new Date(p.estimatedReceiveAt)
-        : false;
-      return !!p.receivedAt || isPastEstimated;
+      return isOutsource ? !!p.completedAt : !!p.receivedAt;
     }).length;
-  }, [statsList]);
+  }, [statsList, isOutsource]);
 
   const handleResetFilters = () => {
     setSearchTerm("");
@@ -145,7 +142,7 @@ export default function PlateExportListPage() {
   };
 
   return (
-    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 pb-6 -mt-4 space-y-4">
+    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-6 space-y-4">
       <Helmet>
         <title>{title}</title>
         <meta
@@ -168,19 +165,15 @@ export default function PlateExportListPage() {
               <span className="ml-2 text-sm font-bold">{totalCount}</span>
             </Badge>
 
-            {!isOutsource && (
-              <>
-                <Badge className="bg-amber-600 text-white px-3 py-1">
-                  Chờ kẽm
-                  <span className="ml-2 text-sm font-bold">{totalCount - receivedCount}</span>
-                </Badge>
+            <Badge className="bg-amber-600 text-white px-3 py-1">
+              {isOutsource ? "Chờ in" : "Chờ kẽm"}
+              <span className="ml-2 text-sm font-bold">{totalCount - receivedCount}</span>
+            </Badge>
 
-                <Badge className="bg-emerald-600 text-white px-3 py-1">
-                  Đã nhận kẽm
-                  <span className="ml-2 text-sm font-bold">{receivedCount}</span>
-                </Badge>
-              </>
-            )}
+            <Badge className="bg-emerald-600 text-white px-3 py-1">
+              {isOutsource ? "Đã in xong" : "Đã nhận kẽm"}
+              <span className="ml-2 text-sm font-bold">{receivedCount}</span>
+            </Badge>
           </div>
         </div>
       </div>
@@ -291,22 +284,16 @@ export default function PlateExportListPage() {
                       {canViewPrice && (
                         <TableHead className="h-9 px-3 text-right text-xs font-semibold text-slate-700">Tổng tiền</TableHead>
                       )}
-                      {isOutsource && (
-                        <TableHead className="h-9 px-3 text-xs font-semibold text-slate-700">Hình thức in</TableHead>
-                      )}
-                      {!isOutsource && (
-                        <TableHead className="h-9 px-3 text-center text-xs font-semibold text-slate-700">Trạng thái</TableHead>
-                      )}
+                      <TableHead className="h-9 px-3 text-center text-xs font-semibold text-slate-700">Trạng thái</TableHead>
                       <TableHead className="h-9 px-3 text-xs font-semibold text-slate-700">Ngày gửi</TableHead>
                       <TableHead className="h-9 px-3 text-xs font-semibold text-slate-700">Ngày nhận dự kiến</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {displayedPlateExports.map((plateExport) => {
-                      const isPastEstimated = plateExport.estimatedReceiveAt
-                        ? new Date() > new Date(plateExport.estimatedReceiveAt)
-                        : false;
-                      const isDone = plateExport.receivedAt || isPastEstimated;
+                      const isDone = isOutsource
+                        ? !!plateExport.completedAt
+                        : !!plateExport.receivedAt;
 
                       return (
                         <TableRow
@@ -339,34 +326,21 @@ export default function PlateExportListPage() {
                               }
                             </TableCell>
                           )}
-                          {isOutsource && (
-                            <TableCell className="py-1 px-3">
-                              <div className="flex flex-col gap-0.5">
-                                <span className="font-medium text-xs text-orange-600">
-                                  In gia công
-                                </span>
-                                {plateExport.printingVendorName && (
-                                  <span className="text-[10px] text-muted-foreground truncate max-w-[150px]">
-                                    {plateExport.printingVendorName}
-                                  </span>
-                                )}
-                              </div>
-                            </TableCell>
-                          )}
-                          {!isOutsource && (
-                            <TableCell className="py-1 px-3 text-center">
-                              <Badge
-                                className={cn(
-                                  "text-[10px] px-1.5 py-0 border font-semibold",
-                                  isDone
-                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-50/80"
-                                    : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-50/80"
-                                )}
-                              >
-                                {isDone ? "Đã nhận kẽm" : "Chờ kẽm"}
-                              </Badge>
-                            </TableCell>
-                          )}
+                          <TableCell className="py-1 px-3 text-center">
+                            <Badge
+                              className={cn(
+                                "text-[10px] px-1.5 py-0 border font-semibold",
+                                isDone
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-50/80"
+                                  : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-50/80"
+                              )}
+                            >
+                              {isOutsource
+                                ? (isDone ? "Đã in xong" : "Chờ in")
+                                : (isDone ? "Đã nhận kẽm" : "Chờ kẽm")
+                              }
+                            </Badge>
+                          </TableCell>
                           <TableCell className="py-1 px-3 text-xs text-slate-600">{formatDate(plateExport.sentAt)}</TableCell>
                           <TableCell className="py-1 px-3 text-xs text-slate-600">
                             {formatDate(plateExport.estimatedReceiveAt)}

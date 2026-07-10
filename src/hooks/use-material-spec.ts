@@ -34,31 +34,39 @@ const materialSpecKeys = {
 
 // ========== QUERIES ==========
 
-export const useMaterialSpecs = (params?: MaterialSpecListParams) => {
+export const useMaterialSpecs = (
+  materialTypeId: number | null,
+  params?: MaterialSpecListParams
+) => {
   return useQuery<MaterialSpecResponseIPaginate>({
-    queryKey: materialSpecKeys.list(params),
+    queryKey: [...materialSpecKeys.all, "paginated", materialTypeId, params],
     queryFn: async () => {
       const response = await apiRequest.get<MaterialSpecResponseIPaginate>(
-        API_SUFFIX.MATERIAL_SPECS,
+        API_SUFFIX.MATERIAL_SPEC_PAGINATED(materialTypeId!),
         {
           params: normalizeParams(params || {}),
         }
       );
       return response.data;
     },
+    enabled: materialTypeId !== null,
   });
 };
 
-export const useMaterialSpec = (id: number | null, enabled = true) => {
+export const useMaterialSpec = (
+  materialTypeId: number | null,
+  id: number | null,
+  enabled = true
+) => {
   return useQuery<MaterialSpecResponse>({
-    queryKey: materialSpecKeys.detail(id!),
+    queryKey: [...materialSpecKeys.all, "detail", materialTypeId, id],
     queryFn: async () => {
       const response = await apiRequest.get<MaterialSpecResponse>(
-        API_SUFFIX.MATERIAL_SPEC_BY_ID(id!)
+        API_SUFFIX.MATERIAL_SPEC_BY_ID(materialTypeId!, id!)
       );
       return response.data;
     },
-    enabled: enabled && id !== null,
+    enabled: enabled && materialTypeId !== null && id !== null,
   });
 };
 
@@ -70,27 +78,11 @@ export const useMaterialSpecsByMaterialType = (
     queryKey: materialSpecKeys.byMaterialType(materialTypeId!),
     queryFn: async () => {
       const response = await apiRequest.get<MaterialSpecResponse[]>(
-        API_SUFFIX.MATERIAL_SPECS_BY_MATERIAL_TYPE(materialTypeId!)
+        API_SUFFIX.MATERIAL_SPECS(materialTypeId!)
       );
       return response.data;
     },
     enabled: enabled && materialTypeId !== null,
-  });
-};
-
-export const useMaterialSpecsByVendor = (
-  vendorId: number | null,
-  enabled = true
-) => {
-  return useQuery<MaterialSpecResponse[]>({
-    queryKey: materialSpecKeys.byVendor(vendorId!),
-    queryFn: async () => {
-      const response = await apiRequest.get<MaterialSpecResponse[]>(
-        API_SUFFIX.MATERIAL_SPECS_BY_VENDOR(vendorId!)
-      );
-      return response.data;
-    },
-    enabled: enabled && vendorId !== null,
   });
 };
 
@@ -99,10 +91,14 @@ export const useMaterialSpecsByVendor = (
 export const useCreateMaterialSpec = () => {
   const queryClient = useQueryClient();
 
-  return useMutation<MaterialSpecResponse, ApiError, CreateMaterialSpecRequest>({
-    mutationFn: async (data: CreateMaterialSpecRequest) => {
+  return useMutation<
+    MaterialSpecResponse,
+    ApiError,
+    { materialTypeId: number; data: CreateMaterialSpecRequest }
+  >({
+    mutationFn: async ({ materialTypeId, data }) => {
       const response = await apiRequest.post<MaterialSpecResponse>(
-        API_SUFFIX.MATERIAL_SPECS,
+        API_SUFFIX.MATERIAL_SPECS(materialTypeId),
         data
       );
       return response.data;
@@ -125,18 +121,18 @@ export const useUpdateMaterialSpec = () => {
   return useMutation<
     MaterialSpecResponse,
     ApiError,
-    { id: number; data: UpdateMaterialSpecRequest }
+    { materialTypeId: number; id: number; data: UpdateMaterialSpecRequest }
   >({
-    mutationFn: async ({ id, data }) => {
+    mutationFn: async ({ materialTypeId, id, data }) => {
       const response = await apiRequest.put<MaterialSpecResponse>(
-        API_SUFFIX.MATERIAL_SPEC_BY_ID(id),
+        API_SUFFIX.MATERIAL_SPEC_BY_ID(materialTypeId, id),
         data
       );
       return response.data;
     },
-    onSuccess: (_, { id }) => {
+    onSuccess: (_, { materialTypeId, id }) => {
       queryClient.invalidateQueries({ queryKey: materialSpecKeys.all });
-      queryClient.invalidateQueries({ queryKey: materialSpecKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: [...materialSpecKeys.all, "detail", materialTypeId, id] });
       toast.success("Cập nhật cấu hình định lượng thành công");
     },
     onError: (error: ApiError) => {
@@ -150,9 +146,9 @@ export const useUpdateMaterialSpec = () => {
 export const useDeleteMaterialSpec = () => {
   const queryClient = useQueryClient();
 
-  return useMutation<void, ApiError, number>({
-    mutationFn: async (id: number) => {
-      await apiRequest.delete(API_SUFFIX.MATERIAL_SPEC_BY_ID(id));
+  return useMutation<void, ApiError, { materialTypeId: number; id: number }>({
+    mutationFn: async ({ materialTypeId, id }) => {
+      await apiRequest.delete(API_SUFFIX.MATERIAL_SPEC_BY_ID(materialTypeId, id));
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: materialSpecKeys.all });

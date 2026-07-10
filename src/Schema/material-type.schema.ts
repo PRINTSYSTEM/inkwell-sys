@@ -41,7 +41,9 @@ export type MaterialTypeClassificationResponse = z.infer<
 
 // ===== MaterialTypeResponse =====
 export const MaterialTypeResponseSchema =
-  GenMaterialTypeResponseSchema.passthrough();
+  GenMaterialTypeResponseSchema.extend({
+    isSystem: z.boolean().optional(),
+  }).passthrough();
 export type MaterialTypeResponse = z.infer<typeof MaterialTypeResponseSchema>;
 
 // ===== PagedResponse =====

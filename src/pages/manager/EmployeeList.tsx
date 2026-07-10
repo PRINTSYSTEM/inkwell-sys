@@ -201,69 +201,50 @@ export default function EmployeeList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">
+          <h1 className="text-2xl font-bold text-foreground">
             Quản lý nhân viên
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground">
             Danh sách nhân viên và thông tin tài khoản
           </p>
         </div>
+
         <Button onClick={handleCreateEmployee} className="gap-2">
           <Plus className="h-4 w-4" />
           Thêm nhân viên
         </Button>
       </div>
 
-      {/* Statistics */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-3">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Tổng nhân viên
-            </CardTitle>
-            <User className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">
-              Tổng số nhân viên trong hệ thống
-            </p>
+          <CardContent className="flex items-center justify-between p-4">
+            <div>
+              <p className="text-sm text-muted-foreground">Tổng nhân viên</p>
+              <p className="text-2xl font-bold">{stats.total}</p>
+            </div>
+            <User className="h-5 w-5 text-primary" />
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Đang hoạt động
-            </CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-600">
-              {stats.active}
+          <CardContent className="flex items-center justify-between p-4">
+            <div>
+              <p className="text-sm text-muted-foreground">Đang hoạt động</p>
+              <p className="text-2xl font-bold text-green-600">{stats.active}</p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Nhân viên đang hoạt động
-            </p>
+            <CheckCircle2 className="h-5 w-5 text-green-600" />
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Đã vô hiệu hóa
-            </CardTitle>
-            <XCircle className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-red-600">
-              {stats.inactive}
+          <CardContent className="flex items-center justify-between p-4">
+            <div>
+              <p className="text-sm text-muted-foreground">Đã vô hiệu hóa</p>
+              <p className="text-2xl font-bold text-red-600">{stats.inactive}</p>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Nhân viên đã vô hiệu hóa
-            </p>
+            <XCircle className="h-5 w-5 text-red-600" />
           </CardContent>
         </Card>
       </div>
@@ -271,17 +252,15 @@ export default function EmployeeList() {
       {/* Search and Filter */}
       <Card>
         <CardHeader>
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                ref={searchInputRef}
-                placeholder="Tìm kiếm theo tên, username, email, số điện thoại..."
-                className="pl-10"
-                value={searchTerm}
-                onChange={(e) => handleSearchChange(e.target.value)}
-              />
-            </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              ref={searchInputRef}
+              placeholder="Tìm kiếm theo tên, username, email, số điện thoại..."
+              className="pl-10"
+              value={searchTerm}
+              onChange={(e) => handleSearchChange(e.target.value)}
+            />
           </div>
         </CardHeader>
         <CardContent>

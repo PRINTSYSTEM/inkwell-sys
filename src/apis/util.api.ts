@@ -141,12 +141,9 @@ export const API_SUFFIX = {
   MATERIAL_HISTORY: (id: number) => `/materials/${id}/history`,
 
   // ========== MATERIAL SPECS ==========
-  MATERIAL_SPECS: "/material-specs",
-  MATERIAL_SPEC_BY_ID: (id: number) => `/material-specs/${id}`,
-  MATERIAL_SPECS_BY_MATERIAL_TYPE: (id: number) =>
-    `/material-specs/by-material-type/${id}`,
-  MATERIAL_SPECS_BY_VENDOR: (vendorId: number) =>
-    `/material-specs/by-vendor/${vendorId}`,
+  MATERIAL_SPECS: (typeId: number) => `/material-types/${typeId}/specs`,
+  MATERIAL_SPEC_PAGINATED: (typeId: number) => `/material-types/${typeId}/specs/paginated`,
+  MATERIAL_SPEC_BY_ID: (typeId: number, id: number) => `/material-types/${typeId}/specs/${id}`,
 
   // ========== MATERIAL 8-LAYER MANAGEMENT SYSTEM ==========
   SUPPLIER_TYPES: "/supplier-types",
