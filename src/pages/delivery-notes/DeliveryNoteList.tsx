@@ -145,21 +145,23 @@ const getDeliveryNoteStatusLabel = (
 
 const getDisplayStatus = (note: { lines?: Array<{ status?: string | null }>; status?: string | null }) => {
   const lines = note.lines || [];
+  if (lines.length === 0) return note.status;
 
-  const hasDelivered = lines.some((l) => l.status === "delivered");
-  const hasReschedule = lines.some((l) => l.status === "failed_reschedule");
-  const hasFailed = lines.some((l) => ["failed", "returned", "cancelled"].includes(l.status || ""));
+  const statuses = lines.map((l) => (l.status || "").toLowerCase());
+  const terminalStatuses = ["delivered", "failed_reschedule", "cancelled", "returned", "failed"];
+  const allHaveResult = statuses.every((s) => terminalStatuses.includes(s));
 
-  if (note.status === "cancelled" && (hasDelivered || hasReschedule)) {
-    return "partial";
+  if (!allHaveResult) {
+    return note.status;
   }
 
-  if (hasReschedule) return "failed_reschedule";
-  if (hasDelivered && hasFailed) return "partial";
-  if (hasDelivered) return "completed";
-  if (hasFailed) return "failed";
+  const allDelivered = lines.every((l) => l.status === "delivered");
+  if (allDelivered) return "completed";
 
-  return note.status;
+  const hasReschedule = lines.some((l) => l.status === "failed_reschedule");
+  if (hasReschedule) return "failed_reschedule";
+
+  return "cancelled";
 };
 
 const getRemainingQty = (detail: any) => {

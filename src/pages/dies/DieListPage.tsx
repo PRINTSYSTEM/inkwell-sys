@@ -160,7 +160,7 @@ export default function DieListPage() {
   };
 
   return (
-    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 pb-6 -mt-4 space-y-4">
+    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-6 space-y-4">
       <Helmet>
         <title>Quản lý khuôn cắt</title>
         <meta

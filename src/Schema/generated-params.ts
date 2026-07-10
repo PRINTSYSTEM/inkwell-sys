@@ -898,6 +898,7 @@ export const MaterialTypeListParamsSchema = PagedParamsSchema.extend({
   status: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
+  isSystem: z.boolean().nullable().optional(),
 });
 export type MaterialTypeListParams = z.infer<typeof MaterialTypeListParamsSchema>;
 

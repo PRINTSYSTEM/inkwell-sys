@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 import {
   Plus,
@@ -57,6 +57,23 @@ import type { MaterialSpecResponse } from "@/Schema";
 
 export default function MaterialSpecPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedMaterialTypeId, setSelectedMaterialTypeId] = useState<string>("");
+
+  // Fetch material types for dropdown
+  const { data: materialTypesData, isLoading: isLoadingTypes } = useMaterialTypeList({
+    pageSize: 100,
+    pageNumber: 1,
+  });
+
+  // Material types list
+  const materialTypes = materialTypesData?.items || [];
+
+  // Automatically select first material type if none selected
+  useEffect(() => {
+    if (!selectedMaterialTypeId && materialTypes.length > 0) {
+      setSelectedMaterialTypeId(materialTypes[0].id.toString());
+    }
+  }, [materialTypes, selectedMaterialTypeId]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -81,20 +98,14 @@ export default function MaterialSpecPage() {
     isError,
     error,
     refetch,
-  } = useMaterialSpecs({
-    pageNumber: currentPage,
-    pageSize: itemsPerPage,
-    q: searchQuery || undefined,
-  });
-
-  // Fetch material types for dropdown
-  const { data: materialTypesData, isLoading: isLoadingTypes } = useMaterialTypeList({
-    pageSize: 100,
-    pageNumber: 1,
-  });
-
-  // Material types list
-  const materialTypes = materialTypesData?.items || [];
+  } = useMaterialSpecs(
+    selectedMaterialTypeId ? Number(selectedMaterialTypeId) : null,
+    {
+      pageNumber: currentPage,
+      pageSize: itemsPerPage,
+      q: searchQuery || undefined,
+    }
+  );
 
   // Mutations
   const createMutation = useCreateMaterialSpec();
@@ -127,9 +138,13 @@ export default function MaterialSpecPage() {
     setIsOpen(true);
   };
 
-  const handleDelete = async (id: number, specName: string) => {
-    if (window.confirm(`Bạn có chắc chắn muốn xóa cấu hình định lượng "${specName}"?`)) {
-      deleteMutation.mutate(id, {
+  const handleDelete = async (spec: MaterialSpecResponse) => {
+    if (!spec.id || !spec.materialTypeId) return;
+    if (window.confirm(`Bạn có chắc chắn muốn xóa cấu hình định lượng "${spec.name}"?`)) {
+      deleteMutation.mutate({
+        materialTypeId: spec.materialTypeId,
+        id: spec.id
+      }, {
         onSuccess: () => {
           refetch();
         },
@@ -165,6 +180,7 @@ export default function MaterialSpecPage() {
     if (isEditing && currentSpec?.id) {
       updateMutation.mutate(
         {
+          materialTypeId: Number(materialTypeId),
           id: currentSpec.id,
           data: payload,
         },
@@ -176,12 +192,18 @@ export default function MaterialSpecPage() {
         }
       );
     } else {
-      createMutation.mutate(payload, {
-        onSuccess: () => {
-          setIsOpen(false);
-          refetch();
+      createMutation.mutate(
+        {
+          materialTypeId: Number(materialTypeId),
+          data: payload,
         },
-      });
+        {
+          onSuccess: () => {
+            setIsOpen(false);
+            refetch();
+          },
+        }
+      );
     }
   };
 
@@ -213,18 +235,48 @@ export default function MaterialSpecPage() {
 
         {/* Search & Actions */}
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-muted/20 p-4 border rounded-xl">
-          <div className="relative flex-1 max-w-sm w-full">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Tìm kiếm cấu hình định lượng..."
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="pl-9 h-9 bg-background"
-            />
+          <div className="flex flex-col md:flex-row gap-2 flex-1 w-full md:max-w-xl">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Tìm kiếm cấu hình định lượng..."
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="pl-9 h-9 bg-background"
+              />
+            </div>
+            
+            <div className="w-full md:w-[220px]">
+              <Select
+                value={selectedMaterialTypeId}
+                onValueChange={(val) => {
+                  setSelectedMaterialTypeId(val);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="h-9 bg-background">
+                  <SelectValue placeholder="Chọn chất liệu" />
+                </SelectTrigger>
+                <SelectContent>
+                  {isLoadingTypes ? (
+                    <SelectItem value="loading" disabled>Đang tải chất liệu...</SelectItem>
+                  ) : materialTypes.length === 0 ? (
+                    <SelectItem value="none" disabled>Không có chất liệu nào</SelectItem>
+                  ) : (
+                    materialTypes.map((type) => (
+                      <SelectItem key={type.id} value={type.id.toString()}>
+                        {type.name} {(type as any).isSystem ? "(Hệ thống)" : ""}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
@@ -337,12 +389,12 @@ export default function MaterialSpecPage() {
                             <Edit className="h-3.5 w-3.5" />
                           </Button>
                           <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-destructive hover:bg-destructive/5"
-                            onClick={() => spec.id && handleDelete(spec.id, spec.name || "")}
-                            disabled={deleteMutation.isPending}
-                          >
+                             variant="ghost"
+                             size="icon"
+                             className="h-7 w-7 text-destructive hover:bg-destructive/5"
+                             onClick={() => handleDelete(spec)}
+                             disabled={deleteMutation.isPending}
+                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>

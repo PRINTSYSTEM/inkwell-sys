@@ -33,7 +33,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useAPSummary, useAPSummaryReport, useAPDetail, useExportAPSummary, useExportAPDetailLedger } from "@/hooks/use-ar-ap";
+import { useAPSummary, useAPSummaryReport, useExportAPSummary, useAPReconciliation } from "@/hooks/use-ar-ap";
 import { APCreatePaymentDialog } from "./APCreatePaymentDialog";
 import { formatCurrency } from "@/lib/status-utils";
 import { cn } from "@/lib/utils";
@@ -424,13 +424,29 @@ export default function APUnifiedPage() {
                           </>
                         )}
                         <TableCell className="text-center">
-                          {(item.vendorId || (item as any).id) && (
-                            <APVendorExportButton 
-                              vendorId={item.vendorId || (item as any).id} 
-                              vendorName={item.vendorName || ""} 
-                              defaultDateRange={dateRange}
-                            />
-                          )}
+                          <div className="flex items-center justify-center gap-1">
+                            {(item.vendorId || (item as any).id) && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-primary hover:text-primary hover:bg-primary/10 transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/accounting/ap?tab=detail&vendorId=${item.vendorId || (item as any).id}`);
+                                  }}
+                                  title="Xem chi tiết sổ công nợ / đối chiếu"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <APVendorExportButton 
+                                  vendorId={item.vendorId || (item as any).id} 
+                                  vendorName={item.vendorName || ""} 
+                                  defaultDateRange={dateRange}
+                                />
+                              </>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                       {isExpanded && item.vendorId && (
@@ -490,13 +506,10 @@ export default function APUnifiedPage() {
   );
 }
 
-// Component render chi tiết giao dịch khi mở rộng dòng
+// Component render chi tiết đối chiếu khi mở rộng dòng
 function VendorDetailRow({
   vendorId,
-  vendorName,
   dateRange,
-  selectedOrders,
-  onSelectOrder,
 }: {
   vendorId: number;
   vendorName: string;
@@ -504,69 +517,53 @@ function VendorDetailRow({
   selectedOrders: Map<number, any>;
   onSelectOrder: (order: any) => void;
 }) {
-  const navigate = useNavigate();
+  const { data: reconData, isLoading: isLoadingRecon, isError: isErrorRecon, error: errorRecon } = useAPReconciliation(
+    vendorId,
+    {
+      fromDate: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
+      toDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
+    }
+  );
 
-  const { data: detailData, isLoading: isLoadingDetail } = useAPDetail({
-    vendorId: vendorId,
-    fromDate: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
-    toDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
-    pageSize: 50, // Lấy nhiều record hơn khi xem chi tiết
-  });
-
-  const handleOrderClick = (documentId: number | null | undefined) => {
-    if (documentId) {
-      // Giả sử chuyển hướng đến trang chi tiết hóa đơn mua hàng/đơn hàng
-      navigate(`/accounting/ap-orders/${documentId}`);
+  const formatDateShort = (dateStr: string | null | undefined) => {
+    if (!dateStr) return "—";
+    try {
+      return format(new Date(dateStr), "dd/MM/yyyy", { locale: vi });
+    } catch {
+      return "—";
     }
   };
 
-  const unpaidItems = useMemo(() => {
-    if (!detailData?.items) return [];
-    return detailData.items.filter((detail: any) => (detail.outstanding ?? 0) > 0);
-  }, [detailData?.items]);
-
-  // Flatten items so that each item becomes a row in the ledger
-  const flatRows = useMemo(() => {
-    const rows: Array<{
-      key: string;
-      detail: any;
-      item?: any;
-    }> = [];
-
-    unpaidItems.forEach((detail: any) => {
-      const itemsList = detail.items || [];
-      if (itemsList.length === 0) {
-        rows.push({
-          key: `${detail.documentId || detail.id}`,
-          detail,
-        });
-      } else {
-        itemsList.forEach((item: any, idx: number) => {
-          rows.push({
-            key: `${detail.documentId || detail.id}-${idx}`,
-            detail,
-            item,
-          });
-        });
-      }
-    });
-
-    return rows;
-  }, [unpaidItems]);
-
-  if (isLoadingDetail) {
+  if (isLoadingRecon) {
     return (
       <div className="flex items-center justify-center py-6 gap-2 text-muted-foreground bg-background rounded-lg border border-inner">
         <Loader2 className="h-4 w-4 animate-spin text-primary" />
-        <span className="text-xs">Đang tải chi tiết giao dịch...</span>
+        <span className="text-xs">Đang tải bảng đối chiếu công nợ...</span>
       </div>
     );
   }
 
-  if (unpaidItems.length === 0) {
+  if (isErrorRecon) {
+    return (
+      <div className="p-4">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Lỗi tải bảng đối chiếu</AlertTitle>
+          <AlertDescription>
+            {errorRecon instanceof Error ? errorRecon.message : "Vui lòng thử lại."}
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  const rows = reconData?.rows ?? [];
+  const specHeaders = reconData?.specHeaders ?? [];
+
+  if (rows.length === 0) {
     return (
       <div className="text-center py-6 text-xs text-muted-foreground italic bg-background rounded-lg border border-dashed border-stone-200 dark:border-stone-800">
-        Không có giao dịch chưa thanh toán trong kỳ
+        Không phát sinh đối chiếu nào trong kỳ đã chọn
       </div>
     );
   }
@@ -576,95 +573,71 @@ function VendorDetailRow({
       <Table>
         <TableHeader className="bg-stone-50 dark:bg-stone-900/60 border-b border-stone-200 dark:border-stone-800">
           <TableRow className="hover:bg-transparent">
-            <TableHead className="w-[45px] text-center">Chọn</TableHead>
-            <TableHead className="w-[45px] text-center">STT</TableHead>
-            <TableHead className="w-[90px] text-center font-bold text-[10px] uppercase tracking-wider">Ngày CT</TableHead>
+            <TableHead className="w-[100px] text-center font-bold text-[10px] uppercase tracking-wider">Ngày</TableHead>
             <TableHead className="w-[120px] font-bold text-[10px] uppercase tracking-wider">Số chứng từ</TableHead>
-            <TableHead className="w-[110px] font-bold text-[10px] uppercase tracking-wider">Loại</TableHead>
-            <TableHead className="w-[110px] font-bold text-[10px] uppercase tracking-wider">Mã vật tư</TableHead>
-            <TableHead className="font-bold text-[10px] uppercase tracking-wider">Tên vật tư</TableHead>
-            <TableHead className="w-[70px] text-right font-bold text-[10px] uppercase tracking-wider">Số lượng</TableHead>
-            <TableHead className="w-[90px] text-right font-bold text-[10px] uppercase tracking-wider">Đơn giá</TableHead>
-            <TableHead className="w-[100px] text-right font-bold text-[10px] uppercase tracking-wider">Thành tiền</TableHead>
-            <TableHead className="w-[115px] text-right font-bold text-[10px] uppercase tracking-wider text-green-700">Đã trả</TableHead>
-            <TableHead className="w-[115px] text-right font-bold text-[10px] uppercase tracking-wider text-red-750">Còn nợ</TableHead>
-            <TableHead className="w-[100px] font-bold text-[10px] uppercase tracking-wider">Hạn trả</TableHead>
+            <TableHead className="w-[90px] font-bold text-[10px] uppercase tracking-wider">Loại</TableHead>
+            <TableHead className="min-w-[150px] font-bold text-[10px] uppercase tracking-wider">Tên hàng/Diễn giải</TableHead>
+
+            {/* Dynamic Spec Headers */}
+            {specHeaders.map((header, idx) => (
+              <TableHead key={idx} className="w-[90px] font-bold text-[10px] uppercase tracking-wider">{header}</TableHead>
+            ))}
+
+            <TableHead className="w-[60px] text-center font-bold text-[10px] uppercase tracking-wider">ĐVT</TableHead>
+            <TableHead className="text-right w-[100px] font-bold text-[10px] uppercase tracking-wider">Đơn giá</TableHead>
+            <TableHead className="text-right w-[110px] font-bold text-[10px] uppercase tracking-wider">Thành tiền</TableHead>
+            <TableHead className="text-right w-[80px] font-bold text-[10px] uppercase tracking-wider">VAT</TableHead>
+            <TableHead className="text-right w-[110px] font-bold text-[10px] uppercase tracking-wider text-green-700">Thanh toán</TableHead>
+            <TableHead className="text-right w-[130px] font-bold text-[10px] uppercase tracking-wider">Dư sau GD</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody className="divide-y divide-stone-100 dark:divide-stone-900">
-          {flatRows.map((row, index) => {
-            const { detail, item } = row;
-            const docKey = detail.documentId || detail.id;
-            const isSelected = selectedOrders.has(docKey);
-
-            const totalAmount = item ? (item.totalAmount ?? 0) : (detail.amountDue ?? 0);
-            const paid = item ? 0 : (detail.amountPaid ?? 0);
-            const outstanding = detail.outstanding ?? 0;
-
+          {rows.map((row, index) => {
             return (
               <TableRow
-                key={row.key}
-                className={cn(
-                  "hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors cursor-pointer",
-                  isSelected && "bg-orange-50/10 dark:bg-orange-950/5 hover:bg-orange-50/15"
-                )}
-                onClick={() => handleOrderClick(detail.documentId)}
+                key={index}
+                className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30 transition-colors"
               >
-                <TableCell className="text-center py-2.5" onClick={(e) => e.stopPropagation()}>
-                  {docKey && (
-                    <Checkbox 
-                      checked={isSelected}
-                      onCheckedChange={() => onSelectOrder({
-                        documentId: docKey,
-                        documentNumber: detail.documentNumber || "—",
-                        outstanding: outstanding,
-                      })}
-                    />
-                  )}
-                </TableCell>
-                <TableCell className="text-center py-2.5 text-xs text-stone-400 font-medium">
-                  {index + 1}
-                </TableCell>
                 <TableCell className="text-center py-2.5 text-xs text-stone-500 font-medium">
-                  {detail.documentDate ? formatDate(detail.documentDate) : "—"}
+                  {row.date ? formatDateShort(row.date) : "—"}
                 </TableCell>
                 <TableCell className="py-2.5 font-mono text-xs font-bold text-primary/80">
-                  {detail.documentNumber || "—"}
+                  {row.documentNumber || "—"}
                 </TableCell>
-                <TableCell className="py-2.5 font-mono text-[10px] uppercase text-muted-foreground">
-                  {detail.documentType || "Hóa đơn"}
-                </TableCell>
-                <TableCell className="py-2.5 font-mono text-xs font-semibold text-stone-600 dark:text-stone-400">
-                  {item?.code || "—"}
+                <TableCell className="py-2.5 text-xs font-semibold text-stone-600 dark:text-stone-400">
+                  {row.documentType || "—"}
                 </TableCell>
                 <TableCell className="py-2.5 text-xs font-medium text-stone-800 dark:text-stone-200">
-                  {item?.name || "—"}
+                  {row.description || "—"}
                 </TableCell>
-                <TableCell className="text-right py-2.5 text-xs font-mono">
-                  {item?.quantity ?? "—"}
+
+                {/* Dynamic Spec Cells */}
+                {specHeaders.map((_, specIdx) => {
+                  const val = specIdx === 0 ? row.spec1 : specIdx === 1 ? row.spec2 : row.spec3;
+                  return (
+                    <TableCell key={specIdx} className="py-2.5 text-xs text-slate-600 font-mono">
+                      {val ?? "—"}
+                    </TableCell>
+                  );
+                })}
+
+                <TableCell className="text-center py-2.5 text-xs text-stone-500">
+                  {row.unit || "—"}
                 </TableCell>
                 <TableCell className="text-right py-2.5 text-xs font-mono text-muted-foreground">
-                  {item?.unitPrice !== undefined ? formatCurrency(item.unitPrice) : "—"}
+                  {row.unitPrice !== null && row.unitPrice !== undefined ? formatCurrency(row.unitPrice) : "—"}
                 </TableCell>
                 <TableCell className="text-right py-2.5 text-xs font-mono font-semibold">
-                  {formatCurrency(totalAmount)}
+                  {row.amount !== null && row.amount !== undefined ? formatCurrency(row.amount) : "—"}
                 </TableCell>
-                <TableCell className="text-right py-2.5 text-xs font-mono text-green-600">
-                  {item ? "—" : formatCurrency(detail.amountPaid || 0)}
+                <TableCell className="text-right py-2.5 text-xs font-mono text-muted-foreground">
+                  {row.vat !== null && row.vat !== undefined ? formatCurrency(row.vat) : "—"}
                 </TableCell>
-                <TableCell className="text-right py-2.5 text-xs font-mono">
-                  {item ? "—" : (
-                    detail.outstanding !== undefined && detail.outstanding > 0 ? (
-                      <Badge variant="outline" className="text-[10px] h-5 bg-background font-bold border-red-200 text-red-600">
-                        {formatCurrency(detail.outstanding)}
-                      </Badge>
-                    ) : (
-                      "—"
-                    )
-                  )}
+                <TableCell className="text-right py-2.5 text-xs font-mono text-green-600 font-semibold">
+                  {row.payment !== null && row.payment !== undefined ? formatCurrency(row.payment) : "—"}
                 </TableCell>
-                <TableCell className="text-center py-2.5 text-xs text-stone-500 font-medium">
-                  {detail.dueDate ? formatDate(detail.dueDate) : "—"}
+                <TableCell className="text-right py-2.5 text-xs font-mono font-bold">
+                  {row.balanceAfter !== null && row.balanceAfter !== undefined ? formatCurrency(row.balanceAfter) : "—"}
                 </TableCell>
               </TableRow>
             );

@@ -408,19 +408,18 @@ export default function DeliveryNoteDetailPage() {
     if (!ls || ls.length === 0) return null;
     const statuses = ls.map((l) => (l.status || "").toLowerCase());
 
+    const terminalStatuses = ["delivered", "failed_reschedule", "cancelled", "returned", "failed"];
+    const allHaveResult = statuses.every((s) => terminalStatuses.includes(s));
+    
+    if (!allHaveResult) return "in_transit";
+
     const allDelivered = statuses.every((s) => s === "delivered");
     if (allDelivered) return "completed";
 
-    const anyDelivered = statuses.some((s) => s === "delivered");
-    const allFailedish = statuses.every((s) =>
-      ["failed_reschedule", "cancelled", "returned"].includes(s),
-    );
-    if (allFailedish) return "cancelled";
+    const hasReschedule = statuses.some((s) => s === "failed_reschedule");
+    if (hasReschedule) return "failed_reschedule";
 
-    if (anyDelivered) return "partially_completed";
-
-    // default: still in transit
-    return "in_transit";
+    return "cancelled";
   };
 
   if (isLoading) {
@@ -456,20 +455,23 @@ export default function DeliveryNoteDetailPage() {
   const getDisplayStatus = (note: any) => {
     if (!note) return "draft";
     const lines = note.lines || [];
-    const hasDelivered = lines.some((l: any) => l.status === "delivered");
-    const hasReschedule = lines.some((l: any) => l.status === "failed_reschedule");
-    const hasFailed = lines.some((l: any) => ["failed", "returned", "cancelled"].includes(l.status || ""));
+    if (lines.length === 0) return (note.status || "draft").toLowerCase();
 
-    if (note.status === "cancelled" && (hasDelivered || hasReschedule)) {
-      return "partial";
+    const statuses = lines.map((l: any) => (l.status || "").toLowerCase());
+    const terminalStatuses = ["delivered", "failed_reschedule", "cancelled", "returned", "failed"];
+    const allHaveResult = statuses.every((s: string) => terminalStatuses.includes(s));
+
+    if (!allHaveResult) {
+      return (note.status || "draft").toLowerCase();
     }
 
-    if (hasReschedule) return "failed_reschedule";
-    if (hasDelivered && hasFailed) return "partial";
-    if (hasDelivered) return "completed";
-    if (hasFailed) return "failed";
+    const allDelivered = lines.every((l: any) => l.status === "delivered");
+    if (allDelivered) return "completed";
 
-    return (note.status || "draft").toLowerCase();
+    const hasReschedule = lines.some((l: any) => l.status === "failed_reschedule");
+    if (hasReschedule) return "failed_reschedule";
+
+    return "cancelled";
   };
 
   const currentStatus = getDisplayStatus(deliveryNote);
