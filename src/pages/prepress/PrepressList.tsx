@@ -597,11 +597,14 @@ export default function PrepressList() {
   const existingPaperSize = useMemo(() => {
     if (!parsedCustomPaperSize || !paperSizes) return null;
     return (
-      paperSizes.find(
-        (ps) =>
-          ps.width === parsedCustomPaperSize.width &&
-          ps.height === parsedCustomPaperSize.height,
-      ) ?? null
+      paperSizes.find((ps) => {
+        const psW = ps.width !== null && ps.width !== undefined ? Number(ps.width) : 0;
+        const psH = ps.height !== null && ps.height !== undefined ? Number(ps.height) : 0;
+        return (
+          (psW === parsedCustomPaperSize.width && psH === parsedCustomPaperSize.height) ||
+          (psW === parsedCustomPaperSize.height && psH === parsedCustomPaperSize.width)
+        );
+      }) ?? null
     );
   }, [parsedCustomPaperSize, paperSizes]);
 

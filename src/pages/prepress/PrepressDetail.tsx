@@ -1104,8 +1104,8 @@ export default function ProofingOrderDetailPage() {
     if (!parsedCustomPaperSize || !paperSizes) return null;
     const found = paperSizes.find(
       (ps) =>
-        ps.width === parsedCustomPaperSize.width &&
-        ps.height === parsedCustomPaperSize.height,
+        (ps.width === parsedCustomPaperSize.width && ps.height === parsedCustomPaperSize.height) ||
+        (ps.width === parsedCustomPaperSize.height && ps.height === parsedCustomPaperSize.width),
     );
     return found ?? null;
   }, [parsedCustomPaperSize, paperSizes]);
@@ -1177,8 +1177,8 @@ export default function ProofingOrderDetailPage() {
     // Fix: Check by width and height instead of name to handle different formats (15x15 vs 15×15)
     const found = paperSizes.find(
       (ps) =>
-        ps.width === parsedUpdateCustomPaperSize.width &&
-        ps.height === parsedUpdateCustomPaperSize.height,
+        (ps.width === parsedUpdateCustomPaperSize.width && ps.height === parsedUpdateCustomPaperSize.height) ||
+        (ps.width === parsedUpdateCustomPaperSize.height && ps.height === parsedUpdateCustomPaperSize.width),
     );
     // Fix: Return null instead of undefined to match condition check
     return found ?? null;
@@ -1210,7 +1210,9 @@ export default function ProofingOrderDetailPage() {
 
     // Check if paper size already exists
     const existing = paperSizes.find(
-      (ps) => ps.width === width && ps.height === height,
+      (ps) =>
+        (ps.width === width && ps.height === height) ||
+        (ps.width === height && ps.height === width),
     );
 
     if (existing) {
@@ -1433,6 +1435,21 @@ export default function ProofingOrderDetailPage() {
     handToProductionMutate(order.id);
   };
 
+  // Helper to find a matching paper size in all orientations
+  const findMatchingPaperSize = (customSizeStr: string | null | undefined) => {
+    if (!customSizeStr || !paperSizes) return null;
+    const trimmed = customSizeStr.trim();
+    const match = trimmed.match(/^(\d+)\s*[×xX*]\s*(\d+)$/);
+    if (!match) return null;
+    const w = parseInt(match[1], 10);
+    const h = parseInt(match[2], 10);
+    return paperSizes.find(
+      (ps) =>
+        (ps.width === w && ps.height === h) ||
+        (ps.width === h && ps.height === w)
+    ) ?? null;
+  };
+
   // Inline editing handlers
   const handleStartEditField = (
     field: "totalQuantity" | "paperSize" | "notes" | "basisWeight" | "rollWidth" | "code",
@@ -1446,10 +1463,16 @@ export default function ProofingOrderDetailPage() {
     if (field === "totalQuantity") {
       setInlineTotalQuantity((order.totalQuantity ?? 0).toString());
     } else if (field === "paperSize") {
-      setInlinePaperSizeId(
-        order.paperSizeId ? order.paperSizeId.toString() : "custom",
-      );
-      setInlineCustomPaperSize(order.customPaperSize || "");
+      const matched = order.paperSizeId ? null : findMatchingPaperSize(order.customPaperSize);
+      if (matched) {
+        setInlinePaperSizeId(matched.id.toString());
+        setInlineCustomPaperSize("");
+      } else {
+        setInlinePaperSizeId(
+          order.paperSizeId ? order.paperSizeId.toString() : "custom",
+        );
+        setInlineCustomPaperSize(order.customPaperSize || "");
+      }
     } else if (field === "notes") {
       setInlineNotes(order.notes || "");
     } else if (field === "basisWeight") {
@@ -1465,10 +1488,16 @@ export default function ProofingOrderDetailPage() {
     if (!order || order.status === "completed") return;
     setEditingField("all");
     setInlineTotalQuantity((order.totalQuantity ?? 0).toString());
-    setInlinePaperSizeId(
-      order.paperSizeId ? order.paperSizeId.toString() : "custom",
-    );
-    setInlineCustomPaperSize(order.customPaperSize || "");
+    const matched = order.paperSizeId ? null : findMatchingPaperSize(order.customPaperSize);
+    if (matched) {
+      setInlinePaperSizeId(matched.id.toString());
+      setInlineCustomPaperSize("");
+    } else {
+      setInlinePaperSizeId(
+        order.paperSizeId ? order.paperSizeId.toString() : "custom",
+      );
+      setInlineCustomPaperSize(order.customPaperSize || "");
+    }
     setInlineNotes(order.notes || "");
     setInlineBasisWeight((order.basisWeight ?? "").toString());
     setInlineRollWidth((order.rollWidth ?? "").toString());

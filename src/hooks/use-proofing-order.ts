@@ -993,7 +993,9 @@ export const usePaperSizes = () => {
   return useQuery({
     queryKey: ["paper-sizes"],
     queryFn: async () => {
-      const response = await apiRequest.get(API_SUFFIX.PAPER_SIZES);
+      const response = await apiRequest.get(API_SUFFIX.PAPER_SIZES, {
+        params: { pageSize: 1000 }
+      });
       const paginated = PaperSizeResponseIPaginateSchema.parse(response.data);
       // Return items array, or empty array if items is null/undefined
       return paginated.items || [];
