@@ -461,6 +461,20 @@ export const MENU_ITEMS: MenuItem[] = [
     ],
   },
   {
+    id: "current-stock",
+    title: "Tồn kho nguyên vật liệu",
+    icon: PackageSearch,
+    path: ROUTE_PATHS.REPORTS.INVENTORY.CURRENT_STOCK,
+    allowedRoles: [
+      ROLE.ADMIN,
+      ROLE.MANAGER,
+      ROLE.PRODUCTION_LEAD,
+      ROLE.PRODUCTION,
+      ROLE.ACCOUNTING,
+      ROLE.ACCOUNTING_LEAD,
+    ],
+  },
+  {
     id: "production-stock",
     title: "Tồn kho sản xuất",
     icon: PackageSearch,
@@ -533,7 +547,7 @@ export const MENU_ITEMS: MenuItem[] = [
     id: "system",
     title: "Quản lý hệ thống",
     icon: Settings,
-    allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
+    allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.ACCOUNTING, ROLE.ACCOUNTING_LEAD],
     children: [
       {
         id: "admin-users",
@@ -554,7 +568,7 @@ export const MENU_ITEMS: MenuItem[] = [
         title: "Cấu hình vật tư",
         icon: Layers,
         path: ROUTE_PATHS.ADMIN.MATERIAL_HIERARCHY,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER],
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.ACCOUNTING, ROLE.ACCOUNTING_LEAD],
       },
 
       // {
@@ -576,7 +590,7 @@ export const MENU_ITEMS: MenuItem[] = [
         title: "Định mức chất liệu",
         icon: FileSpreadsheet,
         path: ROUTE_PATHS.MATERIALS.SPECS,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PRODUCTION, ROLE.PRODUCTION_LEAD],
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.PRODUCTION, ROLE.PRODUCTION_LEAD, ROLE.ACCOUNTING, ROLE.ACCOUNTING_LEAD],
       },
     ],
   },

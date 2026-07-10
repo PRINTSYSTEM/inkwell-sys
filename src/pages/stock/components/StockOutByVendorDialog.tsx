@@ -108,7 +108,11 @@ function MaterialSelector({
             placeholder="Tìm vật tư..."
             className="h-9 w-full bg-transparent text-xs"
           />
-          <CommandList className="max-h-[220px]">
+          <CommandList 
+            className="max-h-[220px]"
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+          >
             <CommandEmpty>Không tìm thấy vật tư nào.</CommandEmpty>
             <CommandGroup>
               {materials.map((m) => (
@@ -182,7 +186,11 @@ function JobCodeSelector({
             placeholder="Tìm mã bài..."
             className="h-9 w-full bg-transparent text-xs border-none focus:ring-0 focus-visible:ring-0"
           />
-          <CommandList className="max-h-[220px]">
+          <CommandList 
+            className="max-h-[220px]"
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+          >
             <CommandEmpty>Không tìm thấy mã bài nào.</CommandEmpty>
             <CommandGroup>
               {productionOrders.map((po) => (
