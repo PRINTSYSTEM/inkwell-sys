@@ -56,6 +56,12 @@ export function CreateMaterialDirectDialog({
     return vendorsData?.find((v) => String(v.id) === selectedVendorId) || null;
   }, [selectedVendorId, vendorsData]);
 
+  const isAuxiliaryVendor = useMemo(() => {
+    if (!selectedVendor) return false;
+    const type = selectedVendor.vendorType?.toLowerCase() || "";
+    return ["solvent", "glue", "ink", "material", "accessory"].includes(type);
+  }, [selectedVendor]);
+
   // Master Data hooks
   const { data: familiesResp } = useMaterialFamilies({ page: 1, size: 1000 });
   const { data: templatesResp } = useMaterialTypeList({ pageSize: 100 });
@@ -173,9 +179,10 @@ export function CreateMaterialDirectDialog({
   }, [currentFamilyObj]);
 
   const isRollType = useMemo(() => {
-    const unitLower = unit.toLowerCase().trim();
-    const isRollUnit = unitLower === "cuộn" || unitLower === "cuon" || unitLower === "mét" || unitLower === "met" || unitLower === "m";
-    if (isRollUnit) return true;
+    const unitLower = (unit || "").toLowerCase().trim();
+    if (unitLower) {
+      return unitLower === "cuộn" || unitLower === "cuon" || unitLower === "mét" || unitLower === "met" || unitLower === "m";
+    }
 
     if (!currentTemplate) return false;
     const nameLower = currentTemplate.name?.toLowerCase() || "";
@@ -252,11 +259,27 @@ export function CreateMaterialDirectDialog({
 
   // Filter templates: only show those linked to the selected Vendor in the catalogs
   const filteredTemplates = useMemo(() => {
+    if (isAuxiliaryVendor) {
+      const vendorTypeUpper = selectedVendor?.vendorType?.toUpperCase() || "";
+      const matched = templates.filter((t: any) => {
+        const family = families.find((f) => f.id === t.materialFamilyId);
+        const familyCodeUpper = family?.code?.toUpperCase() || "";
+        return familyCodeUpper === vendorTypeUpper;
+      });
+      if (matched.length > 0) return matched;
+
+      const materialTemplates = templates.filter((t: any) => {
+        const family = families.find((f) => f.id === t.materialFamilyId);
+        return family?.code?.toUpperCase() === "MATERIAL";
+      });
+      return materialTemplates.length > 0 ? materialTemplates : templates;
+    }
+
     if (!selectedVendor?.id || !catalogs.length) return [];
     return templates.filter((t: any) =>
       catalogs.some((c) => c.materialTypeId === t.id)
     );
-  }, [templates, selectedVendor, catalogs]);
+  }, [templates, selectedVendor, catalogs, isAuxiliaryVendor, families]);
 
   // Automatically pre-select first template in filtered templates
   useEffect(() => {
@@ -273,14 +296,29 @@ export function CreateMaterialDirectDialog({
     return family.allowedUnits;
   }, [selectedFamilyId, families]);
 
+  const isPeType = useMemo(() => {
+    if (!currentTemplate) return false;
+    const nameLower = (currentTemplate.name || "").toLowerCase();
+    const codeLower = (currentTemplate.code || "").toLowerCase();
+    return (
+      nameLower.includes("pe") ||
+      codeLower.includes("pe") ||
+      nameLower.includes("màng") ||
+      nameLower.includes("mang")
+    );
+  }, [currentTemplate]);
+
   const unitsOptions = useMemo(() => {
+    if (isPeType) {
+      return ["tờ", "m"];
+    }
     const defaultUnits = ["sheet", "roll", "kg", "m", "box", "pack", "piece", "m2"];
     const rawOptions = allowedUnitsOptions && allowedUnitsOptions.length > 0
       ? [...allowedUnitsOptions, ...defaultUnits]
       : defaultUnits;
     const mapped = rawOptions.map(opt => translateUnit(opt));
     return Array.from(new Set(mapped));
-  }, [allowedUnitsOptions]);
+  }, [allowedUnitsOptions, isPeType]);
 
 
 
@@ -305,8 +343,8 @@ export function CreateMaterialDirectDialog({
 
   // Filter dynamic spec templates: exclude width, length, and grain templates from the dropdowns list
   const visibleSpecTemplates = useMemo(() => {
-    return specTemplates?.filter((t) => 
-      !isWidthSpec(t.name, t.key) && 
+    return specTemplates?.filter((t) =>
+      !isWidthSpec(t.name, t.key) &&
       !isLengthSpec(t.name, t.key) &&
       !t.name.toLowerCase().includes("thớ") &&
       !t.name.toLowerCase().includes("grain") &&
@@ -325,12 +363,71 @@ export function CreateMaterialDirectDialog({
       return;
     }
 
+    if (isAuxiliaryVendor) {
+      if (!selectedTemplateId) {
+        toast.error("Vui lòng chọn loại vật tư!");
+        return;
+      }
+      if (!name.trim()) {
+        toast.error("Vui lòng nhập tên vật tư!");
+        return;
+      }
+      if (!unit.trim()) {
+        toast.error("Vui lòng nhập đơn vị tính!");
+        return;
+      }
+      if (quantity <= 0) {
+        toast.error("Vui lòng nhập số lượng lớn hơn 0!");
+        return;
+      }
+      if (unitPrice <= 0) {
+        toast.error("Vui lòng nhập đơn giá lớn hơn 0!");
+        return;
+      }
+
+      let toastId: string | number | undefined;
+      try {
+        toastId = toast.loading("Đang ghi nhận công nợ vật tư phụ trợ...");
+        const payload = {
+          vendorId: selectedVendor.id,
+          stockInDate: new Date().toISOString(),
+          items: [
+            {
+              materialTypeId: selectedTemplateId,
+              name: name.trim(),
+              quantity: quantity,
+              unit: unit.trim(),
+              unitPrice: unitPrice,
+              lineAmount: quantity * unitPrice,
+              note: notes?.trim() || undefined,
+            }
+          ]
+        };
+
+        const res = await apiRequest.post<any>(API_SUFFIX.STOCK_IN_AUXILIARY, payload);
+
+        // Invalidate queries to refresh lists
+        queryClient.invalidateQueries({ queryKey: ["materials"] });
+        queryClient.invalidateQueries({ queryKey: ["stock-ins"] });
+
+        if (toastId) toast.dismiss(toastId);
+        toast.success(`Đã nhập vật tư "${name}" và ghi nhận công nợ NCC thành công!`);
+
+        onOpenChange(false);
+        refetch();
+      } catch (err: any) {
+        if (toastId) toast.dismiss(toastId);
+        const errMsg = err.response?.data?.message || err.message || "Đã xảy ra lỗi!";
+        toast.error(`Thực hiện thất bại: ${errMsg}`);
+        console.error(err);
+      }
+      return;
+    }
+
     if (!name.trim()) {
       toast.error("Vui lòng nhập tên vật tư!");
       return;
     }
-
-
 
     if (!selectedTemplateId) {
       toast.error("Vui lòng chọn định mức chất liệu!");
@@ -500,197 +597,284 @@ export function CreateMaterialDirectDialog({
           </DialogHeader>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 text-xs max-h-[75vh] overflow-y-auto px-1 py-1">
-            {/* COLUMN 1: Basic specifications */}
-            <div className="space-y-3.5">
-              {/* Chọn loại chất liệu */}
-              <div className="space-y-1.5">
-                <Label className="font-semibold text-slate-700">Chọn loại chất liệu</Label>
-                <Select value={selectedTemplateId?.toString() || ""} onValueChange={(val) => setSelectedTemplateId(Number(val))}>
-                  <SelectTrigger className="h-10 text-xs" disabled={filteredTemplates.length === 0}>
-                    <SelectValue placeholder={filteredTemplates.length === 0 ? "Nhà cung cấp chưa có chất liệu liên kết nào" : "Chọn định mức chất liệu..."} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredTemplates.map((t: any) => (
-                      <SelectItem key={t.id} value={t.id.toString()}>{t.name} ({t.code})</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            {isAuxiliaryVendor ? (
+              <>
+                {/* COLUMN 1: Basic auxiliary specifications */}
+                <div className="space-y-3.5">
+                  {/* Chọn loại vật tư */}
+                  <div className="space-y-1.5">
+                    <Label className="font-semibold text-slate-700">Chọn loại vật tư *</Label>
+                    <Select value={selectedTemplateId?.toString() || ""} onValueChange={(val) => setSelectedTemplateId(Number(val))}>
+                      <SelectTrigger className="h-10 text-xs" disabled={filteredTemplates.length === 0}>
+                        <SelectValue placeholder={filteredTemplates.length === 0 ? "Chưa có loại vật tư liên kết" : "Chọn loại vật tư..."} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {filteredTemplates.map((t: any) => (
+                          <SelectItem key={t.id} value={t.id.toString()}>{t.name} ({t.code})</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              {/* Tên vật tư (SKU) */}
-              <div className="space-y-1.5">
-                <Label className="font-semibold text-slate-700">Tên vật tư (SKU) <span className="text-red-500">*</span></Label>
-                <Input
-                  type="text"
-                  placeholder="Nhập tên vật tư..."
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="h-10 text-xs font-bold text-slate-900 dark:text-slate-100"
-                  required
-                />
-              </div>
+                  {/* Tên vật tư */}
+                  <div className="space-y-1.5">
+                    <Label className="font-semibold text-slate-700">Tên vật tư (SKU) *</Label>
+                    <Input
+                      type="text"
+                      placeholder="Nhập tên vật tư..."
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="h-10 text-xs font-bold text-slate-900 dark:text-slate-100"
+                      required
+                    />
+                  </div>
 
-              {/* Định lượng (GSM) */}
-              {selectedTemplateId && hasSpecs && (
-                <div className="space-y-1.5 animate-in fade-in duration-200">
-                  <Label className="font-semibold text-slate-700">Định lượng (GSM) <span className="text-red-500">*</span></Label>
-                  <Select
-                    value={basisWeight ? basisWeight.toString() : ""}
-                    onValueChange={(v) => setBasisWeight(Number(v))}
-                  >
-                    <SelectTrigger className="h-10 text-xs">
-                      <SelectValue placeholder="Chọn định lượng..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {materialSpecs.map((spec) => (
-                        <SelectItem
-                          key={spec.id}
-                          value={spec.basisWeight?.toString() || ""}
-                          className="text-xs cursor-pointer"
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <span>{spec.name || `${spec.basisWeight} ${spec.defaultUnit || "gsm"}`}</span>
-                            {spec.isDefault && (
-                              <span className="ml-2 text-[10px] bg-amber-50 text-amber-500 border border-amber-300 rounded px-1 scale-90 shrink-0">
-                                Mặc định
-                              </span>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {/* Điền các thuộc tính động (T5/T6) */}
-              {visibleSpecTemplates && visibleSpecTemplates.length > 0 && (
-                <div className="space-y-3 border border-slate-100 rounded-lg p-3 bg-slate-50/50 animate-in fade-in duration-200">
-                  <span className="font-semibold text-indigo-700 text-xs block mb-1">Thông số kỹ thuật của nhóm</span>
-                  <div className="grid grid-cols-2 gap-3">
-                    {visibleSpecTemplates.map((t) => {
-                      const values = getValuesForSpecTemplate(t.id);
-                      return (
-                        <div key={t.id} className="space-y-1.5">
-                          <Label className="text-slate-600 font-medium">
-                            {t.name} {t.isRequired && <span className="text-red-500">*</span>}
-                          </Label>
-                          <Select
-                            value={specSelections[t.id.toString()] || ""}
-                            onValueChange={(val) => {
-                              setSpecSelections((prev) => ({ ...prev, [t.id.toString()]: val }));
-                              if (t.key.toLowerCase().includes("gsm") || t.name.toLowerCase().includes("định lượng") || t.name.toLowerCase().includes("dinh luong")) {
-                                const numericVal = parseFloat(val);
-                                if (!isNaN(numericVal)) {
-                                  setBasisWeight(numericVal);
-                                }
-                              }
-                            }}
-                          >
-                            <SelectTrigger className="h-9 text-xs bg-white">
-                              <SelectValue placeholder={`Chọn ${t.name}...`} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {values.map((v: any) => (
-                                <SelectItem key={v.id} value={v.value}>{v.value}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      );
-                    })}
+                  {/* Đơn vị tính */}
+                  <div className="space-y-1.5">
+                    <Label className="font-semibold text-slate-700">Đơn vị tính *</Label>
+                    <Input
+                      type="text"
+                      placeholder="Nhập đơn vị (tấm, kg, lít, cái...)"
+                      value={unit}
+                      onChange={(e) => setUnit(e.target.value)}
+                      className="h-10 text-xs"
+                      required
+                    />
                   </div>
                 </div>
-              )}
 
-              {/* Đơn vị tính */}
-              <div className="space-y-1.5 animate-in fade-in duration-200">
-                <Label className="font-semibold text-slate-700">Đơn vị tính</Label>
-                <Select value={unit} onValueChange={setUnit}>
-                  <SelectTrigger className="h-10 text-xs">
-                    <SelectValue placeholder="Chọn đơn vị..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {unitsOptions.map((opt) => (
-                      <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+                {/* COLUMN 2: Quantities, pricing and notes */}
+                <div className="space-y-3.5">
+                  {/* Số lượng */}
+                  <div className="space-y-1.5">
+                    <Label className="font-semibold text-slate-700">Số lượng nhập *</Label>
+                    <Input
+                      type="number"
+                      placeholder="Nhập số lượng..."
+                      value={quantity || ""}
+                      onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
+                      className="h-10 text-xs font-mono font-bold text-indigo-600 focus-visible:ring-indigo-500"
+                      required
+                    />
+                  </div>
 
-            {/* COLUMN 2: Pricing, Quantities and Sizes */}
-            <div className="space-y-3.5">
-              {/* Kích thước (Tầng 8) */}
-              {!isGroup3 && (
-                <div className="space-y-1.5 animate-in fade-in duration-200">
-                  <Label className="font-semibold text-slate-700">
-                    {isRollType ? "Khổ cuộn vật tư" : "Kích thước khổ vật tư"}
-                  </Label>
-                  <div className={isRollType ? "grid grid-cols-1" : "grid grid-cols-2 gap-3"}>
-                    <div className="space-y-1">
-                      <Input
-                        type="number"
-                        placeholder={isRollType ? "Khổ cuộn / Chiều rộng" : "Chiều rộng"}
-                        value={width || ""}
-                        onChange={(e) => setWidth(parseFloat(e.target.value) || 0)}
-                        className="h-10 text-xs font-mono text-center"
-                      />
-                      <span className="text-[10px] text-slate-400 block text-center mt-0.5">
-                        {isRollType ? "Khổ cuộn/Chiều rộng (cm/mm)" : "Chiều rộng (cm/mm)"}
-                      </span>
+                  {/* Đơn giá nhập */}
+                  <div className="space-y-1.5">
+                    <Label className="font-semibold text-slate-700">Đơn giá nhập (đ) *</Label>
+                    <Input
+                      type="number"
+                      placeholder="Nhập đơn giá..."
+                      value={unitPrice || ""}
+                      onChange={(e) => setUnitPrice(parseFloat(e.target.value) || 0)}
+                      className="h-10 text-xs font-mono"
+                      required
+                    />
+                  </div>
+
+                  {/* Thành tiền */}
+                  <div className="space-y-1.5">
+                    <Label className="font-semibold text-slate-700">Thành tiền công nợ</Label>
+                    <div className="h-10 bg-slate-50 border border-slate-200 rounded-lg px-3 flex items-center text-xs font-mono font-bold text-slate-750">
+                      {((quantity || 0) * (unitPrice || 0)).toLocaleString()} đ
                     </div>
-                    {!isRollType && (
-                      <div className="space-y-1">
-                        <Input
-                          type="number"
-                          placeholder="Chiều dài"
-                          value={length || ""}
-                          onChange={(e) => setLength(parseFloat(e.target.value) || 0)}
-                          className="h-10 text-xs font-mono text-center"
-                        />
-                        <span className="text-[10px] text-slate-400 block text-center mt-0.5">Chiều dài (cm/mm)</span>
-                      </div>
-                    )}
+                  </div>
+
+                  {/* Ghi chú */}
+                  <div className="space-y-1.5">
+                    <Label className="font-semibold text-slate-700">Ghi chú phiếu nhập</Label>
+                    <Textarea
+                      placeholder="Diễn giải thêm..."
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      className="text-xs min-h-[90px]"
+                    />
                   </div>
                 </div>
-              )}
+              </>
+            ) : (
+              <>
+                {/* COLUMN 1: Basic specifications */}
+                <div className="space-y-3.5">
+                  {/* Chọn loại chất liệu */}
+                  <div className="space-y-1.5">
+                    <Label className="font-semibold text-slate-700">Chọn loại chất liệu</Label>
+                    <Select value={selectedTemplateId?.toString() || ""} onValueChange={(val) => setSelectedTemplateId(Number(val))}>
+                      <SelectTrigger className="h-10 text-xs" disabled={filteredTemplates.length === 0}>
+                        <SelectValue placeholder={filteredTemplates.length === 0 ? "Nhà cung cấp chưa có chất liệu liên kết nào" : "Chọn định mức chất liệu..."} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {filteredTemplates.map((t: any) => (
+                          <SelectItem key={t.id} value={t.id.toString()}>{t.name} ({t.code})</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              {/* Đơn giá nhập */}
-              <div className="space-y-1.5 animate-in fade-in duration-200">
-                <Label className="font-semibold text-slate-700">Đơn giá nhập (đ)</Label>
-                <Input
-                  type="number"
-                  placeholder="Nhập giá..."
-                  value={unitPrice || ""}
-                  onChange={(e) => setUnitPrice(parseFloat(e.target.value) || 0)}
-                  className="h-10 text-xs font-mono"
-                />
-              </div>
+                  {/* Tên vật tư (SKU) */}
+                  <div className="space-y-1.5">
+                    <Label className="font-semibold text-slate-700">Tên vật tư (SKU) <span className="text-red-500">*</span></Label>
+                    <Input
+                      type="text"
+                      placeholder="Nhập tên vật tư..."
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="h-10 text-xs font-bold text-slate-900 dark:text-slate-100"
+                      required
+                    />
+                  </div>
 
-              {/* Số lượng ban đầu */}
-              <div className="space-y-1.5">
-                <Label className="font-semibold text-slate-700">Số lượng nhập kho đầu kỳ</Label>
-                <Input
-                  type="number"
-                  placeholder="Để trống nếu không có tồn kho ban đầu..."
-                  value={quantity || ""}
-                  onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
-                  className="h-10 text-xs font-mono font-bold text-indigo-600 focus-visible:ring-indigo-500"
-                />
-              </div>
+                  {/* Định lượng (GSM) */}
+                  {selectedTemplateId && hasSpecs && (
+                    <div className="space-y-1.5 animate-in fade-in duration-200">
+                      <Label className="font-semibold text-slate-700">Định lượng (GSM) <span className="text-red-500">*</span></Label>
+                      <Select
+                        value={basisWeight ? basisWeight.toString() : ""}
+                        onValueChange={(v) => setBasisWeight(Number(v))}
+                      >
+                        <SelectTrigger className="h-10 text-xs">
+                          <SelectValue placeholder="Chọn định lượng..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {materialSpecs.map((spec) => (
+                            <SelectItem
+                              key={spec.id}
+                              value={spec.basisWeight?.toString() || ""}
+                              className="text-xs cursor-pointer"
+                            >
+                              <div className="flex items-center justify-between w-full">
+                                <span>{spec.name || `${spec.basisWeight} ${spec.defaultUnit || "gsm"}`}</span>
+                                {spec.isDefault && (
+                                  <span className="ml-2 text-[10px] bg-amber-50 text-amber-500 border border-amber-300 rounded px-1 scale-90 shrink-0">
+                                    Mặc định
+                                  </span>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
-              {/* Ghi chú */}
-              <div className="space-y-1.5">
-                <Label className="font-semibold text-slate-700">Ghi chú phiếu nhập</Label>
-                <Textarea
-                  placeholder="Diễn giải thêm..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="text-xs min-h-[90px]"
-                />
-              </div>
-            </div>
+                  {/* Điền các thuộc tính động (T5/T6) */}
+                  {visibleSpecTemplates && visibleSpecTemplates.length > 0 && (
+                    <div className="space-y-3 border border-slate-100 rounded-lg p-3 bg-slate-50/50 animate-in fade-in duration-200">
+                      <span className="font-semibold text-indigo-700 text-xs block mb-1">Thông số kỹ thuật của nhóm</span>
+                      <div className="grid grid-cols-2 gap-3">
+                        {visibleSpecTemplates.map((t) => {
+                          const values = getValuesForSpecTemplate(t.id);
+                          return (
+                            <div key={t.id} className="space-y-1.5">
+                              <Label className="text-slate-600 font-medium">
+                                {t.name} {t.isRequired && <span className="text-red-500">*</span>}
+                              </Label>
+                              <Select
+                                value={specSelections[t.id.toString()] || ""}
+                                onValueChange={(val) => {
+                                  setSpecSelections((prev) => ({ ...prev, [t.id.toString()]: val }));
+                                  if (t.key.toLowerCase().includes("gsm") || t.name.toLowerCase().includes("định lượng") || t.name.toLowerCase().includes("dinh luong")) {
+                                    const numericVal = parseFloat(val);
+                                    if (!isNaN(numericVal)) {
+                                      setBasisWeight(numericVal);
+                                    }
+                                  }
+                                }}
+                              >
+                                <SelectTrigger className="h-9 text-xs bg-white">
+                                  <SelectValue placeholder={`Chọn ${t.name}...`} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {values.map((v: any) => (
+                                    <SelectItem key={v.id} value={v.value}>{v.value}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Đơn vị tính */}
+                  <div className="space-y-1.5 animate-in fade-in duration-200">
+                    <Label className="font-semibold text-slate-700">Đơn vị tính</Label>
+                    <Select value={unit} onValueChange={setUnit}>
+                      <SelectTrigger className="h-10 text-xs">
+                        <SelectValue placeholder="Chọn đơn vị..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {unitsOptions.map((opt) => (
+                          <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {/* COLUMN 2: Pricing, Quantities and Sizes */}
+                <div className="space-y-3.5">
+                  {/* Kích thước (Tầng 8) */}
+                  {!isGroup3 && (
+                    <div className="space-y-1.5 animate-in fade-in duration-200">
+                      <Label className="font-semibold text-slate-700">
+                        {isRollType ? "Khổ cuộn vật tư" : "Kích thước khổ vật tư"}
+                      </Label>
+                      <div className={isRollType ? "grid grid-cols-1" : "grid grid-cols-2 gap-3"}>
+                        <div className="space-y-1">
+                          <Input
+                            type="number"
+                            placeholder={isRollType ? "Khổ cuộn / Chiều rộng" : "Chiều rộng"}
+                            value={width || ""}
+                            onChange={(e) => setWidth(parseFloat(e.target.value) || 0)}
+                            className="h-10 text-xs font-mono text-center"
+                          />
+                          <span className="text-[10px] text-slate-400 block text-center mt-0.5">
+                            {isRollType ? "Khổ cuộn/Chiều rộng (cm/mm)" : "Chiều rộng (cm/mm)"}
+                          </span>
+                        </div>
+                        {!isRollType && (
+                          <div className="space-y-1">
+                            <Input
+                              type="number"
+                              placeholder="Chiều dài"
+                              value={length || ""}
+                              onChange={(e) => setLength(parseFloat(e.target.value) || 0)}
+                              className="h-10 text-xs font-mono text-center"
+                            />
+                            <span className="text-[10px] text-slate-400 block text-center mt-0.5">Chiều dài (cm/mm)</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+
+                  {/* Số lượng ban đầu */}
+                  <div className="space-y-1.5">
+                    <Label className="font-semibold text-slate-700">Số lượng nhập kho đầu kỳ</Label>
+                    <Input
+                      type="number"
+                      placeholder="Để trống nếu không có tồn kho ban đầu..."
+                      value={quantity || ""}
+                      onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
+                      className="h-10 text-xs font-mono font-bold text-indigo-600 focus-visible:ring-indigo-500"
+                    />
+                  </div>
+
+                  {/* Ghi chú */}
+                  <div className="space-y-1.5">
+                    <Label className="font-semibold text-slate-700">Ghi chú phiếu nhập</Label>
+                    <Textarea
+                      placeholder="Diễn giải thêm..."
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      className="text-xs min-h-[90px]"
+                    />
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           <DialogFooter className="pt-2 border-t border-slate-100 gap-2 sm:gap-0">
@@ -704,9 +888,9 @@ export function CreateMaterialDirectDialog({
             </Button>
             <Button
               type="submit"
-              className="rounded-md text-xs h-10 bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer border-none"
+              className="rounded-md text-xs h-10 bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer border-none font-bold"
             >
-              Tạo & Nhập kho SKU
+              {isAuxiliaryVendor ? "Tạo & Nhập ghi công nợ" : "Tạo vật tư"}
             </Button>
           </DialogFooter>
         </form>

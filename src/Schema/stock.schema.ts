@@ -173,3 +173,23 @@ export const StockCardResponseSchema =
   GenStockCardResponseSchema?.passthrough() || z.any();
 export type StockCardResponse = z.infer<typeof StockCardResponseSchema>;
 
+// ===== CreateAuxiliaryStockInRequest =====
+export const AuxiliaryStockInItemRequestSchema = z.object({
+  materialTypeId: z.number().int(),
+  name: z.string(),
+  quantity: z.number(),
+  unit: z.string(),
+  unitPrice: z.number(),
+  lineAmount: z.number(),
+  note: z.string().nullable().optional(),
+});
+export type AuxiliaryStockInItemRequest = z.infer<typeof AuxiliaryStockInItemRequestSchema>;
+
+export const CreateAuxiliaryStockInRequestSchema = z.object({
+  vendorId: z.number().int(),
+  stockInDate: z.string(),
+  items: z.array(AuxiliaryStockInItemRequestSchema),
+});
+export type CreateAuxiliaryStockInRequest = z.infer<typeof CreateAuxiliaryStockInRequestSchema>;
+
+

@@ -180,7 +180,7 @@ export default function StockOutListPage() {
 
     switch (confirmDialog.type) {
       case "complete":
-        completeStockOut(confirmDialog.id, {
+        completeStockOut({ id: confirmDialog.id }, {
           onSuccess: () => {
             toast.success("Đã hoàn thành phiếu xuất kho");
             setConfirmDialog({ ...confirmDialog, open: false });

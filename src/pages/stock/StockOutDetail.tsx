@@ -122,6 +122,12 @@ export default function StockOutDetailPage() {
   const { mutate: cancelStockOut, isPending: isCancelling } = useCancelStockOut();
   const { mutate: deleteStockOut, isPending: isDeleting } = useDeleteStockOut();
 
+  // Waste dialog state
+  const [wasteDialog, setWasteDialog] = useState<{
+    open: boolean;
+    wastes: Array<{ stockOutItemId: number; itemName: string; wasteQuantity: number }>;
+  }>({ open: false, wastes: [] });
+
   // Confirm dialog states
   const [confirmDialog, setConfirmDialog] = useState<{
     open: boolean;
@@ -345,11 +351,38 @@ export default function StockOutDetailPage() {
 
   const handleComplete = () => {
     if (!stockOut?.id) return;
-    completeStockOut(stockOut.id, {
-      onSuccess: () => {
-        toast.success("Đã hoàn thành phiếu xuất kho");
-      },
-    });
+    const items = stockOut.items || [];
+    const cuonItems = items.filter((item: any) => item.cutLength != null);
+    if (cuonItems.length > 0) {
+      setWasteDialog({
+        open: true,
+        wastes: cuonItems.map((item: any) => ({
+          stockOutItemId: item.id,
+          itemName: item.itemName || "—",
+          wasteQuantity: 0,
+        })),
+      });
+    } else {
+      completeStockOut({ id: stockOut.id }, {
+        onSuccess: () => {
+          toast.success("Đã hoàn thành phiếu xuất kho");
+        },
+      });
+    }
+  };
+
+  const handleCompleteWithWaste = () => {
+    if (!stockOut?.id) return;
+    const wasteUpdates = wasteDialog.wastes.filter((w) => w.wasteQuantity > 0);
+    completeStockOut(
+      { id: stockOut.id, wasteUpdates: wasteUpdates.length > 0 ? wasteUpdates : undefined },
+      {
+        onSuccess: () => {
+          toast.success("Đã hoàn thành phiếu xuất kho");
+          setWasteDialog({ ...wasteDialog, open: false });
+        },
+      }
+    );
   };
 
   const handleCancel = () => {
@@ -383,7 +416,7 @@ export default function StockOutDetailPage() {
 
     switch (confirmDialog.type) {
       case "complete":
-        completeStockOut(stockOut.id, {
+        completeStockOut({ id: stockOut.id }, {
           onSuccess: () => {
             toast.success("Đã hoàn thành phiếu xuất kho");
             setConfirmDialog({ ...confirmDialog, open: false });
@@ -839,6 +872,12 @@ export default function StockOutDetailPage() {
                         <th className="border border-black font-bold text-right py-2.5 px-2 w-28 text-slate-900 print:text-black">
                           SỐ LƯỢNG
                         </th>
+                        <th className="border border-black font-bold text-center py-2.5 px-2 w-24 text-slate-900 print:text-black">
+                          KT cắt (cm)
+                        </th>
+                        <th className="border border-black font-bold text-right py-2.5 px-2 w-20 text-slate-900 print:text-black">
+                          Hao hụt
+                        </th>
                         <th className="border border-black font-bold text-left py-2.5 px-2 w-40 text-slate-900 print:text-black">
                           GHI CHÚ
                         </th>
@@ -848,7 +887,7 @@ export default function StockOutDetailPage() {
                       {items.length === 0 ? (
                         <tr className="border border-black">
                           <td
-                            colSpan={5}
+                            colSpan={7}
                             className="text-center py-8 text-slate-400 italic border border-black"
                           >
                             Không có vật tư nào trong phiếu xuất
@@ -868,7 +907,12 @@ export default function StockOutDetailPage() {
                                 {index + 1}
                               </td>
                               <td className="border border-black font-semibold text-slate-900 print:text-black py-2 px-2 leading-relaxed">
-                                {item.itemName || "—"}
+                                <div>{item.itemName || "—"}</div>
+                                {item.jobCode && (
+                                  <div className="text-[10px] font-mono text-slate-500 print:text-black mt-0.5">
+                                    Mã bài: {item.jobCode}
+                                  </div>
+                                )}
                                 {isOutsourcePrint && isCuonItem ? " (m tới)" : ""}
                               </td>
                               <td className="border border-black text-center py-2 px-1 text-slate-700 print:text-black">
@@ -890,6 +934,12 @@ export default function StockOutDetailPage() {
                                 ) : (
                                   (item.quantity || 0).toLocaleString("vi-VN")
                                 )}
+                              </td>
+                              <td className="border border-black text-center py-2 px-1 text-slate-700 print:text-black">
+                                {item.cutLength != null ? `${item.cutLength} × ${item.cutWidth}` : "—"}
+                              </td>
+                              <td className="border border-black text-right py-2 px-1 font-mono text-slate-700 print:text-black">
+                                {item.cutLength != null ? (item.wasteQuantity?.toLocaleString() ?? "0") : "—"}
                               </td>
                               <td className="border border-black py-2 px-2 text-slate-600 print:text-black leading-normal">
                                 {isEditing ? (
@@ -997,6 +1047,76 @@ export default function StockOutDetailPage() {
                 </>
               ) : (
                 confirmDialog.confirmText
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Waste Dialog */}
+      <Dialog open={wasteDialog.open} onOpenChange={(open) => setWasteDialog({ ...wasteDialog, open })}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full flex items-center justify-center bg-amber-100">
+                <AlertCircle className="h-5 w-5 text-amber-600" />
+              </div>
+              <DialogTitle className="text-lg font-semibold text-slate-900">
+                Nhập hao hụt (xuất cuộn)
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-sm text-slate-600 pt-2">
+              Phiếu xuất có vật tư cuộn. Nhập lượng hao hụt (m) cho từng vật tư nếu có.
+              <br />
+              <span className="text-amber-600 font-semibold">Không bắt buộc —</span> có thể bỏ qua nếu chưa biết hao hụt.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            {wasteDialog.wastes.map((w, i) => (
+              <div key={w.stockOutItemId} className="flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                <span className="text-xs font-semibold text-slate-700 min-w-[24px]">{i + 1}.</span>
+                <span className="text-xs text-slate-800 flex-1 font-medium">{w.itemName}</span>
+                <div className="flex items-center gap-1.5">
+                  <Input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={w.wasteQuantity}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value, 10);
+                      const newWastes = [...wasteDialog.wastes];
+                      newWastes[i] = { ...newWastes[i], wasteQuantity: isNaN(val) ? 0 : val };
+                      setWasteDialog({ ...wasteDialog, wastes: newWastes });
+                    }}
+                    className="h-8 w-20 text-xs font-mono font-bold text-amber-700 border-amber-200 focus-visible:ring-amber-500 rounded-lg text-right"
+                  />
+                  <span className="text-[10px] text-slate-500 font-medium">m</span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setWasteDialog({ ...wasteDialog, open: false })}
+              className="cursor-pointer transition-colors duration-200"
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              onClick={handleCompleteWithWaste}
+              disabled={isCompleting}
+              className="cursor-pointer transition-colors duration-200 bg-amber-600 hover:bg-amber-700"
+            >
+              {isCompleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Đang xử lý...
+                </>
+              ) : (
+                "Hoàn thành"
               )}
             </Button>
           </DialogFooter>

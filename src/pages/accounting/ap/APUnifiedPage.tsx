@@ -525,6 +525,21 @@ function VendorDetailRow({
     }
   );
 
+  const specHeaders = useMemo(() => reconData?.specHeaders ?? [], [reconData]);
+  const activeSpecs = useMemo(() => {
+    return specHeaders
+      .map((header, originalIdx) => ({ header, originalIdx }))
+      .filter(
+        (item) =>
+          item.header &&
+          item.header.trim() !== "" &&
+          !item.header.toLowerCase().includes("m²") &&
+          !item.header.toLowerCase().includes("m2") &&
+          !item.header.toLowerCase().includes("số lượng") &&
+          !item.header.toLowerCase().includes("so luong")
+      );
+  }, [specHeaders]);
+
   const formatDateShort = (dateStr: string | null | undefined) => {
     if (!dateStr) return "—";
     try {
@@ -558,7 +573,6 @@ function VendorDetailRow({
   }
 
   const rows = reconData?.rows ?? [];
-  const specHeaders = reconData?.specHeaders ?? [];
 
   if (rows.length === 0) {
     return (
@@ -579,10 +593,11 @@ function VendorDetailRow({
             <TableHead className="min-w-[150px] font-bold text-[10px] uppercase tracking-wider">Tên hàng/Diễn giải</TableHead>
 
             {/* Dynamic Spec Headers */}
-            {specHeaders.map((header, idx) => (
-              <TableHead key={idx} className="w-[90px] font-bold text-[10px] uppercase tracking-wider">{header}</TableHead>
+            {activeSpecs.map((spec, idx) => (
+              <TableHead key={idx} className="w-[90px] font-bold text-[10px] uppercase tracking-wider">{spec.header}</TableHead>
             ))}
 
+            <TableHead className="text-right w-[80px] font-bold text-[10px] uppercase tracking-wider">Số lượng</TableHead>
             <TableHead className="w-[60px] text-center font-bold text-[10px] uppercase tracking-wider">ĐVT</TableHead>
             <TableHead className="text-right w-[100px] font-bold text-[10px] uppercase tracking-wider">Đơn giá</TableHead>
             <TableHead className="text-right w-[110px] font-bold text-[10px] uppercase tracking-wider">Thành tiền</TableHead>
@@ -612,15 +627,23 @@ function VendorDetailRow({
                 </TableCell>
 
                 {/* Dynamic Spec Cells */}
-                {specHeaders.map((_, specIdx) => {
-                  const val = specIdx === 0 ? row.spec1 : specIdx === 1 ? row.spec2 : row.spec3;
+                {activeSpecs.map((spec, idx) => {
+                  const val = spec.originalIdx === 0 ? row.spec1 : spec.originalIdx === 1 ? row.spec2 : row.spec3;
                   return (
-                    <TableCell key={specIdx} className="py-2.5 text-xs text-slate-600 font-mono">
+                    <TableCell key={idx} className="py-2.5 text-xs text-slate-600 font-mono">
                       {val ?? "—"}
                     </TableCell>
                   );
                 })}
 
+                <TableCell className="text-right py-2.5 text-xs font-mono text-stone-600">
+                  {(() => {
+                    const qtyVal = row.quantity !== undefined && row.quantity !== null 
+                      ? row.quantity 
+                      : (row.amount && row.unitPrice ? row.amount / row.unitPrice : null);
+                    return qtyVal !== null ? qtyVal.toLocaleString() : "—";
+                  })()}
+                </TableCell>
                 <TableCell className="text-center py-2.5 text-xs text-stone-500">
                   {row.unit || "—"}
                 </TableCell>

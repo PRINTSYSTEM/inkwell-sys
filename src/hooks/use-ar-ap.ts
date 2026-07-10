@@ -1535,6 +1535,7 @@ export interface APReconciliationRow {
   spec1?: string | null;
   spec2?: string | null;
   spec3?: string | null;
+  quantity?: number | null;
   unit?: string | null;
   unitPrice?: number | null;
   amount?: number | null;

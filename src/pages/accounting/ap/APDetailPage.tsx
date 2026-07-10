@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -120,6 +120,21 @@ export default function APDetailPage() {
     },
     activeDetailTab === "reconciliation" && !!vendorId
   );
+
+  const specHeaders = useMemo(() => reconData?.specHeaders ?? [], [reconData]);
+  const activeSpecs = useMemo(() => {
+    return specHeaders
+      .map((header, originalIdx) => ({ header, originalIdx }))
+      .filter(
+        (item) =>
+          item.header &&
+          item.header.trim() !== "" &&
+          !item.header.toLowerCase().includes("m²") &&
+          !item.header.toLowerCase().includes("m2") &&
+          !item.header.toLowerCase().includes("số lượng") &&
+          !item.header.toLowerCase().includes("so luong")
+      );
+  }, [specHeaders]);
 
   const { mutate: exportLedger, loading: isExportingLedger } = useExportAPDetailLedger();
   const { mutate: exportRecon, loading: isExportingRecon } = useExportAPReconciliation();
@@ -552,96 +567,104 @@ export default function APDetailPage() {
                   </Alert>
                 </div>
               )}
-
               <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader className="bg-muted/10">
-                    <TableRow>
-                      <TableHead className="w-[110px] text-center">Ngày</TableHead>
-                      <TableHead className="w-[120px]">Số chứng từ</TableHead>
-                      <TableHead className="w-[100px]">Loại</TableHead>
-                      <TableHead className="min-w-[150px]">Tên hàng/Diễn giải</TableHead>
-                      
-                      {/* Dynamic Spec Headers */}
-                      {reconData?.specHeaders?.map((header, idx) => (
-                        <TableHead key={idx} className="w-[90px]">{header}</TableHead>
-                      ))}
-
-                      <TableHead className="w-[60px] text-center">ĐVT</TableHead>
-                      <TableHead className="text-right w-[100px]">Đơn giá</TableHead>
-                      <TableHead className="text-right w-[110px]">Thành tiền</TableHead>
-                      <TableHead className="text-right w-[80px]">VAT</TableHead>
-                      <TableHead className="text-right w-[110px]">Thanh toán</TableHead>
-                      <TableHead className="text-right w-[130px]">Dư sau GD</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoadingRecon ? (
-                      Array.from({ length: 4 }).map((_, i) => (
-                        <TableRow key={i}>
-                          {Array.from({ length: 10 + (reconData?.specHeaders?.length ?? 0) }).map((_, j) => (
-                            <TableCell key={j}>
-                              <Skeleton className="h-5 w-full" />
-                            </TableCell>
-                          ))}
-                        </TableRow>
-                      ))
-                    ) : !reconData?.rows || reconData.rows.length === 0 ? (
+                  <Table>
+                    <TableHeader className="bg-muted/10">
                       <TableRow>
-                        <TableCell colSpan={10 + (reconData?.specHeaders?.length ?? 0)} className="h-24 text-center text-muted-foreground italic text-sm">
-                          Không phát sinh đối chiếu nào trong kỳ đã chọn
-                        </TableCell>
+                        <TableHead className="w-[110px] text-center">Ngày</TableHead>
+                        <TableHead className="w-[120px]">Số chứng từ</TableHead>
+                        <TableHead className="w-[100px]">Loại</TableHead>
+                        <TableHead className="min-w-[150px]">Tên hàng/Diễn giải</TableHead>
+                        
+                        {/* Dynamic Spec Headers */}
+                        {activeSpecs.map((spec, idx) => (
+                          <TableHead key={idx} className="w-[90px]">{spec.header}</TableHead>
+                        ))}
+
+                        <TableHead className="text-right w-[80px]">Số lượng</TableHead>
+                        <TableHead className="w-[60px] text-center">ĐVT</TableHead>
+                        <TableHead className="text-right w-[100px]">Đơn giá</TableHead>
+                        <TableHead className="text-right w-[110px]">Thành tiền</TableHead>
+                        <TableHead className="text-right w-[80px]">VAT</TableHead>
+                        <TableHead className="text-right w-[110px]">Thanh toán</TableHead>
+                        <TableHead className="text-right w-[130px]">Dư sau GD</TableHead>
                       </TableRow>
-                    ) : (
-                      reconData.rows.map((row, index) => (
-                        <TableRow key={index} className="hover:bg-muted/10">
-                          <TableCell className="text-center font-medium text-xs text-muted-foreground">
-                            {row.date ? formatDate(row.date) : "—"}
-                          </TableCell>
-                          <TableCell className="font-mono text-xs font-semibold text-primary">
-                            {row.documentNumber || "—"}
-                          </TableCell>
-                          <TableCell className="text-xs font-medium">
-                            {row.documentType || "—"}
-                          </TableCell>
-                          <TableCell className="text-sm font-medium">
-                            {row.description || "—"}
-                          </TableCell>
-
-                          {/* Dynamic Spec Cells */}
-                          {reconData?.specHeaders?.map((_, specIdx) => {
-                            const val = specIdx === 0 ? row.spec1 : specIdx === 1 ? row.spec2 : row.spec3;
-                            return (
-                              <TableCell key={specIdx} className="text-xs text-slate-600">
-                                {val ?? "—"}
+                    </TableHeader>
+                    <TableBody>
+                      {isLoadingRecon ? (
+                        Array.from({ length: 4 }).map((_, i) => (
+                          <TableRow key={i}>
+                            {Array.from({ length: 11 + activeSpecs.length }).map((_, j) => (
+                              <TableCell key={j}>
+                                <Skeleton className="h-5 w-full" />
                               </TableCell>
-                            );
-                          })}
-
-                          <TableCell className="text-center text-xs text-slate-600">
-                            {row.unit || "—"}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold tabular-nums text-xs">
-                            {row.unitPrice !== null && row.unitPrice !== undefined ? formatCurrency(row.unitPrice) : "—"}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold tabular-nums text-xs">
-                            {row.amount !== null && row.amount !== undefined ? formatCurrency(row.amount) : "—"}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold tabular-nums text-xs text-muted-foreground">
-                            {row.vat !== null && row.vat !== undefined ? formatCurrency(row.vat) : "—"}
-                          </TableCell>
-                          <TableCell className="text-right font-semibold tabular-nums text-green-600 text-xs">
-                            {row.payment !== null && row.payment !== undefined ? formatCurrency(row.payment) : "—"}
-                          </TableCell>
-                          <TableCell className="text-right font-bold tabular-nums text-xs">
-                            {row.balanceAfter !== null && row.balanceAfter !== undefined ? formatCurrency(row.balanceAfter) : "—"}
+                            ))}
+                          </TableRow>
+                        ))
+                      ) : !reconData?.rows || reconData.rows.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={11 + activeSpecs.length} className="h-24 text-center text-muted-foreground italic text-sm">
+                            Không phát sinh đối chiếu nào trong kỳ đã chọn
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                      ) : (
+                        reconData.rows.map((row, index) => (
+                          <TableRow key={index} className="hover:bg-muted/10">
+                            <TableCell className="text-center font-medium text-xs text-muted-foreground">
+                              {row.date ? formatDate(row.date) : "—"}
+                            </TableCell>
+                            <TableCell className="font-mono text-xs font-semibold text-primary">
+                              {row.documentNumber || "—"}
+                            </TableCell>
+                            <TableCell className="text-xs font-medium">
+                              {row.documentType || "—"}
+                            </TableCell>
+                            <TableCell className="text-sm font-medium">
+                              {row.description || "—"}
+                            </TableCell>
+
+                            {/* Dynamic Spec Cells */}
+                            {activeSpecs.map((spec, idx) => {
+                              const val = spec.originalIdx === 0 ? row.spec1 : spec.originalIdx === 1 ? row.spec2 : row.spec3;
+                              return (
+                                <TableCell key={idx} className="text-xs text-slate-600">
+                                  {val ?? "—"}
+                                </TableCell>
+                              );
+                            })}
+
+                            <TableCell className="text-right text-xs font-semibold tabular-nums">
+                              {(() => {
+                                const qtyVal = row.quantity !== undefined && row.quantity !== null 
+                                  ? row.quantity 
+                                  : (row.amount && row.unitPrice ? row.amount / row.unitPrice : null);
+                                return qtyVal !== null ? qtyVal.toLocaleString() : "—";
+                              })()}
+                            </TableCell>
+                            <TableCell className="text-center text-xs text-slate-600">
+                              {row.unit || "—"}
+                            </TableCell>
+                            <TableCell className="text-right font-semibold tabular-nums text-xs">
+                              {row.unitPrice !== null && row.unitPrice !== undefined ? formatCurrency(row.unitPrice) : "—"}
+                            </TableCell>
+                            <TableCell className="text-right font-semibold tabular-nums text-xs">
+                              {row.amount !== null && row.amount !== undefined ? formatCurrency(row.amount) : "—"}
+                            </TableCell>
+                            <TableCell className="text-right font-semibold tabular-nums text-xs text-muted-foreground">
+                              {row.vat !== null && row.vat !== undefined ? formatCurrency(row.vat) : "—"}
+                            </TableCell>
+                            <TableCell className="text-right font-semibold tabular-nums text-green-600 text-xs">
+                              {row.payment !== null && row.payment !== undefined ? formatCurrency(row.payment) : "—"}
+                            </TableCell>
+                            <TableCell className="text-right font-bold tabular-nums text-xs">
+                              {row.balanceAfter !== null && row.balanceAfter !== undefined ? formatCurrency(row.balanceAfter) : "—"}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
             </CardContent>
           </Card>
         </TabsContent>

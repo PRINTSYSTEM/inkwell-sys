@@ -61,7 +61,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useCreateStockInFromVendor } from "@/hooks/use-stock";
+import { useCreateStockInFromVendor, useCreateAuxiliaryStockIn } from "@/hooks/use-stock";
 import type { StockInItemRequest } from "@/Schema/stock.schema";
 import { useVendors, useCreateVendor } from "@/hooks/use-vendor";
 import { useSupplierTypes } from "@/hooks/use-supplier-type";
@@ -74,6 +74,7 @@ import { CreateMaterialDialog } from "./components/CreateMaterialDialog";
 
 interface FormStockInItem extends StockInItemRequest {
   calculationMethod?: "m2" | "ram";
+  materialTypeId?: number;
 }
 
 
@@ -189,9 +190,19 @@ export default function StockInCreatePage() {
   const navigate = useNavigate();
   const {
     mutate: createStockInFromVendor,
-    isPending,
-    isSuccess,
+    isPending: isPendingStandard,
+    isSuccess: isSuccessStandard,
   } = useCreateStockInFromVendor();
+
+  const {
+    mutate: createAuxiliaryStockIn,
+    isPending: isPendingAuxiliary,
+    isSuccess: isSuccessAuxiliary,
+  } = useCreateAuxiliaryStockIn();
+
+  const isPending = isPendingStandard || isPendingAuxiliary;
+  const isSuccess = isSuccessStandard || isSuccessAuxiliary;
+
   const { data: vendorsData } = useVendors({ pageNumber: 1, pageSize: 100, isActive: true });
   const allVendors = (vendorsData?.items || []).filter(
     (v) =>
@@ -199,6 +210,26 @@ export default function StockInCreatePage() {
       v.vendorType !== "plate" &&
       v.vendorType !== "printing"
   );
+
+  const [formData, setFormData] = useState({
+    vendorId: null as number | null,
+    notes: "",
+    stockInDate: new Date().toISOString().slice(0, 16),
+    laborCost: undefined as number | undefined,
+  });
+
+  const selectedVendor = allVendors.find((v) => v.id === formData.vendorId);
+  const isAuxiliaryVendor = !!(
+    selectedVendor &&
+    [
+      "solvent",
+      "glue",
+      "ink",
+      "material",
+      "accessory"
+    ].includes(selectedVendor.vendorType?.toLowerCase() || "")
+  );
+
   const { data: supplierTypesResp } = useSupplierTypes({ page: 1, size: 1000 });
   const supplierTypes = supplierTypesResp?.items || [];
   const { mutate: createVendor, isPending: isCreatingVendor } =
@@ -212,12 +243,24 @@ export default function StockInCreatePage() {
   });
   const materialTypes = materialTypesData?.items || [];
 
-  const [formData, setFormData] = useState({
-    vendorId: null as number | null,
-    notes: "",
-    stockInDate: new Date().toISOString().slice(0, 16),
-    laborCost: undefined as number | undefined,
-  });
+  // Automatically update materialTypeId on items when vendor changes to auxiliary
+  useEffect(() => {
+    if (isAuxiliaryVendor && materialTypes.length > 0) {
+      const defaultType = materialTypes.find(t => 
+        t.code?.toUpperCase() === "MATERIAL" || 
+        t.name?.toUpperCase().includes("VẬT TƯ KHÁC") ||
+        t.name?.toUpperCase().includes("VAT TU KHAC")
+      );
+      const defaultId = defaultType?.id || materialTypes[0]?.id;
+      setItems((prev) => 
+        prev.map((item) => ({
+          ...item,
+          materialTypeId: item.materialTypeId || defaultId,
+          unit: item.unit || "cái",
+        }))
+      );
+    }
+  }, [formData.vendorId, isAuxiliaryVendor, materialTypes]);
 
   const [isCreateVendorDialogOpen, setIsCreateVendorDialogOpen] =
     useState(false);
@@ -269,17 +312,25 @@ export default function StockInCreatePage() {
   >({});
 
   const handleAddItem = () => {
+    const defaultType = materialTypes.find(t => 
+      t.code?.toUpperCase() === "MATERIAL" || 
+      t.name?.toUpperCase().includes("VẬT TƯ KHÁC") ||
+      t.name?.toUpperCase().includes("VAT TU KHAC")
+    );
+    const defaultId = defaultType?.id || materialTypes[0]?.id;
+
     setItems([
       ...items,
       {
         itemName: "",
         itemCode: "",
-        unit: "",
+        unit: isAuxiliaryVendor ? "cái" : "",
         quantity: 1,
         ramQuantity: undefined,
         unitPrice: undefined,
         notes: "",
         materialId: undefined,
+        materialTypeId: isAuxiliaryVendor ? defaultId : undefined,
         orderDetailId: undefined,
         lineKind: undefined,
         proofingOrderId: undefined,
@@ -310,27 +361,36 @@ export default function StockInCreatePage() {
       errors.itemName = "Tên vật phẩm phải có ít nhất 1 ký tự";
     }
 
-    const isItemRam = item.calculationMethod === "ram";
-
-    if (isItemRam) {
-      if (item.ramQuantity === undefined || item.ramQuantity === null) {
-        errors.quantity = "Số ram là bắt buộc";
-      } else if (isNaN(item.ramQuantity)) {
-        errors.quantity = "Số ram phải là số";
-      } else if (item.ramQuantity <= 0) {
-        errors.quantity = "Số ram phải lớn hơn 0";
-      } else if (item.ramQuantity > 2147483647) {
-        errors.quantity = "Số ram quá lớn";
+    if (isAuxiliaryVendor) {
+      if (!item.materialTypeId) {
+        errors.itemName = "Loại vật tư là bắt buộc";
+      }
+      if (item.quantity === undefined || item.quantity === null || isNaN(item.quantity) || item.quantity <= 0) {
+        errors.quantity = "Số lượng phải lớn hơn 0";
       }
     } else {
-      if (item.quantity === undefined || item.quantity === null || isNaN(item.quantity)) {
-        errors.quantity = "Số lượng là bắt buộc";
-      } else if (!Number.isInteger(item.quantity)) {
-        errors.quantity = "Số lượng phải là số nguyên";
-      } else if (item.quantity <= 0) {
-        errors.quantity = "Số lượng phải lớn hơn 0";
-      } else if (item.quantity > 2147483647) {
-        errors.quantity = "Số lượng quá lớn (tối đa 2,147,483,647)";
+      const isItemRam = item.calculationMethod === "ram";
+
+      if (isItemRam) {
+        if (item.ramQuantity === undefined || item.ramQuantity === null) {
+          errors.quantity = "Số ram là bắt buộc";
+        } else if (isNaN(item.ramQuantity)) {
+          errors.quantity = "Số ram phải là số";
+        } else if (item.ramQuantity <= 0) {
+          errors.quantity = "Số ram phải lớn hơn 0";
+        } else if (item.ramQuantity > 2147483647) {
+          errors.quantity = "Số ram quá lớn";
+        }
+      } else {
+        if (item.quantity === undefined || item.quantity === null || isNaN(item.quantity)) {
+          errors.quantity = "Số lượng là bắt buộc";
+        } else if (!Number.isInteger(item.quantity)) {
+          errors.quantity = "Số lượng phải là số nguyên";
+        } else if (item.quantity <= 0) {
+          errors.quantity = "Số lượng phải lớn hơn 0";
+        } else if (item.quantity > 2147483647) {
+          errors.quantity = "Số lượng quá lớn (tối đa 2,147,483,647)";
+        }
       }
     }
 
@@ -408,16 +468,18 @@ export default function StockInCreatePage() {
         ? material.unitPrice
         : (loadedUnitPrice !== undefined ? loadedUnitPrice : newItems[index].unitPrice);
 
+      const isSheet = material.width !== undefined && material.width > 0;
+      const defaultUnit = isSheet ? "tờ" : "m";
       newItems[index] = {
         ...newItems[index],
         itemName: materialName,
         itemCode: generatedCode,
-        unit: isItemRam ? "gram" : (loadedUnit || newItems[index].unit || ""),
+        unit: isItemRam ? "gram" : (loadedUnit || defaultUnit),
         unitPrice: defaultUnitPrice,
         materialId: material.id,
         length: material.length,
         width: material.width,
-        lineKind: material.width !== undefined && material.width > 0 ? "sheet" : "roll",
+        lineKind: isSheet ? "sheet" : "roll",
       };
       setItems(newItems);
       // Clear errors when material is selected
@@ -436,6 +498,17 @@ export default function StockInCreatePage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (!formData.vendorId) {
+      toast.error("Vui lòng chọn nhà cung cấp");
+      return;
+    }
+
+    const formatDateWithOffset = (dateStr: string): string => {
+      if (!dateStr) return new Date().toISOString();
+      const date = new Date(dateStr);
+      return date.toISOString();
+    };
+
     // Validate all items
     let allValid = true;
     items.forEach((item, index) => {
@@ -448,6 +521,51 @@ export default function StockInCreatePage() {
       toast.error("Vui lòng kiểm tra lại thông tin vật phẩm", {
         description: "Có lỗi trong danh sách vật phẩm",
       });
+      return;
+    }
+
+    if (isAuxiliaryVendor) {
+      const validItems = items.filter((item) => {
+        const trimmedName = item.itemName?.trim() || "";
+        return (
+          trimmedName.length >= 1 &&
+          item.materialTypeId !== undefined &&
+          item.quantity !== undefined &&
+          item.quantity > 0
+        );
+      });
+
+      if (validItems.length === 0) {
+        toast.error("Vui lòng thêm ít nhất một vật phẩm hợp lệ", {
+          description: "Tên vật phẩm bắt buộc, loại vật tư bắt buộc và số lượng phải lớn hơn 0",
+        });
+        return;
+      }
+
+      createAuxiliaryStockIn(
+        {
+          vendorId: formData.vendorId,
+          stockInDate: formData.stockInDate
+            ? formatDateWithOffset(formData.stockInDate)
+            : new Date().toISOString(),
+          items: validItems.map((item) => ({
+            materialTypeId: item.materialTypeId || 0,
+            name: item.itemName.trim(),
+            quantity: item.quantity || 0,
+            unit: item.unit?.trim() || "cái",
+            unitPrice: item.unitPrice || 0,
+            lineAmount: (item.quantity || 0) * (item.unitPrice || 0),
+            note: item.notes?.trim() || undefined,
+          })),
+        },
+        {
+          onSuccess: (data) => {
+            if (data?.id) {
+              navigate(`/stock/stock-ins/${data.id}`);
+            }
+          },
+        }
+      );
       return;
     }
 
@@ -476,17 +594,6 @@ export default function StockInCreatePage() {
       toast.error("Vui lòng thêm ít nhất một vật phẩm hợp lệ", {
         description: "Tên vật phẩm bắt buộc (ít nhất 1 ký tự) và số lượng phải hợp lệ",
       });
-      return;
-    }
-
-    const formatDateWithOffset = (dateStr: string): string => {
-      if (!dateStr) return new Date().toISOString();
-      const date = new Date(dateStr);
-      return date.toISOString();
-    };
-
-    if (!formData.vendorId) {
-      toast.error("Vui lòng chọn nhà cung cấp");
       return;
     }
 
@@ -749,125 +856,244 @@ export default function StockInCreatePage() {
                     </div>
 
                     <div className="space-y-3">
-                      <div className="grid grid-cols-1 gap-2">
-                        <div className="flex gap-1">
-                          <MaterialSelector
-                            value={item.materialId}
-                            onSelect={(v) => handleMaterialSelect(index, v)}
-                            materials={materials}
-                            className="flex-1"
-                          />
-                          <Select
-                            value={item.calculationMethod || "m2"}
-                            onValueChange={(val: "m2" | "ram") => handleItemChange(index, "calculationMethod", val)}
-                          >
-                            <SelectTrigger className="w-[110px] h-8 text-xs font-normal">
-                              <SelectValue placeholder="Cách tính" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="m2" className="text-xs">Tính m²</SelectItem>
-                              <SelectItem value="ram" className="text-xs">Tính RAM</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8 shrink-0 hover:bg-[#93631F]/10 text-[#93631F] border-[#93631F]/20"
-                            onClick={() => {
-                              setCreatingMaterialIndex(index);
-                              setIsCreateMaterialDialogOpen(true);
-                            }}
-                          >
-                            <Plus className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                        <Input
-                          value={item.itemName}
-                          onChange={(e) => handleItemChange(index, "itemName", e.target.value)}
-                          placeholder="Tên vật phẩm *"
-                          className={`h-8 text-sm ${itemErrors[index]?.itemName ? "border-red-500" : ""}`}
-                        />
-                      </div>
+                      {isAuxiliaryVendor ? (
+                        <>
+                          <div className="grid grid-cols-1 gap-2">
+                            <div className="space-y-1">
+                              <Label className="text-[10px] uppercase font-bold text-slate-400">Loại vật tư *</Label>
+                              <Select
+                                value={item.materialTypeId?.toString() || ""}
+                                onValueChange={(val) => handleItemChange(index, "materialTypeId", Number(val))}
+                              >
+                                <SelectTrigger className="h-8 text-xs bg-slate-50/50">
+                                  <SelectValue placeholder="Chọn loại vật tư" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {materialTypes.map((t) => (
+                                    <SelectItem key={t.id} value={t.id.toString()} className="text-xs">
+                                      {t.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <Input
+                              value={item.itemName}
+                              onChange={(e) => handleItemChange(index, "itemName", e.target.value)}
+                              placeholder="Tên vật phẩm *"
+                              className={`h-8 text-sm ${itemErrors[index]?.itemName ? "border-red-500" : ""}`}
+                            />
+                          </div>
 
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                          <Label className="text-[10px] uppercase font-bold text-slate-400">
-                            {item.calculationMethod === "ram" ? "Số ram" : "Số lượng"}
-                          </Label>
-                          <Input
-                            type="number"
-                            value={item.calculationMethod === "ram" ? (item.ramQuantity ?? "") : item.quantity}
-                            onChange={(e) => {
-                              const val = parseFloat(e.target.value);
-                              if (item.calculationMethod === "ram") {
-                                handleItemChange(index, "ramQuantity", isNaN(val) ? undefined : val);
-                              } else {
-                                const intVal = parseInt(e.target.value, 10);
-                                handleItemChange(index, "quantity", isNaN(intVal) ? undefined : intVal);
-                              }
-                            }}
-                            className={`h-8 text-sm ${itemErrors[index]?.quantity ? "border-red-500" : ""}`}
-                          />
-                          {item.calculationMethod === "ram" && (
-                            <div className="text-[10px] text-slate-400 mt-0.5">
-                              Quy đổi: {((item.ramQuantity ?? 0) * 500).toLocaleString()} tờ
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                              <Label className="text-[10px] uppercase font-bold text-slate-400">Số lượng *</Label>
+                              <Input
+                                type="number"
+                                value={item.quantity ?? ""}
+                                onChange={(e) => {
+                                  const val = parseInt(e.target.value, 10);
+                                  handleItemChange(index, "quantity", isNaN(val) ? undefined : val);
+                                }}
+                                className="h-8 text-sm"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-[10px] uppercase font-bold text-slate-400">Đơn vị *</Label>
+                              <Input
+                                value={item.unit || ""}
+                                onChange={(e) => handleItemChange(index, "unit", e.target.value)}
+                                placeholder="tấm, kg, lít..."
+                                className="h-8 text-sm"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                              <Label className="text-[10px] uppercase font-bold text-slate-400">Đơn giá *</Label>
+                              <Input
+                                type="number"
+                                min="0"
+                                value={item.unitPrice ?? ""}
+                                onChange={(e) => handleItemChange(index, "unitPrice", e.target.value ? Math.max(0, parseFloat(e.target.value)) : undefined)}
+                                placeholder="0"
+                                className="h-8 text-sm w-full"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-[10px] uppercase font-bold text-slate-400">Thành tiền</Label>
+                              <div className="h-8 bg-slate-50 border border-slate-200 rounded-md px-3 flex items-center text-xs font-mono font-bold text-slate-700">
+                                {((item.quantity || 0) * (item.unitPrice || 0)).toLocaleString()} đ
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 gap-2">
+                            <Input
+                              value={item.notes || ""}
+                              onChange={(e) => handleItemChange(index, "notes", e.target.value)}
+                              placeholder="Ghi chú thêm..."
+                              className="h-8 text-xs italic"
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="grid grid-cols-1 gap-2">
+                            <div className="flex gap-1">
+                              <MaterialSelector
+                                value={item.materialId}
+                                onSelect={(v) => handleMaterialSelect(index, v)}
+                                materials={materials}
+                                className="flex-1"
+                              />
+                              <Select
+                                value={item.calculationMethod || "m2"}
+                                onValueChange={(val: "m2" | "ram") => handleItemChange(index, "calculationMethod", val)}
+                              >
+                                <SelectTrigger className="w-[110px] h-8 text-xs font-normal">
+                                  <SelectValue placeholder="Cách tính" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="m2" className="text-xs">Tính m²</SelectItem>
+                                  <SelectItem value="ram" className="text-xs">Tính RAM</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8 shrink-0 hover:bg-[#93631F]/10 text-[#93631F] border-[#93631F]/20"
+                                onClick={() => {
+                                  setCreatingMaterialIndex(index);
+                                  setIsCreateMaterialDialogOpen(true);
+                                }}
+                              >
+                                <Plus className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                            <Input
+                              value={item.itemName}
+                              onChange={(e) => handleItemChange(index, "itemName", e.target.value)}
+                              placeholder="Tên vật phẩm *"
+                              className={`h-8 text-sm ${itemErrors[index]?.itemName ? "border-red-500" : ""}`}
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                              <Label className="text-[10px] uppercase font-bold text-slate-400">
+                                {item.calculationMethod === "ram" ? "Số ram" : (item.lineKind === "sheet" ? "Số tờ" : "Số lượng")}
+                              </Label>
+                              <Input
+                                type="number"
+                                value={item.calculationMethod === "ram" ? (item.ramQuantity ?? "") : item.quantity}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value);
+                                  if (item.calculationMethod === "ram") {
+                                    handleItemChange(index, "ramQuantity", isNaN(val) ? undefined : val);
+                                  } else {
+                                    const intVal = parseInt(e.target.value, 10);
+                                    handleItemChange(index, "quantity", isNaN(intVal) ? undefined : intVal);
+                                  }
+                                }}
+                                className={`h-8 text-sm ${itemErrors[index]?.quantity ? "border-red-500" : ""}`}
+                              />
+                              {item.calculationMethod === "ram" && (
+                                <div className="text-[10px] text-slate-400 mt-0.5">
+                                  Quy đổi: {((item.ramQuantity ?? 0) * 500).toLocaleString()} tờ
+                                </div>
+                              )}
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-[10px] uppercase font-bold text-slate-400">Đơn vị</Label>
+                              <Input
+                                value={item.unit || ""}
+                                onChange={(e) => handleItemChange(index, "unit", e.target.value)}
+                                placeholder="vị"
+                                className="h-8 text-sm"
+                              />
+                            </div>
+                          </div>
+
+                          {item.lineKind === "sheet" && (
+                            <div className="grid grid-cols-2 gap-2 mt-2">
+                              <div className="space-y-1">
+                                <Label className="text-[10px] uppercase font-bold text-slate-400">Dài</Label>
+                                <Input
+                                  type="number"
+                                  step="any"
+                                  value={item.length ?? ""}
+                                  onChange={(e) => {
+                                    const val = parseFloat(e.target.value);
+                                    handleItemChange(index, "length", isNaN(val) ? undefined : val);
+                                  }}
+                                  placeholder="Chiều dài"
+                                  className="h-8 text-sm"
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <Label className="text-[10px] uppercase font-bold text-slate-400">Rộng</Label>
+                                <Input
+                                  type="number"
+                                  step="any"
+                                  value={item.width ?? ""}
+                                  onChange={(e) => {
+                                    const val = parseFloat(e.target.value);
+                                    handleItemChange(index, "width", isNaN(val) ? undefined : val);
+                                  }}
+                                  placeholder="Chiều rộng"
+                                  className="h-8 text-sm"
+                                />
+                              </div>
                             </div>
                           )}
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[10px] uppercase font-bold text-slate-400">Đơn vị</Label>
-                          <Input
-                            value={item.unit || ""}
-                            onChange={(e) => handleItemChange(index, "unit", e.target.value)}
-                            placeholder="vị"
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                      </div>
 
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="space-y-1">
-                          <Label className="text-[10px] uppercase font-bold text-slate-400">Đơn giá</Label>
-                          <Input
-                            type="number"
-                            min="0"
-                            value={item.unitPrice ?? ""}
-                            onChange={(e) => handleItemChange(index, "unitPrice", e.target.value ? Math.max(0, parseFloat(e.target.value)) : undefined)}
-                            placeholder="0"
-                            className="h-8 text-sm w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[10px] uppercase font-bold text-slate-400">Mã bài</Label>
-                          <Input
-                            type="text"
-                            value={item.jobCode ?? ""}
-                            onChange={(e) => handleItemChange(index, "jobCode", e.target.value)}
-                            placeholder="Mã bài"
-                            className="h-8 text-sm w-full"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[10px] uppercase font-bold text-slate-400">Mã bài HT</Label>
-                          <Input
-                            type="text"
-                            value={item.proofingOrderId ?? ""}
-                            onChange={(e) => handleItemChange(index, "proofingOrderId", e.target.value)}
-                            placeholder="Hệ thống"
-                            className="h-8 text-sm w-full"
-                          />
-                        </div>
-                      </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="space-y-1">
+                              <Label className="text-[10px] uppercase font-bold text-slate-400">Đơn giá</Label>
+                              <Input
+                                type="number"
+                                min="0"
+                                value={item.unitPrice ?? ""}
+                                onChange={(e) => handleItemChange(index, "unitPrice", e.target.value ? Math.max(0, parseFloat(e.target.value)) : undefined)}
+                                placeholder="0"
+                                className="h-8 text-sm w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-[10px] uppercase font-bold text-slate-400">Mã bài</Label>
+                              <Input
+                                type="text"
+                                value={item.jobCode ?? ""}
+                                onChange={(e) => handleItemChange(index, "jobCode", e.target.value)}
+                                placeholder="Mã bài"
+                                className="h-8 text-sm w-full"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <Label className="text-[10px] uppercase font-bold text-slate-400">Mã bài HT</Label>
+                              <Input
+                                type="text"
+                                value={item.proofingOrderId ?? ""}
+                                onChange={(e) => handleItemChange(index, "proofingOrderId", e.target.value)}
+                                placeholder="Hệ thống"
+                                className="h-8 text-sm w-full"
+                              />
+                            </div>
+                          </div>
 
-                      <div className="grid grid-cols-1 gap-2">
-                        <Input
-                          value={item.notes || ""}
-                          onChange={(e) => handleItemChange(index, "notes", e.target.value)}
-                          placeholder="Ghi chú..."
-                          className="h-8 text-xs italic"
-                        />
-                      </div>
+                          <div className="grid grid-cols-1 gap-2">
+                            <Input
+                              value={item.notes || ""}
+                              onChange={(e) => handleItemChange(index, "notes", e.target.value)}
+                              placeholder="Ghi chú..."
+                              className="h-8 text-xs italic"
+                            />
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -888,150 +1114,284 @@ export default function StockInCreatePage() {
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-slate-50/50">
-                        <TableHead className="w-12 text-center">#</TableHead>
-                        <TableHead className="w-[180px]">Chất liệu</TableHead>
-                        <TableHead className="w-[120px]">Cách tính</TableHead>
-                        <TableHead className="min-w-[200px]">Tên vật phẩm *</TableHead>
-                        <TableHead className="w-[120px] text-right">Số lượng / Số ram</TableHead>
-                        <TableHead className="w-[80px]">ĐVT</TableHead>
-                        <TableHead className="w-[120px] text-right">Đơn giá</TableHead>
-                        <TableHead className="w-[100px]">Mã bài</TableHead>
-                        <TableHead className="w-[100px]">Mã bài HT</TableHead>
-                        <TableHead>Ghi chú</TableHead>
-                        <TableHead className="w-10"></TableHead>
-                      </TableRow>
+                      {isAuxiliaryVendor ? (
+                        <TableRow className="bg-slate-50/50">
+                          <TableHead className="w-12 text-center">#</TableHead>
+                          <TableHead className="w-[200px]">Loại vật tư *</TableHead>
+                          <TableHead className="min-w-[200px]">Tên vật phẩm *</TableHead>
+                          <TableHead className="w-[120px] text-right">Số lượng *</TableHead>
+                          <TableHead className="w-[100px]">ĐVT *</TableHead>
+                          <TableHead className="w-[150px] text-right">Đơn giá *</TableHead>
+                          <TableHead className="w-[150px] text-right">Thành tiền</TableHead>
+                          <TableHead>Ghi chú</TableHead>
+                          <TableHead className="w-10"></TableHead>
+                        </TableRow>
+                      ) : (
+                        <TableRow className="bg-slate-50/50">
+                          <TableHead className="w-12 text-center">#</TableHead>
+                          <TableHead className="w-[180px]">Chất liệu</TableHead>
+                          <TableHead className="w-[120px]">Cách tính</TableHead>
+                          <TableHead className="min-w-[200px]">Tên vật phẩm *</TableHead>
+                          <TableHead className="w-[120px] text-right">Số lượng / Số ram</TableHead>
+                          <TableHead className="w-[80px]">ĐVT</TableHead>
+                          <TableHead className="w-[90px] text-right">Dài</TableHead>
+                          <TableHead className="w-[90px] text-right">Rộng</TableHead>
+                          <TableHead className="w-[120px] text-right">Đơn giá</TableHead>
+                          <TableHead className="w-[100px]">Mã bài</TableHead>
+                          <TableHead className="w-[100px]">Mã bài HT</TableHead>
+                          <TableHead>Ghi chú</TableHead>
+                          <TableHead className="w-10"></TableHead>
+                        </TableRow>
+                      )}
                     </TableHeader>
                     <TableBody>
                       {items.map((item, index) => (
-                        <TableRow key={index} className="group">
-                          <TableCell className="text-center font-medium text-slate-400">{index + 1}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              <MaterialSelector
-                                value={item.materialId}
-                                onSelect={(v) => handleMaterialSelect(index, v)}
-                                materials={materials}
+                        isAuxiliaryVendor ? (
+                          <TableRow key={index} className="group">
+                            <TableCell className="text-center font-medium text-slate-400">{index + 1}</TableCell>
+                            <TableCell>
+                              <Select
+                                value={item.materialTypeId?.toString() || ""}
+                                onValueChange={(val) => handleItemChange(index, "materialTypeId", Number(val))}
+                              >
+                                <SelectTrigger className="h-8 text-xs font-normal">
+                                  <SelectValue placeholder="Chọn loại vật tư" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {materialTypes.map((t) => (
+                                    <SelectItem key={t.id} value={t.id.toString()} className="text-xs">
+                                      {t.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                value={item.itemName}
+                                onChange={(e) => handleItemChange(index, "itemName", e.target.value)}
+                                placeholder="Tên vật phẩm..."
+                                className={`h-8 text-sm ${itemErrors[index]?.itemName ? "border-red-500" : ""}`}
                               />
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 shrink-0 text-[#93631F] hover:bg-[#93631F]/10"
-                                onClick={() => {
-                                  setCreatingMaterialIndex(index);
-                                  setIsCreateMaterialDialogOpen(true);
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                value={item.quantity ?? ""}
+                                onChange={(e) => {
+                                  const val = parseInt(e.target.value, 10);
+                                  handleItemChange(index, "quantity", isNaN(val) ? undefined : val);
                                 }}
-                              >
-                                <Plus className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Select
-                              value={item.calculationMethod || "m2"}
-                              onValueChange={(val: "m2" | "ram") => handleItemChange(index, "calculationMethod", val)}
-                            >
-                              <SelectTrigger className="h-8 text-xs font-normal">
-                                <SelectValue placeholder="Cách tính" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="m2" className="text-xs">Tính theo m²</SelectItem>
-                                <SelectItem value="ram" className="text-xs">Tính theo RAM</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              value={item.itemName}
-                              onChange={(e) => handleItemChange(index, "itemName", e.target.value)}
-                              placeholder="Tên..."
-                              className={`h-8 text-sm ${itemErrors[index]?.itemName ? "border-red-500" : ""}`}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="number"
-                              value={item.calculationMethod === "ram" ? (item.ramQuantity ?? "") : item.quantity}
-                              onChange={(e) => {
-                                const val = parseFloat(e.target.value);
-                                if (item.calculationMethod === "ram") {
-                                  handleItemChange(index, "ramQuantity", isNaN(val) ? undefined : val);
-                                } else {
-                                  const intVal = parseInt(e.target.value, 10);
-                                  handleItemChange(index, "quantity", isNaN(intVal) ? undefined : intVal);
-                                }
-                              }}
-                              className={`h-8 text-sm text-right ${itemErrors[index]?.quantity ? "border-red-500" : ""}`}
-                            />
-                            {item.calculationMethod === "ram" && (
-                              <div className="text-[10px] text-right text-slate-400 mt-1">
-                                Quy đổi: {((item.ramQuantity ?? 0) * 500).toLocaleString()} tờ
+                                className="h-8 text-sm text-right"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                value={item.unit || ""}
+                                onChange={(e) => handleItemChange(index, "unit", e.target.value)}
+                                placeholder="cái, kg..."
+                                className="h-8 text-sm"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                min="0"
+                                value={item.unitPrice ?? ""}
+                                onChange={(e) => handleItemChange(index, "unitPrice", e.target.value ? Math.max(0, parseFloat(e.target.value)) : undefined)}
+                                placeholder="0"
+                                className="h-8 text-sm text-right"
+                              />
+                            </TableCell>
+                            <TableCell className="text-right font-mono font-bold text-slate-750">
+                              {((item.quantity || 0) * (item.unitPrice || 0)).toLocaleString()} đ
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                value={item.notes || ""}
+                                onChange={(e) => handleItemChange(index, "notes", e.target.value)}
+                                placeholder="..."
+                                className="h-8 text-sm"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              {items.length > 1 && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleRemoveItem(index)}
+                                  className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          <TableRow key={index} className="group">
+                            <TableCell className="text-center font-medium text-slate-400">{index + 1}</TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <MaterialSelector
+                                  value={item.materialId}
+                                  onSelect={(v) => handleMaterialSelect(index, v)}
+                                  materials={materials}
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 shrink-0 text-[#93631F] hover:bg-[#93631F]/10"
+                                  onClick={() => {
+                                    setCreatingMaterialIndex(index);
+                                    setIsCreateMaterialDialogOpen(true);
+                                  }}
+                                >
+                                  <Plus className="h-3.5 w-3.5" />
+                                </Button>
                               </div>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              value={item.unit || ""}
-                              onChange={(e) => handleItemChange(index, "unit", e.target.value)}
-                              placeholder="vị"
-                              className="h-8 text-sm"
-                            />
-                          </TableCell>
-
-                          <TableCell>
-                            <Input
-                              type="number"
-                              min="0"
-                              value={item.unitPrice ?? ""}
-                              onChange={(e) => handleItemChange(index, "unitPrice", e.target.value ? Math.max(0, parseFloat(e.target.value)) : undefined)}
-                              placeholder="0"
-                              className="h-8 text-sm text-right [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              type="text"
-                              value={item.jobCode ?? ""}
-                              onChange={(e) => handleItemChange(index, "jobCode", e.target.value)}
-                              placeholder="Mã bài"
-                              className="h-8 text-sm"
-                            />
-                          </TableCell>
-                          <TableCell>
-                           <Input
-                             type="text"
-                             value={item.proofingOrderId ?? ""}
-                             onChange={(e) => handleItemChange(index, "proofingOrderId", e.target.value)}
-                             placeholder="Hệ thống"
-                             className="h-8 text-sm"
-                           />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              value={item.notes || ""}
-                              onChange={(e) => handleItemChange(index, "notes", e.target.value)}
-                              placeholder="..."
-                              className="h-8 text-sm"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            {items.length > 1 && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleRemoveItem(index)}
-                                className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                            </TableCell>
+                            <TableCell>
+                              <Select
+                                value={item.calculationMethod || "m2"}
+                                onValueChange={(val: "m2" | "ram") => handleItemChange(index, "calculationMethod", val)}
                               >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
+                                <SelectTrigger className="h-8 text-xs font-normal">
+                                  <SelectValue placeholder="Cách tính" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="m2" className="text-xs">Tính theo m²</SelectItem>
+                                  <SelectItem value="ram" className="text-xs">Tính theo RAM</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                value={item.itemName}
+                                onChange={(e) => handleItemChange(index, "itemName", e.target.value)}
+                                placeholder="Tên..."
+                                className={`h-8 text-sm ${itemErrors[index]?.itemName ? "border-red-500" : ""}`}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                value={item.calculationMethod === "ram" ? (item.ramQuantity ?? "") : item.quantity}
+                                onChange={(e) => {
+                                  const val = parseFloat(e.target.value);
+                                  if (item.calculationMethod === "ram") {
+                                    handleItemChange(index, "ramQuantity", isNaN(val) ? undefined : val);
+                                  } else {
+                                    const intVal = parseInt(e.target.value, 10);
+                                    handleItemChange(index, "quantity", isNaN(intVal) ? undefined : intVal);
+                                  }
+                                }}
+                                className={`h-8 text-sm text-right ${itemErrors[index]?.quantity ? "border-red-500" : ""}`}
+                              />
+                              {item.calculationMethod === "ram" && (
+                                <div className="text-[10px] text-right text-slate-400 mt-1">
+                                  Quy đổi: {((item.ramQuantity ?? 0) * 500).toLocaleString()} tờ
+                                </div>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                value={item.unit || ""}
+                                onChange={(e) => handleItemChange(index, "unit", e.target.value)}
+                                placeholder="vị"
+                                className="h-8 text-sm"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              {item.lineKind === "sheet" ? (
+                                <Input
+                                  type="number"
+                                  step="any"
+                                  value={item.length ?? ""}
+                                  onChange={(e) => {
+                                    const val = parseFloat(e.target.value);
+                                    handleItemChange(index, "length", isNaN(val) ? undefined : val);
+                                  }}
+                                  placeholder="Dài"
+                                  className="h-8 text-sm text-right"
+                                />
+                              ) : (
+                                <div className="text-center text-slate-400 font-mono text-xs select-none">—</div>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {item.lineKind === "sheet" ? (
+                                <Input
+                                  type="number"
+                                  step="any"
+                                  value={item.width ?? ""}
+                                  onChange={(e) => {
+                                    const val = parseFloat(e.target.value);
+                                    handleItemChange(index, "width", isNaN(val) ? undefined : val);
+                                  }}
+                                  placeholder="Rộng"
+                                  className="h-8 text-sm text-right"
+                                />
+                              ) : (
+                                <div className="text-center text-slate-400 font-mono text-xs select-none">—</div>
+                              )}
+                            </TableCell>
+
+                            <TableCell>
+                              <Input
+                                type="number"
+                                min="0"
+                                value={item.unitPrice ?? ""}
+                                onChange={(e) => handleItemChange(index, "unitPrice", e.target.value ? Math.max(0, parseFloat(e.target.value)) : undefined)}
+                                placeholder="0"
+                                className="h-8 text-sm text-right [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="text"
+                                value={item.jobCode ?? ""}
+                                onChange={(e) => handleItemChange(index, "jobCode", e.target.value)}
+                                placeholder="Mã bài"
+                                className="h-8 text-sm"
+                              />
+                            </TableCell>
+                            <TableCell>
+                             <Input
+                               type="text"
+                               value={item.proofingOrderId ?? ""}
+                               onChange={(e) => handleItemChange(index, "proofingOrderId", e.target.value)}
+                               placeholder="Hệ thống"
+                               className="h-8 text-sm"
+                             />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                value={item.notes || ""}
+                                onChange={(e) => handleItemChange(index, "notes", e.target.value)}
+                                placeholder="..."
+                                className="h-8 text-sm"
+                              />
+                            </TableCell>
+                            <TableCell>
+                              {items.length > 1 && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleRemoveItem(index)}
+                                  className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        )
                       ))}
                       <TableRow className="hover:bg-slate-50/50 cursor-pointer" onClick={handleAddItem}>
-                        <TableCell colSpan={10} className="py-3 text-center text-[#93631F] font-bold text-xs uppercase tracking-wider">
+                        <TableCell colSpan={isAuxiliaryVendor ? 9 : 13} className="py-3 text-center text-[#93631F] font-bold text-xs uppercase tracking-wider">
                           <div className="flex items-center justify-center gap-1.5">
                             <Plus className="h-4 w-4" /> Thêm dòng vật phẩm mới
                           </div>
