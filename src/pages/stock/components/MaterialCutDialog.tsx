@@ -129,7 +129,11 @@ function JobCodeSelector({
             onValueChange={setSearch}
             className="h-9 w-full bg-transparent text-xs border-none focus:ring-0 focus-visible:ring-0"
           />
-          <CommandList className="max-h-[350px]">
+          <CommandList 
+            className="max-h-[350px]"
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+          >
             {search.trim() && !hasExactMatch && (
               <CommandGroup heading="Mã tự nhập">
                 <CommandItem

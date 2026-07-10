@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { Plus, Trash2, Loader2, Check, ChevronsUpDown } from "lucide-react";
@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { useMaterials } from "@/hooks/use-material";
 import { useCreateStockOutForProductionOrder } from "@/hooks/use-stock";
 import { usePendingMaterialProductionOrders } from "@/hooks/use-production";
+import { useProofingOrders } from "@/hooks/use-proofing-order";
 import { cn } from "@/lib/utils";
 import {
   Popover,
@@ -92,7 +93,11 @@ function MaterialSelector({
             placeholder="Tìm vật tư..."
             className="h-9 w-full bg-transparent text-xs border-none focus:ring-0 focus-visible:ring-0"
           />
-          <CommandList className="max-h-[220px]">
+          <CommandList 
+            className="max-h-[220px]"
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+          >
             <CommandEmpty>Không tìm thấy vật tư nào.</CommandEmpty>
             <CommandGroup>
               {materials.map((m) => (
@@ -162,7 +167,11 @@ function ProductionOrderSelector({
             placeholder="Tìm mã bài, khách hàng..."
             className="h-9 w-full bg-transparent text-xs border-none focus:ring-0 focus-visible:ring-0"
           />
-          <CommandList className="max-h-[350px]">
+          <CommandList 
+            className="max-h-[350px]"
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+          >
             <CommandEmpty>Không tìm thấy lệnh sản xuất.</CommandEmpty>
             <CommandGroup>
               {productionOrders.map((po) => (
@@ -254,6 +263,39 @@ export function StockOutByProductionOrderDialog({
     pageSize: 1000,
   });
   const pendingProdOrders = pendingProdOrdersData?.items || [];
+
+  const { data: proofingResp, isLoading: isLoadingProofing } = useProofingOrders({
+    pageSize: 1000,
+  });
+  const proofingOrders = proofingResp?.items || [];
+
+  const proofingMap = useMemo(() => {
+    const map = new Map<number, any>();
+    proofingOrders.forEach((po) => {
+      if (po.id) {
+        map.set(po.id, po);
+      }
+    });
+    return map;
+  }, [proofingOrders]);
+
+  const enrichedProductionOrders = useMemo(() => {
+    return pendingProdOrders.map((po) => {
+      const proofing = po.proofingOrderId ? proofingMap.get(po.proofingOrderId) : null;
+      return {
+        ...po,
+        paperName: proofing?.materialType?.name || "Giấy in",
+        materialCode: proofing?.materialType?.code || "",
+        totalQuantity: proofing?.totalQuantity || 0,
+        paperSizeName: proofing?.rollWidth 
+          ? `Cuộn (Rộng: ${proofing.rollWidth} mm)` 
+          : (proofing?.paperSize?.name || proofing?.customPaperSize || "—"),
+        designTypeName: proofing?.designType?.name || "—",
+        basisWeight: proofing?.basisWeight || po.basisWeight || 0,
+        designCount: po.items?.length || proofing?.proofingOrderDesigns?.length || 0,
+      };
+    });
+  }, [pendingProdOrders, proofingMap]);
 
   const { mutateAsync: createStockOut, isPending } = useCreateStockOutForProductionOrder();
 
@@ -389,9 +431,32 @@ export function StockOutByProductionOrderDialog({
                   onSelect={(id, code) => {
                     setSelectedProductionOrderId(id);
                     setSelectedProductionOrderCode(code);
+
+                    // Auto-fill material and quantity if possible
+                    const po = enrichedProductionOrders.find((p) => p.id === id);
+                    if (po) {
+                      // Look for a material matching the po's materialCode or paperName
+                      const matchedMaterial = allMaterials.find(
+                        (m) =>
+                          (po.materialCode && m.code === po.materialCode) ||
+                          (po.paperName && m.name === po.paperName)
+                      );
+
+                      if (matchedMaterial) {
+                        setItems([
+                          {
+                            materialId: matchedMaterial.id,
+                            quantity: po.totalQuantity || 1,
+                          },
+                        ]);
+                      } else {
+                        // Reset items to empty selector with quantity from PO
+                        setItems([{ materialId: null, quantity: po.totalQuantity || 1 }]);
+                      }
+                    }
                   }}
-                  productionOrders={pendingProdOrders}
-                  placeholder={isLoadingOrders ? "Đang tải..." : "Chọn lệnh sản xuất..."}
+                  productionOrders={enrichedProductionOrders}
+                  placeholder={(isLoadingOrders || isLoadingProofing) ? "Đang tải..." : "Chọn lệnh sản xuất..."}
                 />
               </div>
               <div className="space-y-1.5">
@@ -410,19 +475,55 @@ export function StockOutByProductionOrderDialog({
 
             {/* Show Selected Production Order Info Box */}
             {selectedProductionOrderId && (() => {
-              const po: any = pendingProdOrders.find((p) => p.id === selectedProductionOrderId);
+              const po = enrichedProductionOrders.find((p) => p.id === selectedProductionOrderId);
               if (!po) return null;
               return (
                 <div className="bg-amber-50/40 border border-amber-100 rounded-xl p-3.5 space-y-2.5 text-xs text-slate-700 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
-                  <div className="font-bold text-amber-900 border-b border-amber-100 pb-1.5 flex items-center gap-1.5">
+                  <div className="font-bold text-amber-900 border-b border-amber-100 pb-1.5 flex items-center gap-1.5 font-sans">
                     <span className="h-2 w-2 rounded-full bg-amber-500" />
                     Thông tin lệnh sản xuất:
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 font-sans">
                     {po.customerName && (
                       <div>
-                        <span className="text-slate-500 font-medium">Khách hàng:</span>
+                        <span className="text-slate-500 font-medium font-sans">Khách hàng:</span>
                         <span className="font-bold ml-1 text-slate-800">{po.customerName}</span>
+                      </div>
+                    )}
+                    {po.totalQuantity !== undefined && (
+                      <div>
+                        <span className="text-slate-500 font-medium font-sans">Số giấy in:</span>
+                        <span className="font-bold ml-1 text-slate-800">{po.totalQuantity?.toLocaleString()} tờ</span>
+                      </div>
+                    )}
+                    {po.designCount !== undefined && (
+                      <div>
+                        <span className="text-slate-500 font-medium font-sans">Mã hàng:</span>
+                        <span className="font-bold ml-1 text-slate-800">{po.designCount} mã</span>
+                      </div>
+                    )}
+                    {po.paperSizeName && (
+                      <div>
+                        <span className="text-slate-500 font-medium font-sans">Khổ giấy:</span>
+                        <span className="font-bold ml-1 text-slate-800">{po.paperSizeName}</span>
+                      </div>
+                    )}
+                    {po.basisWeight && (
+                      <div>
+                        <span className="text-slate-500 font-medium font-sans">Định lượng:</span>
+                        <span className="font-bold ml-1 text-slate-800">{po.basisWeight} gsm</span>
+                      </div>
+                    )}
+                    {po.paperName && (
+                      <div className="col-span-2 font-sans">
+                        <span className="text-slate-500 font-medium font-sans">Chất liệu:</span>
+                        <span className="font-semibold ml-1 text-slate-800">{po.paperName} {po.materialCode ? `(${po.materialCode})` : ""}</span>
+                      </div>
+                    )}
+                    {po.designTypeName && (
+                      <div className="col-span-2 font-sans">
+                        <span className="text-slate-500 font-medium font-sans">Loại thiết kế:</span>
+                        <span className="font-semibold ml-1 text-slate-800">{po.designTypeName}</span>
                       </div>
                     )}
                   </div>

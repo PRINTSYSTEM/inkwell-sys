@@ -36,7 +36,7 @@ import {
 } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { useQueryClient } from "@tanstack/react-query";
-import { useMaterial, useMaterialHistory, useMaterials } from "@/hooks/use-material";
+import { useMaterial, useMaterialHistory, useMaterials, useUpdateMaterial } from "@/hooks/use-material";
 import {
   useCompleteMaterialCut,
   useCancelMaterialCut,
@@ -57,6 +57,7 @@ import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -141,6 +142,14 @@ export default function MaterialHistoryPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [transactionType, setTransactionType] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
+
+  // Edit Material States
+  const [isEditMaterialOpen, setIsEditMaterialOpen] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editLength, setEditLength] = useState<number | undefined>(undefined);
+  const [editWidth, setEditWidth] = useState<number | undefined>(undefined);
+  const [editUnit, setEditUnit] = useState("");
+  const [editPrice, setEditPrice] = useState<number | undefined>(undefined);
 
   // Dialog States
   const [isCutOpen, setIsCutOpen] = useState(false);
@@ -262,6 +271,20 @@ export default function MaterialHistoryPage() {
            materialDetail.unit?.toLowerCase()?.includes("cuon");
   }, [materialDetail]);
 
+  const sizeDisplay = useMemo(() => {
+    if (!materialDetail) return "";
+    if (isRoll) {
+      return materialDetail.width ? `Khổ: ${materialDetail.width} mm` : "Khổ: Chưa nhập";
+    }
+    if (materialDetail.length && materialDetail.width) {
+      return `Kích thước: ${materialDetail.length}x${materialDetail.width} cm`;
+    }
+    if (materialDetail.size) {
+      return `Kích thước: ${formatSize(materialDetail.size)}`;
+    }
+    return "Kích thước: Chưa nhập";
+  }, [materialDetail, isRoll]);
+
   const {
     data: historyData,
     isLoading: isLoadingHistory,
@@ -301,6 +324,49 @@ export default function MaterialHistoryPage() {
   const { mutateAsync: createStockIn } = useCreateStockIn();
   const { mutateAsync: createStockOut } = useCreateStockOut();
   const { mutateAsync: updateMaterialCut } = useUpdateMaterialCut();
+  const updateMaterialMutation = useUpdateMaterial();
+
+  useEffect(() => {
+    if (materialDetail) {
+      setEditName(materialDetail.name || "");
+      setEditLength(materialDetail.length ?? undefined);
+      setEditWidth(materialDetail.width ?? undefined);
+      setEditUnit(materialDetail.unit || "");
+      setEditPrice(materialDetail.unitPrice ?? undefined);
+    }
+  }, [materialDetail, isEditMaterialOpen]);
+
+  const handleUpdateMaterial = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!materialDetail?.id) return;
+
+    if (!editName.trim()) {
+      toast.error("Vui lòng nhập tên vật tư!");
+      return;
+    }
+
+    try {
+      await updateMaterialMutation.mutateAsync({
+        id: materialDetail.id,
+        data: {
+          name: editName.trim(),
+          materialTypeId: materialDetail.materialTypeId || null,
+          type: materialDetail.type || null,
+          vendorId: materialDetail.vendorId || null,
+          length: editLength ?? null,
+          width: editWidth ?? null,
+          height: materialDetail.height || null,
+          quantity: materialDetail.currentStock || materialDetail.quantity || null,
+          unit: editUnit || null,
+          unitPrice: editPrice ?? null,
+        },
+      });
+      setIsEditMaterialOpen(false);
+      refetchHistory();
+    } catch (err: any) {
+      console.error(err);
+    }
+  };
 
   const handleInlineStockInSubmit = async (e: any) => {
     e.preventDefault();
@@ -885,12 +951,21 @@ export default function MaterialHistoryPage() {
                 <h1 className="text-xl font-bold tracking-tight text-slate-800">
                   {materialDetail?.vendorName ? `${materialDetail.vendorName} : ` : ""}{materialDetail?.name || "—"}
                 </h1>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg cursor-pointer"
+                  onClick={() => setIsEditMaterialOpen(true)}
+                  title="Chỉnh sửa thông tin vật tư"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
                 <Badge variant="outline" className="font-mono text-xs rounded-lg border-slate-200 bg-slate-50/50">
                   ID: #{materialId}
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                 Đơn vị tính: {materialDetail?.unit || "—"}{materialDetail?.unit === "m" ? " tới" : ""}{materialDetail?.size ? ` | Kích thước: ${formatSize(materialDetail.size)}` : ""}
+                 Đơn vị tính: {materialDetail?.unit || "—"}{materialDetail?.unit === "m" ? " tới" : ""}{sizeDisplay ? ` | ${sizeDisplay}` : ""}
               </p>
             </div>
           </div>
@@ -1693,6 +1768,96 @@ export default function MaterialHistoryPage() {
               )}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Chỉnh sửa thông tin vật tư */}
+      <Dialog open={isEditMaterialOpen} onOpenChange={setIsEditMaterialOpen}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle>Cập nhật thông tin vật tư</DialogTitle>
+            <DialogDescription>
+              Thay đổi thông tin chi tiết và kích thước của vật tư. Nhấp vào Lưu khi hoàn tất.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateMaterial} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="editName">Tên chất liệu</Label>
+              <Input
+                id="editName"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="editUnit">Đơn vị tính</Label>
+                <Input
+                  id="editUnit"
+                  value={editUnit}
+                  onChange={(e) => setEditUnit(e.target.value)}
+                  placeholder="tờ, cuộn, cái..."
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="editPrice">Đơn giá (VND)</Label>
+                <Input
+                  id="editPrice"
+                  type="number"
+                  step="any"
+                  value={editPrice !== undefined ? editPrice : ""}
+                  onChange={(e) => setEditPrice(e.target.value ? Number(e.target.value) : undefined)}
+                  placeholder="Nhập đơn giá mới..."
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="editWidth">
+                  {isRoll ? "Khổ cuộn (mm)" : "Chiều rộng (cm)"}
+                </Label>
+                <Input
+                  id="editWidth"
+                  type="number"
+                  step="any"
+                  value={editWidth !== undefined ? editWidth : ""}
+                  onChange={(e) => setEditWidth(e.target.value ? Number(e.target.value) : undefined)}
+                />
+              </div>
+              {!isRoll && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="editLength">Chiều dài (cm)</Label>
+                  <Input
+                    id="editLength"
+                    type="number"
+                    step="any"
+                    value={editLength !== undefined ? editLength : ""}
+                    onChange={(e) => setEditLength(e.target.value ? Number(e.target.value) : undefined)}
+                  />
+                </div>
+              )}
+            </div>
+
+            <DialogFooter className="pt-4 gap-2 sm:gap-0">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditMaterialOpen(false)}
+                disabled={updateMaterialMutation.isPending}
+              >
+                Hủy
+              </Button>
+              <Button type="submit" disabled={updateMaterialMutation.isPending} className="bg-[#93631F] hover:bg-[#7a521a] text-white font-bold border-none">
+                {updateMaterialMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Lưu thay đổi
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </>
