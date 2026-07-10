@@ -1,5 +1,6 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
 import { Plus, Trash2, Loader2, Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -409,7 +410,7 @@ export function StockOutByProductionOrderDialog({
 
             {/* Show Selected Production Order Info Box */}
             {selectedProductionOrderId && (() => {
-              const po = pendingProdOrders.find((p) => p.id === selectedProductionOrderId);
+              const po: any = pendingProdOrders.find((p) => p.id === selectedProductionOrderId);
               if (!po) return null;
               return (
                 <div className="bg-amber-50/40 border border-amber-100 rounded-xl p-3.5 space-y-2.5 text-xs text-slate-700 shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
@@ -422,18 +423,6 @@ export function StockOutByProductionOrderDialog({
                       <div>
                         <span className="text-slate-500 font-medium">Khách hàng:</span>
                         <span className="font-bold ml-1 text-slate-800">{po.customerName}</span>
-                      </div>
-                    )}
-                    {po.receiveDate && (
-                      <div>
-                        <span className="text-slate-500 font-medium">Ngày nhận:</span>
-                        <span className="font-bold ml-1 text-slate-800">{format(new Date(po.receiveDate), "dd/MM/yyyy")}</span>
-                      </div>
-                    )}
-                    {po.dueDate && (
-                      <div>
-                        <span className="text-slate-500 font-medium">Ngày giao:</span>
-                        <span className="font-bold ml-1 text-slate-800">{format(new Date(po.dueDate), "dd/MM/yyyy")}</span>
                       </div>
                     )}
                   </div>

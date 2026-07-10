@@ -69,6 +69,19 @@ function HoverInfoCopy({ value, label }: { value: string; label: string }) {
   );
 }
 
+function formatDesignCreatedDate(value?: string | null) {
+  if (!value) return "—";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
+
 interface DetailDesignsListCardProps {
   order: any;
   orderDesigns: any[];
@@ -140,7 +153,10 @@ export function DetailDesignsListCard({
       ),
     );
   };
-
+  const isDecal =
+    orderDesigns?.[0]?.design?.designType?.name
+      ?.toLowerCase()
+      .includes("decal") ?? false;
   const hasDieCutDesigns = React.useMemo(() => {
     if (!orderDesigns || orderDesigns.length === 0) return false;
     return orderDesigns.some(
@@ -173,21 +189,38 @@ export function DetailDesignsListCard({
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
-              <TableRow className="h-9">
-                <TableHead className="h-9 px-2 text-[10px] w-10 text-center">STT</TableHead>
-                <TableHead className="h-9 px-2 text-[10px]">Ảnh</TableHead>
-                <TableHead className="h-9 px-2 text-[10px]">Mã hàng</TableHead>
-                <TableHead className="h-9 px-2 text-[10px]">
+              <TableRow className="h-10">
+                <TableHead className="w-12 text-center">STT</TableHead>
+
+                <TableHead className="w-20 text-center">
+                  Ảnh
+                </TableHead>
+
+                <TableHead className="w-40">
+                  Mã hàng
+                </TableHead>
+
+                <TableHead className="w-36">
                   Kích thước
                 </TableHead>
-                <TableHead className="h-9 px-2 text-[10px]">SL</TableHead>
-                <TableHead className="h-9 px-2 text-[10px]">
-                  {orderDesigns?.[0]?.design?.designType?.name?.toLowerCase().includes("decal") ? "Loại sản phẩm" : "Số mặt in"}
+
+                <TableHead className="w-28 whitespace-nowrap">
+                  Ngày TK
                 </TableHead>
-                <TableHead className="h-9 px-2 text-[10px]">
+
+                <TableHead className="w-20 text-center">
+                  SL
+                </TableHead>
+
+                <TableHead className="w-24 text-center">
+                  {isDecal ? "Loại SP" : "Số mặt"}
+                </TableHead>
+
+                <TableHead>
                   Quy cách đầy đủ
                 </TableHead>
-                <TableHead className="h-9 px-6 text-right text-[10px]">
+
+                <TableHead className="w-48 text-right">
                   Thao tác
                 </TableHead>
               </TableRow>
@@ -257,7 +290,7 @@ export function DetailDesignsListCard({
                             pod.design?.width,
                             pod.design?.height,
                           )}{" "}
-                          mm
+
                         </span>
                         {pod.design?.length && (
                           <HoverInfoCopy
@@ -443,6 +476,11 @@ export function DetailDesignsListCard({
                             </p>
                           </div>
                         </TableCell>
+                        <TableCell className="px-2 py-1 whitespace-nowrap">
+                          <span className="text-xs text-muted-foreground">
+                            {formatDesignCreatedDate(pod.design?.createdAt)}
+                          </span>
+                        </TableCell>
                         <TableCell className="px-2 py-1">
                           <QuantityCell
                             pod={pod}
@@ -579,25 +617,7 @@ export function DetailDesignsListCard({
                                 title="Cập nhật số lượng"
                               >
                                 <Edit className="h-3 w-3 text-muted-foreground shrink-0" />
-                                <span className="truncate">Sửa số lượng</span>
-                              </Button>
-                            )}
-                            {pod.design?.designFileUrl && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-7 px-2 justify-start gap-1.5 text-[11px] font-normal"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  downloadFile(
-                                    pod.design.designFileUrl,
-                                    pod.design.code || `DES-${pod.design.id}`,
-                                  );
-                                }}
-                                title="Tải thiết kế"
-                              >
-                                <Download className="h-3 w-3 text-muted-foreground shrink-0" />
-                                <span className="truncate">Tải thiết kế</span>
+                                <span className="truncate">Sửa SL</span>
                               </Button>
                             )}
                             {order && order.status !== "completed" && pod.id && isProofer && (
@@ -618,7 +638,7 @@ export function DetailDesignsListCard({
                                 title="Xóa mã hàng"
                               >
                                 <Trash2 className="h-3 w-3 shrink-0" />
-                                <span className="truncate">Xóa mã hàng</span>
+                                <span className="truncate">Xóa Mã</span>
                               </Button>
                             )}
                           </div>
