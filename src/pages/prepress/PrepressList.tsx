@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDebounce } from "use-debounce";
+import { DateRange } from "react-day-picker";
 import {
   ChevronLeft,
   ChevronRight,
@@ -167,6 +168,7 @@ export default function PrepressList() {
   >(null);
   const [incompleteOrdersPage, setIncompleteOrdersPage] = useState(1);
   const [completedOrdersPage, setCompletedOrdersPage] = useState(1);
+  const [completedDateRange, setCompletedDateRange] = useState<DateRange | undefined>();
   const [productionReturnedOrdersPage, setProductionReturnedOrdersPage] = useState(1);
   const [incompleteOrdersPageInput, setIncompleteOrdersPageInput] =
     useState<string>("");
@@ -195,12 +197,12 @@ export default function PrepressList() {
       status: "completed",
       code: debouncedDesignCode.trim() || null,
       materialTypeId: selectedMaterialTypeId,
-      pageSize: itemsPerPage,
-      pageNumber: completedOrdersPage,
+      pageSize: completedDateRange ? 9999 : itemsPerPage,
+      pageNumber: completedDateRange ? 1 : completedOrdersPage,
     };
     const parsed = ProofingOrderListParamsSchema.safeParse(raw);
     return parsed.success ? parsed.data : {};
-  }, [debouncedDesignCode, selectedMaterialTypeId, completedOrdersPage]);
+  }, [debouncedDesignCode, selectedMaterialTypeId, completedOrdersPage, completedDateRange]);
 
   const productionReturnedQueryParams = useMemo(() => {
     const raw = {
@@ -229,11 +231,34 @@ export default function PrepressList() {
     return items as unknown as ProofingOrder[];
   }, [incompleteOrdersResp?.items]);
 
-  const completedOrders = useMemo<ProofingOrder[]>(() => {
+  const rawCompletedOrders = useMemo<ProofingOrder[]>(() => {
     const items = completedOrdersResp?.items;
     if (!items || !Array.isArray(items)) return [];
     return items as unknown as ProofingOrder[];
   }, [completedOrdersResp?.items]);
+
+  const filteredCompletedOrders = useMemo(() => {
+    if (!rawCompletedOrders) return [];
+    if (!completedDateRange || !completedDateRange.from) return rawCompletedOrders;
+
+    const fromDate = new Date(completedDateRange.from);
+    fromDate.setHours(0, 0, 0, 0);
+    const toDate = new Date(completedDateRange.to || completedDateRange.from);
+    toDate.setHours(23, 59, 59, 999);
+
+    return rawCompletedOrders.filter((order) => {
+      const dateStr = order.completedAt || order.updatedAt;
+      if (!dateStr) return false;
+      const orderDate = new Date(dateStr);
+      return orderDate >= fromDate && orderDate <= toDate;
+    });
+  }, [rawCompletedOrders, completedDateRange]);
+
+  const completedOrders = useMemo(() => {
+    if (!completedDateRange) return filteredCompletedOrders;
+    const startIndex = (completedOrdersPage - 1) * itemsPerPage;
+    return filteredCompletedOrders.slice(startIndex, startIndex + itemsPerPage);
+  }, [filteredCompletedOrders, completedOrdersPage, completedDateRange]);
 
   const productionReturnedOrders = useMemo<ProofingOrder[]>(() => {
     const items = productionReturnedOrdersResp?.items;
@@ -282,8 +307,10 @@ export default function PrepressList() {
     Math.ceil(incompleteTotalCount / itemsPerPage) || 1;
 
   const completedTotalCount = completedOrdersResp?.total ?? 0;
-  const completedTotalPages =
-    Math.ceil(completedTotalCount / itemsPerPage) || 1;
+  const filteredCompletedTotalCount = completedDateRange ? filteredCompletedOrders.length : completedTotalCount;
+  const completedTotalPages = completedDateRange
+    ? Math.ceil(filteredCompletedTotalCount / itemsPerPage) || 1
+    : Math.ceil(completedTotalCount / itemsPerPage) || 1;
 
   const productionReturnedTotalCount = productionReturnedOrdersResp?.total ?? 0;
   const productionReturnedTotalPages =
@@ -981,7 +1008,9 @@ export default function PrepressList() {
                           handleProductionReturnedPageInputBlur
                         }
                         incompleteTotalCount={incompleteTotalCount}
-                        completedTotalCount={completedTotalCount}
+                        completedTotalCount={filteredCompletedTotalCount}
+                        completedDateRange={completedDateRange}
+                        setCompletedDateRange={setCompletedDateRange}
                         productionReturnedTotalCount={productionReturnedTotalCount}
                         itemsPerPage={itemsPerPage}
                         shouldShowExpand={shouldShowExpand}
