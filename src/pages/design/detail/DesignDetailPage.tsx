@@ -279,6 +279,7 @@ export default function DesignDetailPage() {
   const [showTimelineDialog, setShowTimelineDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [isDraggingOverPreview, setIsDraggingOverPreview] = useState(false);
   const [gusseted, setGusseted] = useState<boolean>(false);
   const [editFormData, setEditFormData] = useState({
     designName: "",
@@ -1782,7 +1783,24 @@ export default function DesignDetailPage() {
                   </Card>
                 ) : (
                   <>
-                    <Card className="overflow-hidden border-2 hover:border-violet-500 transition-colors">
+                    <Card
+                      className="relative overflow-hidden border-2 hover:border-violet-500 transition-colors cursor-pointer"
+                      onDragEnter={(e) => {
+                        e.preventDefault();
+                        if (enabled) setIsDraggingOverPreview(true);
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault();
+                        setIsDraggingOverPreview(false);
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                      }}
+                      onDrop={async (e) => {
+                        setIsDraggingOverPreview(false);
+                        await handleDrop(e);
+                      }}
+                    >
                       <div
                         className={`relative aspect-square group ${d.designImageUrl ? "cursor-pointer" : ""
                           }`}
@@ -1810,6 +1828,15 @@ export default function DesignDetailPage() {
                           </div>
                         )}
                       </div>
+
+                      {isDraggingOverPreview && (
+                        <div className="absolute inset-0 bg-violet-600/35 backdrop-blur-sm border-2 border-dashed border-violet-500 flex flex-col items-center justify-center gap-2 z-20 animate-in fade-in duration-200 pointer-events-none">
+                          <UploadCloud className="h-10 w-10 text-white animate-bounce" />
+                          <span className="text-sm font-semibold text-white">
+                            Thả file để cập nhật
+                          </span>
+                        </div>
+                      )}
                     </Card>
 
                     {(d.designFileUrl || d.excelFileUrl) && (

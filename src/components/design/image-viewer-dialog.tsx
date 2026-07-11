@@ -131,12 +131,12 @@ export function ImageViewerDialog({
           </div>
 
           {/* Top control bar (Rendered after container for correct z-stacking on long images) */}
-          <div className="absolute top-4 right-4 z-50 flex gap-2">
+          <div className="absolute top-4 right-4 z-50 flex items-center gap-1 bg-background/95 backdrop-blur-sm border border-border/85 rounded-xl p-1 shadow-md select-none">
             {/* Rotate control */}
             <Button
               size="sm"
-              variant="outline"
-              className="h-9 w-9 p-0 bg-background/90 hover:bg-accent hover:text-accent-foreground text-foreground border border-input rounded-xl shadow-sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 text-foreground hover:bg-accent hover:text-accent-foreground rounded-lg"
               onClick={handleRotate}
               title="Xoay ảnh"
             >
@@ -146,8 +146,8 @@ export function ImageViewerDialog({
             {/* Zoom In control */}
             <Button
               size="sm"
-              variant="outline"
-              className="h-9 w-9 p-0 bg-background/90 hover:bg-accent hover:text-accent-foreground text-foreground border border-input rounded-xl shadow-sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 text-foreground hover:bg-accent hover:text-accent-foreground rounded-lg"
               onClick={handleZoomIn}
               title="Phóng to"
             >
@@ -157,8 +157,8 @@ export function ImageViewerDialog({
             {/* Zoom Out control */}
             <Button
               size="sm"
-              variant="outline"
-              className="h-9 w-9 p-0 bg-background/90 hover:bg-accent hover:text-accent-foreground text-foreground border border-input rounded-xl shadow-sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 text-foreground hover:bg-accent hover:text-accent-foreground rounded-lg"
               onClick={handleZoomOut}
               title="Thu nhỏ"
             >
@@ -168,8 +168,8 @@ export function ImageViewerDialog({
             {/* Reset control */}
             <Button
               size="sm"
-              variant="outline"
-              className="h-9 w-9 p-0 bg-background/90 hover:bg-accent hover:text-accent-foreground text-foreground border border-input rounded-xl shadow-sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 text-foreground hover:bg-accent hover:text-accent-foreground rounded-lg"
               onClick={handleReset}
               title="Khôi phục"
             >
@@ -179,26 +179,24 @@ export function ImageViewerDialog({
             {/* Download control */}
             <Button
               size="sm"
-              variant="outline"
-              className="h-9 w-9 p-0 bg-background/90 hover:bg-accent hover:text-accent-foreground text-foreground border border-input rounded-xl shadow-sm"
+              variant="ghost"
+              className="h-8 w-8 p-0 text-foreground hover:bg-accent hover:text-accent-foreground rounded-lg"
               asChild
               title="Tải về"
             >
-              <a href={imageUrl} download target="_blank" rel="noopener noreferrer">
+              <a href={imageUrl} download target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-full h-full">
                 <Download className="h-4 w-4" />
               </a>
             </Button>
 
-            {/* Close control */}
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-9 w-9 p-0 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-900/30 text-rose-600 dark:text-rose-400 border border-rose-200/55 dark:border-rose-900/30 rounded-xl shadow-sm"
+            {/* Close control (using div to avoid Radix button hiding rules) */}
+            <div
+              className="h-8 w-8 flex items-center justify-center bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 rounded-lg cursor-pointer transition-colors"
               onClick={() => onOpenChange(false)}
               title="Đóng"
             >
               <X className="h-4 w-4" />
-            </Button>
+            </div>
           </div>
 
           {/* Footer Zoom Status indicator */}

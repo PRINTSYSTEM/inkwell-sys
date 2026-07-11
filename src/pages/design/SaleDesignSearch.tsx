@@ -15,13 +15,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 
 export default function SaleDesignSearch() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -34,8 +28,7 @@ export default function SaleDesignSearch() {
     string | null
   >(null);
   const [dimensionsFilter, setDimensionsFilter] = useState("");
-  const [previewOpen, setPreviewOpen] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [viewingImage, setViewingImage] = useState<{ url: string; title?: string } | null>(null);
   const [copiedDesignId, setCopiedDesignId] = useState<number | null>(null);
 
   const handleCopyDesignName = async (name: string, id: number) => {
@@ -130,10 +123,7 @@ export default function SaleDesignSearch() {
     if (currentPage < totalPages) setCurrentPage((prev) => prev + 1);
   };
 
-  const openPreview = (url?: string | null) => {
-    setPreviewUrl(url ?? null);
-    setPreviewOpen(true);
-  };
+
 
   return (
     <div className="flex flex-col h-full bg-slate-50 dark:bg-slate-950">
@@ -256,21 +246,16 @@ export default function SaleDesignSearch() {
           <>
 
             <div className="overflow-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded">
-              <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
-                <DialogContent className="max-w-4xl p-0">
-                  <div className="w-full h-[640px] flex items-center justify-center bg-black">
-                    {previewUrl ? (
-                      <img
-                        src={previewUrl}
-                        alt=""
-                        className="max-h-full max-w-full object-contain"
-                      />
-                    ) : (
-                      <div className="text-slate-400">No image</div>
-                    )}
-                  </div>
-                </DialogContent>
-              </Dialog>
+              {viewingImage && (
+                <ImageViewerDialog
+                  open={!!viewingImage}
+                  onOpenChange={(open) => {
+                    if (!open) setViewingImage(null);
+                  }}
+                  imageUrl={viewingImage.url}
+                  title={viewingImage.title}
+                />
+              )}
               <table className="min-w-full text-left text-sm">
                 <thead className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
                   <tr>
@@ -293,12 +278,21 @@ export default function SaleDesignSearch() {
                     >
                       <td className="px-4 py-3 align-middle text-center w-16">
                         <button
-                          onClick={() => openPreview(design.designImageUrl)}
+                          onClick={() => {
+                            const url = design.designImageUrl || design.designFileUrl;
+                            if (url) {
+                              setViewingImage({
+                                url,
+                                title: design.designName || design.code || `DES-${design.id}`
+                              });
+                            }
+                          }}
                           className="w-9 h-9 rounded overflow-hidden bg-slate-100 dark:bg-slate-800 flex items-center justify-center hover:scale-105 transition-transform border border-slate-200 dark:border-slate-700"
+                          disabled={!design.designImageUrl && !design.designFileUrl}
                         >
-                          {design.designImageUrl ? (
+                          {(design.designImageUrl || design.designFileUrl) ? (
                             <img
-                              src={design.designImageUrl}
+                              src={design.designImageUrl || design.designFileUrl}
                               alt={design.designName}
                               className="w-full h-full object-cover"
                             />

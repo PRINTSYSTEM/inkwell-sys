@@ -24,6 +24,7 @@ interface PrepressOrdersTableProps {
   onNavigate: (id: number) => void;
   tableRef?: React.RefObject<HTMLDivElement>;
   showAllDesignsByDefault?: boolean;
+  headerActions?: React.ReactNode;
 }
 
 export function PrepressOrdersTable({
@@ -38,13 +39,15 @@ export function PrepressOrdersTable({
   onNavigate,
   tableRef,
   showAllDesignsByDefault = false,
+  headerActions,
 }: PrepressOrdersTableProps) {
   return (
     <div className="relative flex-1 min-h-0 flex flex-col border rounded-lg overflow-hidden">
-      <div className="shrink-0 border-b bg-muted/30 px-4 py-2">
+      <div className="shrink-0 border-b bg-muted/30 px-4 py-2 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">
           {title} ({count})
         </h3>
+        {headerActions && <div>{headerActions}</div>}
       </div>
       <div className="flex-1 min-h-0 overflow-hidden">
         <ScrollArea className="h-full">

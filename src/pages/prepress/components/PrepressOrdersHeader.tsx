@@ -27,6 +27,8 @@ import { useState } from "react";
 import { FilterSection } from "@/components/proofing/FilterSection";
 import { DesignTable } from "@/components/proofing/DesignTable";
 import { PrepressOrdersTable } from "./PrepressOrdersTable";
+import { DateRangePicker } from "@/components/forms/DateRangePicker";
+import { DateRange } from "react-day-picker";
 import type { FilterOption, DesignItem } from "@/types/proofing";
 
 interface PrepressOrdersHeaderProps {
@@ -107,6 +109,8 @@ interface PrepressOrdersHeaderProps {
   isSelectionEnabled?: boolean;
   selectedCount?: number;
   onAddToExistingClick?: () => void;
+  completedDateRange?: DateRange;
+  setCompletedDateRange: (range: DateRange | undefined) => void;
 }
 
 export function PrepressOrdersHeader({
@@ -182,6 +186,8 @@ export function PrepressOrdersHeader({
   selectedDesigns = [],
   selectedCount = 0,
   onAddToExistingClick,
+  completedDateRange,
+  setCompletedDateRange,
 }: PrepressOrdersHeaderProps) {
   const [materialTypeSearchOpen, setMaterialTypeSearchOpen] = useState(false);
 
@@ -431,6 +437,18 @@ export function PrepressOrdersHeader({
               searchTermLower={searchTermLower}
               debouncedSearchTerm={debouncedDesignCode}
               onNavigate={onNavigate}
+              headerActions={
+                <DateRangePicker
+                  value={completedDateRange}
+                  onValueChange={(range) => {
+                    setCompletedDateRange(range);
+                    setCompletedPage(1);
+                  }}
+                  placeholder="Lọc theo ngày hoàn thành"
+                  showClear
+                  className="h-8 text-xs w-[240px] bg-background border border-input"
+                />
+              }
             />
             {completedTotalCount > itemsPerPage && (
               <div className="flex items-center justify-between gap-3 bg-background px-1 py-1 border rounded-lg shadow-sm">

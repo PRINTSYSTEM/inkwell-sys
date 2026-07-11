@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { DateRangePicker } from "@/components/forms/DateRangePicker";
+import { DateRange } from "react-day-picker";
 import {
   Search,
   Package,
@@ -73,7 +75,7 @@ export default function AllDesignsPage() {
   const [selectedYear, setSelectedYear] = useState<number | null>(
     new Date().getFullYear()
   );
-  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const itemsPerPage = 10;
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
@@ -99,10 +101,18 @@ export default function AllDesignsPage() {
       ...(filterState.filters["designTypeId"]?.value
         ? { designTypeId: filterState.filters["designTypeId"].value as number }
         : {}),
-      ...(selectedDate
+      ...(dateRange?.from
         ? {
-            startDate: `${selectedDate}T00:00:00.000Z`,
-            endDate: `${selectedDate}T23:59:59.999Z`,
+            startDate: (() => {
+              const d = new Date(dateRange.from);
+              d.setHours(0, 0, 0, 0);
+              return d.toISOString();
+            })(),
+            endDate: (() => {
+              const d = new Date(dateRange.to || dateRange.from);
+              d.setHours(23, 59, 59, 999);
+              return d.toISOString();
+            })(),
           }
         : {
             ...(selectedMonth ? { month: selectedMonth } : {}),
@@ -127,7 +137,7 @@ export default function AllDesignsPage() {
       filterState.filters,
       filterState.sortBy,
       filterState.sortOrder,
-      selectedDate,
+      dateRange,
       selectedMonth,
       selectedYear,
       filterState.searchQuery,
@@ -165,7 +175,7 @@ export default function AllDesignsPage() {
     const counts: Record<string, number> = {};
     if (todayConfirmedData?.items) {
       todayConfirmedData.items.forEach((d) => {
-        const typeName = d.designType?.name || d.designTypeName || "Chưa phân loại";
+        const typeName = d.designType?.name || (d as any).designTypeName || "Chưa phân loại";
         counts[typeName] = (counts[typeName] || 0) + 1;
       });
     }
@@ -498,31 +508,16 @@ export default function AllDesignsPage() {
             </Select>
 
             {/* Date filter */}
-            <div className="flex items-center gap-1">
-              <Input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => {
-                  setSelectedDate(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="h-9 text-sm flex-1"
-              />
-              {selectedDate && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    setSelectedDate("");
-                    setCurrentPage(1);
-                  }}
-                  className="h-9 w-8 text-red-500 hover:text-red-700 hover:bg-transparent shrink-0"
-                  title="Xóa lọc ngày"
-                >
-                  ✕
-                </Button>
-              )}
-            </div>
+            <DateRangePicker
+              value={dateRange}
+              onValueChange={(range) => {
+                setDateRange(range);
+                setCurrentPage(1);
+              }}
+              placeholder="Chọn khoảng ngày"
+              showClear
+              className="h-9 text-sm flex-1 bg-card"
+            />
 
 
             {/* Month filter */}
