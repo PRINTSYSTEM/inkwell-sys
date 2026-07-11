@@ -228,6 +228,20 @@ export const MENU_ITEMS: MenuItem[] = [
     ],
     children: [
       {
+        id: "production-dispatch",
+        title: "Điều lệnh sản xuất",
+        icon: Calendar,
+        path: ROUTE_PATHS.PRODUCTION.DISPATCH,
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.PRODUCTION,
+          ROLE.PRODUCTION_LEAD,
+          ROLE.ACCOUNTING,
+          ROLE.ACCOUNTING_LEAD,
+        ],
+      },
+      {
         id: "production-orders",
         title: "Lệnh sản xuất",
         icon: Factory,

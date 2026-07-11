@@ -29,20 +29,6 @@ export type ProofingOrderDesignResponse = z.infer<
   typeof ProofingOrderDesignResponseSchema
 >;
 
-// ===== ProofingOrderResponse =====
-export const ProofingOrderResponseSchema =
-  GenProofingOrderResponseSchema.extend({
-    thumbnailUrl: z.string().nullable().optional(),
-  }).passthrough();
-export type ProofingOrderResponse = z.infer<typeof ProofingOrderResponseSchema>;
-
-// ===== ProofingOrderListResponse =====
-export const ProofingOrderListResponseSchema =
-  GenProofingOrderListResponseSchema.extend({
-    thumbnailUrl: z.string().nullable().optional(),
-  }).passthrough();
-export type ProofingOrderListResponse = z.infer<typeof ProofingOrderListResponseSchema>;
-
 // ===== ProofingOrderImageResponse =====
 export const ProofingOrderImageResponseSchema =
   GenProofingOrderImageResponseSchema.extend({
@@ -50,9 +36,44 @@ export const ProofingOrderImageResponseSchema =
   }).passthrough();
 export type ProofingOrderImageResponse = z.infer<typeof ProofingOrderImageResponseSchema>;
 
+// ===== ProofingOrderResponse =====
+export const ProofingOrderResponseSchema =
+  GenProofingOrderResponseSchema.extend({
+    thumbnailUrl: z.string().nullable().optional(),
+    scheduleStatus: z.string().nullable().optional(),
+    completedAt: z.string().nullable().optional(),
+    images: z.array(ProofingOrderImageResponseSchema).nullable().optional(),
+  }).passthrough();
+export type ProofingOrderResponse = z.infer<typeof ProofingOrderResponseSchema>;
+
+// ===== ProofingOrderListResponse =====
+export const ProofingOrderListResponseSchema =
+  GenProofingOrderListResponseSchema.extend({
+    thumbnailUrl: z.string().nullable().optional(),
+    scheduleStatus: z.string().nullable().optional(),
+    completedAt: z.string().nullable().optional(),
+  }).passthrough();
+export type ProofingOrderListResponse = z.infer<typeof ProofingOrderListResponseSchema>;
+
+// ===== CompletedProofingOrderListParams =====
+export const CompletedProofingOrderListParamsSchema = z.object({
+  fromDate: z.string().nullable().optional(),
+  toDate: z.string().nullable().optional(),
+  designTypeId: z.number().nullable().optional(),
+  scheduleStatus: z.string().nullable().optional(),
+  search: z.string().nullable().optional(),
+  pageNumber: z.number().nullable().optional(),
+  pageSize: z.number().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
+}).passthrough();
+export type CompletedProofingOrderListParams = z.infer<typeof CompletedProofingOrderListParamsSchema>;
+
 // ===== ProofingOrderListResponsePaginate =====
 export const ProofingOrderListResponsePaginateSchema =
-  GenProofingOrderListResponsePaginateSchema.passthrough();
+  GenProofingOrderListResponsePaginateSchema.extend({
+    items: z.array(ProofingOrderListResponseSchema).nullable().optional(),
+  }).passthrough();
 export type ProofingOrderListResponsePaginate = z.infer<typeof ProofingOrderListResponsePaginateSchema>;
 
 // ===== PagedResponse =====

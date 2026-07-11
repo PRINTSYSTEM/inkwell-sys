@@ -45,6 +45,7 @@ interface FormItem {
   quantity: number;
   cutLength?: number;
   cutWidth?: number;
+  quantityProduced?: number;
 }
 
 function MaterialSelector({
@@ -391,6 +392,9 @@ export function StockOutByProductionOrderDialog({
               bodyItem.cutLength = item.cutLength;
               bodyItem.cutWidth = item.cutWidth;
               bodyItem.unit = "m";
+              if (item.quantityProduced) {
+                bodyItem.quantityProduced = Math.round(item.quantityProduced);
+              }
             }
             return bodyItem;
           }),
@@ -408,7 +412,7 @@ export function StockOutByProductionOrderDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl w-[95vw] rounded-xl border-slate-200 shadow-xl overflow-hidden flex flex-col max-h-[90vh] p-0">
+      <DialogContent className="max-w-6xl w-[95vw] rounded-xl border-slate-200 shadow-xl overflow-hidden flex flex-col max-h-[90vh] p-0">
         <DialogHeader className="bg-slate-50 border-b border-slate-100 p-5 shrink-0">
           <DialogTitle className="text-base font-bold text-rose-700 flex items-center gap-2">
             <Plus className="h-5 w-5 text-rose-600" />
@@ -562,11 +566,12 @@ export function StockOutByProductionOrderDialog({
                    <thead>
                     <tr className="bg-slate-50 text-slate-600 border-b border-slate-200 font-bold uppercase tracking-wider">
                       <th className="py-2.5 px-3 w-[50px] text-center">#</th>
-                      <th className="py-2.5 px-3 min-w-[220px]">Chọn vật tư</th>
-                      <th className="py-2.5 px-3 w-[80px]">ĐVT</th>
-                      <th className="py-2.5 px-3 w-[100px] text-right">Tồn hiện tại</th>
-                      <th className="py-2.5 px-3 w-[90px]">SL xuất</th>
-                      <th className="py-2.5 px-3 w-[120px]">Dài × Rộng (cm)</th>
+                      <th className="py-2.5 px-3 min-w-[180px]">Chọn vật tư</th>
+                      <th className="py-2.5 px-3 w-[60px]">ĐVT</th>
+                      <th className="py-2.5 px-3 w-[90px] text-right">Tồn hiện tại</th>
+                      <th className="py-2.5 px-3 w-[100px]">SL xuất</th>
+                      <th className="py-2.5 px-3 w-[150px]">Dài × Rộng (cm)</th>
+                      <th className="py-2.5 px-3 w-[110px]">SL tờ ra</th>
                       <th className="py-2.5 px-3 w-[60px] text-center">Xóa</th>
                     </tr>
                   </thead>
@@ -600,7 +605,7 @@ export function StockOutByProductionOrderDialog({
                               placeholder="SL..."
                               value={item.quantity || ""}
                               onChange={(e) => handleItemChange(index, "quantity", parseInt(e.target.value) || 0)}
-                              className="h-9 text-xs font-mono font-bold text-rose-600 border-slate-200 focus-visible:ring-rose-500 rounded-lg bg-white"
+                              className="h-9 text-xs font-mono font-bold text-rose-600 border-slate-200 focus-visible:ring-rose-500 rounded-lg bg-white text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                             />
                           </td>
                           <td className="py-2 px-3">
@@ -613,7 +618,7 @@ export function StockOutByProductionOrderDialog({
                                   placeholder="Dài"
                                   value={item.cutLength || ""}
                                   onChange={(e) => handleItemChange(index, "cutLength", parseInt(e.target.value) || undefined)}
-                                  className="h-9 text-xs font-mono font-bold text-blue-600 border-blue-200 focus-visible:ring-blue-500 rounded-lg bg-white w-full"
+                                  className="h-9 text-xs font-mono font-bold text-blue-600 border-blue-200 focus-visible:ring-blue-500/30 rounded-lg bg-white w-full text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 />
                                 <span className="text-slate-400 font-bold px-0.5">×</span>
                                 <Input
@@ -623,9 +628,24 @@ export function StockOutByProductionOrderDialog({
                                   placeholder="Rộng"
                                   value={item.cutWidth || ""}
                                   onChange={(e) => handleItemChange(index, "cutWidth", parseInt(e.target.value) || undefined)}
-                                  className="h-9 text-xs font-mono font-bold text-blue-600 border-blue-200 focus-visible:ring-blue-500 rounded-lg bg-white w-full"
+                                  className="h-9 text-xs font-mono font-bold text-blue-600 border-blue-200 focus-visible:ring-blue-500/30 rounded-lg bg-white w-full text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 />
                               </div>
+                            ) : (
+                              <span className="text-slate-400 italic">—</span>
+                            )}
+                          </td>
+                          <td className="py-2 px-3">
+                            {isCuon ? (
+                              <Input
+                                type="number"
+                                min="1"
+                                step="1"
+                                placeholder="Tờ ra..."
+                                value={item.quantityProduced || ""}
+                                onChange={(e) => handleItemChange(index, "quantityProduced", parseInt(e.target.value) || undefined)}
+                                className="h-9 text-xs font-mono font-bold text-amber-600 border-amber-200 focus-visible:ring-amber-500 rounded-lg bg-white text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                              />
                             ) : (
                               <span className="text-slate-400 italic">—</span>
                             )}

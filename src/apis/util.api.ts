@@ -187,6 +187,8 @@ export const API_SUFFIX = {
   PROOFING_FROM_DESIGNS: "/proofing-orders/from-designs",
   PROOFING_AVAILABLE_BINS: "/proofing-orders/available-bins",
   PROOFING_AVAILABLE_ORDER_DETAILS: "/proofing-orders/available-order-details",
+  PROOFING_COMPLETED_LIST: "/proofing-orders/completed",
+  PROOFING_UPDATE_SCHEDULE_STATUS: (id: number) => `/proofing-orders/${id}/schedule-status`,
   PROOFING_BY_ORDER: (orderId: number) =>
     `/proofing-orders/by-order/${orderId}`,
   PROOFING_FOR_PRODUCTION: "/proofing-orders/for-production",
@@ -262,6 +264,7 @@ export const API_SUFFIX = {
   STOCK_IN_CANCEL: (id: number) => `/stock-ins/${id}/cancel`,
   STOCK_IN_COMPLETE: (id: number) => `/stock-ins/${id}/complete`,
   STOCK_IN_FROM_VENDOR: "/stock-ins/from-vendor",
+  STOCK_IN_DIRECT_ISSUE: "/stock-ins/direct-issue",
   STOCK_IN_AUXILIARY: "/stock-ins/auxiliary",
   STOCK_IN_FROM_PRODUCTION: "/stock-ins/from-production",
   STOCK_IN_FROM_DELIVERY_RETURN: "/stock-ins/from-delivery-return",

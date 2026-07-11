@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { format, addDays, startOfMonth } from "date-fns";
+import { format, addDays, startOfMonth, endOfMonth } from "date-fns";
 import { vi } from "date-fns/locale";
 import {
   RefreshCw,
@@ -50,7 +50,10 @@ import {
   useCreateStockIn,
   useCreateStockOut,
   useUpdateMaterialCut,
+  useCreateStockInFromVendor,
+  useCreateDirectIssue,
 } from "@/hooks/use-stock";
+import { useProductionOrders } from "@/hooks/use-production";
 import { DateRangePicker } from "@/components/forms/DateRangePicker";
 import type { DateRange } from "react-day-picker";
 import { cn } from "@/lib/utils";
@@ -130,6 +133,36 @@ const isWaste = (type: string | null | undefined) => {
   return t === "waste";
 };
 
+const getJobCodeDisplay = (entry: any, poCodeMap?: Map<number, string>) => {
+  if (entry.jobCode && entry.jobCode !== "—") {
+    return entry.jobCode;
+  }
+  if (poCodeMap && entry.productionOrderId) {
+    const code = poCodeMap.get(entry.productionOrderId);
+    if (code) return code;
+  }
+  const noteStr = entry.note || entry.notes || "";
+  
+  // Try matching [Mã bài: XXX]
+  const matchMb = noteStr.match(/\[Mã bài:\s*([^\]\s]+)\]/i);
+  if (matchMb && matchMb[1]) {
+    return matchMb[1];
+  }
+  
+  // Try matching LSX #XXX or LSX-XXX or LSX XXX
+  const matchLsx = noteStr.match(/LSX\s*#?\s*([a-zA-Z0-9-]+)/i);
+  if (matchLsx && matchLsx[1]) {
+    const matchVal = matchLsx[1];
+    const parsedId = parseInt(matchVal, 10);
+    if (poCodeMap && !isNaN(parsedId) && poCodeMap.has(parsedId)) {
+      return poCodeMap.get(parsedId) || "";
+    }
+    return matchVal;
+  }
+  
+  return "";
+};
+
 export default function MaterialHistoryPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -138,7 +171,13 @@ export default function MaterialHistoryPage() {
   const isNumericId = materialId !== null && !isNaN(materialId);
 
   // States
-  const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    const today = new Date();
+    return {
+      from: startOfMonth(today),
+      to: endOfMonth(today),
+    };
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [transactionType, setTransactionType] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -261,6 +300,8 @@ export default function MaterialHistoryPage() {
   }, [materialDetail]);
 
   const showSheetOutputColumn = materialDetail?.type !== "to";
+  const showWasteColumn = materialDetail?.unit?.toLowerCase() !== "tờ";
+  const totalColumns = 9 + (showSheetOutputColumn ? 1 : 0) + (showWasteColumn ? 1 : 0);
 
   const isRoll = useMemo(() => {
     if (!materialDetail) return false;
@@ -294,8 +335,8 @@ export default function MaterialHistoryPage() {
   } = useMaterialHistory(
     isNumericId ? materialId : null,
     {
-      pageNumber: currentPage,
-      pageSize: 10,
+      pageNumber: 1,
+      pageSize: 10000,
       fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
       toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
       transactionType: transactionType === "all" ? undefined : transactionType,
@@ -311,6 +352,17 @@ export default function MaterialHistoryPage() {
   // Get all materials for vendor matching
   const { data: allMaterialsData } = useMaterials({ pageSize: 1000 });
 
+  const { data: productionOrdersData } = useProductionOrders({ pageSize: 1000 });
+  const poCodeMap = useMemo(() => {
+    const map = new Map<number, string>();
+    (productionOrdersData?.items || []).forEach((po: any) => {
+      if (po.id && po.proofingOrderCode) {
+        map.set(po.id, po.proofingOrderCode);
+      }
+    });
+    return map;
+  }, [productionOrdersData]);
+
   // Mutations
   const { mutateAsync: completeMaterialCut } = useCompleteMaterialCut();
   const { mutateAsync: cancelMaterialCut } = useCancelMaterialCut();
@@ -324,6 +376,8 @@ export default function MaterialHistoryPage() {
   const { mutateAsync: createStockIn } = useCreateStockIn();
   const { mutateAsync: createStockOut } = useCreateStockOut();
   const { mutateAsync: updateMaterialCut } = useUpdateMaterialCut();
+  const { mutateAsync: createStockInFromVendor } = useCreateStockInFromVendor();
+  const { mutateAsync: createDirectIssue } = useCreateDirectIssue();
   const updateMaterialMutation = useUpdateMaterial();
 
   useEffect(() => {
@@ -378,118 +432,72 @@ export default function MaterialHistoryPage() {
     setIsSubmittingStockIn(true);
     let toastId: string | number | undefined;
     try {
-      const calculatedTotalAmount = inlineStockInTotalAmount || (inlineStockInQty || 0) * (inlineStockInUnitPrice || 0);
       const lineKind = isRoll ? "roll" : "sheet";
 
-      if (isRoll || !inlineStockInJobCode.trim()) {
-        toastId = toast.loading("Đang tạo phiếu nhập...");
-        await createStockIn({
-          source: "manual",
-          itemType: "material",
-          vendorId: materialDetail?.vendorId || undefined,
-          productionOrderId: undefined,
-          deliveryNoteId: undefined,
-          originalStockOutId: undefined,
-          orderId: undefined,
-          totalAmount: calculatedTotalAmount || undefined,
-          laborCost: 0,
-          notes: inlineStockInNotes || undefined,
-          stockInDate: new Date().toISOString(),
+      if (inlineStockInJobCode.trim()) {
+        if (!materialDetail?.vendorId) {
+          toast.error("Vật tư này chưa được liên kết với nhà cung cấp!");
+          setIsSubmittingStockIn(false);
+          return;
+        }
+
+        toastId = toast.loading("Đang thực hiện nhập xuất trực tiếp...");
+        const res = await createDirectIssue({
+          vendorId: materialDetail.vendorId,
+          productionOrderCode: inlineStockInJobCode.trim(),
           items: [
             {
-              lineKind: lineKind,
-              itemName: materialDetail?.name || "",
-              itemCode: materialDetail?.code || undefined,
-              unit: materialDetail?.unit || undefined,
+              materialId: Number(materialId),
               quantity: inlineStockInQty,
-              unitPrice: inlineStockInUnitPrice || undefined,
-              notes: inlineStockInNotes || undefined,
-              materialId: materialId ? Number(materialId) : undefined,
-              orderDetailId: undefined,
-              length: materialDetail?.length || undefined,
-              width: materialDetail?.width || undefined,
-              height: materialDetail?.height || undefined,
-              ramQuantity: undefined,
-              proofingOrderId: undefined,
-              jobCode: !isRoll ? inlineStockInJobCode || undefined : undefined,
+              unitPrice: inlineStockInUnitPrice || 0,
             },
           ],
+          notes: inlineStockInNotes.trim() || "Nhập xuất trực tiếp",
         });
-        toast.success("Tạo phiếu nhập thành công (chờ duyệt)!", { id: toastId });
+
+        toast.success("Nhập xuất trực tiếp thành công!", {
+          id: toastId,
+          action: {
+            label: "Xem phiếu xuất",
+            onClick: () => navigate(`/stock/stock-outs/${res.stockOut.id}`),
+          },
+        });
+
+        if (res?.stockIn?.id) {
+          navigate(`/stock/stock-ins/${res.stockIn.id}`);
+        }
       } else {
-        toastId = toast.loading("1. Đang thực hiện nhập kho...");
-        const resIn = await createStockIn({
-          source: "manual",
-          itemType: "material",
-          vendorId: materialDetail?.vendorId || undefined,
-          productionOrderId: undefined,
-          deliveryNoteId: undefined,
-          originalStockOutId: undefined,
-          orderId: undefined,
-          totalAmount: calculatedTotalAmount || undefined,
-          laborCost: 0,
-          notes: inlineStockInNotes || undefined,
-          stockInDate: new Date().toISOString(),
+        if (!materialDetail?.vendorId) {
+          toast.error("Vật tư này chưa được liên kết với nhà cung cấp!");
+          setIsSubmittingStockIn(false);
+          return;
+        }
+
+        toastId = toast.loading("Đang tạo phiếu nhập từ nhà cung cấp...");
+        const resIn = await createStockInFromVendor({
+          vendorId: materialDetail.vendorId,
+          notes: inlineStockInNotes.trim() || undefined,
           items: [
             {
-              lineKind: "sheet",
-              itemName: materialDetail?.name || "",
-              itemCode: materialDetail?.code || undefined,
-              unit: materialDetail?.unit || undefined,
+              itemName: materialDetail.name || "",
+              itemCode: materialDetail.code || undefined,
+              unit: materialDetail.unit || undefined,
               quantity: inlineStockInQty,
               unitPrice: inlineStockInUnitPrice || undefined,
-              notes: inlineStockInNotes || undefined,
+              notes: inlineStockInNotes.trim() || undefined,
               materialId: materialId ? Number(materialId) : undefined,
-              orderDetailId: undefined,
-              length: materialDetail?.length || undefined,
-              width: materialDetail?.width || undefined,
-              height: materialDetail?.height || undefined,
-              ramQuantity: undefined,
-              proofingOrderId: undefined,
-              jobCode: inlineStockInJobCode || undefined,
+              lineKind: lineKind,
+              length: materialDetail.length || undefined,
+              width: materialDetail.width || undefined,
             },
           ],
         });
 
-        const stockInId = resIn?.id;
-        if (!stockInId) {
-          throw new Error("Không thể lấy ID phiếu nhập vừa tạo!");
+        toast.success("Tạo phiếu nhập từ nhà cung cấp thành công!", { id: toastId });
+
+        if (resIn?.id) {
+          navigate(`/stock/stock-ins/${resIn.id}`);
         }
-
-        toast.loading("2. Đang tự động duyệt phiếu nhập...", { id: toastId });
-        await completeStockIn(stockInId);
-
-        toast.loading("3. Đang thực hiện xuất kho sản xuất...", { id: toastId });
-        const resOut = await createStockOut({
-          purpose: "transfer",
-          itemType: "material",
-          notes: inlineStockInNotes || "",
-          stockOutDate: new Date().toISOString(),
-          vendorId: undefined,
-          receiverName: undefined,
-          receiverAddress: undefined,
-          warehouseName: "CÔNG TY QUANG ĐẠT",
-          warehouseAddress: "97/3 Đường Tân Thời Nhất 8, P. Đông Hưng Thuận, TP. HCM",
-          items: [
-            {
-              itemName: materialDetail?.name || "",
-              quantity: inlineStockInQty,
-              materialId: materialId,
-              unit: materialDetail?.unit || "",
-              jobCode: inlineStockInJobCode || undefined,
-            } as any,
-          ],
-        });
-
-        const stockOutId = resOut?.id;
-        if (!stockOutId) {
-          throw new Error("Không thể lấy ID phiếu xuất vừa tạo!");
-        }
-
-        toast.loading("4. Đang tự động duyệt phiếu xuất...", { id: toastId });
-        await completeStockOut(stockOutId);
-
-        toast.success("Đã nhập kho và xuất kho sản xuất thành công!", { id: toastId });
       }
 
       setInlineStockInQty(0);
@@ -660,12 +668,18 @@ export default function MaterialHistoryPage() {
 
     relevantPendingStockIns.forEach((stockIn: any) => {
       const item = (stockIn.items || []).find((i: any) => i.materialId === materialId);
+      const jobCodeVal = getJobCodeDisplay({
+        jobCode: item?.jobCode,
+        notes: stockIn.notes,
+        productionOrderId: stockIn.productionOrderId
+      }, poCodeMap);
       list.push({
         id: stockIn.id,
         type: "stock_in",
+        productionOrderId: stockIn.productionOrderId,
         code: stockIn.code || `PNK-${stockIn.id}`,
         createdAt: stockIn.createdAt || stockIn.stockInDate,
-        jobCode: item?.jobCode || "—",
+        jobCode: jobCodeVal,
         notes: stockIn.notes || "—",
         quantity: item?.quantity || 0,
         size: item?.size || "—",
@@ -675,22 +689,31 @@ export default function MaterialHistoryPage() {
 
     relevantPendingStockOuts.forEach((stockOut: any) => {
       const item = (stockOut.items || []).find((i: any) => i.materialId === materialId);
+      const jobCodeVal = getJobCodeDisplay({
+        jobCode: item?.jobCode,
+        notes: stockOut.notes,
+        productionOrderId: stockOut.productionOrderId
+      }, poCodeMap);
       list.push({
         id: stockOut.id,
         type: "stock_out",
+        productionOrderId: stockOut.productionOrderId,
         code: stockOut.code || `PXK-${stockOut.id}`,
         createdAt: stockOut.createdAt || stockOut.stockOutDate,
-        jobCode: item?.jobCode || "",
+        jobCode: jobCodeVal,
         notes: stockOut.notes || "",
         quantity: item?.quantity || 0,
-        size: item?.size || "—",
+        size: item?.cutLength && item?.cutWidth 
+          ? `${item.cutLength}x${item.cutWidth}` 
+          : (item?.size || "—"),
+        wasted: item?.wasteQuantity !== undefined ? item.wasteQuantity : undefined,
         raw: stockOut,
       });
     });
 
     // Sort newest first
     return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-  }, [relevantPendingCuts, relevantPendingStockIns, relevantPendingStockOuts, materialId]);
+  }, [relevantPendingCuts, relevantPendingStockIns, relevantPendingStockOuts, materialId, poCodeMap]);
 
   // Local Client-side Filtering and Grouping for cut transactions
   const filteredItems = useMemo(() => {
@@ -1252,9 +1275,11 @@ export default function MaterialHistoryPage() {
                 <TableHead className="text-right font-bold py-2 w-[110px]">
                   Xuất({materialDetail?.unit || "m"})
                 </TableHead>
-                <TableHead className="text-right font-bold py-2 w-[110px]">
-                  Hao hụt({materialDetail?.unit || "m"})
-                </TableHead>
+                {showWasteColumn && (
+                  <TableHead className="text-right font-bold py-2 w-[110px]">
+                    Hao hụt({materialDetail?.unit || "m"})
+                  </TableHead>
+                )}
                 <TableHead className="text-right font-bold py-2 w-[100px]">
                   Tồn
                 </TableHead>
@@ -1268,7 +1293,7 @@ export default function MaterialHistoryPage() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i} className="border-b border-slate-100">
-                    {Array.from({ length: showSheetOutputColumn ? 11 : 10 }).map((_, j) => (
+                    {Array.from({ length: totalColumns }).map((_, j) => (
                       <TableCell key={j} className="py-4">
                         <Skeleton className="h-5 w-full rounded-md" />
                       </TableCell>
@@ -1278,7 +1303,7 @@ export default function MaterialHistoryPage() {
               ) : sortedItems.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={showSheetOutputColumn ? 11 : 10}
+                    colSpan={totalColumns}
                     className="h-32 text-center text-slate-400 text-xs font-semibold py-8"
                   >
                     <div className="flex flex-col items-center justify-center space-y-2">
@@ -1328,7 +1353,7 @@ export default function MaterialHistoryPage() {
 
                         {/* 2. Mã bài */}
                         <TableCell className="py-2 text-slate-700 font-bold w-[100px]">
-                          {anyEntry.jobCode || "—"}
+                          {getJobCodeDisplay(anyEntry, poCodeMap) || "—"}
                         </TableCell>
 
                         {/* 3. Kích thước / Thành phẩm */}
@@ -1361,45 +1386,47 @@ export default function MaterialHistoryPage() {
                         </TableCell>
 
                         {/* 8. Hao hụt */}
-                        <TableCell className="text-right py-1 font-bold tabular-nums text-amber-600 w-[110px]">
-                          {anyEntry.type === "cut" && anyEntry.wasted !== undefined ? (
-                            <div className="flex justify-end">
-                              <Input
-                                key={`${anyEntry.id}-${anyEntry.wasted}`}
-                                type="number"
-                                min="0"
-                                step="any"
-                                defaultValue={anyEntry.wasted}
-                                className="h-7 w-20 text-right text-xs font-mono font-bold text-amber-600 border-amber-200 focus-visible:ring-amber-500 bg-amber-50/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                onBlur={async (e) => {
-                                  const newVal = parseFloat(e.target.value);
-                                  if (isNaN(newVal) || newVal < 0) {
-                                    toast.error("Hao hụt phải là số không âm!");
-                                    e.target.value = String(anyEntry.wasted);
-                                    return;
-                                  }
-                                  if (newVal === anyEntry.wasted) return;
-                                  
-                                  const toastId = toast.loading("Đang cập nhật hao hụt...");
-                                  try {
-                                    await handleUpdateWasted(anyEntry.id, anyEntry.raw, newVal);
-                                  } catch (err) {
-                                    console.error(err);
-                                  } finally {
-                                    toast.dismiss(toastId);
-                                  }
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    (e.target as HTMLInputElement).blur();
-                                  }
-                                }}
-                              />
-                            </div>
-                          ) : (
-                            ""
-                          )}
-                        </TableCell>
+                        {showWasteColumn && (
+                          <TableCell className="text-right py-1 font-bold tabular-nums text-amber-600 w-[110px]">
+                            {anyEntry.type === "cut" && anyEntry.wasted !== undefined ? (
+                              <div className="flex justify-end">
+                                <Input
+                                  key={`${anyEntry.id}-${anyEntry.wasted}`}
+                                  type="number"
+                                  min="0"
+                                  step="any"
+                                  defaultValue={anyEntry.wasted}
+                                  className="h-7 w-20 text-right text-xs font-mono font-bold text-amber-600 border-amber-200 focus-visible:ring-amber-500 bg-amber-50/30 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                  onBlur={async (e) => {
+                                    const newVal = parseFloat(e.target.value);
+                                    if (isNaN(newVal) || newVal < 0) {
+                                      toast.error("Hao hụt phải là số không âm!");
+                                      e.target.value = String(anyEntry.wasted);
+                                      return;
+                                    }
+                                    if (newVal === anyEntry.wasted) return;
+                                    
+                                    const toastId = toast.loading("Đang cập nhật hao hụt...");
+                                    try {
+                                      await handleUpdateWasted(anyEntry.id, anyEntry.raw, newVal);
+                                    } catch (err) {
+                                      console.error(err);
+                                    } finally {
+                                      toast.dismiss(toastId);
+                                    }
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      (e.target as HTMLInputElement).blur();
+                                    }
+                                  }}
+                                />
+                              </div>
+                            ) : (
+                              anyEntry.wasted !== undefined && anyEntry.wasted !== null ? anyEntry.wasted.toLocaleString() : "—"
+                            )}
+                          </TableCell>
+                        )}
 
                         {/* 9. Tồn */}
                         <TableCell className="text-right py-2 font-extrabold tabular-nums text-slate-350 italic w-[100px]">
@@ -1467,7 +1494,7 @@ export default function MaterialHistoryPage() {
                                   const actionPromise = 
                                     anyEntry.type === "cut" ? completeMaterialCut(anyEntry.id) :
                                     anyEntry.type === "stock_in" ? completeStockIn(anyEntry.id) :
-                                    completeStockOut(anyEntry.id);
+                                    completeStockOut({ id: anyEntry.id });
                                   
                                   await actionPromise;
                                   refetchAll();
@@ -1538,7 +1565,7 @@ export default function MaterialHistoryPage() {
 
                       {/* 2. Mã bài */}
                       <TableCell className="py-2 text-slate-700 font-medium w-[100px]">
-                        {anyEntry.jobCode || ""}
+                        {getJobCodeDisplay(anyEntry, poCodeMap)}
                       </TableCell>
 
                       {/* 3. Kích thước / Thành phẩm */}
@@ -1562,28 +1589,34 @@ export default function MaterialHistoryPage() {
 
                       {/* 6. Nhập */}
                       <TableCell className="text-right py-2 font-bold tabular-nums text-emerald-600 w-[110px]">
-                        {isImp && entry.quantity !== undefined
-                          ? entry.quantity.toLocaleString()
-                          : ""}
+                        {entry.stockInQuantity !== undefined && entry.stockInQuantity !== null
+                          ? (entry.stockInQuantity > 0 ? entry.stockInQuantity.toLocaleString() : "")
+                          : (isImp && entry.quantity !== undefined ? entry.quantity.toLocaleString() : "")}
                       </TableCell>
 
                       {/* 7. Xuất */}
                       <TableCell className="text-right py-2 font-bold tabular-nums text-rose-600 w-[110px]">
-                        {anyEntry.quantityOut !== undefined
-                          ? anyEntry.quantityOut.toLocaleString()
-                          : isExp && entry.quantity !== undefined
-                          ? entry.quantity.toLocaleString()
-                          : ""}
+                        {entry.stockOutQuantity !== undefined && entry.stockOutQuantity !== null
+                          ? (entry.stockOutQuantity > 0 ? entry.stockOutQuantity.toLocaleString() : "")
+                          : (anyEntry.quantityOut !== undefined
+                              ? anyEntry.quantityOut.toLocaleString()
+                              : isExp && entry.quantity !== undefined
+                              ? entry.quantity.toLocaleString()
+                              : "")}
                       </TableCell>
 
                       {/* 8. Hao hụt */}
-                      <TableCell className="text-right py-2 font-bold tabular-nums text-amber-600 w-[110px]">
-                        {anyEntry.quantityWaste !== undefined
-                          ? anyEntry.quantityWaste.toLocaleString()
-                          : isWaste(entry.transactionType) && entry.quantity !== undefined
-                          ? entry.quantity.toLocaleString()
-                          : ""}
-                      </TableCell>
+                      {showWasteColumn && (
+                        <TableCell className="text-right py-2 font-bold tabular-nums text-amber-600 w-[110px]">
+                          {entry.wasteQuantity !== undefined && entry.wasteQuantity !== null
+                            ? entry.wasteQuantity.toLocaleString()
+                            : (anyEntry.quantityWaste !== undefined
+                                ? anyEntry.quantityWaste.toLocaleString()
+                                : isWaste(entry.transactionType) && entry.quantity !== undefined
+                                ? entry.quantity.toLocaleString()
+                                : "")}
+                        </TableCell>
+                      )}
 
                       {/* 9. Tồn */}
                       <TableCell className="text-right py-2 font-extrabold tabular-nums text-slate-800 w-[100px]">

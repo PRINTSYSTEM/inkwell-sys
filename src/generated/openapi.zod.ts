@@ -1917,6 +1917,9 @@ const InventoryTransactionResponse = z
     quantityProduced: z.number().int().nullable(),
     stockOutPurpose: z.string().nullable(),
     stockOutPurposeName: z.string().nullable(),
+    stockInQuantity: z.number().int().nullable(),
+    stockOutQuantity: z.number().int().nullable(),
+    wasteQuantity: z.number().int().nullable(),
     createdAt: z.string().datetime({ offset: true }),
   })
   .partial();
