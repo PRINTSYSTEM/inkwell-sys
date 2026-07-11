@@ -15,6 +15,20 @@ import { ShoppingCart, Trash2, CheckCircle2, Loader2, X } from "lucide-react";
 import { useAddDesignsToProofingOrder } from "@/hooks/use-proofing-order";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { formatDesignDimensions } from "@/utils/format-die-size";
+
+function formatDesignCreatedDate(value?: string | null) {
+  if (!value) return "—";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
 
 interface CartBannerProps {
   proofingOrderId: number;
@@ -109,9 +123,11 @@ export function CartBanner({ proofingOrderId }: CartBannerProps) {
               <TableRow className="h-8">
                 <TableHead className="h-8 text-xs font-semibold text-blue-900 py-1">Ảnh</TableHead>
                 <TableHead className="h-8 text-xs font-semibold text-blue-900 py-1">Mã hàng</TableHead>
+                <TableHead className="h-8 text-xs font-semibold text-blue-900 py-1">Kích thước</TableHead>
                 <TableHead className="h-8 text-xs font-semibold text-blue-900 py-1">Tên thiết kế / Loại</TableHead>
                 <TableHead className="h-8 text-xs font-semibold text-blue-900 py-1">Chất liệu</TableHead>
-                <TableHead className="h-8 text-xs font-semibold text-blue-900 py-1 text-right w-24">Khả dụng</TableHead>
+                <TableHead className="h-8 text-xs font-semibold text-blue-900 py-1 text-right w-24">Số lượng</TableHead>
+                <TableHead className="h-8 text-xs font-semibold text-blue-900 py-1 text-center w-28">Ngày thiết kế</TableHead>
                 <TableHead className="h-8 text-xs font-semibold text-blue-900 py-1 text-center w-28">SL thêm</TableHead>
                 <TableHead className="h-8 text-xs font-semibold text-blue-900 py-1 text-center w-12"></TableHead>
               </TableRow>
@@ -138,6 +154,9 @@ export function CartBanner({ proofingOrderId }: CartBannerProps) {
                     <TableCell className="py-1 text-xs font-bold text-foreground">
                       {item.designCode}
                     </TableCell>
+                    <TableCell className="py-1 text-xs text-muted-foreground whitespace-nowrap">
+                      {formatDesignDimensions(item.length, item.width, item.height)}
+                    </TableCell>
                     <TableCell className="py-1 text-xs">
                       <div className="font-medium text-slate-800 truncate max-w-[200px]" title={item.designName}>
                         {item.designName}
@@ -151,6 +170,9 @@ export function CartBanner({ proofingOrderId }: CartBannerProps) {
                     </TableCell>
                     <TableCell className="py-1 text-xs text-right font-medium">
                       {maxQty.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="py-1 text-xs text-center whitespace-nowrap">
+                      {formatDesignCreatedDate(item.createdAt)}
                     </TableCell>
                     <TableCell className="py-1">
                       <div className="flex justify-center">

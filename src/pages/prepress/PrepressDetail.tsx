@@ -723,10 +723,9 @@ export default function ProofingOrderDetailPage() {
     : (order.materialTypeId ?? null);
   // Get available designs for adding (when order is empty, no material type filter)
   // Pass designTypeId from selectedDesignTypes (only first one if selected) to API filter
-  const selectedDesignTypeId =
-    isEmptyOrder && selectedDesignTypes.length > 0
-      ? selectedDesignTypes[0]
-      : null;
+  const selectedDesignTypeId = isEmptyOrder
+    ? (selectedDesignTypes.length > 0 ? selectedDesignTypes[0] : null)
+    : (order?.proofingOrderDesigns?.[0]?.design?.designTypeId ?? null);
   // Pass designCode (search term) to API filter when searching
   const designCodeForApi =
     isEmptyOrder && debouncedSearch.trim().length > 0
@@ -737,8 +736,8 @@ export default function ProofingOrderDetailPage() {
       materialTypeId,
       designTypeId: selectedDesignTypeId,
       designCode: designCodeForApi,
-      pageNumber: currentPage,
-      pageSize: itemsPerPage,
+      pageNumber: isEmptyOrder ? currentPage : 1,
+      pageSize: isEmptyOrder ? itemsPerPage : 1000,
     });
 
   // Get available designs for adding (same material type, exclude already added designs) - for non-empty orders

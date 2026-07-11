@@ -10,6 +10,10 @@ export interface CartItem {
   materialTypeName?: string;
   availableQuantity?: number;
   quantity: number | null; // nhập sau ở màn chi tiết
+  length?: number;
+  width?: number;
+  height?: number;
+  createdAt?: string | null;
 }
 
 interface ProofingCartContextValue {
