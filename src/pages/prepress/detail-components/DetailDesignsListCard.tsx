@@ -204,12 +204,12 @@ export function DetailDesignsListCard({
                   Kích thước
                 </TableHead>
 
-                <TableHead className="w-28 whitespace-nowrap">
-                  Ngày TK
-                </TableHead>
-
                 <TableHead className="w-20 text-center">
                   SL
+                </TableHead>
+
+                <TableHead className="w-28 whitespace-nowrap">
+                  Ngày TK
                 </TableHead>
 
                 <TableHead className="w-24 text-center">
@@ -476,11 +476,6 @@ export function DetailDesignsListCard({
                             </p>
                           </div>
                         </TableCell>
-                        <TableCell className="px-2 py-1 whitespace-nowrap">
-                          <span className="text-xs text-muted-foreground">
-                            {formatDesignCreatedDate(pod.design?.createdAt)}
-                          </span>
-                        </TableCell>
                         <TableCell className="px-2 py-1">
                           <QuantityCell
                             pod={pod}
@@ -495,6 +490,11 @@ export function DetailDesignsListCard({
                             }
                             updatingDesignId={updatingDesignId}
                           />
+                        </TableCell>
+                        <TableCell className="px-2 py-1 whitespace-nowrap">
+                          <span className="text-xs text-muted-foreground">
+                            {formatDesignCreatedDate(pod.design?.createdAt)}
+                          </span>
                         </TableCell>
                         <TableCell className="px-2 py-1">
                           <span className="text-xs">

@@ -1009,7 +1009,11 @@ export default function PrepressList() {
                               designTypeName: d.designTypeName,
                               materialTypeName: d.materialTypeName,
                               availableQuantity: d.availableQuantity,
-                              quantity: null,
+                              quantity: d.availableQuantity !== undefined && d.availableQuantity !== null ? d.availableQuantity : d.quantity,
+                              length: d.length,
+                              width: d.width,
+                              height: d.height,
+                              createdAt: d.createdAt,
                             }))
                           );
                           toast.success(`Đã thêm ${selectedDesigns.length} thiết kế vào giỏ`);
