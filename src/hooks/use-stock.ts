@@ -114,6 +114,49 @@ export const useCreateStockInFromVendor = () => {
   });
 };
 
+export interface CreateDirectIssueRequest {
+  vendorId: number;
+  productionOrderCode: string;
+  items: Array<{
+    materialId: number;
+    quantity: number;
+    unitPrice: number;
+  }>;
+  notes?: string;
+}
+
+export interface DirectIssueResponse {
+  stockIn: { id: number; [key: string]: any };
+  stockOut: { id: number; [key: string]: any };
+}
+
+export const useCreateDirectIssue = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    DirectIssueResponse,
+    ApiError,
+    CreateDirectIssueRequest
+  >({
+    mutationFn: async (data: CreateDirectIssueRequest) => {
+      const response = await apiRequest.post<DirectIssueResponse>(
+        API_SUFFIX.STOCK_IN_DIRECT_ISSUE,
+        data
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: stockInKeys.all });
+      toast.success("Tạo phiếu nhập xuất trực tiếp thành công");
+    },
+    onError: (error: ApiError) => {
+      toast.error("Tạo phiếu nhập xuất trực tiếp thất bại", {
+        description: error.response?.data?.message || error.message,
+      });
+    },
+  });
+};
+
 export const useCreateAuxiliaryStockIn = () => {
   const queryClient = useQueryClient();
 

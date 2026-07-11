@@ -935,23 +935,11 @@ export default function DeliveryNoteListPage() {
       });
     }
 
-    // 3. Sort (priority: pending first, then undelivered, then others; newer first)
-    const priority = (note: any) => {
-      if (!note) return 3;
-      if (String(note.status) === "pending") return 0;
-      const lines = note.lines || [];
-      const hasDelivered = lines.some((l: any) => l && l.status === "delivered");
-      if (!hasDelivered) return 1;
-      return 2;
-    };
-
+    // 3. Sort by ID from largest to smallest (số phiếu từ lớn tới nhỏ)
     result.sort((a: any, b: any) => {
-      const pa = priority(a);
-      const pb = priority(b);
-      if (pa !== pb) return pa - pb;
-      const da = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const db = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return db - da; // newer first
+      const idA = a?.id ?? 0;
+      const idB = b?.id ?? 0;
+      return idB - idA;
     });
 
     return result;
@@ -2541,7 +2529,7 @@ function DeliveryNotesView({
                                     <TableHead className="w-[120px] font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Mã thiết kế</TableHead>
                                     <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Tên sản phẩm</TableHead>
                                     <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Khách hàng</TableHead>
-                                    <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Địa chỉ giao</TableHead>
+                                    <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider text-center">Trạng thái</TableHead>
                                     <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Mã bài</TableHead>
                                     <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-32">Đơn hàng</TableHead>
                                     <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-24">SL giao</TableHead>
@@ -2580,21 +2568,15 @@ function DeliveryNotesView({
                                           <TableCell className="text-[11px] text-stone-500 font-semibold truncate max-w-[120px] md:max-w-[150px]" title={lineCustomerName}>
                                             {lineCustomerName}
                                           </TableCell>
-                                          <TableCell
-                                            className="text-[11px] text-stone-500 font-medium truncate max-w-[120px] md:max-w-[150px]"
-                                            title={
-                                              line.customerAddress
-                                                ? [
-                                                    line.customerAddress.recipientName,
-                                                    line.customerAddress.recipientPhone,
-                                                    line.customerAddress.address,
-                                                  ]
-                                                    .filter(Boolean)
-                                                    .join(" - ")
-                                                : ""
-                                            }
-                                          >
-                                            {line.customerAddress?.address || "—"}
+                                          <TableCell className="text-center">
+                                            {line.status ? (
+                                              <StatusBadge
+                                                status={line.status}
+                                                label={deliveryLineStatusLabels[line.status] || line.status}
+                                              />
+                                            ) : (
+                                              <span className="text-muted-foreground text-[11px]">—</span>
+                                            )}
                                           </TableCell>
                                           <TableCell className="text-[11px] font-medium text-stone-700 dark:text-stone-300">
                                             {line.proofingOrderCodes && line.proofingOrderCodes.length > 0 ? (

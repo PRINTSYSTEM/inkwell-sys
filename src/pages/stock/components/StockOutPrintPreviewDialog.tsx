@@ -38,6 +38,7 @@ export default function StockOutPrintPreviewDialog({
   if (!stockOut) return null;
 
   const items = stockOut.items || [];
+  const showCutColumns = items.some((item: any) => item.cutLength != null);
   const totalQuantity = items.reduce((sum: number, item: any) => sum + (item.quantity || 0), 0);
 
   const dateObj = stockOut.stockOutDate
@@ -360,8 +361,13 @@ export default function StockOutPrintPreviewDialog({
                     </th>
                     <th className="border border-black text-center p-1 w-16">ĐVT</th>
                     <th className="border border-black text-right p-1 w-24">SỐ LƯỢNG</th>
-                    <th className="border border-black text-center p-1 w-22">KT cắt (cm)</th>
-                    <th className="border border-black text-right p-1 w-18">Hao hụt</th>
+                    {showCutColumns && (
+                      <>
+                        <th className="border border-black text-center p-1 w-22">KT cắt (cm)</th>
+                        <th className="border border-black text-right p-1 w-18">SL tờ ra</th>
+                        <th className="border border-black text-right p-1 w-18">Hao hụt</th>
+                      </>
+                    )}
                     <th className="border border-black text-left p-1 w-36">GHI CHÚ</th>
                   </tr>
                 </thead>
@@ -387,12 +393,19 @@ export default function StockOutPrintPreviewDialog({
                         <td className="border border-black text-right p-1.5 font-bold">
                           {(item.quantity || 0).toLocaleString("vi-VN")}
                         </td>
-                        <td className="border border-black text-center p-1.5">
-                          {item.cutLength != null ? `${item.cutLength} × ${item.cutWidth}` : "—"}
-                        </td>
-                        <td className="border border-black text-right p-1.5 font-mono">
-                          {item.cutLength != null ? (item.wasteQuantity?.toLocaleString() ?? "0") : "—"}
-                        </td>
+                        {showCutColumns && (
+                          <>
+                            <td className="border border-black text-center p-1.5">
+                              {item.cutLength != null ? `${item.cutLength} × ${item.cutWidth}` : "—"}
+                            </td>
+                            <td className="border border-black text-right p-1.5 font-mono">
+                              {item.cutLength != null && item.quantityProduced != null ? item.quantityProduced.toLocaleString() : "—"}
+                            </td>
+                            <td className="border border-black text-right p-1.5 font-mono">
+                              {item.cutLength != null ? (item.wasteQuantity?.toLocaleString() ?? "0") : "—"}
+                            </td>
+                          </>
+                        )}
                         <td className="border border-black p-1.5 italic text-stone-700">
                           {item.notes || "—"}
                         </td>
@@ -400,12 +413,19 @@ export default function StockOutPrintPreviewDialog({
                     );
                   })}
                   <tr className="font-bold bg-stone-50">
-                    <td className="border border-black text-center p-1.5" colSpan={5}>
+                    <td className="border border-black text-center p-1.5" colSpan={3}>
                       Cộng
                     </td>
                     <td className="border border-black text-right p-1.5">
                       {totalQuantity.toLocaleString("vi-VN")}
                     </td>
+                    {showCutColumns && (
+                      <>
+                        <td className="border border-black p-1.5"></td>
+                        <td className="border border-black p-1.5"></td>
+                        <td className="border border-black p-1.5"></td>
+                      </>
+                    )}
                     <td className="border border-black p-1.5"></td>
                   </tr>
                 </tbody>

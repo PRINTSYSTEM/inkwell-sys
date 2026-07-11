@@ -170,14 +170,32 @@ export function PrepressOrderRow({
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
   const [isDesignsExpanded, setIsDesignsExpanded] = useState(false);
 
-  const proofingImgUrl = useMemo(() => {
-    const orderImg = order.thumbnailUrl || order.proofingImageUrl || order.proofingImageUrlConverted || order.imageUrl;
-    if (orderImg) return orderImg;
+  const formatImageUrl = (url: string | null | undefined) => {
+    if (!url) return null;
+    if (url.startsWith("http")) return url;
+    const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "");
+    return `${baseUrl}/${url.startsWith("/") ? url.slice(1) : url}`;
+  };
 
-    // Fallback to the first design's image/thumbnail in the proofing order
-    const firstDesign = designs[0]?.design;
-    return firstDesign?.designThumbnailUrl || firstDesign?.designImageUrl || null;
-  }, [order.thumbnailUrl, order.proofingImageUrl, order.proofingImageUrlConverted, order.imageUrl, designs]);
+  const proofingImgUrl = useMemo(() => {
+    if (order.images && order.images.length > 0) {
+      const firstImg = order.images[0];
+      const url = firstImg.thumbnailUrl || firstImg.imageUrl;
+      if (url) return formatImageUrl(url);
+    }
+    const orderImg = order.thumbnailUrl || order.proofingImageUrl || order.proofingImageUrlConverted || order.imageUrl;
+    return formatImageUrl(orderImg);
+  }, [order.images, order.thumbnailUrl, order.proofingImageUrl, order.proofingImageUrlConverted, order.imageUrl]);
+
+  const proofingOriginalImgUrl = useMemo(() => {
+    if (order.images && order.images.length > 0) {
+      const firstImg = order.images[0];
+      const url = firstImg.imageUrl || firstImg.thumbnailUrl;
+      if (url) return formatImageUrl(url);
+    }
+    const orderImg = order.imageUrl || order.proofingImageUrl || order.proofingImageUrlConverted || order.thumbnailUrl;
+    return formatImageUrl(orderImg);
+  }, [order.images, order.imageUrl, order.proofingImageUrl, order.proofingImageUrlConverted, order.thumbnailUrl]);
 
   const searchMatchesDesignCode = useMemo(() => {
     const term = debouncedSearchTerm.trim().toLowerCase();
@@ -259,7 +277,7 @@ export function PrepressOrderRow({
                 className="w-10 h-10 object-cover rounded border shadow-sm cursor-zoom-in hover:scale-105 transition-transform"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setViewingImageUrl(proofingImgUrl);
+                  setViewingImageUrl(proofingOriginalImgUrl);
                 }}
               />
             ) : (

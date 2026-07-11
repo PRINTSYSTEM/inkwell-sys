@@ -16,6 +16,7 @@ import type {
   ProofingOrderResponse,
   ProofingOrderResponsePaginate,
   AvailableBinResponse,
+  CompletedProofingOrderListParams,
 } from "@/Schema/proofing-order.schema";
 import { ProofingOrderResponseSchema } from "@/Schema/proofing-order.schema";
 import type {
@@ -1476,6 +1477,55 @@ export const useAvailableBins = (enabled: boolean = true) => {
         API_SUFFIX.PROOFING_AVAILABLE_BINS
       );
       return res.data;
+    },
+  });
+};
+
+// ================== GET COMPLETED PROOFING ORDERS ==================
+// GET /proofing-orders/completed
+export const useCompletedProofingOrders = (params?: CompletedProofingOrderListParams) => {
+  return useQuery({
+    queryKey: [proofingKeys.all[0], "completed-proofing-orders", params],
+    queryFn: async () => {
+      const normalizedParams = normalizeParams(params ?? {});
+      const res = await apiRequest.get<ProofingOrderResponsePaginate>(
+        API_SUFFIX.PROOFING_COMPLETED_LIST,
+        { params: normalizedParams }
+      );
+      return res.data;
+    },
+  });
+};
+
+// ================== UPDATE PROOFING ORDER SCHEDULE STATUS ==================
+// PUT /proofing-orders/{id}/schedule-status
+export const useUpdateProofingOrderScheduleStatus = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      id,
+      scheduleStatus,
+    }: {
+      id: number;
+      scheduleStatus: string;
+    }) => {
+      const res = await apiRequest.put<ProofingOrderResponse>(
+        API_SUFFIX.PROOFING_UPDATE_SCHEDULE_STATUS(id),
+        { scheduleStatus }
+      );
+      return res.data;
+    },
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: proofingKeys.all });
+      queryClient.invalidateQueries({ queryKey: proofingKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: [proofingKeys.all[0], "completed-proofing-orders"] });
+      toast.success("Cập nhật trạng thái điều lệnh thành công");
+    },
+    onError: (error: ApiError) => {
+      toast.error("Cập nhật trạng thái thất bại", {
+        description: error.response?.data?.message || error.message,
+      });
     },
   });
 };

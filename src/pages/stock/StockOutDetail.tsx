@@ -258,6 +258,10 @@ export default function StockOutDetailPage() {
       notes: item.notes,
       materialId: item.materialId,
       orderDetailId: item.orderDetailId,
+      wasteQuantity: item.wasteQuantity,
+      cutLength: item.cutLength,
+      cutWidth: item.cutWidth,
+      jobCode: item.jobCode,
     }));
 
     updateStockOut(
@@ -481,6 +485,8 @@ export default function StockOutDetailPage() {
   }
 
   const items = stockOut.items || [];
+  const activeItems = isEditing ? editItems : items;
+  const showCutColumns = activeItems.some((item: any) => item.cutLength != null);
   const totalQuantity = items.reduce((sum, item) => sum + (item.quantity || 0), 0);
   const status = stockOut.status || "pending";
 
@@ -872,12 +878,19 @@ export default function StockOutDetailPage() {
                         <th className="border border-black font-bold text-right py-2.5 px-2 w-28 text-slate-900 print:text-black">
                           SỐ LƯỢNG
                         </th>
-                        <th className="border border-black font-bold text-center py-2.5 px-2 w-24 text-slate-900 print:text-black">
-                          KT cắt (cm)
-                        </th>
-                        <th className="border border-black font-bold text-right py-2.5 px-2 w-20 text-slate-900 print:text-black">
-                          Hao hụt
-                        </th>
+                        {showCutColumns && (
+                          <>
+                            <th className="border border-black font-bold text-center py-2.5 px-2 w-24 text-slate-900 print:text-black">
+                              KT cắt (cm)
+                            </th>
+                            <th className="border border-black font-bold text-right py-2.5 px-2 w-20 text-slate-900 print:text-black">
+                              SL tờ ra
+                            </th>
+                            <th className="border border-black font-bold text-right py-2.5 px-2 w-20 text-slate-900 print:text-black">
+                              Hao hụt
+                            </th>
+                          </>
+                        )}
                         <th className="border border-black font-bold text-left py-2.5 px-2 w-40 text-slate-900 print:text-black">
                           GHI CHÚ
                         </th>
@@ -887,7 +900,7 @@ export default function StockOutDetailPage() {
                       {items.length === 0 ? (
                         <tr className="border border-black">
                           <td
-                            colSpan={7}
+                            colSpan={showCutColumns ? 8 : 5}
                             className="text-center py-8 text-slate-400 italic border border-black"
                           >
                             Không có vật tư nào trong phiếu xuất
@@ -935,12 +948,37 @@ export default function StockOutDetailPage() {
                                   (item.quantity || 0).toLocaleString("vi-VN")
                                 )}
                               </td>
-                              <td className="border border-black text-center py-2 px-1 text-slate-700 print:text-black">
-                                {item.cutLength != null ? `${item.cutLength} × ${item.cutWidth}` : "—"}
-                              </td>
-                              <td className="border border-black text-right py-2 px-1 font-mono text-slate-700 print:text-black">
-                                {item.cutLength != null ? (item.wasteQuantity?.toLocaleString() ?? "0") : "—"}
-                              </td>
+                              {showCutColumns && (
+                                <>
+                                  <td className="border border-black text-center py-2 px-1 text-slate-700 print:text-black">
+                                    {item.cutLength != null ? `${item.cutLength} × ${item.cutWidth}` : "—"}
+                                  </td>
+                                  <td className="border border-black text-right py-2 px-1 font-mono text-slate-700 print:text-black">
+                                    {item.cutLength != null && item.quantityProduced != null ? item.quantityProduced.toLocaleString() : "—"}
+                                  </td>
+                                  <td className="border border-black text-right py-2 px-1 font-mono text-slate-700 print:text-black">
+                                    {isEditing ? (
+                                      item.cutLength != null ? (
+                                        <Input
+                                          type="number"
+                                          min="0"
+                                          step="1"
+                                          value={item.wasteQuantity ?? 0}
+                                          onChange={(e) => {
+                                            const val = parseInt(e.target.value, 10);
+                                            handleEditItemChange(index, "wasteQuantity", isNaN(val) ? 0 : val);
+                                          }}
+                                          className="h-7 w-20 text-xs font-semibold text-right ml-auto bg-blue-50/30 text-blue-900 border-blue-300 focus-visible:ring-blue-500/30 focus:border-blue-500 focus:bg-blue-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                        />
+                                      ) : (
+                                        "—"
+                                      )
+                                    ) : (
+                                      item.cutLength != null ? (item.wasteQuantity?.toLocaleString() ?? "0") : "—"
+                                    )}
+                                  </td>
+                                </>
+                              )}
                               <td className="border border-black py-2 px-2 text-slate-600 print:text-black leading-normal">
                                 {isEditing ? (
                                   <Input

@@ -54,6 +54,7 @@ export const ROUTE_PATHS = {
     ROOT: "/productions" as const,
     DETAIL: "/productions/:id" as const,
     DEFECT_RECORDS: "/production/defect-records" as const,
+    DISPATCH: "/productions/dispatch" as const,
   },
 
 
