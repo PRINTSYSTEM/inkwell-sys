@@ -103,7 +103,9 @@ export type UpdateProofingDesignItem = z.infer<
 
 // ===== UpdateProofingOrderRequest =====
 export const UpdateProofingOrderRequestSchema =
-  GenUpdateProofingOrderRequestSchema.passthrough();
+  GenUpdateProofingOrderRequestSchema.extend({
+    completedAt: z.string().nullable().optional(),
+  }).passthrough();
 export type UpdateProofingOrderRequest = z.infer<
   typeof UpdateProofingOrderRequestSchema
 >;

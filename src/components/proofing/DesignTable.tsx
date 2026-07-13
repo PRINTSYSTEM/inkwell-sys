@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import type { DesignItem } from "@/types/proofing";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -11,7 +12,11 @@ import {
 } from "@/components/ui/table";
 import { CursorTooltip } from "@/components/ui/cursor-tooltip";
 import { cn } from "@/lib/utils";
-import { Search, FileText, Copy } from "lucide-react";
+import { Search, FileText, Copy, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { useAuth } from "@/hooks/use-auth";
+import { useUpdateAvailableQuantity } from "@/hooks/use-proofing-order";
+import { ROLE } from "@/constants";
 import {
   processClassificationLabels,
   sidesClassificationLabels,
@@ -49,6 +54,47 @@ export function DesignTable({
   isConfiguring = false,
   selectedDesigns = [],
 }: DesignTableProps) {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const updateAvailableQuantityMutation = useUpdateAvailableQuantity();
+
+  const [editingDesignId, setEditingDesignId] = useState<number | null>(null);
+  const [editValue, setEditValue] = useState<string>("");
+
+  const role = user?.role;
+  const canEditQuantity = user && [
+    ROLE.ADMIN,
+    ROLE.MANAGER,
+    ROLE.DESIGN_LEAD,
+    ROLE.DESIGN,
+    ROLE.PROOFER
+  ].includes(role as any);
+
+  const handleSaveQuantity = async (design: DesignItem) => {
+    const designId = design.designId || design.id;
+    console.log("DEBUG Available Qty: designId =", designId, "design =", design);
+    if (!designId) {
+      toast.error("Lỗi", { description: "Không tìm thấy ID thiết kế" });
+      return;
+    }
+
+    const qty = parseInt(editValue, 10);
+    if (isNaN(qty) || qty < 0) {
+      toast.error("Lỗi", { description: "Số lượng không hợp lệ" });
+      return;
+    }
+
+    try {
+      await updateAvailableQuantityMutation.mutateAsync({
+        designId,
+        newAvailableQuantity: qty,
+      });
+      setEditingDesignId(null);
+    } catch (error) {
+      // Handled in mutation onError
+    }
+  };
+
   const [viewingImage, setViewingImage] = useState<{
     url: string;
     title: string;
@@ -88,17 +134,17 @@ export function DesignTable({
     return [...designs].sort((a, b) => {
       const aUrgent = Boolean(
         (a as any).urgent ||
-          (a as any).isUrgent ||
-          (a as any).rush ||
-          (a as any).isRushDelivery ||
-          (a as any).urgentDelivery,
+        (a as any).isUrgent ||
+        (a as any).rush ||
+        (a as any).isRushDelivery ||
+        (a as any).urgentDelivery,
       );
       const bUrgent = Boolean(
         (b as any).urgent ||
-          (b as any).isUrgent ||
-          (b as any).rush ||
-          (b as any).isRushDelivery ||
-          (b as any).urgentDelivery,
+        (b as any).isUrgent ||
+        (b as any).rush ||
+        (b as any).isRushDelivery ||
+        (b as any).urgentDelivery,
       );
       if (aUrgent && !bUrgent) return -1;
       if (!aUrgent && bUrgent) return 1;
@@ -139,10 +185,10 @@ export function DesignTable({
               const selectable = canSelect(design);
               const isUrgent = Boolean(
                 (design as any).urgent ||
-                  (design as any).isUrgent ||
-                  (design as any).rush ||
-                  (design as any).isRushDelivery ||
-                  (design as any).urgentDelivery,
+                (design as any).isUrgent ||
+                (design as any).rush ||
+                (design as any).isRushDelivery ||
+                (design as any).urgentDelivery,
               );
               const deliveryInfo =
                 (design as any).deliveryPerson ||
@@ -414,18 +460,125 @@ export function DesignTable({
                         {design.width ? ` × ${design.width}` : ""}
                       </div>
                     </TableCell>
-                    <TableCell className="py-1">
-                      <div className="text-sm font-semibold">
-                        {((design.designTypeName?.toLowerCase().includes("decal") ||
-                          design.materialTypeName?.toLowerCase().includes("decal")) &&
-                          design.sidesClassification === "two_side"
-                          ? design.quantity * 2
-                          : design.quantity
-                        ).toLocaleString()}
-                      </div>
-                      {design.availableQuantity !== undefined && (
-                        <div className="text-xs text-muted-foreground">
-                          Có thể: {design.availableQuantity.toLocaleString()}
+                    <TableCell
+                      className="py-1"
+                      onClick={(e) => {
+                        if (canEditQuantity) {
+                          e.stopPropagation();
+                        }
+                      }}
+                    >
+                      {editingDesignId === design.id ? (
+                        <div
+                          className="flex items-center gap-1.5"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Input
+                            type="number"
+                            min="0"
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                handleSaveQuantity(design);
+                              } else if (e.key === "Escape") {
+                                setEditingDesignId(null);
+                              }
+                            }}
+                            className="h-7 w-20 text-xs font-semibold px-1"
+                            autoFocus
+                            disabled={updateAvailableQuantityMutation.isPending && editingDesignId === design.id}
+                          />
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-1.5 text-xs text-green-600 border-green-200 hover:bg-green-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSaveQuantity(design);
+                            }}
+                            disabled={updateAvailableQuantityMutation.isPending && editingDesignId === design.id}
+                          >
+                            {updateAvailableQuantityMutation.isPending && editingDesignId === design.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              "✓"
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-1.5 text-xs text-red-600 hover:bg-red-50"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingDesignId(null);
+                            }}
+                            disabled={updateAvailableQuantityMutation.isPending && editingDesignId === design.id}
+                          >
+                            ✕
+                          </Button>
+                        </div>
+                      ) : (
+                        <div
+                          className={cn(
+                            "text-sm font-semibold flex items-center gap-1 group/qty rounded px-1 -ml-1 transition-colors min-h-[24px] w-fit",
+                            canEditQuantity && "cursor-pointer hover:bg-muted/50"
+                          )}
+                          onClick={(e) => {
+                            if (canEditQuantity) {
+                              e.stopPropagation();
+                              setEditingDesignId(design.id);
+                              setEditValue(
+                                (design.availableQuantity !== undefined && design.availableQuantity !== null
+                                  ? design.availableQuantity
+                                  : ((design.designTypeName?.toLowerCase().includes("decal") ||
+                                    design.materialTypeName?.toLowerCase().includes("decal")) &&
+                                    design.sidesClassification === "two_side"
+                                    ? design.quantity * 2
+                                    : design.quantity)
+                                ).toString()
+                              );
+                            }
+                          }}
+                          title={canEditQuantity ? "Nhấp để sửa số lượng có thể bình bài" : undefined}
+                        >
+                          <span>
+                            {(design.availableQuantity !== undefined && design.availableQuantity !== null
+                              ? design.availableQuantity
+                              : ((design.designTypeName?.toLowerCase().includes("decal") ||
+                                design.materialTypeName?.toLowerCase().includes("decal")) &&
+                                design.sidesClassification === "two_side"
+                                ? design.quantity * 2
+                                : design.quantity)
+                            ).toLocaleString()}
+                          </span>
+                          {canEditQuantity && (
+                            <span className="text-[10px] text-muted-foreground opacity-0 group-hover/qty:opacity-100 transition-opacity ml-1">
+                              ✏️
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {design.proofingAllocations && design.proofingAllocations.length > 0 && (
+                        <div className="mt-1.5 space-y-1 border-t border-dashed pt-1.5 text-[11.5px] text-muted-foreground">
+                          {design.proofingAllocations.map((alloc, idx) => (
+                            <div key={idx} className="flex justify-between gap-2.5 whitespace-nowrap">
+                              <span
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (alloc.proofingOrderId) {
+                                    navigate(`/proofing/${alloc.proofingOrderId}?highlightDesignId=${design.designId || design.id}`);
+                                  }
+                                }}
+                                className="font-mono text-blue-600 dark:text-blue-400 font-medium hover:underline cursor-pointer"
+                              >
+                                {alloc.proofingOrderCode || `Bài #${alloc.proofingOrderId}`}
+                              </span>
+                              <span className="font-semibold text-foreground text-[11.5px]">
+                                {alloc.quantityTaken?.toLocaleString()}
+                              </span>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </TableCell>

@@ -53,7 +53,8 @@ export default function ProductionListPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [pageInput, setPageInput] = useState<string>("1");
   const [dateFilterType, setDateFilterType] = useState<string>("all");
-  const [customDate, setCustomDate] = useState<string>("");
+  const [customFromDate, setCustomFromDate] = useState<string>("");
+  const [customToDate, setCustomToDate] = useState<string>("");
   const itemsPerPage = dateFilterType === "all" ? 10 : 1000;
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
@@ -107,7 +108,7 @@ export default function ProductionListPage() {
     };
   }, []);
 
-  // Compute fromDate/toDate ISO params based on dateFilterType & customDate
+  // Compute fromDate/toDate ISO params based on dateFilterType & customFromDate/customToDate
   const dateParams = useMemo(() => {
     if (dateFilterType === "all") {
       return { fromDate: undefined, toDate: undefined };
@@ -137,16 +138,37 @@ export default function ProductionListPage() {
       end.setHours(23, 59, 59, 999);
       return { fromDate: start.toISOString(), toDate: end.toISOString() };
     }
-    if (dateFilterType === "custom" && customDate) {
-      const [year, month, day] = customDate.split("-").map(Number);
-      if (year && month && day) {
-        const start = new Date(year, month - 1, day, 0, 0, 0, 0);
-        const end = new Date(year, month - 1, day, 23, 59, 59, 999);
-        return { fromDate: start.toISOString(), toDate: end.toISOString() };
+    if (dateFilterType === "custom") {
+      let fromDate: string | undefined = undefined;
+      let toDate: string | undefined = undefined;
+      
+      if (customFromDate) {
+        const [year, month, day] = customFromDate.split("-").map(Number);
+        if (year && month && day) {
+          const start = new Date(year, month - 1, day, 0, 0, 0, 0);
+          fromDate = start.toISOString();
+        }
       }
+      
+      if (customToDate) {
+        const [year, month, day] = customToDate.split("-").map(Number);
+        if (year && month && day) {
+          const end = new Date(year, month - 1, day, 23, 59, 59, 999);
+          toDate = end.toISOString();
+        }
+      } else if (customFromDate) {
+        // If only start date is selected, filter range is that single day
+        const [year, month, day] = customFromDate.split("-").map(Number);
+        if (year && month && day) {
+          const end = new Date(year, month - 1, day, 23, 59, 59, 999);
+          toDate = end.toISOString();
+        }
+      }
+      
+      return { fromDate, toDate };
     }
     return { fromDate: undefined, toDate: undefined };
-  }, [dateFilterType, customDate]);
+  }, [dateFilterType, customFromDate, customToDate]);
 
   // Fetch summary stats using a single optimized endpoint
   const { data: statsData } = useQuery({
@@ -230,7 +252,7 @@ export default function ProductionListPage() {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedStatus, debouncedSearch, dateFilterType, customDate]);
+  }, [selectedStatus, debouncedSearch, dateFilterType, customFromDate, customToDate]);
 
   // Try to parse with schema, but fallback to raw data if validation fails
   const parseProdResp = safeParseSchema(
@@ -621,7 +643,8 @@ export default function ProductionListPage() {
                 )}
                 onClick={() => {
                   setDateFilterType("all");
-                  setCustomDate("");
+                  setCustomFromDate("");
+                  setCustomToDate("");
                 }}
               >
                 Tất cả ngày
@@ -638,7 +661,8 @@ export default function ProductionListPage() {
                 )}
                 onClick={() => {
                   setDateFilterType("today");
-                  setCustomDate("");
+                  setCustomFromDate("");
+                  setCustomToDate("");
                 }}
               >
                 {dateOptions.todayLabel}
@@ -655,7 +679,8 @@ export default function ProductionListPage() {
                 )}
                 onClick={() => {
                   setDateFilterType("yesterday");
-                  setCustomDate("");
+                  setCustomFromDate("");
+                  setCustomToDate("");
                 }}
               >
                 {dateOptions.yesterdayLabel}
@@ -672,7 +697,8 @@ export default function ProductionListPage() {
                 )}
                 onClick={() => {
                   setDateFilterType("two_days_ago");
-                  setCustomDate(dateOptions.twoDaysAgoValue);
+                  setCustomFromDate(dateOptions.twoDaysAgoValue);
+                  setCustomToDate(dateOptions.twoDaysAgoValue);
                 }}
               >
                 {dateOptions.twoDaysAgoLabel}
@@ -693,15 +719,30 @@ export default function ProductionListPage() {
                     setDateFilterType("custom");
                   }}
                 >
-                  Chọn ngày...
+                  Chọn khoảng ngày...
                 </Button>
                 {dateFilterType === "custom" && (
-                  <Input
-                    type="date"
-                    value={customDate}
-                    onChange={(e) => setCustomDate(e.target.value)}
-                    className="h-7 text-xs bg-background border border-input w-32 py-0 px-2 focus-visible:ring-1 focus-visible:ring-slate-400 rounded-sm"
-                  />
+                  <div className="flex items-center gap-1.5 animate-in fade-in duration-200">
+                    <div className="flex items-center border border-input rounded-sm px-2 bg-background focus-within:ring-1 focus-within:ring-slate-450 h-7">
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase select-none mr-1.5">TỪ</span>
+                      <input
+                        type="date"
+                        value={customFromDate}
+                        onChange={(e) => setCustomFromDate(e.target.value)}
+                        className="bg-transparent border-0 p-0 text-xs focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-none outline-none w-[96px] h-full"
+                      />
+                    </div>
+                    <span className="text-xs text-slate-400">—</span>
+                    <div className="flex items-center border border-input rounded-sm px-2 bg-background focus-within:ring-1 focus-within:ring-slate-450 h-7">
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase select-none mr-1.5">ĐẾN</span>
+                      <input
+                        type="date"
+                        value={customToDate}
+                        onChange={(e) => setCustomToDate(e.target.value)}
+                        className="bg-transparent border-0 p-0 text-xs focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-none outline-none w-[96px] h-full"
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
             </div>

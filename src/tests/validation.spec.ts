@@ -9,6 +9,7 @@ import {
   CreateOrderWithExistingDesignsRequestSchema,
 } from "@/Schema";
 import { ChangePasswordRequestSchema } from "@/Schema/auth.schema";
+import { runKcsTests } from "./kcs.spec";
 
 function expectPass<T>(schema: z.ZodSchema<T>, data: unknown) {
   const res = schema.safeParse(data);
@@ -156,6 +157,7 @@ export async function runValidationTests() {
   });
 
   console.log("✅ All validation tests passed");
+  await runKcsTests();
 }
 
 // Auto-run in dev mode when imported via Vite

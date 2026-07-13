@@ -785,7 +785,14 @@ export default function ReadyDesignListPage() {
                         </TableCell>
                         <TableCell className={`py-2 text-xs font-medium truncate max-w-[150px] ${design.isUrgent ? "text-red-650/80 dark:text-red-400/80" : "text-muted-foreground"}`} title={design.materialTypeName || ""}>
                           {design.materialTypeName}
-                          {(design as any).basisWeight ? ` (${(design as any).basisWeight} gsm)` : ""}
+                          {(() => {
+                            const typeName = (design as any).designTypeName || (design as any).designType?.name || "";
+                            const matName = design.materialTypeName || (design as any).materialType?.name || "";
+                            const isDecalDesign = typeName.toLowerCase().includes("decal");
+                            const isPaperMaterial = matName.toLowerCase().includes("giấy") || matName.toLowerCase().includes("giay");
+                            const isDecalPaper = isDecalDesign && isPaperMaterial;
+                            return (design as any).basisWeight && !isDecalPaper ? ` (${(design as any).basisWeight} gsm)` : "";
+                          })()}
                         </TableCell>
                         <TableCell className={`py-2 text-xs break-words max-w-[280px] ${design.isUrgent ? "text-red-650/80 dark:text-red-400/80" : "text-muted-foreground"}`} title={design.notes || ""}>
                           {design.notes || "—"}

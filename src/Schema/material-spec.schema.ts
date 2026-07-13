@@ -1,7 +1,7 @@
 import { z } from "zod";
 import {
   MaterialSpecResponseSchema as GenMaterialSpecResponseSchema,
-  MaterialSpecResponseIPaginateSchema as GenMaterialSpecResponseIPaginateSchema,
+  MaterialSpecResponsePaginateSchema as GenMaterialSpecResponsePaginateSchema,
   CreateMaterialSpecRequestSchema as GenCreateMaterialSpecRequestSchema,
   UpdateMaterialSpecRequestSchema as GenUpdateMaterialSpecRequestSchema,
 } from "./generated";
@@ -11,10 +11,12 @@ export const MaterialSpecResponseSchema = GenMaterialSpecResponseSchema.passthro
 export type MaterialSpecResponse = z.infer<typeof MaterialSpecResponseSchema>;
 
 // ===== MaterialSpecResponseIPaginate =====
-export const MaterialSpecResponseIPaginateSchema = GenMaterialSpecResponseIPaginateSchema.passthrough();
-export type MaterialSpecResponseIPaginate = z.infer<
-  typeof MaterialSpecResponseIPaginateSchema
+export const MaterialSpecResponsePaginateSchema = GenMaterialSpecResponsePaginateSchema.passthrough();
+export const MaterialSpecResponseIPaginateSchema = MaterialSpecResponsePaginateSchema;
+export type MaterialSpecResponsePaginate = z.infer<
+  typeof MaterialSpecResponsePaginateSchema
 >;
+export type MaterialSpecResponseIPaginate = MaterialSpecResponsePaginate;
 
 // ===== CreateMaterialSpecRequest =====
 export const CreateMaterialSpecRequestSchema = GenCreateMaterialSpecRequestSchema.passthrough();
@@ -27,3 +29,11 @@ export const UpdateMaterialSpecRequestSchema = GenUpdateMaterialSpecRequestSchem
 export type UpdateMaterialSpecRequest = z.infer<
   typeof UpdateMaterialSpecRequestSchema
 >;
+
+// ===== MaterialSpecListParams (Compatibility Alias) =====
+import {
+  MaterialTypeSpecsPaginatedParamsSchema,
+} from "./generated-params";
+
+export const MaterialSpecListParamsSchema = MaterialTypeSpecsPaginatedParamsSchema;
+export type MaterialSpecListParams = z.infer<typeof MaterialSpecListParamsSchema>;

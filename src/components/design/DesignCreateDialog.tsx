@@ -170,7 +170,12 @@ export default function DesignCreateDialog({
     !!materialTypeId
   );
 
-  const hasSpecs = materialSpecs && materialSpecs.length > 0 && !(
+  const isDecalPaper = (isDecal || isDecalCuon) && (
+    selectedMaterial?.name?.toLowerCase().includes("giấy") ||
+    selectedMaterial?.name?.toLowerCase().includes("giay")
+  );
+
+  const hasSpecs = materialSpecs && materialSpecs.length > 0 && !isDecalPaper && !(
     materialSpecs.length === 1 &&
     (materialSpecs[0].basisWeight === 0 || materialSpecs[0].basisWeight === null || materialSpecs[0].basisWeight === undefined)
   );

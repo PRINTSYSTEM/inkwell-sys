@@ -217,7 +217,7 @@ export const useAvailableOrderDetailsForProofing = (
             thumbnailUrl: (design as any).designThumbnailUrl || design.designImageUrl || "",
             largeImageUrl: design.designImageUrl || "",
             createdAt: od.createdAt || design.createdAt || "",
-            designId: design.id, // Store designId for fallback fetching if needed
+            designId: od.designId || design?.id, // Store designId for fallback fetching if needed
              isUrgent: (od as any).isUrgent ?? (od as any).readyDesign?.isUrgent ?? (design as any).isUrgent ?? false,
             orderCode: od.orderCode || undefined,
             customerName:
@@ -237,6 +237,7 @@ export const useAvailableOrderDetailsForProofing = (
             basisWeight: design.basisWeight ?? undefined,
             designerName: design.designer?.fullName || design.designer?.username || undefined,
             createdBy: (od as any).createdBy?.fullName || (od as any).createdBy?.username || undefined,
+            proofingAllocations: od.proofingAllocations || undefined,
             specification: (() => {
               const rawSpec =
                 (od as any).specification ||
@@ -1274,6 +1275,51 @@ export const useAvailableQuantity = (
       return res.data;
     },
     staleTime: 5 * 60 * 1000,
+  });
+};
+
+// ===== PATCH /proofing-orders/designs/{designId}/available-quantity =====
+export const useUpdateAvailableQuantity = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      designId,
+      newAvailableQuantity,
+    }: {
+      designId: number;
+      newAvailableQuantity: number;
+    }) => {
+      const response = await apiRequest.patch<any>(
+        API_SUFFIX.PROOFING_UPDATE_AVAILABLE_QUANTITY(designId),
+        { newAvailableQuantity },
+      );
+      return response.data;
+    },
+    onSuccess: (data) => {
+      // Invalidate queries to refresh lists
+      queryClient.invalidateQueries({
+        queryKey: [proofingKeys.all[0], "available-order-details"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: [proofingKeys.all[0], "available-quantity"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: proofingKeys.all,
+      });
+
+      toast.success("Thành công", {
+        description: data.message || "Đã cập nhật số lượng có thể bình bài",
+      });
+    },
+    onError: (error: ApiError) => {
+      toast.error("Lỗi", {
+        description:
+          error.response?.data?.message ||
+          error.message ||
+          "Không thể cập nhật số lượng có thể bình bài",
+      });
+    },
   });
 };
 

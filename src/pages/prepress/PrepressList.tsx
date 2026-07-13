@@ -801,6 +801,7 @@ export default function PrepressList() {
     setDesignsPage(1);
     setDesignsPageInput("1");
     setViewMode("orders");
+    clearSelection();
   };
 
   const handleClearSelection = () => {

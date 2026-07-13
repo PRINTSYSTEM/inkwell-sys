@@ -150,8 +150,6 @@ export default function ProductionDispatch() {
   const { data: proofingData, isLoading, isError, refetch } = useCompletedProofingOrders({
     pageSize: 300,
     pageNumber: 1,
-    scheduleStatus: scheduleStatusFilter === "all" ? undefined : scheduleStatusFilter,
-    designTypeId: selectedDesignTypeId === "all" ? undefined : Number(selectedDesignTypeId),
     fromDate: fromDate || undefined,
     toDate: toDate || undefined,
     search: searchQuery || undefined,
