@@ -73,6 +73,7 @@ const ProofingOutput = lazy(() => import("@/pages/prepress/PrepressOutput"));
 // Production
 const Production = lazy(() => import("@/pages/production/ProductionList"));
 const ProductionDispatch = lazy(() => import("@/pages/production/ProductionDispatch"));
+const KCSPage = lazy(() => import("@/pages/production/KCSPage"));
 const DefectRecordListPage = lazy(
   () => import("@/pages/production/DefectRecordListPage")
 );
@@ -570,6 +571,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
                 <ProductionDispatch />
+              </Suspense>
+            ),
+          },
+          {
+            path: "kcs",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <KCSPage />
               </Suspense>
             ),
           },

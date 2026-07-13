@@ -220,6 +220,8 @@ export const API_SUFFIX = {
     `/proofing-orders/${id}/hand-to-production`,
   PROOFING_AVAILABLE_QUANTITY: (designId: number) =>
     `/proofing-orders/available-quantity/${designId}`,
+  PROOFING_UPDATE_AVAILABLE_QUANTITY: (designId: number) =>
+    `/proofing-orders/designs/${designId}/available-quantity`,
   PROOFING_ADD_DESIGNS: (id: number) => `/proofing-orders/${id}/designs`,
   PROOFING_REMOVE_DESIGN: (id: number, designId: number) =>
     `/proofing-orders/${id}/designs/${designId}`,
@@ -313,6 +315,10 @@ export const API_SUFFIX = {
     `/production-orders/steps/${id}/assign`,
   PRODUCTION_STEP_STATUS: (id: number) =>
     `/production-orders/steps/${id}/status`,
+  PRODUCTION_ORDERS_KCS: "/production-orders/kcs",
+  PRODUCTION_ORDERS_KCS_SUMMARY: "/production-orders/kcs/design-type-summary",
+  PRODUCTION_ORDER_PRINT_LABEL: (poId: number, itemId: number) =>
+    `/production-orders/${poId}/items/${itemId}/print-label`,
 
   // ========== DEFECT RECORDS ==========
   DEFECT_RECORDS: "/defect-records",

@@ -255,6 +255,20 @@ export const MENU_ITEMS: MenuItem[] = [
           ROLE.ACCOUNTING_LEAD,
         ],
       },
+      {
+        id: "production-qc",
+        title: "Báo số KCS",
+        icon: FileText,
+        path: ROUTE_PATHS.PRODUCTION.KCS,
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.PRODUCTION,
+          ROLE.PRODUCTION_LEAD,
+          ROLE.ACCOUNTING,
+          ROLE.ACCOUNTING_LEAD,
+        ],
+      },
     ],
   },
 

@@ -39,6 +39,14 @@ export interface DesignItem {
   availableForProofing?: number; // from BE availableForProofing
   basisWeight?: number; // from design.basisWeight
   createdBy?: string;
+  proofingAllocations?: ProofingAllocation[];
+}
+
+export interface ProofingAllocation {
+  proofingOrderId?: number;
+  proofingOrderCode?: string | null;
+  quantityTaken?: number;
+  proofingOrderStatus?: string | null;
 }
 
 export interface FilterOption {

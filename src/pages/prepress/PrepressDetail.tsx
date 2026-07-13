@@ -1658,6 +1658,23 @@ export default function ProofingOrderDetailPage() {
     }
   };
 
+  const handleUpdateCompletedAt = async (completedAt: string | null) => {
+    if (!order?.id) return;
+    try {
+      await updateProofingOrderAsync({
+        id: order.id,
+        data: { completedAt },
+      });
+      toast.success("Thành công", {
+        description: "Đã cập nhật ngày hoàn thành bài",
+      });
+    } catch (error) {
+      toast.error("Lỗi", {
+        description: "Không thể cập nhật ngày hoàn thành",
+      });
+    }
+  };
+
   const handleOpenUpdateInfoDialog = () => {
     if (!order) return;
     setUpdateStatus(order.status || "");
@@ -2230,6 +2247,7 @@ export default function ProofingOrderDetailPage() {
         handleSaveField={handleSaveField}
         onDeleteClick={() => setIsConfirmDeleteDialogOpen(true)}
         isDeleting={isDeleting}
+        onUpdateCompletedAt={handleUpdateCompletedAt}
       />
 
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">

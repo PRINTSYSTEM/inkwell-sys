@@ -337,12 +337,25 @@ export default function SaleDesignSearch() {
                         {design.dimensions ||
                           `${design.length || ""} x ${design.width || ""} x ${design.height || ""}`}
                       </td>
-                      <td className="px-4 py-3 align-middle max-w-[130px] truncate text-[13px]" title={
-                        `${design.materialType?.name || design.materialTypeName || "—"}${design.basisWeight ? ` (${design.basisWeight} gsm)` : ""}`
-                      }>
+                      <td className="px-4 py-3 align-middle max-w-[130px] truncate text-[13px]" title={(() => {
+                        const typeName = design.designType?.name || "";
+                        const matName = design.materialType?.name || design.materialTypeName || "";
+                        const isDecalDesign = typeName.toLowerCase().includes("decal");
+                        const isPaperMaterial = matName.toLowerCase().includes("giấy") || matName.toLowerCase().includes("giay");
+                        const isDecalPaper = isDecalDesign && isPaperMaterial;
+                        const weightStr = design.basisWeight && !isDecalPaper ? ` (${design.basisWeight} gsm)` : "";
+                        return `${matName || "—"}${weightStr}`;
+                      })()}>
                         <span>
                           {design.materialType?.name || design.materialTypeName || "—"}
-                          {design.basisWeight ? ` (${design.basisWeight} gsm)` : ""}
+                          {(() => {
+                            const typeName = design.designType?.name || "";
+                            const matName = design.materialType?.name || design.materialTypeName || "";
+                            const isDecalDesign = typeName.toLowerCase().includes("decal");
+                            const isPaperMaterial = matName.toLowerCase().includes("giấy") || matName.toLowerCase().includes("giay");
+                            const isDecalPaper = isDecalDesign && isPaperMaterial;
+                            return design.basisWeight && !isDecalPaper ? ` (${design.basisWeight} gsm)` : "";
+                          })()}
                         </span>
                       </td>
                       <td className="px-4 py-3 align-middle text-slate-500 text-[13px] w-24 max-w-[90px] truncate">

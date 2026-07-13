@@ -1,4 +1,5 @@
 import * as React from "react";
+import { useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -129,6 +130,21 @@ export function DetailDesignsListCard({
   highlightSearchTerm = "",
   isProofer = true,
 }: DetailDesignsListCardProps) {
+  const [searchParams] = useSearchParams();
+  const highlightDesignIdStr = searchParams.get("highlightDesignId");
+  const highlightDesignId = highlightDesignIdStr ? parseInt(highlightDesignIdStr, 10) : null;
+
+  const rowRef = React.useRef<HTMLTableRowElement | null>(null);
+
+  React.useEffect(() => {
+    if (highlightDesignId && rowRef.current) {
+      const timer = setTimeout(() => {
+        rowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightDesignId]);
+
   // order null check moved below (hooks must be called first)
 
   const isDieExported = (order?.dieExports?.length ?? 0) > 0 || (order?.proofingOrderDies?.length ?? 0) > 0;
@@ -227,6 +243,7 @@ export function DetailDesignsListCard({
             </TableHeader>
             <TableBody>
               {orderDesigns.map((pod, index) => {
+                const isHighlighted = highlightDesignId !== null && pod.design?.id === highlightDesignId;
                 const fullInfo = (
                   <div className="space-y-2 text-sm max-w-md">
                     <div className="font-semibold text-base border-b pb-2 flex flex-col gap-1 w-full">
@@ -427,7 +444,10 @@ export function DetailDesignsListCard({
                 return (
                   <HoverCard key={pod.id} openDelay={300}>
                     <HoverCardTrigger asChild>
-                      <TableRow className="h-14">
+                      <TableRow
+                        ref={isHighlighted ? rowRef : undefined}
+                        className={`h-14 transition-all duration-300 ${isHighlighted ? "bg-emerald-100/90 dark:bg-emerald-950/40 ring-2 ring-emerald-400/60 shadow-[inset_4px_0_0_0_#10b981] animate-pulse" : ""}`}
+                      >
                         <TableCell className="px-2 py-1 text-center">
                           <p className="text-xs text-muted-foreground">
                             {index + 1}

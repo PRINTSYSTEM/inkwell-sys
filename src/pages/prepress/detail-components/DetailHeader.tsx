@@ -1,3 +1,5 @@
+import { useState } from "react";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ArrowLeft, Box, Edit, Upload, AlertCircle, Trash2 } from "lucide-react";
@@ -40,6 +42,7 @@ interface DetailHeaderProps {
   handleSaveField: () => void;
   onDeleteClick?: () => void;
   isDeleting?: boolean;
+  onUpdateCompletedAt?: (completedAt: string | null) => Promise<void>;
 }
 
 export function DetailHeader({
@@ -65,200 +68,287 @@ export function DetailHeader({
   handleSaveField,
   onDeleteClick,
   isDeleting = false,
+  onUpdateCompletedAt,
 }: DetailHeaderProps) {
+  const [isEditingCompletedAt, setIsEditingCompletedAt] = useState(false);
+  const [tempCompletedAt, setTempCompletedAt] = useState("");
+  const [isSavingCompletedAt, setIsSavingCompletedAt] = useState(false);
+
+  const handleSaveCompletedAt = async () => {
+    if (!onUpdateCompletedAt) return;
+    setIsSavingCompletedAt(true);
+    try {
+      const dateVal = tempCompletedAt ? new Date(tempCompletedAt).toISOString() : null;
+      await onUpdateCompletedAt(dateVal);
+      setIsEditingCompletedAt(false);
+    } catch (e) {
+      // Error is handled in parent
+    } finally {
+      setIsSavingCompletedAt(false);
+    }
+  };
+
   if (!order) return null;
 
   return (
     <div className="relative mb-4 shrink-0 p-2 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onBack}
-            className="h-8 w-8"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex flex-col">
-            {(editingField === "code" || editingField === "all") ? (
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <Input
-                  value={inlineCode}
-                  onChange={(e) => setInlineCode(e.target.value)}
-                  className="h-8 text-sm font-semibold px-2 w-48 bg-slate-50/50"
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleSaveField();
-                    else if (e.key === "Escape") handleCancelEditField();
-                  }}
-                  autoFocus={editingField === "code"}
-                  disabled={isUpdatingInfo}
-                  placeholder="Nhập mã bài..."
-                />
-                {editingField !== "all" && (
-                  <div className="flex gap-1">
+      <div className="flex items-center gap-3">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onBack}
+          className="h-8 w-8"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <div className="flex flex-col">
+          {(editingField === "code" || editingField === "all") ? (
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <Input
+                value={inlineCode}
+                onChange={(e) => setInlineCode(e.target.value)}
+                className="h-8 text-sm font-semibold px-2 w-48 bg-slate-50/50"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSaveField();
+                  else if (e.key === "Escape") handleCancelEditField();
+                }}
+                autoFocus={editingField === "code"}
+                disabled={isUpdatingInfo}
+                placeholder="Nhập mã bài..."
+              />
+              {editingField !== "all" && (
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-6 px-2 text-[11px] font-bold"
+                    onClick={handleSaveField}
+                    disabled={isUpdatingInfo}
+                  >
+                    Lưu
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 px-2 text-[11px]"
+                    onClick={handleCancelEditField}
+                    disabled={isUpdatingInfo}
+                  >
+                    Hủy
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 group">
+              <h1 className="text-xl font-semibold">{order.code ?? "—"}</h1>
+              {order.status !== "completed" && isProofer && (
+                <button
+                  onClick={() => handleStartEditField("code")}
+                  className="text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded-md hover:bg-slate-100"
+                  title="Chỉnh sửa mã bài"
+                >
+                  <Edit className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          )}
+          <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider">Chi tiết mã bài</p>
+        </div>
+      </div>
+      {!isEmptyOrder && (
+        <>
+          <div className="flex items-center gap-2">
+            {hasDieCutDesigns && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2 mr-2"
+                onClick={onOpenDieList}
+              >
+                <Box className="h-4 w-4" />
+                Danh sách khuôn bế
+              </Button>
+            )}
+            <span className="text-sm text-muted-foreground">
+              Trạng thái hiện tại:
+            </span>{" "}
+            <StatusBadge
+              status={order.status ?? undefined}
+              label={
+                proofingStatusLabels[order.status ?? ""] ?? order.status ?? ""
+              }
+            />
+
+            {/* Completion Time / Thời gian hoàn thành */}
+            {order.status === "completed" && (
+              <div className="flex items-center gap-1.5 ml-2 border-l pl-3 h-8 border-slate-200 dark:border-slate-800">
+                <span className="text-sm text-muted-foreground">
+                  Thời gian hoàn thành:
+                </span>
+                {isEditingCompletedAt ? (
+                  <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900 border rounded px-1.5 py-0.5 shadow-sm">
+                    <input
+                      type="datetime-local"
+                      value={tempCompletedAt}
+                      onChange={(e) => setTempCompletedAt(e.target.value)}
+                      className="h-7 text-xs border rounded px-1.5 bg-white dark:bg-slate-950 font-medium"
+                      disabled={isSavingCompletedAt}
+                    />
                     <Button
                       size="sm"
-                      variant="outline"
-                      className="h-6 px-2 text-[11px] font-bold"
-                      onClick={handleSaveField}
-                      disabled={isUpdatingInfo}
+                      variant="default"
+                      className="h-7 px-2 text-xs font-bold"
+                      onClick={handleSaveCompletedAt}
+                      disabled={isSavingCompletedAt}
                     >
-                      Lưu
+                      {isSavingCompletedAt ? "Lưu..." : "Lưu"}
                     </Button>
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-6 px-2 text-[11px]"
-                      onClick={handleCancelEditField}
-                      disabled={isUpdatingInfo}
+                      className="h-7 px-1.5 text-xs"
+                      onClick={() => setIsEditingCompletedAt(false)}
+                      disabled={isSavingCompletedAt}
                     >
                       Hủy
                     </Button>
                   </div>
-                )}
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 group">
-                <h1 className="text-xl font-semibold">{order.code ?? "—"}</h1>
-                {order.status !== "completed" && isProofer && (
-                  <button
-                    onClick={() => handleStartEditField("code")}
-                    className="text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded-md hover:bg-slate-100"
-                    title="Chỉnh sửa mã bài"
-                  >
-                    <Edit className="h-3.5 w-3.5" />
-                  </button>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-semibold text-foreground">
+                      {order.completedAt
+                        ? format(new Date(order.completedAt), "dd/MM/yyyy HH:mm")
+                        : order.updatedAt
+                        ? format(new Date(order.updatedAt), "dd/MM/yyyy HH:mm")
+                        : "—"}
+                    </span>
+                    {isProofer && (
+                      <button
+                        onClick={() => {
+                          const defaultDate = order.completedAt
+                            ? new Date(order.completedAt)
+                            : order.updatedAt
+                            ? new Date(order.updatedAt)
+                            : new Date();
+                          const offset = defaultDate.getTimezoneOffset();
+                          const localDate = new Date(defaultDate.getTime() - offset * 60 * 1000);
+                          setTempCompletedAt(localDate.toISOString().slice(0, 16));
+                          setIsEditingCompletedAt(true);
+                        }}
+                        className="text-muted-foreground hover:text-foreground p-1 rounded-md hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        title="Chỉnh sửa thời gian hoàn thành"
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
                 )}
               </div>
             )}
-            <p className="text-[10px] text-muted-foreground uppercase font-semibold tracking-wider">Chi tiết mã bài</p>
-          </div>
-        </div>
-        {!isEmptyOrder && (
-          <>
-            <div className="flex items-center gap-2">
-              {hasDieCutDesigns && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 mr-2"
-                  onClick={onOpenDieList}
-                >
-                  <Box className="h-4 w-4" />
-                  Danh sách khuôn bế
-                </Button>
-              )}
-              <span className="text-sm text-muted-foreground">
-                Trạng thái hiện tại:
-              </span>{" "}
-              <StatusBadge
-                status={order.status ?? undefined}
-                label={
-                  proofingStatusLabels[order.status ?? ""] ?? order.status ?? ""
-                }
-              />
-              {nextStatusInfo && isProofer && (
-                <TooltipProvider>
-                  <div className="flex items-center gap-2">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="inline-block">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-1.5 h-8 text-xs"
-                            onClick={onStatusChangeClick}
-                          >
-                            <Edit className="h-3.5 w-3.5" />
-                            {nextStatusInfo.buttonLabel}
-                          </Button>
-                        </span>
-                      </TooltipTrigger>
-                      {(order?.status === "not_completed" || order?.status === "production_returned") &&
-                        !canMarkCompleted && (
-                          <TooltipContent className="max-w-xs">
-                            <div className="space-y-1">
-                              <p className="font-semibold">
-                                Chưa thể hoàn thành vì còn thiếu:
-                              </p>
-                              <ul className="list-disc pl-4 space-y-0.5">
-                                {completionMissingItems.map((item) => (
-                                  <li key={item} className="text-sm">
-                                    {item}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          </TooltipContent>
-                        )}
-                    </Tooltip>
 
-                    {/* Move Cancel Button outside the Tooltip if you want it always visible or inside if it depends on status */}
-                  </div>
-                </TooltipProvider>
-              )}
+            {nextStatusInfo && isProofer && (
+              <TooltipProvider>
+                <div className="flex items-center gap-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-block">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1.5 h-8 text-xs"
+                          onClick={onStatusChangeClick}
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                          {nextStatusInfo.buttonLabel}
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    {(order?.status === "not_completed" || order?.status === "production_returned") &&
+                      !canMarkCompleted && (
+                        <TooltipContent className="max-w-xs">
+                          <div className="space-y-1">
+                            <p className="font-semibold">
+                              Chưa thể hoàn thành vì còn thiếu:
+                            </p>
+                            <ul className="list-disc pl-4 space-y-0.5">
+                              {completionMissingItems.map((item) => (
+                                <li key={item} className="text-sm">
+                                  {item}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        </TooltipContent>
+                      )}
+                  </Tooltip>
 
-              {/* Always visible "Hủy hình bài" button */}
-              {isProofer && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20"
-                  onClick={() => {
-                    if (onCancelClick) onCancelClick();
-                  }}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Hủy hình bài
-                </Button>
-              )}
-              {isProofer && order.status === "waiting_for_file" && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 h-8 text-xs"
-                  onClick={onOldStatusChangeClick}
-                  title={
-                    !order.proofingFileUrl
-                      ? "Vui lòng tải lên file bình bài trước"
-                      : "Chuyển sang chờ sản xuất"
-                  }
-                >
-                  <Edit className="h-3.5 w-3.5" />
-                  Chuyển trạng thái
-                </Button>
-              )}
-              {isProofer && order.status !== "completed" && (
-                <Button
-                  size="sm"
-                  className="gap-1.5 h-8 text-xs"
-                  onClick={onUploadClick}
-                >
-                  <Upload className="h-3.5 w-3.5" />
-                  {order.proofingFileUrl ? "Thay đổi file " : "Tải lên file"}
-                </Button>
-              )}
-              {order.isPlateExported && (
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <AlertCircle className="h-3.5 w-3.5 text-yellow-600" />
-                  <span>Đã xuất kẽm</span>
+                  {/* Move Cancel Button outside the Tooltip if you want it always visible or inside if it depends on status */}
                 </div>
-              )}
-            </div>
-          </>
-        )}
-        {isEmptyOrder && isProofer && (
-          <Button
-            variant="destructive"
-            size="sm"
-            className="gap-1.5 h-8 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm"
-            onClick={onDeleteClick}
-            disabled={isDeleting}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            Xóa bình bài
-          </Button>
-        )}
-      </div>
+              </TooltipProvider>
+            )}
+
+            {/* Always visible "Hủy bình bài" button */}
+            {isProofer && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20"
+                onClick={() => {
+                  if (onCancelClick) onCancelClick();
+                }}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Hủy bình bài
+              </Button>
+            )}
+            {isProofer && order.status === "waiting_for_file" && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 h-8 text-xs"
+                onClick={onOldStatusChangeClick}
+                title={
+                  !order.proofingFileUrl
+                    ? "Vui lòng tải lên file bình bài trước"
+                    : "Chuyển sang chờ sản xuất"
+                }
+              >
+                <Edit className="h-3.5 w-3.5" />
+                Chuyển trạng thái
+              </Button>
+            )}
+            {isProofer && order.status !== "completed" && (
+              <Button
+                size="sm"
+                className="gap-1.5 h-8 text-xs"
+                onClick={onUploadClick}
+              >
+                <Upload className="h-3.5 w-3.5" />
+                {order.proofingFileUrl ? "Thay đổi file " : "Tải lên file"}
+              </Button>
+            )}
+            {order.isPlateExported && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <AlertCircle className="h-3.5 w-3.5 text-yellow-600" />
+                <span>Đã xuất kẽm</span>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+      {isEmptyOrder && isProofer && (
+        <Button
+          variant="destructive"
+          size="sm"
+          className="gap-1.5 h-8 text-xs bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm"
+          onClick={onDeleteClick}
+          disabled={isDeleting}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+          Xóa bình bài
+        </Button>
+      )}
+    </div>
   );
 }

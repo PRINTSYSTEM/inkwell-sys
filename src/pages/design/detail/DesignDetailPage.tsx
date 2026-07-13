@@ -164,6 +164,20 @@ const isTuiCuonDesignType = (designTypeName: string | undefined): boolean => {
   );
 };
 
+const isDecalDesignType = (designTypeName: string | undefined): boolean => {
+  if (!designTypeName) return false;
+  return designTypeName.toLowerCase().includes("decal");
+};
+
+const isDecalCuonDesignType = (designTypeName: string | undefined): boolean => {
+  if (!designTypeName) return false;
+  return (
+    designTypeName.toLowerCase().includes("decal") &&
+    (designTypeName.toLowerCase().includes("cuộn") ||
+      designTypeName.toLowerCase().includes("cuon"))
+  );
+};
+
 function getTimelineVisual(entry: DesignTimelineEntryResponse) {
   const description = (entry.description as string | undefined) || "";
   const normalized = description.toLowerCase();
@@ -299,13 +313,33 @@ export default function DesignDetailPage() {
     basisWeight: undefined as number | undefined,
   });
 
+  // Load materials by design type to check material name during editing
+  const { data: materialsByDesignType = [], isLoading: materialsLoading } =
+    useMaterialsByDesignType(
+      ((design as unknown as { designType?: { id?: number } })?.designType
+        ?.id as number | undefined)
+    );
+
   // Load material specifications for selected material type
   const { data: materialSpecs = [] } = useMaterialSpecsByMaterialType(
     editFormData.materialTypeId || null,
     !!editFormData.materialTypeId
   );
 
-  const hasSpecs = materialSpecs && materialSpecs.length > 0 && !(
+  const designTypeName = design?.designType?.name;
+  const isDecal = isDecalDesignType(designTypeName);
+  const isDecalCuon = isDecalCuonDesignType(designTypeName);
+
+  const selectedMaterialName = isEditing
+    ? (materialsByDesignType || []).find((m) => m.id === editFormData.materialTypeId)?.name || ""
+    : (design as any)?.materialType?.name || "";
+
+  const isDecalPaper = (isDecal || isDecalCuon) && (
+    selectedMaterialName.toLowerCase().includes("giấy") ||
+    selectedMaterialName.toLowerCase().includes("giay")
+  );
+
+  const hasSpecs = materialSpecs && materialSpecs.length > 0 && !isDecalPaper && !(
     materialSpecs.length === 1 &&
     (materialSpecs[0].basisWeight === 0 || materialSpecs[0].basisWeight === null || materialSpecs[0].basisWeight === undefined)
   );
@@ -354,12 +388,6 @@ export default function DesignDetailPage() {
   const cancelDesign = useCancelDesign();
   const markUrgentMutation = useMarkDesignUrgent();
   const [markingUrgent, setMarkingUrgent] = useState(false);
-
-  const { data: materialsByDesignType = [], isLoading: materialsLoading } =
-    useMaterialsByDesignType(
-      ((design as unknown as { designType?: { id?: number } })?.designType
-        ?.id as number | undefined)
-    );
 
   // Filter active materials or the currently selected material of this design (even if inactive)
   const filteredDropdownMaterials = useMemo(() => {
@@ -855,7 +883,6 @@ export default function DesignDetailPage() {
   const d = design as DesignResponse;
 
   // Check design type for conditional editing
-  const designTypeName = d.designType?.name;
   const isNhan = isNhanDesignType(designTypeName);
   const isHop = isHopDesignType(designTypeName);
   const isTui = isTuiDesignType(designTypeName);
@@ -865,7 +892,7 @@ export default function DesignDetailPage() {
     (isTui && (isEditing ? gusseted : (d.width ?? 0) > 0));
   const canEditWidth = isHop || isTuiXepHong; // Only box and side-fold bag can edit width
   const canEditAdhesiveOffset = isNhan; // Only label can edit adhesive offset
-  const showBasisWeight = !!(isEditing ? hasSpecs : (d.basisWeight && d.basisWeight > 0));
+  const showBasisWeight = !!(isEditing ? hasSpecs : (d.basisWeight && d.basisWeight > 0 && !isDecalPaper));
 
   // ==== MAIN LAYOUT ====
   return (

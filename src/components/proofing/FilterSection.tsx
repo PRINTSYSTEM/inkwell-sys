@@ -42,7 +42,8 @@ export function FilterSection({
 }: FilterSectionProps) {
   const isAnyFilterActive =
     selectedDesignTypes.length > 0 ||
-    selectedMaterialTypes.length > 0;
+    selectedMaterialTypes.length > 0 ||
+    selectedCount > 0;
 
   const toggleDesignType = (id: number) => {
     // Only allow selecting 1 design type at a time
