@@ -60,7 +60,7 @@ export default function KCSPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20;
+  const itemsPerPage = 10;
 
   // Debounce search input
   useEffect(() => {
@@ -71,9 +71,7 @@ export default function KCSPage() {
     return () => clearTimeout(handler);
   }, [searchTerm]);
 
-  // Tab: pending_qc (Chờ kiểm hàng), completed (Hoàn thành), all (Tất cả)
-  type KcsTab = "pending_qc" | "completed" | "all";
-  const [viewTab, setViewTab] = useState<KcsTab>("pending_qc");
+  // No tab filtering needed as requested by user - showing all completed proofing orders
 
   // Date filters
   const [dateFilterType, setDateFilterType] = useState<string>("all");
@@ -123,43 +121,37 @@ export default function KCSPage() {
     };
   }, []);
 
-  // Compute from/to Date parameters based on shortcuts
+  // Compute from/to Date parameters based on shortcuts (using local YYYY-MM-DD date strings)
   const dateParams = useMemo(() => {
+    const toLocalDateString = (d: Date) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
     if (dateFilterType === "all") {
       return { fromDate: undefined, toDate: undefined };
     }
     if (dateFilterType === "today") {
-      const start = new Date();
-      start.setHours(0, 0, 0, 0);
-      const end = new Date();
-      end.setHours(23, 59, 59, 999);
-      return { fromDate: start.toISOString(), toDate: end.toISOString() };
+      const dateStr = toLocalDateString(new Date());
+      return { fromDate: dateStr, toDate: dateStr };
     }
     if (dateFilterType === "yesterday") {
-      const start = new Date();
-      start.setDate(start.getDate() - 1);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date();
-      end.setDate(end.getDate() - 1);
-      end.setHours(23, 59, 59, 999);
-      return { fromDate: start.toISOString(), toDate: end.toISOString() };
+      const d = new Date();
+      d.setDate(d.getDate() - 1);
+      const dateStr = toLocalDateString(d);
+      return { fromDate: dateStr, toDate: dateStr };
     }
     if (dateFilterType === "two_days_ago") {
-      const start = new Date();
-      start.setDate(start.getDate() - 2);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date();
-      end.setDate(end.getDate() - 2);
-      end.setHours(23, 59, 59, 999);
-      return { fromDate: start.toISOString(), toDate: end.toISOString() };
+      const d = new Date();
+      d.setDate(d.getDate() - 2);
+      const dateStr = toLocalDateString(d);
+      return { fromDate: dateStr, toDate: dateStr };
     }
     if (dateFilterType === "custom" && customFromDate && customToDate) {
       if (new Date(customFromDate) <= new Date(customToDate)) {
-        const start = new Date(customFromDate);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(customToDate);
-        end.setHours(23, 59, 59, 999);
-        return { fromDate: start.toISOString(), toDate: end.toISOString() };
+        return { fromDate: customFromDate, toDate: customToDate };
       }
     }
     return { fromDate: undefined, toDate: undefined };
@@ -204,30 +196,18 @@ export default function KCSPage() {
 
   // Filter client-side based on tabs if tab parameters are not natively filtered by backend
   const filteredProductions = useMemo(() => {
-    if (viewTab === "all") return productions;
-
-    return productions.filter((prod) => {
-      // Check if all items in this production order have been checked (outputQty has been set > 0)
-      const isCompleted = prod.items && prod.items.length > 0 && prod.items.every((item) => (item.outputQty ?? 0) > 0);
-      
-      if (viewTab === "completed") {
-        return isCompleted;
-      } else {
-        // pending_qc (has items with outputQty == 0 or null)
-        return !isCompleted;
-      }
-    });
-  }, [productions, viewTab]);
+    return productions;
+  }, [productions]);
 
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [dateFilterType, customFromDate, customToDate, selectedDesignTypeId, viewTab]);
+  }, [dateFilterType, customFromDate, customToDate, selectedDesignTypeId]);
 
   return (
     <div className="h-full flex flex-col overflow-hidden bg-background relative">
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden px-3 pb-3 pt-0">
-        
+
         {/* Header section */}
         <div className="flex items-center justify-between py-3 shrink-0">
           <div className="flex items-center gap-2">
@@ -236,38 +216,133 @@ export default function KCSPage() {
             </div>
             <div>
               <h1 className="text-md font-bold text-slate-800 dark:text-slate-100">Báo số KCS</h1>
-              <p className="text-xs text-muted-foreground">Nhập số lượng ra, báo lỗi và in tem nhãn dán thùng hàng</p>
             </div>
           </div>
         </div>
 
         {/* Filter bar */}
         <div className="flex flex-col gap-2.5 mb-3 shrink-0 bg-muted/20 p-2.5 rounded-lg border border-border/50">
-          {/* ROW 1: Tabs & Search */}
-          <div className="flex flex-wrap flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <Tabs
-              value={viewTab}
-              onValueChange={(val) => setViewTab(val as any)}
-              className="w-fit shrink-0"
-            >
-              <TabsList className="h-9 p-1">
-                <TabsTrigger value="pending_qc" className="h-7 text-xs px-3 gap-1.5 flex items-center">
-                  <span>Chờ kiểm hàng</span>
-                  <span className="px-1.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-500 text-white leading-none">
-                    {totalCount && viewTab === "pending_qc" ? filteredProductions.length : "—"}
-                  </span>
-                </TabsTrigger>
-                <TabsTrigger value="completed" className="h-7 text-xs px-3 gap-1.5 flex items-center">
-                  <span>Đã hoàn thành</span>
-                  <span className="px-1.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500 text-white leading-none">
-                    {totalCount && viewTab === "completed" ? filteredProductions.length : "—"}
-                  </span>
-                </TabsTrigger>
-                <TabsTrigger value="all" className="h-7 text-xs px-3">
-                  Tất cả ({totalCount})
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
+          {/* ROW 1: Date Filters & Search */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+            <div className="flex flex-wrap items-center gap-1.5 bg-background dark:bg-muted/10 p-1 rounded-md border border-border/40 w-fit">
+              <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 px-2 select-none">
+                Ngày hoàn thành BB:
+              </span>
+              <Button
+                variant={dateFilterType === "all" ? "default" : "ghost"}
+                size="sm"
+                type="button"
+                className={cn(
+                  "h-7 text-xs px-2.5 rounded-sm font-medium transition-all",
+                  dateFilterType === "all"
+                    ? "bg-slate-700 text-white shadow-sm"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-muted"
+                )}
+                onClick={() => {
+                  setDateFilterType("all");
+                  setCustomFromDate("");
+                  setCustomToDate("");
+                }}
+              >
+                Tất cả ngày
+              </Button>
+              <Button
+                variant={dateFilterType === "today" ? "default" : "ghost"}
+                size="sm"
+                type="button"
+                className={cn(
+                  "h-7 text-xs px-2.5 rounded-sm font-medium transition-all",
+                  dateFilterType === "today"
+                    ? "bg-slate-700 text-white shadow-sm"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-muted"
+                )}
+                onClick={() => {
+                  setDateFilterType("today");
+                  setCustomFromDate("");
+                  setCustomToDate("");
+                }}
+              >
+                {dateOptions.todayLabel}
+              </Button>
+              <Button
+                variant={dateFilterType === "yesterday" ? "default" : "ghost"}
+                size="sm"
+                type="button"
+                className={cn(
+                  "h-7 text-xs px-2.5 rounded-sm font-medium transition-all",
+                  dateFilterType === "yesterday"
+                    ? "bg-slate-700 text-white shadow-sm"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-muted"
+                )}
+                onClick={() => {
+                  setDateFilterType("yesterday");
+                  setCustomFromDate("");
+                  setCustomToDate("");
+                }}
+              >
+                {dateOptions.yesterdayLabel}
+              </Button>
+              <Button
+                variant={dateFilterType === "two_days_ago" ? "default" : "ghost"}
+                size="sm"
+                type="button"
+                className={cn(
+                  "h-7 text-xs px-2.5 rounded-sm font-medium transition-all",
+                  dateFilterType === "two_days_ago"
+                    ? "bg-slate-700 text-white shadow-sm"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-muted"
+                )}
+                onClick={() => {
+                  setDateFilterType("two_days_ago");
+                  setCustomFromDate(dateOptions.twoDaysAgoValue);
+                  setCustomToDate(dateOptions.twoDaysAgoValue);
+                }}
+              >
+                {dateOptions.twoDaysAgoLabel}
+              </Button>
+
+              <div className="flex items-center gap-1.5 pl-1.5 border-l border-border/60">
+                <Button
+                  variant={dateFilterType === "custom" ? "default" : "ghost"}
+                  size="sm"
+                  type="button"
+                  className={cn(
+                    "h-7 text-xs px-2.5 rounded-sm font-medium transition-all",
+                    dateFilterType === "custom"
+                      ? "bg-slate-700 text-white shadow-sm"
+                      : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-muted"
+                  )}
+                  onClick={() => {
+                    setDateFilterType("custom");
+                  }}
+                >
+                  Chọn khoảng ngày...
+                </Button>
+                {dateFilterType === "custom" && (
+                  <div className="flex items-center gap-1.5 animate-in fade-in duration-200">
+                    <div className="flex items-center border border-input rounded-sm px-2 bg-background focus-within:ring-1 focus-within:ring-slate-450 h-7">
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase select-none mr-1.5">TỪ</span>
+                      <input
+                        type="date"
+                        value={customFromDate}
+                        onChange={(e) => setCustomFromDate(e.target.value)}
+                        className="bg-transparent border-0 p-0 text-xs focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-none outline-none w-[96px] h-full"
+                      />
+                    </div>
+                    <span className="text-xs text-slate-400">—</span>
+                    <div className="flex items-center border border-input rounded-sm px-2 bg-background focus-within:ring-1 focus-within:ring-slate-450 h-7">
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase select-none mr-1.5">ĐẾN</span>
+                      <input
+                        type="date"
+                        value={customToDate}
+                        onChange={(e) => setCustomToDate(e.target.value)}
+                        className="bg-transparent border-0 p-0 text-xs focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-none outline-none w-[96px] h-full"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
 
             {/* Search Input */}
             <div className="relative min-w-0 w-full lg:max-w-[280px]">
@@ -281,177 +356,61 @@ export default function KCSPage() {
             </div>
           </div>
 
-          {/* ROW 2: Date Filters */}
-          <div className="flex flex-wrap items-center gap-1.5 bg-background dark:bg-muted/10 p-1 rounded-md border border-border/40 w-fit">
-            <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 px-2 select-none">
-              Ngày hoàn thành BB:
-            </span>
-            <Button
-              variant={dateFilterType === "all" ? "default" : "ghost"}
-              size="sm"
-              type="button"
-              className={cn(
-                "h-7 text-xs px-2.5 rounded-sm font-medium transition-all",
-                dateFilterType === "all"
-                  ? "bg-slate-700 text-white shadow-sm"
-                  : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-muted"
-              )}
-              onClick={() => {
-                setDateFilterType("all");
-                setCustomFromDate("");
-                setCustomToDate("");
-              }}
-            >
-              Tất cả ngày
-            </Button>
-            <Button
-              variant={dateFilterType === "today" ? "default" : "ghost"}
-              size="sm"
-              type="button"
-              className={cn(
-                "h-7 text-xs px-2.5 rounded-sm font-medium transition-all",
-                dateFilterType === "today"
-                  ? "bg-slate-700 text-white shadow-sm"
-                  : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-muted"
-              )}
-              onClick={() => {
-                setDateFilterType("today");
-                setCustomFromDate("");
-                setCustomToDate("");
-              }}
-            >
-              {dateOptions.todayLabel}
-            </Button>
-            <Button
-              variant={dateFilterType === "yesterday" ? "default" : "ghost"}
-              size="sm"
-              type="button"
-              className={cn(
-                "h-7 text-xs px-2.5 rounded-sm font-medium transition-all",
-                dateFilterType === "yesterday"
-                  ? "bg-slate-700 text-white shadow-sm"
-                  : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-muted"
-              )}
-              onClick={() => {
-                setDateFilterType("yesterday");
-                setCustomFromDate("");
-                setCustomToDate("");
-              }}
-            >
-              {dateOptions.yesterdayLabel}
-            </Button>
-            <Button
-              variant={dateFilterType === "two_days_ago" ? "default" : "ghost"}
-              size="sm"
-              type="button"
-              className={cn(
-                "h-7 text-xs px-2.5 rounded-sm font-medium transition-all",
-                dateFilterType === "two_days_ago"
-                  ? "bg-slate-700 text-white shadow-sm"
-                  : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-muted"
-              )}
-              onClick={() => {
-                setDateFilterType("two_days_ago");
-                setCustomFromDate(dateOptions.twoDaysAgoValue);
-                setCustomToDate(dateOptions.twoDaysAgoValue);
-              }}
-            >
-              {dateOptions.twoDaysAgoLabel}
-            </Button>
-
-            <div className="flex items-center gap-1.5 pl-1.5 border-l border-border/60">
+          {/* ROW 3: Design Type Filters & Info */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+            <div className="flex flex-wrap items-center gap-1.5 bg-background dark:bg-muted/10 p-1 rounded-md border border-border/40 w-fit">
+              <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 px-2 select-none">
+                Loại sản phẩm:
+              </span>
               <Button
-                variant={dateFilterType === "custom" ? "default" : "ghost"}
+                variant={selectedDesignTypeId === null ? "default" : "ghost"}
                 size="sm"
                 type="button"
                 className={cn(
                   "h-7 text-xs px-2.5 rounded-sm font-medium transition-all",
-                  dateFilterType === "custom"
+                  selectedDesignTypeId === null
                     ? "bg-slate-700 text-white shadow-sm"
                     : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-muted"
                 )}
-                onClick={() => {
-                  setDateFilterType("custom");
-                }}
+                onClick={() => setSelectedDesignTypeId(null)}
               >
-                Chọn khoảng ngày...
+                Tất cả
               </Button>
-              {dateFilterType === "custom" && (
-                <div className="flex items-center gap-1.5 animate-in fade-in duration-200">
-                  <div className="flex items-center border border-input rounded-sm px-2 bg-background focus-within:ring-1 focus-within:ring-slate-450 h-7">
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase select-none mr-1.5">TỪ</span>
-                    <input
-                      type="date"
-                      value={customFromDate}
-                      onChange={(e) => setCustomFromDate(e.target.value)}
-                      className="bg-transparent border-0 p-0 text-xs focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-none outline-none w-[96px] h-full"
-                    />
-                  </div>
-                  <span className="text-xs text-slate-400">—</span>
-                  <div className="flex items-center border border-input rounded-sm px-2 bg-background focus-within:ring-1 focus-within:ring-slate-450 h-7">
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase select-none mr-1.5">ĐẾN</span>
-                    <input
-                      type="date"
-                      value={customToDate}
-                      onChange={(e) => setCustomToDate(e.target.value)}
-                      className="bg-transparent border-0 p-0 text-xs focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-none outline-none w-[96px] h-full"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* ROW 3: Design Type Filters */}
-          <div className="flex flex-wrap items-center gap-1.5 bg-background dark:bg-muted/10 p-1 rounded-md border border-border/40 w-fit">
-            <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 px-2 select-none">
-              Loại sản phẩm:
-            </span>
-            <Button
-              variant={selectedDesignTypeId === null ? "default" : "ghost"}
-              size="sm"
-              type="button"
-              className={cn(
-                "h-7 text-xs px-2.5 rounded-sm font-medium transition-all",
-                selectedDesignTypeId === null
-                  ? "bg-slate-700 text-white shadow-sm"
-                  : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-muted"
-              )}
-              onClick={() => setSelectedDesignTypeId(null)}
-            >
-              Tất cả
-            </Button>
-            {designTypes.map((type: any) => {
-              const summary = designTypesSummary.find((s) => s.designTypeId === type.id);
-              const count = summary ? summary.productionOrderCount : 0;
-              return (
-                <Button
-                  key={type.id}
-                  variant={selectedDesignTypeId === type.id ? "default" : "ghost"}
-                  size="sm"
-                  type="button"
-                  className={cn(
-                    "h-7 text-xs px-2.5 rounded-sm font-medium transition-all",
-                    selectedDesignTypeId === type.id
-                      ? "bg-slate-700 text-white shadow-sm"
-                      : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-muted"
-                  )}
-                  onClick={() => setSelectedDesignTypeId(type.id)}
-                >
-                  <span>{type.name || "Chưa xác định"}</span>
-                  <span
+              {designTypes.map((type: any) => {
+                const summary = designTypesSummary.find((s) => s.designTypeId === type.id);
+                const count = summary ? summary.productionOrderCount : 0;
+                return (
+                  <Button
+                    key={type.id}
+                    variant={selectedDesignTypeId === type.id ? "default" : "ghost"}
+                    size="sm"
+                    type="button"
                     className={cn(
-                      "ml-1.5 px-1 py-0.2 rounded-full text-[9px] font-extrabold",
+                      "h-7 text-xs px-2.5 rounded-sm font-medium transition-all",
                       selectedDesignTypeId === type.id
-                        ? "bg-white/20 text-white"
-                        : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                        ? "bg-slate-700 text-white shadow-sm"
+                        : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-muted"
                     )}
+                    onClick={() => setSelectedDesignTypeId(type.id)}
                   >
-                    {count}
-                  </span>
-                </Button>
-              );
-            })}
+                    <span>{type.name || "Chưa xác định"}</span>
+                    <span
+                      className={cn(
+                        "ml-1.5 px-1 py-0.2 rounded-full text-[9px] font-extrabold",
+                        selectedDesignTypeId === type.id
+                          ? "bg-white/20 text-white"
+                          : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                      )}
+                    >
+                      {count}
+                    </span>
+                  </Button>
+                );
+              })}
+            </div>
+            <div className="text-xs text-slate-500 font-semibold px-1">
+              Tổng số lệnh hoàn thành bài: <span className="text-slate-800 dark:text-slate-200 font-extrabold text-sm">{totalCount}</span>
+            </div>
           </div>
         </div>
 
@@ -464,7 +423,7 @@ export default function KCSPage() {
                   <TableHead className="w-[120px]">Bình bài</TableHead>
                   <TableHead className="w-[120px]">Hoàn thành BB</TableHead>
                   <TableHead className="w-[120px]">Loại thiết kế</TableHead>
-                  <TableHead>Chi tiết kiểm hàng</TableHead>
+                  <TableHead>Danh sách mã hàng</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -486,7 +445,7 @@ export default function KCSPage() {
                   <TableHead className="w-[110px] font-bold">Mã BB</TableHead>
                   <TableHead className="w-[130px] font-bold">Hoàn thành BB</TableHead>
                   <TableHead className="w-[140px] font-bold">Loại thiết kế</TableHead>
-                  <TableHead className="font-bold">Chi tiết kiểm hàng</TableHead>
+                  <TableHead className="font-bold">Danh sách mã hàng</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -622,7 +581,7 @@ function KcsOrderRow({ prod, onOpenPrintLabel, onOpenImageViewer }: KcsOrderRowP
       );
 
       initial[item.productionOrderItemId] = {
-        outputQty: item.outputQty !== null && item.outputQty !== 0 ? String(item.outputQty) : String(item.inputQty || 0),
+        outputQty: item.outputQty !== null && item.outputQty !== 0 ? String(item.outputQty) : "0",
         defectQty: item.defectQty !== null && item.defectQty !== 0 ? String(item.defectQty) : "",
         notes: existingDefect?.description || "",
         assignedToUserId: existingDefect?.assignedToUserId?.toString() || "",
@@ -824,7 +783,7 @@ function KcsOrderRow({ prod, onOpenPrintLabel, onOpenImageViewer }: KcsOrderRowP
     try {
       const d = new Date(dateStr);
       const pad = (n: number) => String(n).padStart(2, "0");
-      return `${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
     } catch (e) {
       return "—";
     }
@@ -848,7 +807,7 @@ function KcsOrderRow({ prod, onOpenPrintLabel, onOpenImageViewer }: KcsOrderRowP
 
   return (
     <TableRow className={cn("hover:bg-muted/5 font-medium border-b", isChecked && "bg-emerald-50/20 dark:bg-emerald-950/5")}>
-      
+
       {/* Flat layout image */}
       <TableCell className="align-top py-3">
         {layoutImageUrl ? (
@@ -882,7 +841,7 @@ function KcsOrderRow({ prod, onOpenPrintLabel, onOpenImageViewer }: KcsOrderRowP
 
       {/* Completed date */}
       <TableCell className="align-top py-3 text-xs tabular-nums text-slate-600 dark:text-slate-400">
-        {formatDate(prod.completedAt)}
+        {formatDate(prod.proofingOrderCompletedAt)}
       </TableCell>
 
       {/* Design type */}
@@ -893,7 +852,7 @@ function KcsOrderRow({ prod, onOpenPrintLabel, onOpenImageViewer }: KcsOrderRowP
       {/* Items list / QC details */}
       <TableCell className="align-top py-3 pl-1">
         <div className="flex flex-col gap-3">
-          
+
           {/* Quick Input (Rendered at top of list only when editing) */}
           {isEditing && (
             <div className="flex items-center gap-2 bg-amber-500/10 dark:bg-amber-950/20 border border-amber-500/20 p-2 rounded-md w-full max-w-[420px]">
@@ -944,9 +903,8 @@ function KcsOrderRow({ prod, onOpenPrintLabel, onOpenImageViewer }: KcsOrderRowP
                           src={
                             item.designImageUrl.startsWith("http")
                               ? item.designImageUrl
-                              : `${
-                                  (import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "")
-                                }/${item.designImageUrl.replace(/^\//, "")}`
+                              : `${(import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "")
+                              }/${item.designImageUrl.replace(/^\//, "")}`
                           }
                           alt={item.designCode || "design"}
                           className="w-full h-full object-contain"
@@ -954,12 +912,11 @@ function KcsOrderRow({ prod, onOpenPrintLabel, onOpenImageViewer }: KcsOrderRowP
                             onOpenImageViewer(
                               item.designImageUrl!.startsWith("http")
                                 ? item.designImageUrl!
-                                : `${
-                                    (import.meta.env.VITE_API_BASE_URL || "").replace(
-                                      /\/api\/?$/,
-                                      ""
-                                    )
-                                  }/${item.designImageUrl!.replace(/^\//, "")}`
+                                : `${(import.meta.env.VITE_API_BASE_URL || "").replace(
+                                  /\/api\/?$/,
+                                  ""
+                                )
+                                }/${item.designImageUrl!.replace(/^\//, "")}`
                             )
                           }
                         />
@@ -976,7 +933,7 @@ function KcsOrderRow({ prod, onOpenPrintLabel, onOpenImageViewer }: KcsOrderRowP
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-slate-500 mt-0.5">
                         <span>Mã: <strong className="text-slate-700 dark:text-slate-350">{item.designCode || "—"}</strong></span>
                         <span>•</span>
-                        <span>Khách: <strong className="text-slate-700 dark:text-slate-350">{item.customerName || "—"}</strong></span>
+                        <span>Khách: <strong className="text-slate-700 dark:text-slate-350">{item.customerName || item.customerCompanyName || "—"}</strong></span>
                         <span>•</span>
                         <span>SL Yêu cầu: <strong className="text-amber-700 font-bold">{item.inputQty}</strong></span>
                       </div>

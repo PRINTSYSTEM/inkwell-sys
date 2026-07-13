@@ -1,6 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/http";
@@ -8,18 +7,13 @@ import { API_SUFFIX } from "@/apis";
 import { normalizeParams } from "@/apis/util.api";
 import {
   useProductionOrders,
-  useCreateProductionOrder,
   usePendingMaterialProductionOrders,
 } from "@/hooks/use-production";
-import { useProofingOrdersForProduction } from "@/hooks/use-proofing-order";
-import { useAuth } from "@/hooks/use-auth";
 import { useDesignTypeList } from "@/hooks/use-design-type";
 import {
   ProductionOrderResponse,
   ProductionOrderResponsePaginateSchema,
   safeParseSchema,
-  type ProductionListParams,
-  type ProofingOrderResponse,
 } from "@/Schema";
 import type { SortOrder } from "@/components/ui/sort-controls";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -34,7 +28,6 @@ import { useListState } from "@/hooks/use-list-state";
 
 export default function ProductionListPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
 
   const {
     currentPage,
@@ -323,67 +316,9 @@ export default function ProductionListPage() {
     }
   }, [currentPage]);
 
-  const { mutate: createProduction, isPending: creating } =
-    useCreateProductionOrder();
-
-  // Fetch proofing orders waiting for production
-  const { data: proofingOrdersResp, isLoading: isLoadingProofingOrders } =
-    useProofingOrdersForProduction({
-      pageNumber: 1,
-      pageSize: 100,
-      search: debouncedSearch.trim() || undefined,
-    });
-
-  const proofingOrders = useMemo<ProofingOrderResponse[]>(
-    () => proofingOrdersResp?.items || [],
-    [proofingOrdersResp?.items]
-  );
-
-  // Unified List: Merged ProductionOrders and filtered ProofingOrders
+  // Unified List: ProductionOrders filtered by search/status
   const displayProductions = useMemo<ProductionOrderResponse[]>(() => {
-    if (viewTab !== "all" && viewTab !== "active") {
-      // In specific tabs, we only show productions fetched from the backend (which matches tab condition)
-      // and we just filter by search query. No drafts shown.
-      return productions.filter((prod: any) => {
-        const search = debouncedSearch.toLowerCase().trim();
-        const cleanSearch = search.replace(/^bb0*/, "bb");
-        const cleanProdCode = (prod.proofingOrderCode || prod.proofingOrder?.code || "").toLowerCase().trim().replace(/^bb0*/, "bb");
-
-        const matchDesign = (prod.proofingOrder?.proofingOrderDesigns || []).some((pod: any) => {
-          const dName = (pod.design?.designName || pod.design?.name || "").toLowerCase();
-          const dCode = (pod.design?.code || "").toLowerCase();
-          return dName.includes(search) || dCode.includes(search);
-        });
-
-        return (
-          search.length === 0 ||
-          String(prod.id ?? "")
-            .toLowerCase()
-            .includes(search) ||
-          (prod.proofingOrder?.code ?? "").toLowerCase().includes(search) ||
-          (prod.proofingOrderCode ?? "").toLowerCase().includes(search) ||
-          (cleanSearch.startsWith("bb") && cleanProdCode.includes(cleanSearch)) ||
-          (prod.productionLeadName ?? "").toLowerCase().includes(search) ||
-          matchDesign
-        );
-      });
-    }
-
-    const existingPoIds = new Set(productions.map((p) => p.proofingOrderId));
-    const readyProofingAsProds: ProductionOrderResponse[] = proofingOrders
-      .filter((po) => !existingPoIds.has(po.id) && (!po.productions || (po.productions as any[]).length === 0))
-      .map((po) => ({
-        proofingOrderId: po.id,
-        proofingOrder: po,
-        status: "Draft",
-        steps: [],
-        createdAt: po.updatedAt || po.createdAt,
-      } as unknown as ProductionOrderResponse));
-
-    const merged = [...productions, ...readyProofingAsProds];
-
-    // Apply client-side search/status filter
-    return merged.filter((prod: any) => {
+    return productions.filter((prod: any) => {
       const search = debouncedSearch.toLowerCase().trim();
       const cleanSearch = search.replace(/^bb0*/, "bb");
       const cleanProdCode = (prod.proofingOrderCode || prod.proofingOrder?.code || "").toLowerCase().trim().replace(/^bb0*/, "bb");
@@ -406,12 +341,11 @@ export default function ProductionListPage() {
         matchDesign;
 
       const matchStatus =
-        selectedStatus === "all" ||
-        (prod.id ? prod.status === selectedStatus : selectedStatus === "Draft");
+        selectedStatus === "all" || prod.status === selectedStatus;
 
       return matchSearch && matchStatus;
     });
-  }, [productions, proofingOrders, debouncedSearch, selectedStatus, viewTab]);
+  }, [productions, debouncedSearch, selectedStatus, viewTab]);
 
   // Helper to extract design type ID from a display production order
   const getProdDesignTypeId = (prod: any) => {
@@ -496,23 +430,6 @@ export default function ProductionListPage() {
 
   const handleProductionClick = (productionId: number) => {
     navigate(`/productions/${productionId}`);
-  };
-
-  const handleStartProduction = async (proofingOrderId: number) => {
-    if (!user?.id) {
-      toast.error("Lỗi xác thực", {
-        description: "Không thể lấy thông tin người dùng",
-      });
-      return;
-    }
-
-    try {
-      await createProduction({
-        proofingOrderId: proofingOrderId,
-      });
-    } catch (error) {
-      // Error handled by hook
-    }
   };
 
   const stats = useMemo(
@@ -810,7 +727,6 @@ export default function ProductionListPage() {
             onNextPage={handleNextPage}
             onPageInputChange={handlePageInputChange}
             onPageInputBlur={handlePageInputBlur}
-            onStartProduction={handleStartProduction}
           />
         </div>
       </div>
