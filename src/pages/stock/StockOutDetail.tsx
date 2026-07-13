@@ -175,6 +175,7 @@ export default function StockOutDetailPage() {
           ...item,
           quantity: item.quantity ?? 1,
           notes: item.notes ?? "",
+          displayName: item.displayName ?? item.itemName ?? "",
         }))
       );
     }
@@ -199,6 +200,7 @@ export default function StockOutDetailPage() {
           ...item,
           quantity: item.quantity ?? 1,
           notes: item.notes ?? "",
+          displayName: item.displayName ?? item.itemName ?? "",
         }))
       );
     }
@@ -225,6 +227,7 @@ export default function StockOutDetailPage() {
           ...item,
           quantity: item.quantity ?? 1,
           notes: item.notes ?? "",
+          displayName: item.displayName ?? item.itemName ?? "",
         }))
       );
     }
@@ -252,6 +255,7 @@ export default function StockOutDetailPage() {
 
     const updatedItems = editItems.map((item) => ({
       itemName: item.itemName,
+      displayName: item.displayName || null,
       itemCode: item.itemCode,
       unit: item.unit,
       quantity: item.quantity,
@@ -362,7 +366,7 @@ export default function StockOutDetailPage() {
         open: true,
         wastes: cuonItems.map((item: any) => ({
           stockOutItemId: item.id,
-          itemName: item.itemName || "—",
+          itemName: item.displayName || item.itemName || "—",
           wasteQuantity: 0,
         })),
       });
@@ -839,7 +843,7 @@ export default function StockOutDetailPage() {
                           placeholder="Lý do xuất kho..."
                         />
                       ) : (
-                        stockOut.notes || (stockOut.purpose ? stockOutPurposeLabels[stockOut.purpose.toLowerCase()] || stockOut.purpose : "—")
+                        stockOut.exportReason || stockOut.notes || (stockOut.purpose ? stockOutPurposeLabels[stockOut.purpose.toLowerCase()] || stockOut.purpose : "—")
                       )}
                     </span>
                   </div>
@@ -920,13 +924,27 @@ export default function StockOutDetailPage() {
                                 {index + 1}
                               </td>
                               <td className="border border-black font-semibold text-slate-900 print:text-black py-2 px-2 leading-relaxed">
-                                <div>{item.itemName || "—"}</div>
-                                {item.jobCode && (
-                                  <div className="text-[10px] font-mono text-slate-500 print:text-black mt-0.5">
-                                    Mã bài: {item.jobCode}
+                                {isEditing ? (
+                                  <div className="space-y-1">
+                                    <div className="text-xs text-slate-500 font-medium">Tên gốc: {item.itemName || "—"}</div>
+                                    <Input
+                                      value={item.displayName || ""}
+                                      onChange={(e) => handleEditItemChange(index, "displayName", e.target.value)}
+                                      placeholder="Tên hiển thị..."
+                                      className="h-7 text-xs bg-blue-50/30 text-blue-900 border-blue-300 focus-visible:ring-blue-500/30 focus:border-blue-500 focus:bg-blue-50 w-full"
+                                    />
                                   </div>
+                                ) : (
+                                  <>
+                                    <div>{item.displayName || item.itemName || "—"}</div>
+                                    {item.jobCode && (
+                                      <div className="text-[10px] font-mono text-slate-500 print:text-black mt-0.5">
+                                        Mã bài: {item.jobCode}
+                                      </div>
+                                    )}
+                                    {isOutsourcePrint && isCuonItem ? " (m tới)" : ""}
+                                  </>
                                 )}
-                                {isOutsourcePrint && isCuonItem ? " (m tới)" : ""}
                               </td>
                               <td className="border border-black text-center py-2 px-1 text-slate-700 print:text-black">
                                 {item.unit || "—"}

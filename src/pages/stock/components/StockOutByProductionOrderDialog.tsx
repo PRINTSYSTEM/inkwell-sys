@@ -249,6 +249,7 @@ export function StockOutByProductionOrderDialog({
   const [selectedProductionOrderId, setSelectedProductionOrderId] = useState<number | null>(null);
   const [selectedProductionOrderCode, setSelectedProductionOrderCode] = useState("");
   const [receiverName, setReceiverName] = useState("");
+  const [exportReason, setExportReason] = useState("");
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<FormItem[]>([
     { materialId: null, quantity: 1 },
@@ -305,6 +306,7 @@ export function StockOutByProductionOrderDialog({
       setSelectedProductionOrderId(null);
       setSelectedProductionOrderCode("");
       setReceiverName("");
+      setExportReason("");
       setNotes("");
       setItems([{ materialId: null, quantity: 1 }]);
     }
@@ -353,6 +355,11 @@ export function StockOutByProductionOrderDialog({
       return;
     }
 
+    if (!exportReason.trim()) {
+      toast.error("Vui lòng nhập lý do xuất kho!");
+      return;
+    }
+
     const invalidItem = items.some((item) => !item.materialId || !item.quantity || item.quantity <= 0);
     if (invalidItem) {
       toast.error("Vui lòng kiểm tra lại danh sách vật tư!");
@@ -381,6 +388,7 @@ export function StockOutByProductionOrderDialog({
         productionOrderId: selectedProductionOrderId,
         data: {
           receiverName: receiverName.trim(),
+          exportReason: exportReason.trim(),
           stockOutDate: new Date().toISOString(),
           notes: notes.trim() || undefined,
           items: items.map((item) => {
@@ -425,7 +433,7 @@ export function StockOutByProductionOrderDialog({
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
           <div className="flex-1 overflow-y-auto p-5 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-slate-700">
                   Chọn lệnh sản xuất <span className="text-red-500">*</span>
@@ -435,6 +443,7 @@ export function StockOutByProductionOrderDialog({
                   onSelect={(id, code) => {
                     setSelectedProductionOrderId(id);
                     setSelectedProductionOrderCode(code);
+                    setExportReason(`Xuất nguyên liệu cho LSX #${code}`);
 
                     // Auto-fill material and quantity if possible
                     const po = enrichedProductionOrders.find((p) => p.id === id);
@@ -471,6 +480,18 @@ export function StockOutByProductionOrderDialog({
                   placeholder="Nhập tên người nhận..."
                   value={receiverName}
                   onChange={(e) => setReceiverName(e.target.value)}
+                  className="h-10 text-xs border-slate-200 focus-visible:ring-rose-500 rounded-lg"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">
+                  Lý do xuất kho <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  placeholder="Nhập lý do xuất..."
+                  value={exportReason}
+                  onChange={(e) => setExportReason(e.target.value)}
                   className="h-10 text-xs border-slate-200 focus-visible:ring-rose-500 rounded-lg"
                   required
                 />

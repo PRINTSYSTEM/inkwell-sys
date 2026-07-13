@@ -112,7 +112,6 @@ interface ProductionListTableProps {
   onNextPage: () => void;
   onPageInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onPageInputBlur: () => void;
-  onStartProduction: (proofingOrderId: number) => void;
 }
 
 // Helper to find a specific step
@@ -669,12 +668,10 @@ const ProductionTableRow = React.memo(
     prod,
     searchTerm,
     onProductionClick,
-    onStartProduction,
   }: {
     prod: ProductionOrderResponse;
     searchTerm: string;
     onProductionClick: (id: number) => void;
-    onStartProduction: (proofingOrderId: number) => void;
   }) {
     const queryClient = useQueryClient();
     const [openDiePopover, setOpenDiePopover] = useState(false);
@@ -716,15 +713,6 @@ const ProductionTableRow = React.memo(
     };
 
     const isDraft = !prod.id;
-    const isCreating = React.useRef(false);
-
-    // Auto-start production for draft items if they have a proofingOrderId
-    React.useEffect(() => {
-      if (isDraft && prod.proofingOrderId && !isCreating.current) {
-        isCreating.current = true;
-        onStartProduction(prod.proofingOrderId);
-      }
-    }, [isDraft, prod.proofingOrderId, onStartProduction]);
 
     const { data: proofingOrderData, isLoading: isProofingLoading } =
       useProofingOrder(
@@ -1657,7 +1645,6 @@ const ProductionTableRow = React.memo(
   (prevProps, nextProps) => {
     if (prevProps.searchTerm !== nextProps.searchTerm) return false;
     if (prevProps.onProductionClick !== nextProps.onProductionClick) return false;
-    if (prevProps.onStartProduction !== nextProps.onStartProduction) return false;
 
     const p = prevProps.prod;
     const n = nextProps.prod;
@@ -1697,7 +1684,6 @@ export function ProductionListTable({
   onNextPage,
   onPageInputChange,
   onPageInputBlur,
-  onStartProduction,
 }: ProductionListTableProps) {
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
@@ -1785,7 +1771,6 @@ export function ProductionListTable({
                   prod={prod}
                   searchTerm={searchTerm}
                   onProductionClick={onProductionClick}
-                  onStartProduction={onStartProduction}
                 />
               ))}
             </TableBody>

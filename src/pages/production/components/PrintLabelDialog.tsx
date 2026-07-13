@@ -219,12 +219,8 @@ export function PrintLabelDialog({
                   <span class="label-val">${labelData.designName || "—"}</span>
                 </div>
                 <div class="label-row">
-                  <span class="label-lbl">Mã BB:</span>
-                  <span class="label-val">${labelData.productionOrderCode || "—"}</span>
-                </div>
-                <div class="label-row">
                   <span class="label-lbl">Số lượng:</span>
-                  <span class="label-val label-val-qty">${qtyNumber.toLocaleString("vi-VN")} PCS</span>
+                  <span class="label-val label-val-qty">${qtyNumber.toLocaleString("vi-VN")}</span>
                 </div>
               </div>
               ${
@@ -280,7 +276,7 @@ export function PrintLabelDialog({
             {/* Front-end Form for setting print quantity */}
             <div className="flex flex-col gap-1.5 bg-muted/40 p-2.5 rounded border">
               <Label htmlFor="print-qty" className="text-xs font-bold text-slate-700">
-                Số lượng trên nhãn (PCS)
+                Số lượng trên nhãn
               </Label>
               <Input
                 id="print-qty"
@@ -311,23 +307,13 @@ export function PrintLabelDialog({
                       {labelData.customerName || "—"}
                     </span>
                   </div>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <div>
-                      <span className="font-semibold block text-slate-500 text-[10px] uppercase">
-                        Mã hàng
-                      </span>
-                      <span className="font-bold text-slate-900 break-all">
-                        {labelData.designCode || "—"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="font-semibold block text-slate-500 text-[10px] uppercase">
-                        Mã BB
-                      </span>
-                      <span className="font-medium text-slate-700 break-all">
-                        {labelData.productionOrderCode || "—"}
-                      </span>
-                    </div>
+                  <div>
+                    <span className="font-semibold block text-slate-500 text-[10px] uppercase">
+                      Mã hàng
+                    </span>
+                    <span className="font-bold text-slate-900 break-all">
+                      {labelData.designCode || "—"}
+                    </span>
                   </div>
                   <div>
                     <span className="font-semibold block text-slate-500 text-[10px] uppercase">
@@ -342,7 +328,7 @@ export function PrintLabelDialog({
                       Số lượng
                     </span>
                     <span className="font-black text-emerald-700 text-sm">
-                      {Number(printQty || 0).toLocaleString("vi-VN")} PCS
+                      {Number(printQty || 0).toLocaleString("vi-VN")}
                     </span>
                   </div>
                 </div>

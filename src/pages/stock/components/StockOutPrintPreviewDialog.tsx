@@ -336,7 +336,7 @@ export default function StockOutPrintPreviewDialog({
                 <div className="info-row">
                   <span className="info-label">- Lý do xuất kho:</span>
                   <span className="info-val-border">
-                    {stockOut.notes || (stockOut.purpose ? stockOutPurposeLabels[stockOut.purpose.toLowerCase()] || stockOut.purpose : "—")}
+                    {stockOut.exportReason || stockOut.notes || (stockOut.purpose ? stockOutPurposeLabels[stockOut.purpose.toLowerCase()] || stockOut.purpose : "—")}
                   </span>
                 </div>
                 <div className="info-flex-group">
@@ -381,7 +381,7 @@ export default function StockOutPrintPreviewDialog({
                       <tr key={item.id || index}>
                         <td className="border border-black text-center p-1.5">{index + 1}</td>
                         <td className="border border-black p-1.5 font-bold">
-                          <div>{item.itemName || "—"}</div>
+                          <div>{item.displayName || item.itemName || "—"}</div>
                           {item.jobCode && (
                             <div className="text-[10px] font-mono text-stone-500 font-normal mt-0.5">
                               Mã bài: {item.jobCode}

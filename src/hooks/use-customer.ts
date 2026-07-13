@@ -304,9 +304,8 @@ export const useCustomerAddresses = (
       } else {
         items = (res.data?.items ?? []) as CustomerAddress[];
       }
-      // NOTE (backend bug): isActive luôn = false dù mới tạo → KHÔNG filter theo isActive
-      // Xem: https://checkafe.online/api/customers/{id}/addresses trả isActive=false cho tất cả
-      return items;
+      // Filter out delivery addresses with isActive = false
+      return items.filter((item) => item.isActive !== false);
     },
     staleTime: 2 * 60 * 1000,
   });

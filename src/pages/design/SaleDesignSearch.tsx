@@ -308,25 +308,35 @@ export default function SaleDesignSearch() {
                         {design.code || `DES-${design.id}`}
                       </td>
                       <td className="px-4 py-3 align-middle min-w-[220px]">
-                        <div className="flex items-center gap-1.5 group">
-                          <div
-                            className="whitespace-normal break-words flex-1 text-slate-900 dark:text-slate-100 font-semibold"
-                            title={design.designName || "Không tên"}
-                          >
-                            {design.designName || "Không tên"}
-                          </div>
-                          {design.designName && (
-                            <button
-                              onClick={() => handleCopyDesignName(design.designName, design.id)}
-                              className="inline-flex items-center justify-center p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100"
-                              title="Sao chép tên thiết kế"
+                        <div className="flex flex-col gap-0.5">
+                          <div className="flex items-center gap-1.5 group">
+                            <div
+                              className="whitespace-normal break-words flex-1 text-slate-900 dark:text-slate-100 font-semibold"
+                              title={design.designName || "Không tên"}
                             >
-                              {copiedDesignId === design.id ? (
-                                <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
-                              ) : (
-                                <Copy className="h-3.5 w-3.5" />
-                              )}
-                            </button>
+                              {design.designName || "Không tên"}
+                            </div>
+                            {design.designName && (
+                              <button
+                                onClick={() => handleCopyDesignName(design.designName, design.id)}
+                                className="inline-flex items-center justify-center p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors h-6 w-6 shrink-0 opacity-0 group-hover:opacity-100"
+                                title="Sao chép tên thiết kế"
+                              >
+                                {copiedDesignId === design.id ? (
+                                  <Check className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                                ) : (
+                                  <Copy className="h-3.5 w-3.5" />
+                                )}
+                              </button>
+                            )}
+                          </div>
+                          {design.notes && (
+                            <div
+                              className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-normal break-words max-w-[400px] mt-0.5"
+                              title={design.notes}
+                            >
+                              Ghi chú: {design.notes}
+                            </div>
                           )}
                         </div>
                       </td>
