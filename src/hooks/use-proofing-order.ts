@@ -1514,13 +1514,16 @@ export const useCancelProofingOrder = () => {
 
 // ================== GET AVAILABLE BINS ==================
 // GET /proofing-orders/available-bins
-export const useAvailableBins = (enabled: boolean = true) => {
+export const useAvailableBins = (designTypeId?: number | null, enabled: boolean = true) => {
   return useQuery<AvailableBinResponse[]>({
-    queryKey: [proofingKeys.all[0], "available-bins"],
+    queryKey: [proofingKeys.all[0], "available-bins", designTypeId],
     enabled,
     queryFn: async () => {
       const res = await apiRequest.get<AvailableBinResponse[]>(
-        API_SUFFIX.PROOFING_AVAILABLE_BINS
+        API_SUFFIX.PROOFING_AVAILABLE_BINS,
+        {
+          params: { designTypeId: designTypeId ?? undefined }
+        }
       );
       return res.data;
     },

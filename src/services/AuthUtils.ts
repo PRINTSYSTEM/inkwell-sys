@@ -108,6 +108,9 @@ export class AuthUtils {
 
     // ===== Sale =====
     sale: this.STAFF_ROUTES,
+
+    // ===== KCS =====
+    kcs: this.STAFF_ROUTES,
   } as const;
 
   /** Kiểm tra xem user có quyền truy cập route không */

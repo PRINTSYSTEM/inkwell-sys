@@ -17,6 +17,7 @@ import {
   Check,
   ChevronsUpDown,
   Package,
+  ShoppingCart,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -102,6 +103,7 @@ import { DetailEmptyOrderView } from "./detail-components/DetailEmptyOrderView";
 import { DieListDialog } from "@/components/dies/DieListDialog";
 import { InventoryViewDialog } from "@/components/inventory/InventoryViewDialog";
 import { useProofingCart } from "@/context/proofing-cart-context";
+import { MergeProofingOrderWizard } from "./components/MergeProofingOrderWizard";
 
 import type { DesignItem } from "@/types/proofing";
 import { useMaterialTypeList, useAuth } from "@/hooks";
@@ -126,7 +128,7 @@ export default function PrepressList() {
   const { user } = useAuth();
   const role = user?.role as UserRole | undefined;
   const isProofer = role === ROLE.ADMIN || role === ROLE.MANAGER || role === ROLE.PROOFER;
-  const { addToCart } = useProofingCart();
+  const { addToCart, cartItems } = useProofingCart();
 
   // ===== Mode: Orders list (default) vs Waiting designs (when filters active) =====
   const [selectedDesignTypes, setSelectedDesignTypes] = useState<number[]>([]);
@@ -558,6 +560,7 @@ export default function PrepressList() {
 
 
   const [isDieListDialogOpen, setIsDieListDialogOpen] = useState(false);
+  const [isMergeWizardOpen, setIsMergeWizardOpen] = useState(false);
   const [isInventoryViewDialogOpen, setIsInventoryViewDialogOpen] =
     useState(false);
   const [expandedOrderIds, setExpandedOrderIds] = useState<Set<number>>(
@@ -1029,10 +1032,18 @@ export default function PrepressList() {
                         selectedDesigns={selectedDesigns}
                         selectedCount={selectedIds.size}
                         onAddToExistingClick={() => {
+                          const firstType = selectedDesigns[0]?.designTypeName;
+                          const hasMixed = selectedDesigns.some(d => d.designTypeName !== firstType);
+                          if (hasMixed) {
+                            toast.error("Vui lòng chỉ chọn các thiết kế cùng Loại thiết kế (ví dụ: cùng là Hộp, hoặc cùng là Nhãn) để ghép bài");
+                            return;
+                          }
+
                           addToCart(
                             selectedDesigns.map((d) => ({
                               readyDesignId: d.readyDesignId ?? d.id,
-                              orderDetailId: d.id,
+                              designId: d.designId,
+                              orderDetailId: d.id > 0 ? d.id : undefined,
                               designCode: d.code,
                               designName: d.name,
                               designImageUrl: d.thumbnailUrl,
@@ -1044,10 +1055,11 @@ export default function PrepressList() {
                               width: d.width,
                               height: d.height,
                               createdAt: d.createdAt,
+                              designTypeId: d.designTypeId || null,
                             }))
                           );
-                          toast.success(`Đã thêm ${selectedDesigns.length} thiết kế vào giỏ`);
                           clearSelection();
+                          setIsMergeWizardOpen(true);
                         }}
                         // Designs Pagination props
                         designsPage={designsPage}
@@ -1128,6 +1140,29 @@ export default function PrepressList() {
             open={isInventoryViewDialogOpen}
             onOpenChange={setIsInventoryViewDialogOpen}
           />
+
+          <MergeProofingOrderWizard
+            open={isMergeWizardOpen}
+            onOpenChange={setIsMergeWizardOpen}
+            existingOrders={[...incompleteOrders, ...productionReturnedOrders]}
+          />
+
+          {cartItems.length > 0 && (
+            <div className="fixed bottom-6 right-6 z-50">
+              <Button
+                onClick={() => setIsMergeWizardOpen(true)}
+                className="rounded-full shadow-2xl h-14 w-14 bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center p-0 hover:scale-105 active:scale-95 transition-all"
+                title="Mở giỏ ghép bài bình"
+              >
+                <div className="relative">
+                  <ShoppingCart className="h-6 w-6" />
+                  <span className="absolute -top-2.5 -right-2.5 bg-red-500 text-white rounded-full text-[10px] font-black h-5 w-5 flex items-center justify-center border-2 border-white">
+                    {cartItems.length}
+                  </span>
+                </div>
+              </Button>
+            </div>
+          )}
 
           <AlertDialog
             open={isRejectDialogOpen}

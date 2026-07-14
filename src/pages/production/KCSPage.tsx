@@ -806,7 +806,12 @@ function KcsOrderRow({ prod, onOpenPrintLabel, onOpenImageViewer }: KcsOrderRowP
   const isChecked = prod.items && prod.items.length > 0 && prod.items.every((i) => (i.outputQty ?? 0) > 0);
 
   return (
-    <TableRow className={cn("hover:bg-muted/5 font-medium border-b", isChecked && "bg-emerald-50/20 dark:bg-emerald-950/5")}>
+    <TableRow
+      className={cn(
+        "hover:bg-muted/5 font-medium border-b transition-colors",
+        isChecked && "bg-emerald-100/70 dark:bg-emerald-950/60 hover:bg-emerald-200/50 dark:hover:bg-emerald-900/50"
+      )}
+    >
 
       {/* Flat layout image */}
       <TableCell className="align-top py-3">
@@ -815,6 +820,10 @@ function KcsOrderRow({ prod, onOpenPrintLabel, onOpenImageViewer }: KcsOrderRowP
             <img
               src={layoutImageUrl}
               alt={prod.proofingOrderCode || "Flat layout"}
+              loading="lazy"
+              decoding="async"
+              width={80}
+              height={80}
               className="w-full h-full object-contain"
               onClick={() => onOpenImageViewer(layoutImageUrl)}
             />
@@ -828,13 +837,13 @@ function KcsOrderRow({ prod, onOpenPrintLabel, onOpenImageViewer }: KcsOrderRowP
       </TableCell>
 
       {/* Code */}
-      <TableCell className="align-top py-3 text-xs">
-        <span className="font-extrabold text-slate-800 dark:text-slate-200">
+      <TableCell className="align-top py-3 text-sm">
+        <span className="text-base font-black text-slate-900 dark:text-slate-100">
           {prod.proofingOrderCode || `LSX #${prod.productionOrderId}`}
         </span>
         {isChecked && (
-          <span className="mt-1 flex items-center gap-1 text-[9px] font-black text-emerald-600 uppercase">
-            <CheckCircle2 className="w-3 h-3" /> Đã KCS
+          <span className="mt-1.5 flex items-center gap-1 text-[11px] font-extrabold text-emerald-700 dark:text-emerald-500 uppercase">
+            <CheckCircle2 className="w-3.5 h-3.5" /> Đã KCS
           </span>
         )}
       </TableCell>
@@ -907,6 +916,10 @@ function KcsOrderRow({ prod, onOpenPrintLabel, onOpenImageViewer }: KcsOrderRowP
                               }/${item.designImageUrl.replace(/^\//, "")}`
                           }
                           alt={item.designCode || "design"}
+                          loading="lazy"
+                          decoding="async"
+                          width={40}
+                          height={40}
                           className="w-full h-full object-contain"
                           onClick={() =>
                             onOpenImageViewer(
@@ -926,16 +939,16 @@ function KcsOrderRow({ prod, onOpenPrintLabel, onOpenImageViewer }: KcsOrderRowP
                         <FileImage className="w-4 h-4 opacity-40" />
                       </div>
                     )}
-                    <div className="min-w-0 text-[11px] leading-normal">
-                      <p className="font-extrabold text-slate-800 dark:text-slate-200 truncate" title={item.designName || ""}>
+                    <div className="min-w-0 text-xs leading-normal">
+                      <p className="text-sm font-black text-slate-900 dark:text-slate-100 truncate" title={item.designName || ""}>
                         {item.designName || "—"}
                       </p>
-                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-slate-500 mt-0.5">
-                        <span>Mã: <strong className="text-slate-700 dark:text-slate-350">{item.designCode || "—"}</strong></span>
+                      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-slate-500 mt-1">
+                        <span>Mã: <strong className="text-slate-800 dark:text-slate-200 font-bold">{item.designCode || "—"}</strong></span>
                         <span>•</span>
-                        <span>Khách: <strong className="text-slate-700 dark:text-slate-350">{item.customerName || item.customerCompanyName || "—"}</strong></span>
+                        <span>Khách: <strong className="text-slate-800 dark:text-slate-200 font-bold">{item.customerName || item.customerCompanyName || "—"}</strong></span>
                         <span>•</span>
-                        <span>SL Yêu cầu: <strong className="text-amber-700 font-bold">{item.inputQty}</strong></span>
+                        <span>SL Yêu cầu: <strong className="text-amber-800 dark:text-amber-500 font-extrabold text-sm">{item.inputQty ? item.inputQty.toLocaleString("vi-VN") : "0"}</strong></span>
                       </div>
                     </div>
                   </div>
@@ -1013,14 +1026,14 @@ function KcsOrderRow({ prod, onOpenPrintLabel, onOpenImageViewer }: KcsOrderRowP
                       // Read-only state
                       <div className="flex items-center gap-4 text-xs font-bold shrink-0">
                         <div className="text-right">
-                          <span className="text-[9px] block text-slate-400 font-semibold uppercase leading-none mb-0.5">Ra</span>
-                          <span className="text-emerald-700 tabular-nums">
+                          <span className="text-[10px] block text-slate-400 dark:text-slate-500 font-bold uppercase leading-none mb-1">Ra</span>
+                          <span className="text-emerald-700 dark:text-emerald-500 text-base font-black tabular-nums">
                             {item.outputQty !== null ? item.outputQty.toLocaleString("vi-VN") : "0"}
                           </span>
                         </div>
                         <div className="text-right">
-                          <span className="text-[9px] block text-slate-400 font-semibold uppercase leading-none mb-0.5">Lỗi</span>
-                          <span className="text-red-600 tabular-nums">
+                          <span className="text-[10px] block text-slate-400 dark:text-slate-500 font-bold uppercase leading-none mb-1">Lỗi</span>
+                          <span className="text-red-600 dark:text-red-400 text-base font-black tabular-nums">
                             {item.defectQty !== null ? item.defectQty.toLocaleString("vi-VN") : "0"}
                           </span>
                         </div>

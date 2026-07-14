@@ -15,6 +15,7 @@ export const ENTITY_CONFIG = {
       design_lead: "Trưởng phòng thiết kế",
       production: "Nhân viên sản xuất",
       production_lead: "Trưởng phòng sản xuất",
+      kcs: "Nhân viên KCS",
     },
   },
   orderStatuses: {

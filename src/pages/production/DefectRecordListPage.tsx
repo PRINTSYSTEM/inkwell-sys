@@ -102,7 +102,8 @@ export default function DefectRecordListPage() {
   const canEdit =
     userRole === ROLE.ADMIN ||
     userRole === ROLE.MANAGER ||
-    userRole === ROLE.PRODUCTION_LEAD;
+    userRole === ROLE.PRODUCTION_LEAD ||
+    userRole === ROLE.KCS;
   const canDelete = userRole === ROLE.ADMIN || userRole === ROLE.MANAGER;
 
   // Build API query parameters

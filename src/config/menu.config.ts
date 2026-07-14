@@ -76,7 +76,7 @@ export const MENU_ITEMS: MenuItem[] = [
     id: "design-dept",
     title: "Thiết kế",
     icon: Palette,
-    allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.DESIGN, ROLE.DESIGN_LEAD,ROLE.SALE],
+    allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.DESIGN, ROLE.DESIGN_LEAD, ROLE.SALE],
     children: [
       {
         id: "design-staff",
@@ -212,6 +212,7 @@ export const MENU_ITEMS: MenuItem[] = [
       ROLE.DESIGN_LEAD,
       ROLE.ACCOUNTING,
       ROLE.ACCOUNTING_LEAD,
+      ROLE.KCS,
     ],
   },
   {
@@ -225,6 +226,7 @@ export const MENU_ITEMS: MenuItem[] = [
       ROLE.PRODUCTION_LEAD,
       ROLE.ACCOUNTING,
       ROLE.ACCOUNTING_LEAD,
+      ROLE.KCS,
     ],
     children: [
       {
@@ -267,6 +269,7 @@ export const MENU_ITEMS: MenuItem[] = [
           ROLE.PRODUCTION_LEAD,
           ROLE.ACCOUNTING,
           ROLE.ACCOUNTING_LEAD,
+          ROLE.KCS,
         ],
       },
     ],
@@ -465,6 +468,7 @@ export const MENU_ITEMS: MenuItem[] = [
           ROLE.MANAGER,
           ROLE.PRODUCTION,
           ROLE.PRODUCTION_LEAD,
+          ROLE.KCS,
         ],
       },
     ],

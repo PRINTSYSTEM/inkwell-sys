@@ -108,8 +108,10 @@ export function PrintLabelDialog({
         size: 80mm auto;
         margin: 0;
       }
+      body, body * {
+        font-family: "Times New Roman", Times, serif !important;
+      }
       body {
-        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
         width: 80mm;
         margin: 0;
         padding: 5mm;
@@ -293,7 +295,16 @@ export function PrintLabelDialog({
             </div>
 
             {/* Label preview inside Dialog */}
-            <div className="border border-slate-300 rounded p-3 bg-white text-black shadow-sm mx-auto w-full max-w-[320px]">
+            <div
+              id="label-preview-container"
+              className="border border-slate-300 rounded p-3 bg-white text-black shadow-sm mx-auto w-full max-w-[320px]"
+            >
+              <style dangerouslySetInnerHTML={{ __html: `
+                #label-preview-container,
+                #label-preview-container * {
+                  font-family: "Times New Roman", Times, serif !important;
+                }
+              ` }} />
               <div className="text-center font-bold text-sm border-b pb-1.5 uppercase tracking-wide">
                 THÔNG TIN ĐÓNG GÓI
               </div>
