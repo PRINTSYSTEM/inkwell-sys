@@ -38,20 +38,36 @@ export type UserResponsePaginate = z.infer<
 >;
 
 // ===== CreateUserRequest =====
-// Base from generated, but keep custom validation
-export const CreateUserRequestSchema = GenCreateUserRequestSchema.refine(
-  (data) => {
-    if (data.password && data.password.length < 6) {
-      return false;
-    }
-    return true;
-  },
-  { message: "Mật khẩu phải có ít nhất 6 ký tự", path: ["password"] }
-);
+export const CreateUserRequestSchema = z.object({
+  username: z.string().min(1, "Username không được để trống").max(100),
+  password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự").max(100),
+  fullName: z.string().min(1, "Họ và tên không được để trống").max(255),
+  role: UserRoleSchema,
+  email: z.preprocess(
+    (val) => (val === "" || val === null ? undefined : val),
+    z.string().email("Email không hợp lệ").optional().nullable()
+  ),
+  phone: z.preprocess(
+    (val) => (val === "" || val === null ? undefined : val),
+    z.string().max(20, "Số điện thoại không quá 20 ký tự").optional().nullable()
+  ),
+});
 export type CreateUserRequest = z.infer<typeof CreateUserRequestSchema>;
 
 // ===== UpdateUserRequest =====
-export const UpdateUserRequestSchema = GenUpdateUserRequestSchema.passthrough();
+export const UpdateUserRequestSchema = z.object({
+  fullName: z.string().min(1, "Họ và tên không được để trống").max(255).optional().nullable(),
+  role: UserRoleSchema.optional().nullable(),
+  email: z.preprocess(
+    (val) => (val === "" || val === null ? undefined : val),
+    z.string().email("Email không hợp lệ").optional().nullable()
+  ),
+  phone: z.preprocess(
+    (val) => (val === "" || val === null ? undefined : val),
+    z.string().max(20, "Số điện thoại không quá 20 ký tự").optional().nullable()
+  ),
+  isActive: z.boolean().optional().nullable(),
+}).partial();
 export type UpdateUserRequest = z.infer<typeof UpdateUserRequestSchema>;
 
 // ===== UpdateMyProfileRequest =====

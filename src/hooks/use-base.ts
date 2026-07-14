@@ -164,6 +164,8 @@ export function createCrudHooks<
       queryKey: keys.detail(id as TId),
       queryFn: () => api.get(id as TId),
       enabled: enabled && id !== null,
+      staleTime: 5 * 60 * 1000,
+      refetchOnWindowFocus: false,
     });
   };
 

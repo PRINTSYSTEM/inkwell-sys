@@ -77,8 +77,10 @@ export default function StockOutPrintPreviewDialog({
         size: ${isA5 ? "A5 landscape" : "A4 portrait"};
         margin: 8mm;
       }
+      body, body * {
+        font-family: "Times New Roman", Times, serif !important;
+      }
       body {
-        font-family: "Times New Roman", Times, serif;
         margin: 0;
         padding: 0;
         color: #000;
@@ -283,6 +285,12 @@ export default function StockOutPrintPreviewDialog({
               fontFamily: '"Times New Roman", Times, serif',
             }}
           >
+            <style dangerouslySetInnerHTML={{ __html: `
+              #stock-out-print-area,
+              #stock-out-print-area * {
+                font-family: "Times New Roman", Times, serif !important;
+              }
+            ` }} />
             {/* The Print Area */}
             <div id="stock-out-print-area">
               {/* Company info header (No logo) */}

@@ -12,6 +12,7 @@ export const ROLE = {
   ACCOUNTING: "accounting",
   ACCOUNTING_LEAD: "accounting_lead",
   PROOFER: "proofer",
+  KCS: "kcs",
 } as const;
 
 export const REDIRECT_ROLE = {
@@ -25,6 +26,7 @@ export const REDIRECT_ROLE = {
   [ROLE.ACCOUNTING_LEAD]: ROUTE_PATHS.DASHBOARD,
   [ROLE.PROOFER]: ROUTE_PATHS.PROOFING.ROOT,
   [ROLE.PRODUCTION_LEAD]: ROUTE_PATHS.PRODUCTION.ROOT,
+  [ROLE.KCS]: ROUTE_PATHS.PRODUCTION.KCS,
 } as const;
 
 export const ROLE_LABELS: Record<string, string> = ENTITY_CONFIG.roles.values;

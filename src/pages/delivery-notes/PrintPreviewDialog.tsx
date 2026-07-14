@@ -30,7 +30,7 @@ export default function PrintPreviewDialog({
   const lines = deliveryNote.lines || [];
   const today = new Date();
   const dateFormatted = format(today, "'Ngày' dd 'Tháng' MM 'Năm' yyyy", { locale: vi });
-  const dateObj = deliveryNote.deliveryDate ? new Date(deliveryNote.deliveryDate) : new Date();
+  const dateObj = (deliveryNote as any).deliveryDate ? new Date((deliveryNote as any).deliveryDate) : new Date();
   const deliveryDateFormatted = format(dateObj, "dd/MM/yyyy");
 
   const totalDeliveryQty = lines.reduce((sum, l) => sum + (l.deliveryQty || 0), 0);
@@ -70,8 +70,10 @@ export default function PrintPreviewDialog({
         size: ${printType === "A4" ? "A4 portrait" : "A5 landscape"};
         margin: 8mm 12mm;
       }
+      body, body * {
+        font-family: "Times New Roman", Times, serif, Arial, sans-serif !important;
+      }
       body {
-        font-family: "Times New Roman", Times, serif, Arial, sans-serif;
         color: #000;
         background: #fff;
         margin: 0;
@@ -274,6 +276,12 @@ export default function PrintPreviewDialog({
               fontFamily: '"Times New Roman", Times, serif',
             }}
           >
+            <style dangerouslySetInnerHTML={{ __html: `
+              #delivery-note-print-area,
+              #delivery-note-print-area * {
+                font-family: "Times New Roman", Times, serif !important;
+              }
+            ` }} />
             {/* The Print Area */}
             <div id="delivery-note-print-area">
               {/* Logo & Company info & Delivery Meta layout */}

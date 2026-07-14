@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 
 export interface CartItem {
   readyDesignId: number;
+  designId?: number;
   orderDetailId?: number;
   designCode: string;
   designName: string;
@@ -54,9 +55,17 @@ export const ProofingCartProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   const addToCart = useCallback((items: CartItem[]) => {
     setCartItems((prev) => {
-      const existing = new Set(prev.map((i) => i.readyDesignId));
-      const newItems = items.filter((i) => !existing.has(i.readyDesignId));
-      return [...prev, ...newItems];
+      const existingCodes = new Set(prev.map((i) => i.designCode.trim().toLowerCase()));
+      const uniqueIncoming: CartItem[] = [];
+      const seenCodes = new Set<string>();
+      for (const item of items) {
+        const codeLower = item.designCode.trim().toLowerCase();
+        if (!existingCodes.has(codeLower) && !seenCodes.has(codeLower)) {
+          uniqueIncoming.push(item);
+          seenCodes.add(codeLower);
+        }
+      }
+      return [...prev, ...uniqueIncoming];
     });
   }, []);
 

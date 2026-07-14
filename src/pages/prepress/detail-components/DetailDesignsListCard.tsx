@@ -131,19 +131,22 @@ export function DetailDesignsListCard({
   isProofer = true,
 }: DetailDesignsListCardProps) {
   const [searchParams] = useSearchParams();
-  const highlightDesignIdStr = searchParams.get("highlightDesignId");
-  const highlightDesignId = highlightDesignIdStr ? parseInt(highlightDesignIdStr, 10) : null;
+  const highlightDesignIds = React.useMemo(() => {
+    const raw = searchParams.get("highlightDesignId");
+    if (!raw) return [];
+    return raw.split(",").map(id => parseInt(id, 10)).filter(id => !isNaN(id));
+  }, [searchParams]);
 
   const rowRef = React.useRef<HTMLTableRowElement | null>(null);
 
   React.useEffect(() => {
-    if (highlightDesignId && rowRef.current) {
+    if (highlightDesignIds.length > 0 && rowRef.current) {
       const timer = setTimeout(() => {
         rowRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [highlightDesignId]);
+  }, [highlightDesignIds]);
 
   // order null check moved below (hooks must be called first)
 
@@ -243,7 +246,7 @@ export function DetailDesignsListCard({
             </TableHeader>
             <TableBody>
               {orderDesigns.map((pod, index) => {
-                const isHighlighted = highlightDesignId !== null && pod.design?.id === highlightDesignId;
+                const isHighlighted = pod.design?.id ? highlightDesignIds.includes(pod.design.id) : false;
                 const fullInfo = (
                   <div className="space-y-2 text-sm max-w-md">
                     <div className="font-semibold text-base border-b pb-2 flex flex-col gap-1 w-full">

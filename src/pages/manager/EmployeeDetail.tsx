@@ -38,6 +38,7 @@ import {
   UserResponse,
   UpdateUserRequestSchema,
   UpdateUserRequest,
+  type UserRole,
 } from "@/Schema";
 import { ROLE_LABELS as RoleLabels } from "@/constants/role.constant";
 import {
@@ -169,9 +170,11 @@ export default function EmployeeDetail() {
       const updateData: Partial<UpdateUserRequest> = {};
       if (editForm.fullName !== user?.fullName)
         updateData.fullName = editForm.fullName;
-      if (editForm.role !== user?.role) updateData.role = editForm.role;
-      if (editForm.email !== user?.email) updateData.email = editForm.email;
-      if (editForm.phone !== user?.phone) updateData.phone = editForm.phone;
+      if (editForm.role !== user?.role) updateData.role = editForm.role as UserRole;
+      if (editForm.email !== user?.email)
+        updateData.email = editForm.email?.trim() || null;
+      if (editForm.phone !== user?.phone)
+        updateData.phone = editForm.phone?.trim() || null;
       if (editForm.isActive !== user?.isActive)
         updateData.isActive = editForm.isActive;
 
