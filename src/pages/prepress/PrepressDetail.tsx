@@ -1453,7 +1453,8 @@ export default function ProofingOrderDetailPage() {
   const handleStartEditField = (
     field: "totalQuantity" | "paperSize" | "notes" | "basisWeight" | "rollWidth" | "code",
   ) => {
-    if (!order || order.status === "completed") return;
+    if (!order) return;
+    if (order.status === "completed" && field !== "code") return;
     // If another field is being edited, cancel it first
     if (editingField && editingField !== field) {
       handleCancelEditField();

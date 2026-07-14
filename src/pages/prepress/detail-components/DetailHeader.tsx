@@ -142,10 +142,10 @@ export function DetailHeader({
           ) : (
             <div className="flex items-center gap-2 group">
               <h1 className="text-xl font-semibold">{order.code ?? "—"}</h1>
-              {order.status !== "completed" && isProofer && (
+              {isProofer && (
                 <button
                   onClick={() => handleStartEditField("code")}
-                  className="text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded-md hover:bg-slate-100"
+                  className="text-muted-foreground hover:text-foreground p-0.5 rounded-md hover:bg-slate-100"
                   title="Chỉnh sửa mã bài"
                 >
                   <Edit className="h-3.5 w-3.5" />
