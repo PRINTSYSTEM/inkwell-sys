@@ -1519,10 +1519,31 @@ export const useAvailableBins = (designTypeId?: number | null, enabled: boolean 
     queryKey: [proofingKeys.all[0], "available-bins", designTypeId],
     enabled,
     queryFn: async () => {
+      let finalDesignTypeId = designTypeId;
+      if (designTypeId === 999001 || designTypeId === 999002) {
+        // Fetch design types to resolve IDs
+        const designTypesRes = await apiRequest.get<any>(API_SUFFIX.DESIGN_TYPES);
+        const designTypes = Array.isArray(designTypesRes.data)
+          ? designTypesRes.data
+          : (designTypesRes.data.items ?? []);
+        
+        if (designTypeId === 999001) {
+          const nhanGiayType = designTypes.find((dt: any) =>
+            dt.name.toLowerCase().includes("nhãn") || dt.name.toLowerCase().includes("nhan")
+          );
+          finalDesignTypeId = nhanGiayType?.id || null;
+        } else {
+          const tuiType = designTypes.find((dt: any) =>
+            dt.name.toLowerCase().includes("túi") || dt.name.toLowerCase().includes("tui")
+          );
+          finalDesignTypeId = tuiType?.id || null;
+        }
+      }
+
       const res = await apiRequest.get<AvailableBinResponse[]>(
         API_SUFFIX.PROOFING_AVAILABLE_BINS,
         {
-          params: { designTypeId: designTypeId ?? undefined }
+          params: { designTypeId: finalDesignTypeId ?? undefined }
         }
       );
       return res.data;

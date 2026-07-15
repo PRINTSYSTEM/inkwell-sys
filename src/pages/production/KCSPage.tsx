@@ -862,34 +862,78 @@ function KcsOrderRow({ prod, onOpenPrintLabel, onOpenImageViewer }: KcsOrderRowP
       <TableCell className="align-top py-3 pl-1">
         <div className="flex flex-col gap-3">
 
-          {/* Quick Input (Rendered at top of list only when editing) */}
-          {isEditing && (
-            <div className="flex items-center gap-2 bg-amber-500/10 dark:bg-amber-950/20 border border-amber-500/20 p-2 rounded-md w-full max-w-[420px]">
-              <span className="text-[11px] font-bold text-amber-800 dark:text-amber-300 whitespace-nowrap">
-                Nhập nhanh hàng ra:
-              </span>
-              <Input
-                type="number"
-                placeholder="Số lượng..."
-                value={quickQty}
-                onChange={(e) => {
-                  if (e.target.value === "" || /^\d+$/.test(e.target.value)) {
-                    setQuickQty(e.target.value);
-                  }
-                }}
-                onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                className="h-7 text-xs w-28 bg-background border-amber-300 font-bold tabular-nums"
-              />
-              <Button
-                variant="default"
-                size="sm"
-                className="h-7 text-[10px] font-bold bg-[#93631F] hover:bg-[#7a521a]"
-                onClick={handleApplyQuickQty}
-              >
-                Áp Dụng Tất Cả
-              </Button>
+          {/* Action Row at top of list */}
+          <div className="flex gap-2 justify-between items-center max-w-5xl">
+            {isEditing ? (
+              <div className="flex items-center gap-2 bg-amber-500/10 dark:bg-amber-950/20 border border-amber-500/20 p-2 rounded-md w-full max-w-[420px]">
+                <span className="text-[11px] font-bold text-amber-800 dark:text-amber-300 whitespace-nowrap">
+                  Nhập nhanh hàng ra:
+                </span>
+                <Input
+                  type="number"
+                  placeholder="Số lượng..."
+                  value={quickQty}
+                  onChange={(e) => {
+                    if (e.target.value === "" || /^\d+$/.test(e.target.value)) {
+                      setQuickQty(e.target.value);
+                    }
+                  }}
+                  onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                  className="h-7 text-xs w-28 bg-background border-amber-300 font-bold tabular-nums"
+                />
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="h-7 text-[10px] font-bold bg-[#93631F] hover:bg-[#7a521a]"
+                  onClick={handleApplyQuickQty}
+                >
+                  Áp Dụng Tất Cả
+                </Button>
+              </div>
+            ) : (
+              <div />
+            )}
+
+            <div className="flex gap-2">
+              {isEditing ? (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 px-3 text-xs bg-slate-50 hover:bg-slate-100 font-semibold"
+                    onClick={() => setIsEditing(false)}
+                    disabled={isSaving}
+                  >
+                    <XCircle className="w-3.5 h-3.5 mr-1" />
+                    Hủy sửa
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="h-8 px-4 text-xs bg-[#93631F] hover:bg-[#7a521a] text-white font-extrabold shadow-sm"
+                    onClick={handleSave}
+                    disabled={isSaving}
+                  >
+                    {isSaving ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" />
+                    ) : (
+                      <Save className="w-3.5 h-3.5 mr-1" />
+                    )}
+                    Lưu Báo Số
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-4 text-xs font-bold border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-800"
+                  onClick={startEditing}
+                >
+                  Nhập / Sửa Báo Số KCS
+                </Button>
+              )}
             </div>
-          )}
+          </div>
 
           {/* Table list of individual designs */}
           <div className="space-y-2 max-w-5xl">
