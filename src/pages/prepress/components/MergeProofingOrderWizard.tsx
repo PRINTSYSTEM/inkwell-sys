@@ -40,6 +40,15 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { proofingStatusLabels } from "@/lib/status-utils";
 
+const normalizeMaterial = (materialName: string | undefined | null): string => {
+  if (!materialName) return "";
+  let name = materialName.replace(/\(.*?\)/g, "").trim().toLowerCase();
+  if (name.includes("couche")) return "couche";
+  if (name.includes("thẻ treo") || name.includes("the treo")) return "the_treo";
+  if (name.includes("metaline") || name.includes("metalized") || name.includes("metalise")) return "metaline";
+  return name;
+};
+
 interface MergeProofingOrderWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -83,6 +92,12 @@ export function MergeProofingOrderWizard({
     const firstType = cartItemsWithResolvedTypes[0].resolvedDesignTypeId;
     return cartItemsWithResolvedTypes.some(item => item.resolvedDesignTypeId !== firstType);
   }, [cartItemsWithResolvedTypes]);
+
+  const hasMixedMaterials = useMemo(() => {
+    if (cartItems.length <= 1) return false;
+    const firstMaterial = normalizeMaterial(cartItems[0].materialTypeName);
+    return cartItems.some(item => normalizeMaterial(item.materialTypeName) !== firstMaterial);
+  }, [cartItems]);
 
   const activeDesignTypeId = useMemo(() => {
     return cartItemsWithResolvedTypes[0]?.resolvedDesignTypeId ?? null;
@@ -155,6 +170,17 @@ export function MergeProofingOrderWizard({
     return "—";
   };
 
+  const filteredBins = useMemo(() => {
+    if (cartItems.length === 0) return [];
+    const activeMaterialNormalized = normalizeMaterial(cartItems[0].materialTypeName);
+    
+    return resolvedBins.filter(bin => {
+      const binMaterialLabel = getMaterialLabel(bin);
+      const binMaterialNormalized = normalizeMaterial(binMaterialLabel);
+      return !binMaterialNormalized || binMaterialNormalized === activeMaterialNormalized;
+    });
+  }, [resolvedBins, cartItems]);
+
   // Check if a design is a duplicate (By design code to prevent ID collisions)
   const duplicateMap = useMemo(() => {
     const map = new Set<string>();
@@ -187,6 +213,10 @@ export function MergeProofingOrderWizard({
     if (step === 1) {
       if (hasMixedTypes) {
         toast.error("Không thể tiếp tục vì các thiết kế trong giỏ không cùng loại");
+        return;
+      }
+      if (hasMixedMaterials) {
+        toast.error("Không thể tiếp tục vì các thiết kế trong giỏ không cùng chất liệu");
         return;
       }
       setStep(2);
@@ -332,6 +362,15 @@ export function MergeProofingOrderWizard({
                 </Alert>
               )}
 
+              {hasMixedMaterials && (
+                <Alert variant="destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription className="text-xs font-bold">
+                    Phát hiện các thiết kế khác chất liệu trong giỏ ghép bài (ví dụ: trộn lẫn Giấy Couche, Thẻ treo, hoặc Metaline)! Vui lòng xóa bớt để đảm bảo tất cả thiết kế cùng một chất liệu gốc.
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <div className="rounded-md border bg-white overflow-hidden">
                 <Table>
                   <TableHeader className="bg-slate-50">
@@ -420,12 +459,12 @@ export function MergeProofingOrderWizard({
                   <Loader2 className="w-8 h-8 animate-spin text-primary" />
                   <span className="text-xs">Đang tìm danh sách bài bình phù hợp...</span>
                 </div>
-              ) : resolvedBins.length === 0 ? (
+              ) : filteredBins.length === 0 ? (
                 <div className="text-center py-12 border border-dashed rounded-lg bg-white">
                   <AlertTriangle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
                   <p className="text-sm font-bold text-slate-800">Không có bài bình nào phù hợp!</p>
                   <p className="text-xs text-muted-foreground mt-1 max-w-md mx-auto">
-                    Hiện tại không có bài bình nào của loại <strong>{activeDesignTypeName}</strong> ở các trạng thái có thể ghép bài (Chờ xử lý, Tạm dừng, Trả về). Vui lòng tạo một bài bình mới.
+                    Hiện tại không có bài bình nào của loại <strong>{activeDesignTypeName}</strong> và chất liệu <strong>{cartItems[0]?.materialTypeName?.replace(/\(.*?\)/g, "").trim() || "chưa xác định"}</strong> ở các trạng thái có thể ghép bài. Vui lòng tạo một bài bình mới.
                   </p>
                 </div>
               ) : (
@@ -444,7 +483,7 @@ export function MergeProofingOrderWizard({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {resolvedBins.map((bin) => {
+                      {filteredBins.map((bin) => {
                         const isSelected = selectedBinId === bin.id;
                         return (
                           <TableRow

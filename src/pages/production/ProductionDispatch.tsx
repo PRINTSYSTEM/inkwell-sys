@@ -211,7 +211,7 @@ export default function ProductionDispatch() {
   const filteredAndSortedOrders = useMemo(() => {
     let result = [...proofingOrders];
 
-    // 1. Search Query filter (Mã bài / Mã hàng / Tên sản phẩm)
+    // 1. Search Query filter (Mã bài / Mã hàng / Tên sản phẩm / Khách hàng)
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       result = result.filter((po) => {
@@ -219,7 +219,14 @@ export default function ProductionDispatch() {
         const matchDetails = (po.proofingOrderDesigns || []).some((pod: any) => {
           const matchDesignCode = (pod.design?.code || "").toLowerCase().includes(q);
           const matchDesignName = (pod.design?.designName || "").toLowerCase().includes(q);
-          return matchDesignCode || matchDesignName;
+          const matchCustomerName = (
+            pod.design?.customerName ||
+            pod.customerName ||
+            pod.design?.customer?.name ||
+            pod.design?.customer?.companyName ||
+            ""
+          ).toLowerCase().includes(q);
+          return matchDesignCode || matchDesignName || matchCustomerName;
         });
         return matchCode || matchDetails;
       });
@@ -780,8 +787,13 @@ export default function ProductionDispatch() {
                       {/* Proofing Order Code & Completed At */}
                       <TableCell className="align-middle">
                         <div className="flex flex-col gap-1">
-                          <span className="font-mono font-black text-sm uppercase text-slate-900 dark:text-slate-50">
-                            {po.code || `BÀI #${po.id}`}
+                          <span className="font-mono font-black text-sm text-slate-900 dark:text-slate-50">
+                            <span className="uppercase">{po.code || `BÀI #${po.id}`}</span>
+                            {po.proofingOrderDesigns?.[0]?.design?.designType?.name && (
+                              <span className="font-sans font-medium text-xs text-stone-500 ml-1.5 normal-case">
+                                - {po.proofingOrderDesigns[0].design.designType.name}
+                              </span>
+                            )}
                           </span>
                           <span className="text-[10px] text-stone-400 font-semibold flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
@@ -802,12 +814,8 @@ export default function ProductionDispatch() {
                                 <span className="font-mono font-bold text-stone-900 dark:text-stone-50">
                                   {pod.design?.code || "Mã hàng nháp"}
                                 </span>
-                                <span className="text-[11px] font-medium text-stone-500 truncate max-w-[180px]" title={pod.design?.designName}>
+                                <span className="text-[11px] font-medium text-stone-600 dark:text-stone-300" title={pod.design?.designName}>
                                   {pod.design?.designName}
-                                </span>
-                                <span className="text-[10px] text-stone-400">•</span>
-                                <span className="text-[11px] text-stone-500">
-                                  {pod.design?.designType?.name}
                                 </span>
                                 {pod.design?.size && (
                                   <>
@@ -829,6 +837,25 @@ export default function ProductionDispatch() {
                                 <span className="text-[11px] font-bold text-primary">
                                   {new Intl.NumberFormat("vi-VN").format(pod.quantity || 0)}
                                 </span>
+                                {(() => {
+                                  const customerNameVal =
+                                    pod.design?.customerName ||
+                                    pod.customerName ||
+                                    pod.design?.customer?.name ||
+                                    pod.design?.customer?.companyName;
+                                  if (!customerNameVal) return null;
+                                  return (
+                                    <>
+                                      <span className="text-[10px] text-stone-400">•</span>
+                                      <span 
+                                        className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-150 dark:bg-indigo-950/30 dark:text-indigo-400 dark:border-indigo-900/30"
+                                        title="Khách hàng"
+                                      >
+                                        {customerNameVal}
+                                      </span>
+                                    </>
+                                  );
+                                })()}
                               </div>
                             ))}
                           </div>
