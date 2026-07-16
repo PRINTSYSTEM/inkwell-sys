@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, Pencil } from "lucide-react";
 
 interface Props {
   code: string;
@@ -12,12 +12,13 @@ interface Props {
   customerName?: string;
   designerName?: string;
   updatedAt?: string;
+  onEditCode?: () => void;
 }
 
 export default function DesignCode(props: Props) {
   const [copied, setCopied] = useState(false);
 
-  const { code, designName, dimensions, extraNote, createdAt, adhesiveOffset, customerName, designerName, updatedAt } =
+  const { code, designName, dimensions, extraNote, createdAt, adhesiveOffset, customerName, designerName, updatedAt, onEditCode } =
     props;
 
   // 2) Format date string "2025-11-26T10:38:30.3642249" -> "26/11/2025"
@@ -68,7 +69,20 @@ export default function DesignCode(props: Props) {
       {/* ROW 1: CODE + DESIGN NAME + CUSTOMER + DESIGNER */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <div className="flex items-center gap-2">
-          <span className="font-bold shrink-0 whitespace-nowrap">{code}:</span>
+          <div className="flex items-center gap-1">
+            <span className="font-bold shrink-0 whitespace-nowrap">{code}</span>
+            {onEditCode && (
+              <button
+                type="button"
+                onClick={onEditCode}
+                className="text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 p-0.5 shrink-0"
+                title="Sửa mã thiết kế"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+            )}
+            <span className="font-bold shrink-0 whitespace-nowrap">:</span>
+          </div>
           <span className="font-semibold uppercase break-all text-slate-900 dark:text-slate-100">
             {designName}
           </span>

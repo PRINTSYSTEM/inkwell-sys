@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from "react";
+import { useDebounce } from "use-debounce";
 import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -90,6 +91,9 @@ export default function AllDesignsPage() {
     persistKey: "designs-list",
   });
 
+  // Debounce search query to reduce API calls
+  const [debouncedSearchQuery] = useDebounce(filterState.searchQuery, 500);
+
   // gọi React Query lấy list với pagination
   const useDesignsParams = useMemo(
     () => ({
@@ -127,8 +131,8 @@ export default function AllDesignsPage() {
             sortColumn: "createdAt",
             sortOrder: "desc",
           }),
-      ...(filterState.searchQuery.trim()
-        ? { search: filterState.searchQuery.trim() }
+      ...(debouncedSearchQuery.trim()
+        ? { search: debouncedSearchQuery.trim() }
         : {}),
     }),
     [
@@ -140,7 +144,7 @@ export default function AllDesignsPage() {
       dateRange,
       selectedMonth,
       selectedYear,
-      filterState.searchQuery,
+      debouncedSearchQuery,
     ]
   );
   const { data, isLoading } = useDesigns(useDesignsParams);
@@ -233,7 +237,7 @@ export default function AllDesignsPage() {
     }
   };
 
-  // map thêm field để search theo tên designer
+  // map thêm field để hiển thị (tên designer, tên khách hàng...)
   const designsWithSearch: DesignWithSearch[] = useMemo(
     () =>
       designs.map((d) => ({
@@ -243,22 +247,6 @@ export default function AllDesignsPage() {
       })),
     [designs]
   );
-
-  // Filter by search query (hybrid strategy: filters client-side on the loaded page, supporting design name)
-  const filteredDesigns = useMemo(() => {
-    if (!filterState.searchQuery.trim()) return designsWithSearch;
-    const query = filterState.searchQuery.toLowerCase();
-    return designsWithSearch.filter(
-      (d) =>
-        d.code?.toLowerCase().includes(query) ||
-        d.designName?.toLowerCase().includes(query) ||
-        d.designerFullName?.toLowerCase().includes(query) ||
-        d.latestOrderCode?.toLowerCase().includes(query) ||
-        d.customerName?.toLowerCase().includes(query) ||
-        d.latestRequirements?.toLowerCase().includes(query) ||
-        d.notes?.toLowerCase().includes(query)
-    );
-  }, [designsWithSearch, filterState.searchQuery]);
 
   // Auto-adjust currentPage if it exceeds totalPages
   // Only adjust when data is actually loaded (not undefined) to avoid resetting during data fetch
@@ -633,8 +621,8 @@ export default function AllDesignsPage() {
               <TableBody>
                 {isLoading ? (
                   <TableSkeleton cols={11} rows={10} rowHeight="h-14" />
-                ) : filteredDesigns.length > 0 ? (
-                  filteredDesigns.map((design) => (
+                ) : designsWithSearch.length > 0 ? (
+                  designsWithSearch.map((design) => (
                     <TableRow
                       key={design.id}
                       className={`cursor-pointer hover:bg-muted/50 h-14 ${design.status === "returned" && `bg-red-50`}`}

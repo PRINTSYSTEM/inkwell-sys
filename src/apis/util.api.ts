@@ -177,6 +177,7 @@ export const API_SUFFIX = {
   DESIGN_REPRINT: (id: number) => `/designs/${id}/reprint`,
   DESIGN_CANCEL: (id: number) => `/designs/${id}/cancel`,
   DESIGN_MARK_URGENT: (id: number) => `/designs/${id}/mark-urgent`,
+  DESIGN_UPDATE_CODE: (id: number) => `/designs/${id}/code`,
 
   DESIGN_EMPLOYEES_FIXED_QUERY: () =>
     `/users?pageNumber=1&pageSize=10&role=design`,

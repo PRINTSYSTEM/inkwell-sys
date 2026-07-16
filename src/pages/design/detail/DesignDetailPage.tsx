@@ -42,6 +42,7 @@ import {
   useReprintDesign,
   useCancelDesign,
   useMarkDesignUrgent,
+  useUpdateDesignCode,
 } from "@/hooks/use-design";
 import { useMaterialsByDesignType } from "@/hooks/use-material-type";
 import { ErrorBoundary, ErrorDisplay } from "@/components/ui/error-components";
@@ -388,6 +389,9 @@ export default function DesignDetailPage() {
   const cancelDesign = useCancelDesign();
   const markUrgentMutation = useMarkDesignUrgent();
   const [markingUrgent, setMarkingUrgent] = useState(false);
+  const updateDesignCodeMutation = useUpdateDesignCode();
+  const [editCodeDialogOpen, setEditCodeDialogOpen] = useState(false);
+  const [newDesignCode, setNewDesignCode] = useState("");
 
   // Filter active materials or the currently selected material of this design (even if inactive)
   const filteredDropdownMaterials = useMemo(() => {
@@ -502,6 +506,32 @@ export default function DesignDetailPage() {
       // handled in hook
     } finally {
       setMarkingUrgent(false);
+    }
+  };
+
+  const handleOpenEditCode = () => {
+    if (d.code) {
+      setNewDesignCode(d.code);
+    } else {
+      setNewDesignCode("");
+    }
+    setEditCodeDialogOpen(true);
+  };
+
+  const handleSaveCode = async () => {
+    if (!newDesignCode.trim()) {
+      toast.error("Vui lòng nhập mã thiết kế");
+      return;
+    }
+    try {
+      await updateDesignCodeMutation.mutate({
+        id: designId,
+        code: newDesignCode.trim(),
+      });
+      setEditCodeDialogOpen(false);
+      refetchDesign();
+    } catch {
+      // handled in hook
     }
   };
 
@@ -817,6 +847,11 @@ export default function DesignDetailPage() {
       user?.role === ROLE.ADMIN) &&
     !hasProofingOrder;
 
+  const canEditCode =
+    user?.role === ROLE.DESIGN ||
+    user?.role === ROLE.DESIGN_LEAD ||
+    user?.role === ROLE.ADMIN;
+
   // Calculate dimensions - must be before early returns to maintain hook order
   const calculatedDimensions = useMemo(() => {
     if (!design) return "";
@@ -929,6 +964,7 @@ export default function DesignDetailPage() {
                       designerName={d.designer?.fullName ?? "Chưa phân công"}
                       showCopy={false}
                       updatedAt={d.updatedAt}
+                      onEditCode={canEditCode ? handleOpenEditCode : undefined}
                     />
                   </div>
                   {canEditDesign && (
@@ -2207,6 +2243,48 @@ export default function DesignDetailPage() {
                 className="font-semibold"
               >
                 {cancelDesign.loading ? "Đang xử lý..." : "Xác nhận hủy"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog sửa mã thiết kế */}
+        <Dialog open={editCodeDialogOpen} onOpenChange={setEditCodeDialogOpen}>
+          <DialogContent className="max-w-md bg-background border border-border shadow-2xl rounded-2xl p-6">
+            <DialogHeader className="pb-3 border-b border-border/40">
+              <DialogTitle className="text-lg font-bold text-foreground">
+                Cập nhật mã thiết kế thủ công
+              </DialogTitle>
+              <DialogDescription className="text-xs text-muted-foreground mt-1">
+                Nhập mã thiết kế mới cho thiết kế này. Hệ thống sẽ cập nhật mã trên toàn hệ thống.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4 text-sm">
+              <div className="space-y-2">
+                <Label className="font-semibold text-foreground">Mã thiết kế mới *</Label>
+                <Input
+                  placeholder="VD: KH001-T018"
+                  value={newDesignCode}
+                  onChange={(e) => setNewDesignCode(e.target.value)}
+                  className="h-11 bg-background"
+                  maxLength={100}
+                />
+              </div>
+            </div>
+            <DialogFooter className="pt-3 border-t border-border/40 gap-2 shrink-0">
+              <Button
+                variant="outline"
+                onClick={() => setEditCodeDialogOpen(false)}
+                disabled={updateDesignCodeMutation.loading}
+              >
+                Hủy bỏ
+              </Button>
+              <Button
+                onClick={handleSaveCode}
+                disabled={updateDesignCodeMutation.loading || !newDesignCode.trim()}
+                className="font-semibold"
+              >
+                {updateDesignCodeMutation.loading ? "Đang lưu..." : "Lưu thay đổi"}
               </Button>
             </DialogFooter>
           </DialogContent>
