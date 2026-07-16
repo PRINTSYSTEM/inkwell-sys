@@ -724,6 +724,64 @@ export const useMarkDesignUrgent = () => {
   };
 };
 
+// PUT /api/designs/{id}/code
+export const useUpdateDesignCode = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    DesignResponse,
+    [{ id: number; code: string }]
+  >(async ({ id, code }) => {
+    const res = await apiRequest.put<DesignResponse>(
+      API_SUFFIX.DESIGN_UPDATE_CODE(id),
+      { code }
+    );
+    return res.data;
+  });
+
+  const mutate = async (payload: { id: number; code: string }) => {
+    try {
+      const result = await execute(payload);
+
+      // Invalidate design detail query
+      queryClient.invalidateQueries({
+        queryKey: designKeys.detail(payload.id),
+      });
+
+      // Invalidate design list queries
+      queryClient.invalidateQueries({
+        queryKey: designKeys.all,
+      });
+
+      toast.success("Thành công", {
+        description: "Đã cập nhật mã thiết kế thành công",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể cập nhật mã thiết kế",
+      });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
+};
+
 
 
 

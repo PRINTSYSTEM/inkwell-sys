@@ -256,7 +256,12 @@ export function DesignTable({
                             </span>
                             <span className="font-medium">
                               {design.materialTypeName}
-                              {design.basisWeight && design.basisWeight > 0 ? ` (${design.basisWeight} gsm)` : ""}
+                              {(() => {
+                                const matName = (design.materialTypeName || "").toLowerCase();
+                                const isDecalGiay = matName.includes("decal") && (matName.includes("giấy") || matName.includes("giay"));
+                                if (isDecalGiay) return null;
+                                return design.basisWeight && design.basisWeight > 0 ? ` (${design.basisWeight} gsm)` : "";
+                              })()}
                             </span>
                           </div>
                           <div className="flex justify-between text-xs">
@@ -290,16 +295,35 @@ export function DesignTable({
                             </span>
                             <span
                               className={cn(
-                                "font-bold",
+                                "font-bold text-right whitespace-nowrap",
                                 design.availableQuantity &&
                                   design.availableQuantity > 0
                                   ? "text-green-600"
                                   : "text-red-600",
                               )}
                             >
-                              {design.availableQuantity?.toLocaleString() ||
-                                "0"}{" "}
-                              / {design.quantity.toLocaleString()}
+                              {(() => {
+                                const isDecal = (design.designTypeName || "").toLowerCase().includes("decal") || 
+                                                (design.materialTypeName || "").toLowerCase().includes("decal");
+                                const availQty = design.availableQuantity !== undefined && design.availableQuantity !== null
+                                  ? design.availableQuantity
+                                  : (isDecal && design.sidesClassification === "two_side" ? design.quantity * 2 : design.quantity);
+                                
+                                const baseQtyStr = design.quantity.toLocaleString("vi-VN");
+                                const availQtyStr = availQty.toLocaleString("vi-VN");
+
+                                if (isDecal) {
+                                  const isBo = design.sidesClassification === "two_side";
+                                  if (isBo) {
+                                    const totalBoQtyStr = (design.quantity * 2).toLocaleString("vi-VN");
+                                    return `${availQtyStr} / ${baseQtyStr} bộ = ${totalBoQtyStr} cái`;
+                                  } else {
+                                    return `${availQtyStr} / ${baseQtyStr} cái lẻ`;
+                                  }
+                                }
+                                
+                                return `${availQtyStr} / ${baseQtyStr}`;
+                              })()}
                             </span>
                           </div>
                         </div>
@@ -552,6 +576,24 @@ export function DesignTable({
                                 : design.quantity)
                             ).toLocaleString()}
                           </span>
+                          {(() => {
+                            const isDecal = (design.designTypeName || "").toLowerCase().includes("decal") || 
+                                            (design.materialTypeName || "").toLowerCase().includes("decal");
+                            if (isDecal) {
+                              const isBo = design.sidesClassification === "two_side";
+                              return (
+                                <span className={cn(
+                                  "text-[10px] ml-1.5 px-1 py-0.2 rounded border font-semibold select-none shrink-0",
+                                  isBo 
+                                    ? "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/20 dark:text-purple-400 dark:border-purple-800" 
+                                    : "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-800"
+                                )}>
+                                  {isBo ? "bộ" : "lẻ"}
+                                </span>
+                              );
+                            }
+                            return null;
+                          })()}
                           {canEditQuantity && (
                             <span className="text-[10px] text-muted-foreground opacity-0 group-hover/qty:opacity-100 transition-opacity ml-1">
                               ✏️
@@ -588,7 +630,12 @@ export function DesignTable({
                         className="whitespace-normal break-words min-w-[120px]"
                       >
                         {design.materialTypeName}
-                        {design.basisWeight && design.basisWeight > 0 ? ` (${design.basisWeight} gsm)` : ""}
+                        {(() => {
+                          const matName = (design.materialTypeName || "").toLowerCase();
+                          const isDecalGiay = matName.includes("decal") && (matName.includes("giấy") || matName.includes("giay"));
+                          if (isDecalGiay) return null;
+                          return design.basisWeight && design.basisWeight > 0 ? ` (${design.basisWeight} gsm)` : "";
+                        })()}
                       </div>
                     </TableCell>
                     <TableCell className="py-1">
