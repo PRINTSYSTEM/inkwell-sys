@@ -434,8 +434,9 @@ export default function StockOutDetailPage() {
       case "cancel":
         cancelStockOut(stockOut.id, {
           onSuccess: () => {
-            toast.success("Đã hủy phiếu xuất kho");
+            toast.success("Đã hủy phiếu xuất kho thành công");
             setConfirmDialog({ ...confirmDialog, open: false });
+            navigate("/stock/summary");
           },
         });
         break;
@@ -615,46 +616,46 @@ export default function StockOutDetailPage() {
                 ) : (
                   <>
                     {status === "pending" && (
-                      <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleComplete}
-                          disabled={isCompleting}
-                          className="cursor-pointer transition-colors duration-200"
-                        >
-                          {isCompleting ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Đang xử lý...
-                            </>
-                          ) : (
-                            <>
-                              <CheckCircle2 className="h-4 w-4 mr-2" />
-                              Hoàn thành
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleCancel}
-                          disabled={isCancelling}
-                          className="cursor-pointer transition-colors duration-200 text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          {isCancelling ? (
-                            <>
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              Đang xử lý...
-                            </>
-                          ) : (
-                            <>
-                              <XCircle className="h-4 w-4 mr-2" />
-                              Hủy
-                            </>
-                          )}
-                        </Button>
-                      </>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleComplete}
+                        disabled={isCompleting}
+                        className="cursor-pointer transition-colors duration-200"
+                      >
+                        {isCompleting ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Đang xử lý...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="h-4 w-4 mr-2" />
+                            Hoàn thành
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    {status === "completed" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCancel}
+                        disabled={isCancelling}
+                        className="cursor-pointer transition-colors duration-200 text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        {isCancelling ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Đang xử lý...
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="h-4 w-4 mr-2" />
+                            Hủy phiếu xuất
+                          </>
+                        )}
+                      </Button>
                     )}
                     {(status === "pending" || status === "draft") && (
                       <Button

@@ -173,6 +173,27 @@ function QuantityCell({
   const isEditing = editingQuantityDesignId === pod.id;
   const designId = pod.design?.id ?? null;
 
+  const isDecal = pod.design?.designType?.name?.toLowerCase().includes("decal") ||
+                  pod.design?.materialType?.name?.toLowerCase().includes("decal");
+  const isBo = isDecal && pod.design?.sidesClassification === "two_side";
+
+  const formatQtyFromPieces = (qty: number | undefined | null) => {
+    if (qty == null) return "0";
+    if (isBo) {
+      const sets = Math.floor(qty / 2);
+      return `${qty.toLocaleString()} / ${sets.toLocaleString()} bộ`;
+    }
+    return qty.toLocaleString();
+  };
+
+  const formatQtyFromSets = (qty: number | undefined | null) => {
+    if (qty == null) return "0";
+    if (isBo) {
+      return `${(qty * 2).toLocaleString()} / ${qty.toLocaleString()} bộ`;
+    }
+    return qty.toLocaleString();
+  };
+
   // Get available quantity from API when editing this design
   const { data: availableQuantityFromApi, isLoading: isLoadingAvailableQty } =
     useAvailableQuantity(
@@ -223,7 +244,7 @@ function QuantityCell({
 
   if (isEditing) {
     return (
-      <div className="space-y-1.5">
+      <div className="space-y-1.5 pt-2">
         <div className="flex items-center gap-1.5">
           <Input
             type="number"
@@ -289,13 +310,13 @@ function QuantityCell({
               <p>
                 Có thể bình bài:{" "}
                 <span className="font-semibold text-foreground">
-                  {apiAvailableQty.toLocaleString()}
+                  {formatQtyFromPieces(apiAvailableQty)}
                 </span>
               </p>
               <p>
                 Hiện tại:{" "}
                 <span className="font-semibold text-foreground">
-                  {pod.quantity?.toLocaleString() || "0"}
+                  {formatQtyFromSets(pod.quantity)}
                 </span>
               </p>
             </>
@@ -304,13 +325,13 @@ function QuantityCell({
               <p>
                 Có thể bình bài:{" "}
                 <span className="font-semibold text-foreground">
-                  {pod.design.availableQuantityForProofing.toLocaleString()}
+                  {formatQtyFromPieces(pod.design.availableQuantityForProofing)}
                 </span>
               </p>
               <p>
                 Hiện tại:{" "}
                 <span className="font-semibold text-foreground">
-                  {pod.quantity?.toLocaleString() || "0"}
+                  {formatQtyFromSets(pod.quantity)}
                 </span>
               </p>
             </>
@@ -318,7 +339,7 @@ function QuantityCell({
             <p>
               Hiện tại:{" "}
               <span className="font-semibold text-foreground">
-                {pod.quantity?.toLocaleString() || "0"}
+                {formatQtyFromSets(pod.quantity)}
               </span>
             </p>
           )}
@@ -329,12 +350,12 @@ function QuantityCell({
 
   return (
     <div className="space-y-0.5">
-      <p className="text-xs font-semibold">
-        {pod.quantity?.toLocaleString() || "0"}
+      <p className={`text-xs font-semibold ${isBo ? "text-green-600 dark:text-green-400 font-bold" : ""}`}>
+        {formatQtyFromSets(pod.quantity)}
       </p>
       {pod.design?.availableQuantityForProofing != null && (
         <p className="text-[10px] text-muted-foreground">
-          Còn: {pod.design.availableQuantityForProofing.toLocaleString()}
+          Còn: {formatQtyFromPieces(pod.design.availableQuantityForProofing)}
         </p>
       )}
     </div>

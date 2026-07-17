@@ -195,6 +195,9 @@ export function DesignTable({
                 (design as any).deliveryNote ||
                 (design as any).delivery ||
                 null;
+              const isDecal = (design.designTypeName || "").toLowerCase().includes("decal") || 
+                              (design.materialTypeName || "").toLowerCase().includes("decal");
+              const isBo = isDecal && design.sidesClassification === "two_side";
 
               // Build full info for tooltip
               const fullInfo = (
@@ -296,34 +299,34 @@ export function DesignTable({
                             <span
                               className={cn(
                                 "font-bold text-right whitespace-nowrap",
-                                design.availableQuantity &&
+                                design.availableQuantity !== undefined &&
                                   design.availableQuantity > 0
                                   ? "text-green-600"
                                   : "text-red-600",
                               )}
                             >
                               {(() => {
-                                const isDecal = (design.designTypeName || "").toLowerCase().includes("decal") || 
-                                                (design.materialTypeName || "").toLowerCase().includes("decal");
-                                const availQty = design.availableQuantity !== undefined && design.availableQuantity !== null
-                                  ? design.availableQuantity
-                                  : (isDecal && design.sidesClassification === "two_side" ? design.quantity * 2 : design.quantity);
-                                
-                                const baseQtyStr = design.quantity.toLocaleString("vi-VN");
-                                const availQtyStr = availQty.toLocaleString("vi-VN");
-
-                                if (isDecal) {
-                                  const isBo = design.sidesClassification === "two_side";
-                                  if (isBo) {
-                                    const totalBoQtyStr = (design.quantity * 2).toLocaleString("vi-VN");
-                                    return `${availQtyStr} / ${baseQtyStr} bộ = ${totalBoQtyStr} cái`;
-                                  } else {
-                                    return `${availQtyStr} / ${baseQtyStr} cái lẻ`;
-                                  }
-                                }
-                                
-                                return `${availQtyStr} / ${baseQtyStr}`;
-                              })()}
+                                 const isDecal = (design.designTypeName || "").toLowerCase().includes("decal") || 
+                                                 (design.materialTypeName || "").toLowerCase().includes("decal");
+                                 const availQty = design.availableQuantity !== undefined && design.availableQuantity !== null
+                                   ? design.availableQuantity
+                                   : (isDecal && design.sidesClassification === "two_side" ? design.quantity * 2 : design.quantity);
+                                 
+                                 const baseQtyStr = design.quantity.toLocaleString("vi-VN");
+                                 const availQtyStr = availQty.toLocaleString("vi-VN");
+ 
+                                 if (isDecal) {
+                                   const isBo = design.sidesClassification === "two_side";
+                                   if (isBo) {
+                                     const sets = Math.floor(availQty / 2);
+                                     return `${availQty.toLocaleString("vi-VN")} cái / ${sets.toLocaleString("vi-VN")} bộ`;
+                                   } else {
+                                     return availQty.toLocaleString("vi-VN");
+                                   }
+                                 }
+                                 
+                                 return `${availQtyStr} / ${baseQtyStr}`;
+                               })()}
                             </span>
                           </div>
                         </div>
@@ -546,7 +549,8 @@ export function DesignTable({
                         <div
                           className={cn(
                             "text-sm font-semibold flex items-center gap-1 group/qty rounded px-1 -ml-1 transition-colors min-h-[24px] w-fit",
-                            canEditQuantity && "cursor-pointer hover:bg-muted/50"
+                            canEditQuantity && "cursor-pointer hover:bg-muted/50",
+                            isBo && "text-green-600 dark:text-green-400 font-bold"
                           )}
                           onClick={(e) => {
                             if (canEditQuantity) {
@@ -555,9 +559,7 @@ export function DesignTable({
                               setEditValue(
                                 (design.availableQuantity !== undefined && design.availableQuantity !== null
                                   ? design.availableQuantity
-                                  : ((design.designTypeName?.toLowerCase().includes("decal") ||
-                                    design.materialTypeName?.toLowerCase().includes("decal")) &&
-                                    design.sidesClassification === "two_side"
+                                  : (isBo
                                     ? design.quantity * 2
                                     : design.quantity)
                                 ).toString()
@@ -567,33 +569,19 @@ export function DesignTable({
                           title={canEditQuantity ? "Nhấp để sửa số lượng có thể bình bài" : undefined}
                         >
                           <span>
-                            {(design.availableQuantity !== undefined && design.availableQuantity !== null
-                              ? design.availableQuantity
-                              : ((design.designTypeName?.toLowerCase().includes("decal") ||
-                                design.materialTypeName?.toLowerCase().includes("decal")) &&
-                                design.sidesClassification === "two_side"
-                                ? design.quantity * 2
-                                : design.quantity)
-                            ).toLocaleString()}
+                            {(() => {
+                              const qtyVal = design.availableQuantity !== undefined && design.availableQuantity !== null
+                                ? design.availableQuantity
+                                : (isBo ? design.quantity * 2 : design.quantity);
+
+                              if (isBo) {
+                                const setsVal = Math.floor(qtyVal / 2);
+                                return `${qtyVal.toLocaleString()} / ${setsVal.toLocaleString()} bộ`;
+                              }
+                              
+                              return qtyVal.toLocaleString();
+                            })()}
                           </span>
-                          {(() => {
-                            const isDecal = (design.designTypeName || "").toLowerCase().includes("decal") || 
-                                            (design.materialTypeName || "").toLowerCase().includes("decal");
-                            if (isDecal) {
-                              const isBo = design.sidesClassification === "two_side";
-                              return (
-                                <span className={cn(
-                                  "text-[10px] ml-1.5 px-1 py-0.2 rounded border font-semibold select-none shrink-0",
-                                  isBo 
-                                    ? "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/20 dark:text-purple-400 dark:border-purple-800" 
-                                    : "bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/20 dark:text-orange-400 dark:border-orange-800"
-                                )}>
-                                  {isBo ? "bộ" : "lẻ"}
-                                </span>
-                              );
-                            }
-                            return null;
-                          })()}
                           {canEditQuantity && (
                             <span className="text-[10px] text-muted-foreground opacity-0 group-hover/qty:opacity-100 transition-opacity ml-1">
                               ✏️
@@ -616,8 +604,17 @@ export function DesignTable({
                               >
                                 {alloc.proofingOrderCode || `Bài #${alloc.proofingOrderId}`}
                               </span>
-                              <span className="font-semibold text-foreground text-[11.5px]">
-                                {alloc.quantityTaken?.toLocaleString()}
+                              <span className={cn(
+                                "font-semibold text-[11.5px]",
+                                isBo ? "text-green-600 dark:text-green-400 font-bold" : "text-foreground"
+                              )}>
+                                {(() => {
+                                  const qty = alloc.quantityTaken ?? 0;
+                                  if (isBo) {
+                                    return `${(qty * 2).toLocaleString()} / ${qty.toLocaleString()} bộ`;
+                                  }
+                                  return qty.toLocaleString();
+                                })()}
                               </span>
                             </div>
                           ))}

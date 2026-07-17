@@ -302,6 +302,7 @@ export const API_SUFFIX = {
   STOCK_OUT_FOR_PRODUCTION_ORDER: (productionOrderId: number) =>
     `/stock-outs/production-order/${productionOrderId}`,
   STOCK_OUT_BY_VENDOR_EXCEL: (vendorId: number) => `/stock-outs/by-vendor/${vendorId}/excel`,
+  INVENTORY_OPENING_BALANCE: "/inventory/opening-balance",
   MATERIAL_CUTS: "/material-cuts",
   MATERIAL_CUT_BY_ID: (id: number) => `/material-cuts/${id}`,
   MATERIAL_CUT_COMPLETE: (id: number) => `/material-cuts/${id}/complete`,
