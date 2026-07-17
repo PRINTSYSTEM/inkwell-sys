@@ -146,7 +146,7 @@ export default function StockCardPage() {
       const origIdx = items.findIndex(item => item === entry);
       const entryAny = entry as any;
       const typeLower = entryAny.transactionType?.toLowerCase() || entryAny.voucherType?.toLowerCase() || "";
-      const isStockIn = typeLower === "in" || typeLower === "stockin";
+      const isStockIn = typeLower === "in" || typeLower === "stockin" || typeLower === "opening_balance";
       const qty = entryAny.quantity || entryAny.inQuantity || entryAny.outQuantity || 0;
       const val = entryAny.totalPrice || entryAny.inValue || entryAny.outValue || 0;
       
@@ -190,6 +190,9 @@ export default function StockCardPage() {
 
   const getCustomDescription = (entryAny: any) => {
     const typeLower = entryAny.transactionType?.toLowerCase() || entryAny.voucherType?.toLowerCase() || "";
+    const isOpening = typeLower === "opening_balance" || typeLower === "openingbalance";
+    if (isOpening) return "Số dư đầu kỳ";
+
     const isStockIn = typeLower === "in" || typeLower === "stockin";
     const isStockOut = typeLower === "out" || typeLower === "stockout";
     const source = entryAny.sourceOrPurpose?.toLowerCase() || "";
@@ -436,6 +439,7 @@ export default function StockCardPage() {
               <SelectItem value="all">Tất cả giao dịch</SelectItem>
               <SelectItem value="StockIn">Nhập kho</SelectItem>
               <SelectItem value="StockOut">Xuất kho</SelectItem>
+              <SelectItem value="opening_balance">Số dư đầu kỳ</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -479,7 +483,7 @@ export default function StockCardPage() {
                   const entryAny = entry as any;
                   
                   const typeLower = entryAny.transactionType?.toLowerCase() || entryAny.voucherType?.toLowerCase() || "";
-                  const isStockIn = typeLower === "in" || typeLower === "stockin";
+                  const isStockIn = typeLower === "in" || typeLower === "stockin" || typeLower === "opening_balance";
                   const isStockOut = typeLower === "out" || typeLower === "stockout";
                   
                   const qty = entryAny.quantity || entryAny.inQuantity || entryAny.outQuantity || 0;
@@ -526,7 +530,8 @@ export default function StockCardPage() {
                           </div>
                           {typeLower && (
                             <div className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
-                              {typeLower === "in" || typeLower === "stockin" ? "Phiếu nhập" : "Phiếu xuất"}
+                              {typeLower === "in" || typeLower === "stockin" ? "Phiếu nhập" : 
+                               (typeLower === "opening_balance" ? "Số dư đầu kỳ" : "Phiếu xuất")}
                             </div>
                           )}
                         </div>

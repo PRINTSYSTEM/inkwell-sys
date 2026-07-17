@@ -52,6 +52,7 @@ import {
   useUpdateMaterialCut,
   useCreateStockInFromVendor,
   useCreateDirectIssue,
+  useCreateOpeningBalance,
 } from "@/hooks/use-stock";
 import { useProductionOrders } from "@/hooks/use-production";
 import { DateRangePicker } from "@/components/forms/DateRangePicker";
@@ -118,7 +119,7 @@ const formatSize = (sizeStr: string | null | undefined): string => {
 const isImport = (type: string | null | undefined) => {
   if (!type) return false;
   const t = type.toLowerCase();
-  return t === "stockin" || t === "stock_in" || t === "cut_in";
+  return t === "stockin" || t === "stock_in" || t === "cut_in" || t === "opening_balance";
 };
 
 const isExport = (type: string | null | undefined) => {
@@ -379,6 +380,13 @@ export default function MaterialHistoryPage() {
   const { mutateAsync: createStockInFromVendor } = useCreateStockInFromVendor();
   const { mutateAsync: createDirectIssue } = useCreateDirectIssue();
   const updateMaterialMutation = useUpdateMaterial();
+  const createOpeningBalanceMutation = useCreateOpeningBalance();
+
+  const [isOpeningBalanceOpen, setIsOpeningBalanceOpen] = useState(false);
+  const [openingBalanceQty, setOpeningBalanceQty] = useState<number>(0);
+  const [openingBalanceDate, setOpeningBalanceDate] = useState<string>(
+    format(new Date(), "yyyy-MM-dd")
+  );
 
   useEffect(() => {
     if (materialDetail) {
@@ -419,6 +427,35 @@ export default function MaterialHistoryPage() {
       refetchHistory();
     } catch (err: any) {
       console.error(err);
+    }
+  };
+
+  const handleOpeningBalanceSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!materialDetail?.code) {
+      toast.error("Không tìm thấy mã vật tư!");
+      return;
+    }
+    if (openingBalanceQty < 0) {
+      toast.error("Số lượng số dư đầu kỳ phải lớn hơn hoặc bằng 0!");
+      return;
+    }
+    if (!openingBalanceDate) {
+      toast.error("Vui lòng chọn ngày hiệu lực!");
+      return;
+    }
+
+    try {
+      await createOpeningBalanceMutation.mutateAsync({
+        itemCode: materialDetail.code,
+        itemType: "material",
+        quantity: openingBalanceQty,
+        effectiveDate: openingBalanceDate,
+      });
+      setIsOpeningBalanceOpen(false);
+      refetchAll();
+    } catch {
+      // Handled in mutation hook toast
     }
   };
 
@@ -982,6 +1019,19 @@ export default function MaterialHistoryPage() {
                   title="Chỉnh sửa thông tin vật tư"
                 >
                   <Pencil className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs font-semibold rounded-lg hover:bg-slate-50 cursor-pointer text-slate-700 border-slate-200"
+                  onClick={() => {
+                    setOpeningBalanceQty(materialDetail?.currentStock || 0);
+                    setIsOpeningBalanceOpen(true);
+                  }}
+                  title="Cập nhật số dư đầu kỳ"
+                >
+                  <History className="h-3.5 w-3.5 mr-1" />
+                  Số dư đầu kỳ
                 </Button>
                 <Badge variant="outline" className="font-mono text-xs rounded-lg border-slate-200 bg-slate-50/50">
                   ID: #{materialId}
@@ -1734,6 +1784,69 @@ export default function MaterialHistoryPage() {
         setStockOutForm={setStockOutForm}
         refetchAll={refetchAll}
       />
+
+      {/* 5. Dialog Cập nhật số dư đầu kỳ */}
+      <Dialog open={isOpeningBalanceOpen} onOpenChange={setIsOpeningBalanceOpen}>
+        <DialogContent className="max-w-md border-slate-200 shadow-xl rounded-2xl p-6 bg-background">
+          <DialogHeader className="pb-3 border-b border-border/40">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                <History className="h-5 w-5" />
+              </div>
+              <DialogTitle className="text-lg font-bold text-slate-800">
+                Cập nhật số dư đầu kỳ
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-xs text-muted-foreground mt-1">
+              Nhập số dư đầu kỳ mới cho vật tư **{materialDetail?.name}** (Mã: {materialDetail?.code}). Lưu ý: Mỗi vật tư chỉ được phép có tối đa 1 số dư đầu kỳ cho cùng một ngày.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleOpeningBalanceSubmit} className="space-y-4 py-4 text-sm">
+            <div className="space-y-2">
+              <Label htmlFor="opening-qty" className="font-semibold text-foreground">Số lượng ({materialDetail?.unit || "m"}) *</Label>
+              <Input
+                id="opening-qty"
+                type="number"
+                min="0"
+                step="any"
+                required
+                placeholder="VD: 5000"
+                value={openingBalanceQty || ""}
+                onChange={(e) => setOpeningBalanceQty(parseFloat(e.target.value) || 0)}
+                className="h-11"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="opening-date" className="font-semibold text-foreground">Ngày hiệu lực *</Label>
+              <Input
+                id="opening-date"
+                type="date"
+                required
+                value={openingBalanceDate}
+                onChange={(e) => setOpeningBalanceDate(e.target.value)}
+                className="h-11 cursor-pointer"
+              />
+            </div>
+            <DialogFooter className="pt-3 border-t border-border/40 gap-2 shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsOpeningBalanceOpen(false)}
+                disabled={createOpeningBalanceMutation.isPending}
+              >
+                Hủy bỏ
+              </Button>
+              <Button
+                type="submit"
+                disabled={createOpeningBalanceMutation.isPending}
+                className="font-semibold bg-blue-600 hover:bg-blue-700 text-white border-none"
+              >
+                {createOpeningBalanceMutation.isPending ? "Đang lưu..." : "Cập nhật"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* 4. Dialog Xuất PDF Phiếu xuất kho */}
       <Dialog open={isPdfDialogOpen} onOpenChange={setIsPdfDialogOpen}>

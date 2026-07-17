@@ -522,6 +522,8 @@ export const useCancelStockOut = () => {
     onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: stockOutKeys.all });
       queryClient.invalidateQueries({ queryKey: stockOutKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: ["materials"] });
+      queryClient.invalidateQueries({ queryKey: ["production-orders"] });
       toast.success("Hủy phiếu xuất kho thành công");
     },
     onError: (error: ApiError) => {
@@ -986,5 +988,36 @@ export const useMaterialSuggestions = (productionOrderId?: number, enabled: bool
       return res.data;
     },
     enabled: !!productionOrderId && enabled,
+  });
+};
+
+export interface CreateOpeningBalanceRequest {
+  itemCode: string;
+  itemType: string;
+  quantity: number;
+  effectiveDate: string;
+}
+
+export const useCreateOpeningBalance = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<any, ApiError, CreateOpeningBalanceRequest>({
+    mutationFn: async (data: CreateOpeningBalanceRequest) => {
+      const response = await apiRequest.post(
+        API_SUFFIX.INVENTORY_OPENING_BALANCE,
+        data
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["materials"] });
+      queryClient.invalidateQueries({ queryKey: stockInKeys.all });
+      toast.success("Cập nhật số dư đầu kỳ thành công");
+    },
+    onError: (error: ApiError) => {
+      toast.error("Cập nhật số dư đầu kỳ thất bại", {
+        description: error.response?.data?.message || error.message,
+      });
+    },
   });
 };

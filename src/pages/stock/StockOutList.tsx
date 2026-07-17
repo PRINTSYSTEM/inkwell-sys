@@ -489,16 +489,6 @@ export default function StockOutListPage() {
                                         <DropdownMenuItem
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            handleCancel(stockOut.id);
-                                          }}
-                                          className="text-destructive cursor-pointer"
-                                        >
-                                          <XCircle className="h-4 w-4 mr-2" />
-                                          Hủy
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                          onClick={(e) => {
-                                            e.stopPropagation();
                                             handleDelete(stockOut.id);
                                           }}
                                           className="text-destructive cursor-pointer"
@@ -508,6 +498,22 @@ export default function StockOutListPage() {
                                         </DropdownMenuItem>
                                       </>
                                     )}
+
+                                  {stockOut.status === "completed" && (
+                                    <>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleCancel(stockOut.id);
+                                        }}
+                                        className="text-destructive cursor-pointer"
+                                      >
+                                        <XCircle className="h-4 w-4 mr-2" />
+                                        Hủy phiếu xuất
+                                      </DropdownMenuItem>
+                                    </>
+                                  )}
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </TableCell>
