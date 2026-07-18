@@ -451,10 +451,8 @@ export default function DesignDetailPage() {
 
   const canChangeStatus =
     canUpdateStatus &&
-    (!isFinalStatus(currentStatus) ||
-      currentStatus === "confirmed_for_printing") &&
-    (validNextStatuses.length > 0 ||
-      currentStatus === "confirmed_for_printing");
+    !isFinalStatus(currentStatus) &&
+    validNextStatuses.length > 0;
 
   const canTransitionTo = (targetStatus: DesignStatus): boolean => {
     void targetStatus;
@@ -788,7 +786,9 @@ export default function DesignDetailPage() {
           height: editFormData.height || null,
           adhesiveOffset: editFormData.adhesiveOffset ?? null,
           requestedQuantity:
-            typeof editFormData.requestedQuantity === "number"
+            currentStatus === "confirmed_for_printing"
+              ? ((design.requestedQuantity as number | undefined) ?? null)
+              : typeof editFormData.requestedQuantity === "number"
               ? editFormData.requestedQuantity
               : null,
           requirements: editFormData.requirements || null,
@@ -845,7 +845,9 @@ export default function DesignDetailPage() {
       user?.role === ROLE.DESIGN_LEAD ||
       user?.role === ROLE.SALE ||
       user?.role === ROLE.ADMIN) &&
-    !hasProofingOrder;
+    !hasProofingOrder &&
+    currentStatus !== "confirmed_for_printing" &&
+    currentStatus !== "cancelled";
 
   const canEditCode =
     user?.role === ROLE.DESIGN ||
@@ -981,7 +983,7 @@ export default function DesignDetailPage() {
                 </div>
 
                 {/* Status transition helper / Actions */}
-                {(canChangeStatus || canExportDocuments || canCompleteOrder) && (
+                {(canChangeStatus || canExportDocuments || canCompleteOrder || currentStatus === "confirmed_for_printing") && (
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-end space-y-0 pb-2">
                       <div className="flex items-center gap-2">
@@ -1003,21 +1005,7 @@ export default function DesignDetailPage() {
                             </Button>
                           )
                         )}
-                        {canChangeStatus && currentStatus === "confirmed_for_printing" && (
-                          <Button
-                            size="sm"
-                            className="gap-1.5 h-8 font-semibold shadow-md"
-                            onClick={() => {
-                              setReprintQuantity(1000);
-                              setReprintNotes("");
-                              setReprintDialogOpen(true);
-                            }}
-                          >
-                            <Plus className="h-3.5 w-3.5" />
-                            <span>Tái bản</span>
-                          </Button>
-                        )}
-                        {canUpdateStatus && currentStatus !== "cancelled" && (
+                        {canUpdateStatus && currentStatus !== "cancelled" && currentStatus !== "confirmed_for_printing" && (
                           <Button
                             size="sm"
                             variant="destructive"
@@ -1068,19 +1056,6 @@ export default function DesignDetailPage() {
                                   <span>Chốt in</span>
                                 </Button>
                               </>
-                            )}
-
-                            {currentStatus === "confirmed_for_printing" && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="gap-1.5 h-8 border-destructive/30 hover:bg-destructive/10 text-destructive"
-                                onClick={() => handleStatusTransition("waiting_for_customer_approval")}
-                                disabled={updatingStatus}
-                              >
-                                <ArrowLeft className="h-3.5 w-3.5" />
-                                <span>Chờ khách duyệt</span>
-                              </Button>
                             )}
 
                             {currentStatus !== "waiting_for_customer_approval" &&
@@ -1171,15 +1146,17 @@ export default function DesignDetailPage() {
                               </Button>
                             </>
                           ) : (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="h-9 text-sm gap-1.5 border-primary text-primary hover:bg-primary/5 px-4 font-bold"
-                              onClick={handleStartEdit}
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                              Sửa
-                            </Button>
+                            canEditDesign && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-9 text-sm gap-1.5 border-primary text-primary hover:bg-primary/5 px-4 font-bold"
+                                onClick={handleStartEdit}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                                Sửa
+                              </Button>
+                            )
                           )}
                         </div>
                     </div>
@@ -1505,21 +1482,35 @@ export default function DesignDetailPage() {
                           Số lượng
                         </p>
                         {isEditing && canEditDesign ? (
-                          <Input
-                            type="number"
-                            min="0"
-                            value={editFormData.requestedQuantity ?? ""}
-                            onChange={(e) =>
-                              setEditFormData((prev) => ({
-                                ...prev,
-                                requestedQuantity:
-                                  e.target.value === ""
-                                    ? undefined
-                                    : Number(e.target.value),
-                              }))
-                            }
-                            className="h-9 w-full font-bold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 focus-visible:ring-1"
-                          />
+                          currentStatus === "confirmed_for_printing" ? (
+                            <div className="space-y-1">
+                              <Input
+                                type="number"
+                                value={editFormData.requestedQuantity ?? ""}
+                                disabled
+                                className="h-9 w-full font-bold text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-700 cursor-not-allowed opacity-80"
+                              />
+                              <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                                Không thể sửa số lượng khi ở trạng thái Đã chốt in
+                              </p>
+                            </div>
+                          ) : (
+                            <Input
+                              type="number"
+                              min="0"
+                              value={editFormData.requestedQuantity ?? ""}
+                              onChange={(e) =>
+                                setEditFormData((prev) => ({
+                                  ...prev,
+                                  requestedQuantity:
+                                    e.target.value === ""
+                                      ? undefined
+                                      : Number(e.target.value),
+                                }))
+                              }
+                              className="h-9 w-full font-bold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 focus-visible:ring-1"
+                            />
+                          )
                         ) : (
                           <p className="font-bold text-sm text-blue-900 dark:text-blue-100">
                             {typeof d.requestedQuantity === "number"

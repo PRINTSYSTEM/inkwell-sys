@@ -148,10 +148,15 @@ export function DetailEmptyOrderView({
                             <span className="text-[11px] text-muted-foreground font-medium shrink-0">
                               Còn:{" "}
                               <span className="text-red-600 dark:text-red-400 font-bold text-[10px]">
-                                {(design.availableQuantity !== undefined
-                                  ? design.availableQuantity
-                                  : design.quantity
-                                ).toLocaleString()}
+                                {(() => {
+                                  const avail = design.availableQuantity !== undefined ? design.availableQuantity : design.quantity;
+                                  const isDecal = (design.designTypeName || "").toLowerCase().includes("decal") || (design.materialTypeName || "").toLowerCase().includes("decal");
+                                  const isBo = isDecal && design.sidesClassification === "two_side";
+                                  if (isBo) {
+                                    return `${(avail * 2).toLocaleString("vi-VN")} / ${avail.toLocaleString("vi-VN")} bộ`;
+                                  }
+                                  return avail.toLocaleString("vi-VN");
+                                })()}
                               </span>
                             </span>
                           </div>
