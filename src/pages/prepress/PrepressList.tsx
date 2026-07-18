@@ -187,7 +187,7 @@ export default function PrepressList() {
       status: "not_completed",
       code: debouncedDesignCode.trim() || null,
       materialTypeId: selectedMaterialTypeId,
-      pageSize: itemsPerPage,
+      pageSize: 1000,
       pageNumber: incompleteOrdersPage,
     };
     const parsed = ProofingOrderListParamsSchema.safeParse(raw);
