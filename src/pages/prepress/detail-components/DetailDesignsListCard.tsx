@@ -327,7 +327,16 @@ export function DetailDesignsListCard({
                       <div>
                         <span className="text-muted-foreground">SL:</span>
                         <span className="ml-2 font-semibold">
-                          {pod.quantity?.toLocaleString() || "0"}
+                          {(() => {
+                            const qty = pod.quantity ?? 0;
+                            const isDecal = (pod.design?.designType?.name || "").toLowerCase().includes("decal") || (pod.design?.materialType?.name || "").toLowerCase().includes("decal");
+                            const isBo = isDecal && pod.design?.sidesClassification === "two_side";
+                            if (isBo) {
+                              const sets = Math.floor(qty / 2);
+                              return `${qty.toLocaleString("vi-VN")} (${sets.toLocaleString("vi-VN")} bộ)`;
+                            }
+                            return qty.toLocaleString("vi-VN");
+                          })()}
                         </span>
                       </div>
 

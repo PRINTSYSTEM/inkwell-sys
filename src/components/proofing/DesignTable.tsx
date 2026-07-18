@@ -159,9 +159,7 @@ export function DesignTable({
           <TableHeader>
             <TableRow>
               <TableHead className="w-16 h-10 text-sm font-bold">Ảnh</TableHead>
-              {!isConfiguring && (
-                <TableHead className="h-10 text-sm font-bold">Đơn hàng</TableHead>
-              )}
+              <TableHead className="h-10 text-sm font-bold">Đơn hàng</TableHead>
               <TableHead className="h-10 text-sm font-bold">Mã hàng</TableHead>
               <TableHead className="h-10 text-sm font-bold">
                 Kích thước (mm)
@@ -171,7 +169,9 @@ export function DesignTable({
                 Chất liệu
               </TableHead>
               <TableHead className="h-10 text-sm font-bold">Quy cách</TableHead>
-              <TableHead className="h-10 text-sm font-bold">Giao hàng</TableHead>
+              {!isConfiguring && (
+                <TableHead className="h-10 text-sm font-bold">Giao hàng</TableHead>
+              )}
               <TableHead className="h-10 text-sm font-bold">Ngày tạo</TableHead>
               <TableHead className="h-10 text-sm font-bold text-right sticky right-0 bg-background z-20">
                 Thao tác
@@ -308,24 +308,23 @@ export function DesignTable({
                               {(() => {
                                  const isDecal = (design.designTypeName || "").toLowerCase().includes("decal") || 
                                                  (design.materialTypeName || "").toLowerCase().includes("decal");
-                                 const availQty = design.availableQuantity !== undefined && design.availableQuantity !== null
+                                 const isBo = isDecal && design.sidesClassification === "two_side";
+                                 const piecesVal = design.availableQuantity !== undefined && design.availableQuantity !== null
                                    ? design.availableQuantity
-                                   : (isDecal && design.sidesClassification === "two_side" ? design.quantity * 2 : design.quantity);
+                                   : design.quantity;
                                  
                                  const baseQtyStr = design.quantity.toLocaleString("vi-VN");
-                                 const availQtyStr = availQty.toLocaleString("vi-VN");
- 
+
                                  if (isDecal) {
-                                   const isBo = design.sidesClassification === "two_side";
                                    if (isBo) {
-                                     const sets = Math.floor(availQty / 2);
-                                     return `${availQty.toLocaleString("vi-VN")} cái / ${sets.toLocaleString("vi-VN")} bộ`;
+                                     const setsVal = Math.floor(piecesVal / 2);
+                                     return `${piecesVal.toLocaleString("vi-VN")} cái / ${setsVal.toLocaleString("vi-VN")} bộ`;
                                    } else {
-                                     return availQty.toLocaleString("vi-VN");
+                                     return piecesVal.toLocaleString("vi-VN");
                                    }
                                  }
                                  
-                                 return `${availQtyStr} / ${baseQtyStr}`;
+                                 return `${piecesVal.toLocaleString("vi-VN")} / ${baseQtyStr}`;
                                })()}
                             </span>
                           </div>
@@ -385,41 +384,41 @@ export function DesignTable({
               );
 
               return (
-                <CursorTooltip
+                <TableRow
                   key={design.id}
-                  content={fullInfo}
-                  delayDuration={1000}
-                  className="p-3 bg-popover/95 backdrop-blur-sm border-shadow shadow-xl ring-1 ring-black/5"
+                  className={cn(
+                    "h-11 transition-colors relative",
+                    isSelectionEnabled && "cursor-pointer",
+                    isSelected
+                      ? "bg-green-100/90 hover:bg-green-200/80 dark:bg-green-900/40 dark:hover:bg-green-900/60 shadow-[inset_4px_0_0_0_#22c55e]"
+                      : isUrgent
+                        ? "bg-red-50/70 hover:bg-red-100/70 dark:bg-red-950/20 dark:hover:bg-red-900/20 text-red-700 dark:text-red-300 shadow-[inset_4px_0_0_0_#ef4444]"
+                        : isSelectionEnabled && selectable && "hover:bg-muted/50",
+                    isSelectionEnabled && !selectable &&
+                    !isSelected &&
+                    "opacity-50 cursor-not-allowed",
+                    !isSelectionEnabled && !isSelected && "hover:bg-transparent"
+                  )}
+                  onClick={() => {
+                    if (isSelectionEnabled && (selectable || isSelected)) {
+                      onToggle(design);
+                    }
+                  }}
                 >
-                  <TableRow
-                    className={cn(
-                      "h-11 transition-colors relative",
-                      isSelectionEnabled && "cursor-pointer",
-                      isSelected
-                        ? "bg-green-100/90 hover:bg-green-200/80 dark:bg-green-900/40 dark:hover:bg-green-900/60 shadow-[inset_4px_0_0_0_#22c55e]"
-                        : isUrgent
-                          ? "bg-red-50/70 hover:bg-red-100/70 dark:bg-red-950/20 dark:hover:bg-red-900/20 text-red-700 dark:text-red-300 shadow-[inset_4px_0_0_0_#ef4444]"
-                          : isSelectionEnabled && selectable && "hover:bg-muted/50",
-                      isSelectionEnabled && !selectable &&
-                      !isSelected &&
-                      "opacity-50 cursor-not-allowed",
-                      !isSelectionEnabled && !isSelected && "hover:bg-transparent"
-                    )}
-                    onClick={() => {
-                      if (isSelectionEnabled && (selectable || isSelected)) {
-                        onToggle(design);
-                      }
-                    }}
-                  >
-                    <TableCell className="py-1">
-                      <div className="flex items-center gap-1.5">
-                        {selectedIndex !== -1 ? (
-                          <div className="w-5 h-5 shrink-0 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] font-extrabold shadow-sm">
-                            {selectedIndex + 1}
-                          </div>
-                        ) : (
-                          <div className="w-5 h-5 shrink-0" />
-                        )}
+                  <TableCell className="py-1">
+                    <div className="flex items-center gap-1.5">
+                      {selectedIndex !== -1 ? (
+                        <div className="w-5 h-5 shrink-0 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] font-extrabold shadow-sm">
+                          {selectedIndex + 1}
+                        </div>
+                      ) : (
+                        <div className="w-5 h-5 shrink-0" />
+                      )}
+                      <CursorTooltip
+                        content={fullInfo}
+                        delayDuration={300}
+                        className="p-3 bg-popover/95 backdrop-blur-sm border-shadow shadow-xl ring-1 ring-black/5"
+                      >
                         {design.thumbnailUrl ? (
                           <button
                             onClick={(e) => {
@@ -429,7 +428,7 @@ export function DesignTable({
                                 title: design.name,
                               });
                             }}
-                            className="w-10 h-10 rounded border bg-muted overflow-hidden hover:opacity-80 transition-opacity"
+                            className="w-10 h-10 rounded border bg-muted overflow-hidden hover:opacity-80 transition-opacity flex-shrink-0"
                           >
                             <img
                               src={design.thumbnailUrl}
@@ -438,35 +437,36 @@ export function DesignTable({
                             />
                           </button>
                         ) : (
-                          <div className="w-10 h-10 rounded border bg-muted" />
+                          <div className="w-10 h-10 rounded border bg-muted flex items-center justify-center flex-shrink-0 cursor-help">
+                            <FileText className="h-5 w-5 text-muted-foreground opacity-40" />
+                          </div>
                         )}
-                      </div>
-                    </TableCell>
-                    {!isConfiguring && (
-                      <TableCell className="py-1">
+                      </CursorTooltip>
+                    </div>
+                  </TableCell>
+                  <TableCell className="py-1">
+                    <div className="flex items-center gap-1.5">
+                      {design.queueItemId?.startsWith("RD_") ? (
+                        <Badge
+                          variant="secondary"
+                          className="bg-gray-100 text-gray-600 border-none font-normal text-xs py-0.5 px-2 hover:bg-gray-100"
+                        >
+                          Chưa lên đơn
+                        </Badge>
+                      ) : design.orderCode ? (
                         <div className="flex items-center gap-1.5">
-                          {design.queueItemId?.startsWith("RD_") ? (
-                            <Badge
-                              variant="secondary"
-                              className="bg-gray-100 text-gray-600 border-none font-normal text-xs py-0.5 px-2 hover:bg-gray-100"
-                            >
-                              Chưa lên đơn
-                            </Badge>
-                          ) : design.orderCode ? (
-                            <div className="flex items-center gap-1.5">
-                              <FileText className="h-3 w-3 text-muted-foreground" />
-                              <span className="font-semibold text-sm text-primary">
-                                {design.orderCode}
-                              </span>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground text-sm font-semibold">
-                              -
-                            </span>
-                          )}
+                          <FileText className="h-3 w-3 text-muted-foreground" />
+                          <span className="font-semibold text-sm text-primary">
+                            {design.orderCode}
+                          </span>
                         </div>
-                      </TableCell>
-                    )}
+                      ) : (
+                        <span className="text-muted-foreground text-sm font-semibold">
+                          -
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
                     <TableCell className="py-1 font-mono text-sm font-semibold">
                       <div className="flex items-center gap-1.5">
                         <span>{highlightText(design.code, searchTerm)}</span>
@@ -570,16 +570,16 @@ export function DesignTable({
                         >
                           <span>
                             {(() => {
-                              const qtyVal = design.availableQuantity !== undefined && design.availableQuantity !== null
+                              const piecesVal = design.availableQuantity !== undefined && design.availableQuantity !== null
                                 ? design.availableQuantity
-                                : (isBo ? design.quantity * 2 : design.quantity);
+                                : design.quantity;
 
                               if (isBo) {
-                                const setsVal = Math.floor(qtyVal / 2);
-                                return `${qtyVal.toLocaleString()} / ${setsVal.toLocaleString()} bộ`;
+                                const setsVal = Math.floor(piecesVal / 2);
+                                return `${piecesVal.toLocaleString("vi-VN")} / ${setsVal.toLocaleString("vi-VN")} bộ`;
                               }
                               
-                              return qtyVal.toLocaleString();
+                              return piecesVal.toLocaleString("vi-VN");
                             })()}
                           </span>
                           {canEditQuantity && (
@@ -611,9 +611,10 @@ export function DesignTable({
                                 {(() => {
                                   const qty = alloc.quantityTaken ?? 0;
                                   if (isBo) {
-                                    return `${(qty * 2).toLocaleString()} / ${qty.toLocaleString()} bộ`;
+                                    const pieces = qty * 2;
+                                    return `${pieces.toLocaleString("vi-VN")} / ${qty.toLocaleString("vi-VN")} bộ`;
                                   }
-                                  return qty.toLocaleString();
+                                  return qty.toLocaleString("vi-VN");
                                 })()}
                               </span>
                             </div>
@@ -671,22 +672,24 @@ export function DesignTable({
                         })()}
                       </div>
                     </TableCell>
-                    <TableCell className="py-1 text-sm">
-                      <div className="flex flex-col gap-1">
-                        {isUrgent && (
-                          <span className="font-extrabold text-red-600 dark:text-red-500 text-sm">
-                            Gấp
-                          </span>
-                        )}
-                        {deliveryInfo ? (
-                          <div className="text-sm text-muted-foreground">
-                            {deliveryInfo}
-                          </div>
-                        ) : (
-                          !isUrgent && <span className="text-muted-foreground text-xs">—</span>
-                        )}
-                      </div>
-                    </TableCell>
+                    {!isConfiguring && (
+                      <TableCell className="py-1 text-sm">
+                        <div className="flex flex-col gap-1">
+                          {isUrgent && (
+                            <span className="font-extrabold text-red-600 dark:text-red-500 text-sm">
+                              Gấp
+                            </span>
+                          )}
+                          {deliveryInfo ? (
+                            <div className="text-sm text-muted-foreground">
+                              {deliveryInfo}
+                            </div>
+                          ) : (
+                            !isUrgent && <span className="text-muted-foreground text-xs">—</span>
+                          )}
+                        </div>
+                      </TableCell>
+                    )}
                     <TableCell className="py-1 text-[11px] text-muted-foreground">
                       {design.createdAt ? (
                         (() => {
@@ -754,7 +757,6 @@ export function DesignTable({
                       </div>
                     </TableCell>
                   </TableRow>
-                </CursorTooltip>
               );
             })}
           </TableBody>
