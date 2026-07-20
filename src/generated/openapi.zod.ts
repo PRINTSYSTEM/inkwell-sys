@@ -1752,6 +1752,9 @@ const DesignTimelineEntryResponsePaginate = z
   })
   .partial();
 const RevertDesignRequest = z.object({ reason: z.string().min(0).max(500) });
+const UpdateDesignCodeRequest = z
+  .object({ code: z.string().nullable() })
+  .partial();
 const CreateDesignTypeRequest = z.object({
   code: z.string().min(0).max(20),
   name: z.string().min(0).max(255),
@@ -1949,6 +1952,12 @@ const AdjustInventoryRequest = z.object({
   itemType: z.string().min(1),
   newQuantity: z.number().int(),
   note: z.string().min(1).max(500),
+});
+const SetOpeningBalanceRequest = z.object({
+  itemCode: z.string().min(1),
+  itemType: z.string().min(1),
+  quantity: z.number().int(),
+  effectiveDate: z.string().datetime({ offset: true }),
 });
 const InventoryBalanceResponse = z
   .object({
@@ -3290,6 +3299,68 @@ const BulkUpdateItem = z.object({
 const BulkUpdateProductionOrderItemsRequest = z.object({
   items: z.array(BulkUpdateItem).min(1),
 });
+const KcsItemResponse = z
+  .object({
+    productionOrderItemId: z.number().int(),
+    designId: z.number().int(),
+    designCode: z.string().nullable(),
+    designName: z.string().nullable(),
+    designImageUrl: z.string().nullable(),
+    customerId: z.number().int().nullable(),
+    customerCode: z.string().nullable(),
+    customerName: z.string().nullable(),
+    customerCompanyName: z.string().nullable(),
+    inputQty: z.number().int(),
+    outputQty: z.number().int(),
+    defectQty: z.number().int(),
+    orderDetailId: z.number().int().nullable(),
+    itemsPerSheet: z.number().int(),
+  })
+  .partial();
+const KcsProductionOrderResponse = z
+  .object({
+    productionOrderId: z.number().int(),
+    status: z.string().nullable(),
+    proofingOrderId: z.number().int(),
+    proofingOrderCode: z.string().nullable(),
+    proofingOrderCompletedAt: z.string().datetime({ offset: true }).nullable(),
+    designTypeId: z.number().int().nullable(),
+    designTypeName: z.string().nullable(),
+    designTypeCode: z.string().nullable(),
+    proofingOrderImages: z.array(ProofingOrderImageResponse).nullable(),
+    items: z.array(KcsItemResponse).nullable(),
+  })
+  .partial();
+const KcsProductionOrderResponsePaginate = z
+  .object({
+    size: z.number().int(),
+    page: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+    items: z.array(KcsProductionOrderResponse).nullable(),
+  })
+  .partial();
+const KcsDesignTypeCountResponse = z
+  .object({
+    designTypeId: z.number().int(),
+    designTypeName: z.string().nullable(),
+    designTypeCode: z.string().nullable(),
+    productionOrderCount: z.number().int(),
+    totalItemCount: z.number().int(),
+  })
+  .partial();
+const KcsLabelPrintResponse = z
+  .object({
+    customerName: z.string().nullable(),
+    customerCode: z.string().nullable(),
+    customerCompanyName: z.string().nullable(),
+    designCode: z.string().nullable(),
+    designName: z.string().nullable(),
+    quantity: z.number().int(),
+    productionOrderCode: z.string().nullable(),
+    designImageUrl: z.string().nullable(),
+  })
+  .partial();
 const ProofingOrderDesignResponse = z
   .object({
     id: z.number().int(),
@@ -3297,6 +3368,7 @@ const ProofingOrderDesignResponse = z
     designId: z.number().int(),
     design: DesignResponse,
     quantity: z.number().int(),
+    itemsPerSheet: z.number().int(),
     createdAt: z.string().datetime({ offset: true }),
     specification: z.array(z.string()).nullable(),
     designImageUrl: z.string().nullable(),
@@ -3366,6 +3438,7 @@ const DesignSimpleResponse = z
     id: z.number().int(),
     code: z.string().nullable(),
     customerId: z.number().int(),
+    customerName: z.string().nullable(),
     requestedQuantity: z.number().int(),
     designerId: z.number().int(),
     designTypeId: z.number().int(),
@@ -3405,6 +3478,7 @@ const ProofingOrderDesignListResponse = z
     designId: z.number().int(),
     design: DesignSimpleResponse,
     quantity: z.number().int(),
+    itemsPerSheet: z.number().int(),
     designImageUrl: z.string().nullable(),
     designThumbnailUrl: z.string().nullable(),
     isUrgent: z.boolean(),
@@ -3456,6 +3530,7 @@ const AddProofingOrderDetailItem = z.object({
   orderDetailId: z.number().int().nullish(),
   readyDesignId: z.number().int().nullish(),
   quantity: z.number().int().gte(1).lte(2147483647),
+  itemsPerSheet: z.number().int().gte(1).lte(2147483647).nullish(),
 });
 const AddDesignsToProofingOrderRequest = z.object({
   materialTypeId: z.number().int().nullish(),
@@ -3470,6 +3545,7 @@ const AddDesignsToProofingOrderResponse = z
 const UpdateProofingDesignItem = z.object({
   proofingOrderDesignId: z.number().int(),
   quantity: z.number().int().gte(1).lte(2147483647),
+  itemsPerSheet: z.number().int().gte(1).lte(2147483647).nullish(),
 });
 const UpdateProofingOrderRequest = z
   .object({
@@ -4142,6 +4218,7 @@ const DirectMaterialIssueRequest = z.object({
 const StockOutItemRequest = z.object({
   itemName: z.string().min(1),
   itemCode: z.string().nullish(),
+  displayName: z.string().nullish(),
   unit: z.string().nullish(),
   quantity: z.number().int().gte(1).lte(2147483647),
   notes: z.string().nullish(),
@@ -4390,7 +4467,7 @@ const CreateUserRequest = z.object({
     .string()
     .min(1)
     .regex(
-      /^(admin|manager|design|design_lead|proofer|production|production_lead|accounting|accounting_lead|warehouse|warehouse_lead|hr|hr_lead|cskh|cskh_lead|sale)$/,
+      /^(admin|manager|design|design_lead|proofer|production|production_lead|kcs|accounting|accounting_lead|warehouse|warehouse_lead|hr|hr_lead|cskh|cskh_lead|sale)$/,
     ),
   email: z.string().min(0).max(255).email().nullish(),
   phone: z.string().min(0).max(20).nullish(),
@@ -4433,7 +4510,7 @@ const UpdateUserRequest = z
     role: z
       .string()
       .regex(
-        /^(admin|manager|design|design_lead|proofer|production|production_lead|accounting|accounting_lead|warehouse|warehouse_lead|hr|hr_lead|cskh|cskh_lead)$/,
+        /^(admin|manager|design|design_lead|proofer|production|production_lead|kcs|accounting|accounting_lead|warehouse|warehouse_lead|hr|hr_lead|cskh|cskh_lead)$/,
       )
       .nullable(),
     email: z.string().min(0).max(255).email().nullable(),
@@ -4670,6 +4747,7 @@ export const schemas = {
   postApidesignsIdtimeline_Body,
   DesignTimelineEntryResponsePaginate,
   RevertDesignRequest,
+  UpdateDesignCodeRequest,
   CreateDesignTypeRequest,
   DesignTypeResponsePaginate,
   UpdateDesignTypeRequest,
@@ -4688,6 +4766,7 @@ export const schemas = {
   FinanceAccountFlatResponse,
   FinanceAccountNodeResponse,
   AdjustInventoryRequest,
+  SetOpeningBalanceRequest,
   InventoryBalanceResponse,
   InventoryBalanceResponseIPaginate,
   InventoryTransactionResponse,
@@ -4786,6 +4865,11 @@ export const schemas = {
   UpdateProductionOrderItemRequest,
   BulkUpdateItem,
   BulkUpdateProductionOrderItemsRequest,
+  KcsItemResponse,
+  KcsProductionOrderResponse,
+  KcsProductionOrderResponsePaginate,
+  KcsDesignTypeCountResponse,
+  KcsLabelPrintResponse,
   ProofingOrderDesignResponse,
   ProductionResponse,
   ProofingOrderResponse,
@@ -8314,6 +8398,11 @@ const endpoints = makeApi([
         schema: z.string().optional(),
       },
       {
+        name: "search",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
         name: "month",
         type: "Query",
         schema: z.number().int().optional(),
@@ -8395,6 +8484,25 @@ const endpoints = makeApi([
     alias: "putApidesignsIdcancel",
     requestFormat: "json",
     parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: DesignResponse,
+  },
+  {
+    method: "put",
+    path: "/api/designs/:id/code",
+    alias: "putApidesignsIdcode",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: z.object({ code: z.string().nullable() }).partial(),
+      },
       {
         name: "id",
         type: "Path",
@@ -10014,6 +10122,36 @@ const endpoints = makeApi([
       {
         status: 403,
         description: `Forbidden`,
+        schema: z
+          .object({
+            type: z.string().nullable(),
+            title: z.string().nullable(),
+            status: z.number().int().nullable(),
+            detail: z.string().nullable(),
+            instance: z.string().nullable(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+  {
+    method: "post",
+    path: "/api/inventory/opening-balance",
+    alias: "postApiinventoryopeningBalance",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: SetOpeningBalanceRequest,
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 400,
+        description: `Bad Request`,
         schema: z
           .object({
             type: z.string().nullable(),
@@ -12044,6 +12182,25 @@ const endpoints = makeApi([
     response: ProductionOrderItemResponse,
   },
   {
+    method: "get",
+    path: "/api/production-orders/:productionOrderId/items/:itemId/print-label",
+    alias: "getApiproductionOrdersProductionOrderIditemsItemIdprintLabel",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "productionOrderId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+      {
+        name: "itemId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: KcsLabelPrintResponse,
+  },
+  {
     method: "put",
     path: "/api/production-orders/:productionOrderId/items/bulk",
     alias: "putApiproductionOrdersProductionOrderIditemsbulk",
@@ -12100,6 +12257,74 @@ const endpoints = makeApi([
       },
     ],
     response: ProductionOrderResponsePaginate,
+  },
+  {
+    method: "get",
+    path: "/api/production-orders/kcs",
+    alias: "getApiproductionOrderskcs",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "pageNumber",
+        type: "Query",
+        schema: z.number().int().optional().default(1),
+      },
+      {
+        name: "pageSize",
+        type: "Query",
+        schema: z.number().int().optional().default(10),
+      },
+      {
+        name: "proofingCompletedFromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "proofingCompletedToDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "designTypeId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+      {
+        name: "search",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+    ],
+    response: KcsProductionOrderResponsePaginate,
+  },
+  {
+    method: "get",
+    path: "/api/production-orders/kcs/design-type-summary",
+    alias: "getApiproductionOrderskcsdesignTypeSummary",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "proofingCompletedFromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "proofingCompletedToDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+    ],
+    response: z.array(KcsDesignTypeCountResponse),
   },
   {
     method: "get",
@@ -12618,6 +12843,13 @@ const endpoints = makeApi([
     path: "/api/proofing-orders/available-bins",
     alias: "getApiproofingOrdersavailableBins",
     requestFormat: "json",
+    parameters: [
+      {
+        name: "designTypeId",
+        type: "Query",
+        schema: z.number().int().optional(),
+      },
+    ],
     response: z.array(ProofingOrderListResponse),
   },
   {

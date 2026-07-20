@@ -90,6 +90,8 @@ interface DetailDesignsListCardProps {
   setEditingQuantityDesignId: (id: number | null) => void;
   inlineQuantityValue: string;
   setInlineQuantityValue: (val: string) => void;
+  inlineItemsPerSheetValue?: string;
+  setInlineItemsPerSheetValue?: (val: string) => void;
   updatingDesignId: number | null;
   handleUpdateDesignQuantity: (designId: number) => void;
   setIsAddDesignDialogOpen: (val: boolean) => void;
@@ -114,6 +116,8 @@ export function DetailDesignsListCard({
   setEditingQuantityDesignId,
   inlineQuantityValue,
   setInlineQuantityValue,
+  inlineItemsPerSheetValue,
+  setInlineItemsPerSheetValue,
   updatingDesignId,
   handleUpdateDesignQuantity,
   setIsAddDesignDialogOpen,
@@ -514,6 +518,8 @@ export function DetailDesignsListCard({
                             editingQuantityDesignId={editingQuantityDesignId}
                             inlineQuantityValue={inlineQuantityValue}
                             setInlineQuantityValue={setInlineQuantityValue}
+                            inlineItemsPerSheetValue={inlineItemsPerSheetValue}
+                            setInlineItemsPerSheetValue={setInlineItemsPerSheetValue}
                             setEditingQuantityDesignId={
                               setEditingQuantityDesignId
                             }
@@ -640,6 +646,9 @@ export function DetailDesignsListCard({
                                   setEditingQuantityDesignId(pod.id!);
                                   setInlineQuantityValue(
                                     pod.quantity?.toString() || "",
+                                  );
+                                  setInlineItemsPerSheetValue?.(
+                                    (pod.itemsPerSheet != null && pod.itemsPerSheet > 0 ? pod.itemsPerSheet : 1).toString(),
                                   );
                                 }}
                                 disabled={

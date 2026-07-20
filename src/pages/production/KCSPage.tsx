@@ -627,16 +627,21 @@ function KcsOrderRow({ prod, onOpenPrintLabel, onOpenImageViewer }: KcsOrderRowP
       const updated = { ...prev };
       prod.items.forEach((item) => {
         if (updated[item.productionOrderItemId]) {
+          const itemsPerSheet =
+            item.itemsPerSheet != null && item.itemsPerSheet > 0
+              ? item.itemsPerSheet
+              : 1;
+          const calculatedOutput = qtyNum * itemsPerSheet;
           updated[item.productionOrderItemId] = {
             ...updated[item.productionOrderItemId],
-            outputQty: quickQty,
+            outputQty: String(calculatedOutput),
           };
         }
       });
       return updated;
     });
 
-    toast.info("Đã áp dụng số lượng ra cho tất cả các con hàng!");
+    toast.info("Đã áp dụng số lượng ra (nhân theo số con bình) cho tất cả!");
   };
 
   // Save all items and sync defect records
@@ -993,6 +998,10 @@ function KcsOrderRow({ prod, onOpenPrintLabel, onOpenImageViewer }: KcsOrderRowP
                         <span>Khách: <strong className="text-slate-800 dark:text-slate-200 font-bold">{item.customerName || item.customerCompanyName || "—"}</strong></span>
                         <span>•</span>
                         <span>SL Yêu cầu: <strong className="text-amber-800 dark:text-amber-500 font-extrabold text-sm">{item.inputQty ? item.inputQty.toLocaleString("vi-VN") : "0"}</strong></span>
+                        <span>•</span>
+                        <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded font-bold text-[11px] border">
+                          {(item.itemsPerSheet != null && item.itemsPerSheet > 0 ? item.itemsPerSheet : 1)} con/bài
+                        </span>
                       </div>
                     </div>
                   </div>

@@ -446,6 +446,7 @@ export default function ProofingOrderDetailPage() {
     number | null
   >(null);
   const [inlineQuantityValue, setInlineQuantityValue] = useState<string>("");
+  const [inlineItemsPerSheetValue, setInlineItemsPerSheetValue] = useState<string>("");
   const [updateImageFile, setUpdateImageFile] = useState<File | null>(null);
   const [updateProofingFile, setUpdateProofingFile] = useState<File | null>(
     null,
@@ -1806,7 +1807,7 @@ export default function ProofingOrderDetailPage() {
     });
   };
 
-  // Handle update quantity for a single design item
+  // Handle update quantity and itemsPerSheet for a single design item
   const handleUpdateDesignQuantity = async (designId: number) => {
     if (!order?.id) return;
 
@@ -1836,12 +1837,27 @@ export default function ProofingOrderDetailPage() {
       return;
     }
 
-    // If quantity hasn't changed, no need to update
-    if (originalDesign.quantity === qty) {
-      // Clear the input and exit editing mode
+    // Process itemsPerSheet input
+    const parsedItemsPerSheet = inlineItemsPerSheetValue
+      ? parseInt(inlineItemsPerSheetValue, 10)
+      : NaN;
+    const itemsPerSheetVal =
+      !isNaN(parsedItemsPerSheet) && parsedItemsPerSheet >= 1
+        ? parsedItemsPerSheet
+        : originalDesign.itemsPerSheet != null && originalDesign.itemsPerSheet > 0
+          ? originalDesign.itemsPerSheet
+          : 1;
+
+    const qtyChanged = originalDesign.quantity !== qty;
+    const itemsPerSheetChanged =
+      (originalDesign.itemsPerSheet ?? 1) !== itemsPerSheetVal;
+
+    // If nothing changed, exit editing mode
+    if (!qtyChanged && !itemsPerSheetChanged) {
       if (editingQuantityDesignId === designId) {
         setEditingQuantityDesignId(null);
         setInlineQuantityValue("");
+        setInlineItemsPerSheetValue("");
       } else {
         setUpdateDesignQuantities((prev) => {
           const next = { ...prev };
@@ -1860,6 +1876,7 @@ export default function ProofingOrderDetailPage() {
           {
             proofingOrderDesignId: designId,
             quantity: qty,
+            itemsPerSheet: itemsPerSheetVal,
           },
         ],
       };
@@ -1874,6 +1891,7 @@ export default function ProofingOrderDetailPage() {
       if (editingQuantityDesignId === designId) {
         setEditingQuantityDesignId(null);
         setInlineQuantityValue("");
+        setInlineItemsPerSheetValue("");
       } else {
         setUpdateDesignQuantities((prev) => {
           const next = { ...prev };
@@ -1883,7 +1901,7 @@ export default function ProofingOrderDetailPage() {
       }
 
       toast.success("Thành công", {
-        description: `Đã cập nhật số lượng cho ${originalDesign.design?.code || "mã hàng"}`,
+        description: `Đã cập nhật mã hàng ${originalDesign.design?.code || ""}`,
       });
     } catch (error) {
       // Error is handled by the hook
@@ -2455,6 +2473,8 @@ export default function ProofingOrderDetailPage() {
                   setEditingQuantityDesignId={setEditingQuantityDesignId}
                   inlineQuantityValue={inlineQuantityValue}
                   setInlineQuantityValue={setInlineQuantityValue}
+                  inlineItemsPerSheetValue={inlineItemsPerSheetValue}
+                  setInlineItemsPerSheetValue={setInlineItemsPerSheetValue}
                   handleUpdateDesignQuantity={handleUpdateDesignQuantity}
                   updatingDesignId={updatingDesignId}
                   setIsAddDesignDialogOpen={setIsAddDesignDialogOpen}

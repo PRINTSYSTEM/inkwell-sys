@@ -70,6 +70,7 @@ import {
 } from "@/components/ui/tooltip";
 import { CursorTooltip } from "@/components/ui/cursor-tooltip";
 
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useAddDesignsToProofingOrder,
   useAvailableOrderDetailsForProofing,
@@ -80,6 +81,7 @@ import {
   useRejectDesignFromProofingOrder,
   usePaperSizes,
   useCreatePaperSize,
+  proofingKeys,
 } from "@/hooks/use-proofing-order";
 import { useDesignTypeList } from "@/hooks/use-design-type";
 import { useProofingSelection } from "@/hooks/useProofingSelection";
@@ -125,10 +127,16 @@ function useHasActiveProofingFilters(args: {
 
 export default function PrepressList() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const role = user?.role as UserRole | undefined;
   const isProofer = role === ROLE.ADMIN || role === ROLE.MANAGER || role === ROLE.PROOFER;
   const { addToCart, cartItems } = useProofingCart();
+
+  // Refresh proofing data when user navigates/mounts page from sidebar
+  useEffect(() => {
+    queryClient.invalidateQueries({ queryKey: proofingKeys.all });
+  }, [queryClient]);
 
   // ===== Mode: Orders list (default) vs Waiting designs (when filters active) =====
   const [selectedDesignTypes, setSelectedDesignTypes] = useState<number[]>([]);
@@ -399,7 +407,7 @@ export default function PrepressList() {
   const [designsPage, setDesignsPage] = useState(1);
   const [designsPageInput, setDesignsPageInput] = useState<string>("");
   const designsTableRef = useRef<HTMLDivElement>(null);
-  const designsPageSize = 20;
+  const designsPageSize = 50;
 
   const materialTypeIdForApi = currentMaterialTypeId
     ? currentMaterialTypeId
@@ -805,6 +813,7 @@ export default function PrepressList() {
     setDesignsPageInput("1");
     setViewMode("orders");
     clearSelection();
+    queryClient.invalidateQueries({ queryKey: proofingKeys.all });
   };
 
   const handleClearSelection = () => {
