@@ -153,7 +153,8 @@ export function DetailEmptyOrderView({
                                   const isDecal = (design.designTypeName || "").toLowerCase().includes("decal") || (design.materialTypeName || "").toLowerCase().includes("decal");
                                   const isBo = isDecal && design.sidesClassification === "two_side";
                                   if (isBo) {
-                                    return `${(avail * 2).toLocaleString("vi-VN")} / ${avail.toLocaleString("vi-VN")} bộ`;
+                                    const sets = Math.floor(avail / 2);
+                                    return `${avail.toLocaleString("vi-VN")} / ${sets.toLocaleString("vi-VN")} bộ`;
                                   }
                                   return avail.toLocaleString("vi-VN");
                                 })()}

@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-07-12T08:56:24.231Z */
+/* Generated at: 2026-07-20T06:07:26.389Z */
 
 import { z } from "zod";
 import { IdSchema, PagedParamsSchema } from "./Common";
@@ -574,6 +574,7 @@ export type DesignByCustomerParams = z.infer<typeof DesignByCustomerParamsSchema
 export const DesignListParamsSchema = PagedParamsSchema.extend({
   designerId: z.number().int().nullable().optional(),
   status: z.string().nullable().optional(),
+  search: z.string().nullable().optional(),
   month: z.number().int().nullable().optional(),
   year: z.number().int().nullable().optional(),
   startDate: z.string().datetime({ offset: true }).nullable().optional(),
@@ -1065,6 +1066,24 @@ export const ProductionByOrderParamsSchema = PagedParamsSchema.extend({
 });
 export type ProductionByOrderParams = z.infer<typeof ProductionByOrderParamsSchema>;
 
+// ==== ProductionKcsDesignTypeSummaryParams (GET /api/production-orders/kcs/design-type-summary) ====
+export const ProductionKcsDesignTypeSummaryParamsSchema = z.object({
+  proofingCompletedFromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  proofingCompletedToDate: z.string().datetime({ offset: true }).nullable().optional(),
+}).passthrough();
+export type ProductionKcsDesignTypeSummaryParams = z.infer<typeof ProductionKcsDesignTypeSummaryParamsSchema>;
+
+// ==== ProductionKcsParams (GET /api/production-orders/kcs) ====
+export const ProductionKcsParamsSchema = PagedParamsSchema.extend({
+  proofingCompletedFromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  proofingCompletedToDate: z.string().datetime({ offset: true }).nullable().optional(),
+  designTypeId: z.number().int().nullable().optional(),
+  search: z.string().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
+});
+export type ProductionKcsParams = z.infer<typeof ProductionKcsParamsSchema>;
+
 // ==== ProductionListParams (GET /api/production-orders) ====
 export const ProductionListParamsSchema = PagedParamsSchema.extend({
   status: z.string().nullable().optional(),
@@ -1094,6 +1113,12 @@ export const ProductionSummaryStatsParamsSchema = z.object({
   todayEnd: z.string().datetime({ offset: true }).nullable().optional(),
 }).passthrough();
 export type ProductionSummaryStatsParams = z.infer<typeof ProductionSummaryStatsParamsSchema>;
+
+// ==== ProofingOrderAvailableBinsParams (GET /api/proofing-orders/available-bins) ====
+export const ProofingOrderAvailableBinsParamsSchema = z.object({
+  designTypeId: z.number().int().nullable().optional(),
+}).passthrough();
+export type ProofingOrderAvailableBinsParams = z.infer<typeof ProofingOrderAvailableBinsParamsSchema>;
 
 // ==== ProofingOrderAvailableOrderDetailsDesignTypeSummaryParams (GET /api/proofing-orders/available-order-details/design-type-summary) ====
 export const ProofingOrderAvailableOrderDetailsDesignTypeSummaryParamsSchema = z.object({

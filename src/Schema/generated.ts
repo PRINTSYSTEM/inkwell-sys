@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-07-12T08:56:24.193Z */
+/* Generated at: 2026-07-20T06:07:26.340Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -204,6 +204,11 @@ export const InvoiceResponseSchema = schemas.InvoiceResponse;
 export const InvoiceResponsePaginateSchema = schemas.InvoiceResponsePaginate;
 export const InvoiceSummaryStatsResponseSchema = schemas.InvoiceSummaryStatsResponse;
 export const IssueInvoiceRequestSchema = schemas.IssueInvoiceRequest;
+export const KcsDesignTypeCountResponseSchema = schemas.KcsDesignTypeCountResponse;
+export const KcsItemResponseSchema = schemas.KcsItemResponse;
+export const KcsLabelPrintResponseSchema = schemas.KcsLabelPrintResponse;
+export const KcsProductionOrderResponseSchema = schemas.KcsProductionOrderResponse;
+export const KcsProductionOrderResponsePaginateSchema = schemas.KcsProductionOrderResponsePaginate;
 export const LoginRequestSchema = schemas.LoginRequest;
 export const LoginResponseSchema = schemas.LoginResponse;
 export const LowStockResponseSchema = schemas.LowStockResponse;
@@ -309,6 +314,7 @@ export const SalesDetailLedgerRowSchema = schemas.SalesDetailLedgerRow;
 export const SalesDetailLedgerRowIPaginateSchema = schemas.SalesDetailLedgerRowIPaginate;
 export const SalesSummaryRowSchema = schemas.SalesSummaryRow;
 export const SalesSummaryRowIPaginateSchema = schemas.SalesSummaryRowIPaginate;
+export const SetOpeningBalanceRequestSchema = schemas.SetOpeningBalanceRequest;
 export const SharedAddressResponseSchema = schemas.SharedAddressResponse;
 export const SharedAddressResponsePaginateSchema = schemas.SharedAddressResponsePaginate;
 export const SlowMovingResponseSchema = schemas.SlowMovingResponse;
@@ -339,6 +345,7 @@ export const UpdateDefectRecordRequestSchema = schemas.UpdateDefectRecordRequest
 export const UpdateDeliveryLineResultRequestSchema = schemas.UpdateDeliveryLineResultRequest;
 export const UpdateDeliveryNoteRequestSchema = schemas.UpdateDeliveryNoteRequest;
 export const UpdateDeliveryStatusRequestSchema = schemas.UpdateDeliveryStatusRequest;
+export const UpdateDesignCodeRequestSchema = schemas.UpdateDesignCodeRequest;
 export const UpdateDesignRequestSchema = schemas.UpdateDesignRequest;
 export const UpdateDesignTypeRequestSchema = schemas.UpdateDesignTypeRequest;
 export const UpdateDieRequestSchema = schemas.UpdateDieRequest;

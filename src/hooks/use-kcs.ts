@@ -31,6 +31,7 @@ export interface KcsProductionOrderResponse {
     outputQty: number;
     defectQty: number;
     orderDetailId: number | null;
+    itemsPerSheet?: number | null;
   }[];
 }
 

@@ -404,6 +404,8 @@ export const useProofingAvailableOrderDetailsDesignTypeSummary = (
       "design-type-summary",
     ],
     enabled,
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () => {
       // 1. Fetch design types to resolve IDs
       const designTypesRes = await apiRequest.get<any>(API_SUFFIX.DESIGN_TYPES);
@@ -457,7 +459,6 @@ export const useProofingAvailableOrderDetailsDesignTypeSummary = (
         count,
       }));
     },
-    staleTime: 5 * 60 * 1000,
   });
 };
 
