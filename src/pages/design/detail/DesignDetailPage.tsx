@@ -1005,7 +1005,7 @@ export default function DesignDetailPage() {
                             </Button>
                           )
                         )}
-                        {canUpdateStatus && currentStatus !== "cancelled" && currentStatus !== "confirmed_for_printing" && (
+                        {canUpdateStatus && currentStatus !== "cancelled" && (
                           <Button
                             size="sm"
                             variant="destructive"
