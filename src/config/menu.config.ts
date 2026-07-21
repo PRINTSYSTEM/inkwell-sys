@@ -213,6 +213,7 @@ export const MENU_ITEMS: MenuItem[] = [
       ROLE.ACCOUNTING,
       ROLE.ACCOUNTING_LEAD,
       ROLE.KCS,
+      ROLE.SALE,
     ],
   },
   {
