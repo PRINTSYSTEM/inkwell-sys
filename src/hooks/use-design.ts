@@ -20,7 +20,7 @@ import type {
   ReadyDesignListParams,
   UpdateReadyDesignRequest,
 } from "@/Schema";
-import { createCrudHooks } from "./use-base";
+import { createCrudHooks, getErrorMessage } from "./use-base";
 import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async"; // <== hook async bạn đã có
 
@@ -645,15 +645,8 @@ export const useCancelDesign = () => {
 
       return result;
     } catch (err: unknown) {
-      const error = err as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
       toast.error("Lỗi", {
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Không thể hủy thiết kế",
+        description: getErrorMessage(err, "Không thể hủy thiết kế"),
       });
       throw err;
     }
