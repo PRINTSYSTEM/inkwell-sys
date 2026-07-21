@@ -294,6 +294,8 @@ export default function SaleDesignSearch() {
                             <img
                               src={design.designImageUrl || design.designFileUrl}
                               alt={design.designName}
+                              loading="lazy"
+                              decoding="async"
                               className="w-full h-full object-cover"
                             />
                           ) : (

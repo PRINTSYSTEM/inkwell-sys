@@ -168,6 +168,8 @@ export const API_SUFFIX = {
   DESIGNS_SALE: "/designs/sale",
   READY_DESIGNS: "/ready-designs",
   READY_DESIGNS_BY_ID: (id: number) => `/ready-designs/${id}`,
+  READY_DESIGN_RESET_AVAILABLE_QUANTITY: (id: number) =>
+    `/ready-designs/${id}/reset-available-quantity`,
 
   DESIGN_TIMELINE: (id: number) => `/designs/${id}/timeline`,
   DESIGN_UPLOAD_FILE: (id: number) => `/designs/${id}/upload-design-file`,

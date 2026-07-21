@@ -1038,12 +1038,24 @@ export default function DesignDetailPage() {
                         {/* Next status transitions */}
                         {canChangeStatus && (
                           <>
+                             {currentStatus === "returned" && (
+                              <Button
+                                size="sm"
+                                className="gap-1.5 h-8 bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md"
+                                onClick={() => handleStatusTransition("confirmed_for_printing")}
+                                disabled={updatingStatus}
+                              >
+                                <CheckCircleIcon className="h-3.5 w-3.5" />
+                                <span>Chốt in</span>
+                              </Button>
+                            )}
+
                             {currentStatus === "waiting_for_customer_approval" && (
                               <>
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="gap-1.5 h-8 border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-400"
+                                  className="gap-1.5 h-8 border-amber-200 bg-amber-50 hover:bg-amber-100 text-amber-700 dark:border-amber-900/50 dark:bg-amber-950/20 dark:text-amber-400 font-medium"
                                   onClick={() => handleStatusTransition("editing")}
                                   disabled={updatingStatus}
                                 >
@@ -1052,7 +1064,7 @@ export default function DesignDetailPage() {
                                 </Button>
                                 <Button
                                   size="sm"
-                                  className="gap-1.5 h-8 bg-emerald-600 hover:bg-emerald-700 text-white"
+                                  className="gap-1.5 h-8 bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-md"
                                   onClick={() => handleStatusTransition("confirmed_for_printing")}
                                   disabled={updatingStatus}
                                 >
@@ -1063,6 +1075,7 @@ export default function DesignDetailPage() {
                             )}
 
                             {currentStatus !== "waiting_for_customer_approval" &&
+                              currentStatus !== "returned" &&
                               currentStatus !== "confirmed_for_printing" &&
                               validNextStatuses.length > 0 &&
                               validNextStatuses.map((status) => (

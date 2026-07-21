@@ -253,6 +253,8 @@ export function PrepressDesignTable({
                                       <img
                                         src={design.thumbnailUrl}
                                         alt={design.code}
+                                        loading="lazy"
+                                        decoding="async"
                                         className="w-12 h-10 object-contain rounded cursor-zoom-in"
                                         onClick={(e) => {
                                           e.stopPropagation();

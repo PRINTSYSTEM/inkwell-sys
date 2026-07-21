@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { ChevronDown, FileImage, Copy } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -34,12 +34,16 @@ function DesignHoverContent({ design, pod }: { design: any; pod: any }) {
           <img
             src={design.designThumbnailUrl}
             alt={design.code}
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover"
           />
         ) : design?.designImageUrl ? (
           <img
             src={design.designImageUrl}
             alt={design.code}
+            loading="lazy"
+            decoding="async"
             className="w-full h-full object-cover"
           />
         ) : (
@@ -152,7 +156,7 @@ interface PrepressOrderRowProps {
   showAllDesignsByDefault?: boolean;
 }
 
-export function PrepressOrderRow({
+export const PrepressOrderRow = React.memo(function PrepressOrderRow({
   order,
   shouldShowExpand,
   searchTermLower,
@@ -274,6 +278,8 @@ export function PrepressOrderRow({
               <img
                 src={proofingImgUrl}
                 alt={order.code}
+                loading="lazy"
+                decoding="async"
                 className="w-10 h-10 object-cover rounded border shadow-sm cursor-zoom-in hover:scale-105 transition-transform"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -471,4 +477,4 @@ export function PrepressOrderRow({
       )}
     </>
   );
-}
+});

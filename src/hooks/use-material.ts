@@ -72,16 +72,21 @@ export const useMaterials = (
 };
 
 export const useMaterial = (id: number | null, enabled = true) => {
-  const isValid = id !== null && !Number.isNaN(id);
+  const numericId = Number(id);
+  const isValidId = id !== null && id !== undefined && !Number.isNaN(numericId) && numericId > 0;
+
   return useQuery<MaterialResponse>({
-    queryKey: materialKeys.detail(id!),
+    queryKey: materialKeys.detail(isValidId ? numericId : 0),
     queryFn: async () => {
+      if (!isValidId) {
+        throw new Error("Invalid material ID");
+      }
       const response = await apiRequest.get<MaterialResponse>(
-        API_SUFFIX.MATERIAL_BY_ID(id!)
+        API_SUFFIX.MATERIAL_BY_ID(numericId)
       );
       return response.data;
     },
-    enabled: enabled && isValid,
+    enabled: enabled && isValidId,
   });
 };
 
@@ -90,19 +95,24 @@ export const useMaterialHistory = (
   params?: MaterialHistoryParams,
   enabled = true
 ) => {
-  const isValid = id !== null && !Number.isNaN(id);
+  const numericId = Number(id);
+  const isValidId = id !== null && id !== undefined && !Number.isNaN(numericId) && numericId > 0;
+
   return useQuery<InventoryTransactionResponseIPaginate>({
-    queryKey: materialKeys.history(id!, params || {}),
+    queryKey: materialKeys.history(isValidId ? numericId : 0, params || {}),
     queryFn: async () => {
+      if (!isValidId) {
+        throw new Error("Invalid material ID");
+      }
       const response = await apiRequest.get<InventoryTransactionResponseIPaginate>(
-        API_SUFFIX.MATERIAL_HISTORY(id!),
+        API_SUFFIX.MATERIAL_HISTORY(numericId),
         {
           params: normalizeParams(params || {}),
         }
       );
       return response.data;
     },
-    enabled: enabled && isValid,
+    enabled: enabled && isValidId,
   });
 };
 

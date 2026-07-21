@@ -316,6 +316,8 @@ export default function DieListPage() {
                               <img
                                 src={die.imageUrl}
                                 alt={die.code || "Khuôn bế"}
+                                loading="lazy"
+                                decoding="async"
                                 className="w-full h-full object-contain"
                               />
                             </div>

@@ -615,6 +615,57 @@ export const useDeleteReadyDesign = () => {
   };
 };
 
+// POST /api/ready-designs/{id}/reset-available-quantity
+export const useResetReadyDesignAvailableQuantity = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    void,
+    [number]
+  >(async (id: number) => {
+    const res = await apiRequest.post(
+      API_SUFFIX.READY_DESIGN_RESET_AVAILABLE_QUANTITY(id)
+    );
+    return res.data;
+  });
+
+  const mutate = async (id: number) => {
+    try {
+      const result = await execute(id);
+
+      // Invalidate ready-designs list to trigger refetch
+      queryClient.invalidateQueries({ queryKey: ["ready-designs"] });
+      queryClient.invalidateQueries({ queryKey: designKeys.all });
+
+      toast.success("Thành công", {
+        description: "Đã cập nhật số lượng khả dụng và hoàn tất đơn hàng",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể cập nhật số lượng khả dụng",
+      });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
+};
+
 // PUT /api/designs/{id}/cancel
 export const useCancelDesign = () => {
   const queryClient = useQueryClient();

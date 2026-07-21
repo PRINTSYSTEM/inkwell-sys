@@ -5,6 +5,7 @@ import { Check, ChevronsUpDown, Loader2, Package, Search, Plus, Trash2, Calendar
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import { apiRequest, API_SUFFIX } from "@/apis";
+import { cn } from "@/lib/utils";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,7 @@ import {
   useDesign,
   useUpdateReadyDesign,
   useDeleteReadyDesign,
+  useResetReadyDesignAvailableQuantity,
 } from "@/hooks";
 import type { ReadyDesignResponse } from "@/Schema";
 
@@ -423,8 +425,21 @@ export default function ReadyDesignListPage() {
   // Update Ready Design Mutation (for isUrgent flag)
   const { mutate: updateReadyDesign } = useUpdateReadyDesign();
   const { mutate: deleteReadyDesign } = useDeleteReadyDesign();
+  const { mutate: resetAvailableQuantity } = useResetReadyDesignAvailableQuantity();
   const [updatingUrgentId, setUpdatingUrgentId] = useState<number | null>(null);
+  const [resettingId, setResettingId] = useState<number | null>(null);
   const [designToDelete, setDesignToDelete] = useState<ReadyDesignResponse | null>(null);
+
+  const handleResetQuantity = async (designId: number) => {
+    setResettingId(designId);
+    try {
+      await resetAvailableQuantity(designId);
+    } catch (err) {
+      // Error handled in hook
+    } finally {
+      setResettingId(null);
+    }
+  };
 
   const handleToggleUrgent = async (design: ReadyDesignResponse) => {
     if (!design.id) return;
@@ -725,19 +740,20 @@ export default function ReadyDesignListPage() {
                   sortedDesigns.map((design) => {
                     const isSelected = selectedIds.includes(design.id!);
                     const isDisabled = isRowSelectionDisabled(design);
+                    const isPendingUpdate = !!(design as any).isPendingOrderUpdate || !!(design as any).is_pending_order_update;
                     return (
                       <TableRow
                         key={design.id}
-                        className={`h-12 transition-all duration-150 relative ${design.isUrgent
-                          ? isSelected
-                            ? "bg-red-100/60 hover:bg-red-200/60 dark:bg-red-900/30 dark:hover:bg-red-800/30 text-red-755 dark:text-red-355"
-                            : "bg-red-50/50 hover:bg-red-100/50 dark:bg-red-950/20 dark:hover:bg-red-900/20 text-red-700 dark:text-red-300"
-                          : isSelected
-                            ? "bg-primary/5 hover:bg-primary/10"
-                            : "hover:bg-muted/50"
-                          } ${isDisabled ? "opacity-45" : ""}`}
+                        className={cn(
+                          "h-12 transition-all duration-150 relative",
+                          isPendingUpdate && "bg-amber-50/70 hover:bg-amber-100/70 dark:bg-amber-950/30 dark:hover:bg-amber-900/30 text-amber-900 dark:text-amber-200 border-l-4 border-l-amber-500",
+                          !isPendingUpdate && design.isUrgent && (isSelected ? "bg-red-100/60 hover:bg-red-200/60 dark:bg-red-900/30 dark:hover:bg-red-800/30 text-red-700 dark:text-red-300 border-l-4 border-l-red-500 dark:border-l-red-600" : "bg-red-50/50 hover:bg-red-100/50 dark:bg-red-950/20 dark:hover:bg-red-900/20 text-red-700 dark:text-red-300 border-l-4 border-l-red-500 dark:border-l-red-600"),
+                          !isPendingUpdate && !design.isUrgent && isSelected && "bg-primary/5 hover:bg-primary/10",
+                          !isPendingUpdate && !design.isUrgent && !isSelected && "hover:bg-muted/50",
+                          isDisabled && "opacity-45"
+                        )}
                       >
-                        <TableCell className={`text-center py-2 ${design.isUrgent ? "border-l-4 border-l-red-500 dark:border-l-red-650" : ""}`}>
+                        <TableCell className="text-center py-2">
                           <Checkbox
                             checked={isSelected}
                             onCheckedChange={() => handleSelectRow(design.id!, design)}
@@ -769,21 +785,28 @@ export default function ReadyDesignListPage() {
                           {((design as any).requestedQuantity ?? design.quantity ?? 0).toLocaleString("vi-VN")}
                         </TableCell>
                         <TableCell className="py-2 text-center">
-                          <StatusBadge
-                            status={design.status || ""}
-                            label={
-                              orderDetailItemStatusLabels[design.status || ""] ||
-                              orderStatusLabels[design.status || ""] ||
-                              designStatusLabels[design.status || ""] ||
-                              design.status ||
-                              "N/A"
-                            }
-                          />
+                          <div className="flex flex-col items-center gap-1 justify-center">
+                            <StatusBadge
+                              status={design.status || ""}
+                              label={
+                                orderDetailItemStatusLabels[design.status || ""] ||
+                                orderStatusLabels[design.status || ""] ||
+                                designStatusLabels[design.status || ""] ||
+                                design.status ||
+                                "N/A"
+                              }
+                            />
+                            {isPendingUpdate && (
+                              <Badge className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-[10px] animate-pulse px-1.5 py-0.5 whitespace-nowrap">
+                                Cần cập nhật đơn hàng
+                              </Badge>
+                            )}
+                          </div>
                         </TableCell>
-                        <TableCell className={`py-2 font-mono text-xs ${design.isUrgent ? "text-red-650/80 dark:text-red-400/80" : "text-muted-foreground"}`}>
+                        <TableCell className={cn("py-2 font-mono text-xs", design.isUrgent ? "text-red-650/80 dark:text-red-400/80" : "text-muted-foreground")}>
                           {design.dimensions || "—"}
                         </TableCell>
-                        <TableCell className={`py-2 text-xs font-medium truncate max-w-[150px] ${design.isUrgent ? "text-red-650/80 dark:text-red-400/80" : "text-muted-foreground"}`} title={design.materialTypeName || ""}>
+                        <TableCell className={cn("py-2 text-xs font-medium truncate max-w-[150px]", design.isUrgent ? "text-red-650/80 dark:text-red-400/80" : "text-muted-foreground")} title={design.materialTypeName || ""}>
                           {design.materialTypeName}
                           {(() => {
                             const typeName = (design as any).designTypeName || (design as any).designType?.name || "";
@@ -794,7 +817,7 @@ export default function ReadyDesignListPage() {
                             return (design as any).basisWeight && !isDecalPaper ? ` (${(design as any).basisWeight} gsm)` : "";
                           })()}
                         </TableCell>
-                        <TableCell className={`py-2 text-xs break-words max-w-[280px] ${design.isUrgent ? "text-red-650/80 dark:text-red-400/80" : "text-muted-foreground"}`} title={design.notes || ""}>
+                        <TableCell className={cn("py-2 text-xs break-words max-w-[280px]", design.isUrgent ? "text-red-650/80 dark:text-red-400/80" : "text-muted-foreground")} title={design.notes || ""}>
                           {design.notes || "—"}
                         </TableCell>
                         <TableCell className="py-2 text-center" onClick={(e) => e.stopPropagation()}>
@@ -811,20 +834,39 @@ export default function ReadyDesignListPage() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className={`py-2 text-xs ${design.isUrgent ? "text-red-650/80 dark:text-red-350/80" : "text-muted-foreground"}`}>
+                        <TableCell className={cn("py-2 text-xs", design.isUrgent ? "text-red-650/80 dark:text-red-350/80" : "text-muted-foreground")}>
                           {design.updatedAt
                             ? new Date(design.updatedAt).toLocaleDateString("vi-VN")
                             : "—"}
                         </TableCell>
                         <TableCell className="py-2 text-right pr-6" onClick={(e) => e.stopPropagation()}>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive rounded-lg"
-                            onClick={() => setDesignToDelete(design)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            {isPendingUpdate && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={resettingId === design.id}
+                                className="h-7 px-2 text-[11px] font-bold border-amber-400 bg-amber-50 text-amber-800 hover:bg-amber-100 shadow-sm shrink-0"
+                                onClick={() => handleResetQuantity(design.id!)}
+                                title="Đồng bộ số lượng khả dụng và hoàn tất cập nhật đơn hàng"
+                              >
+                                {resettingId === design.id ? (
+                                  <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                                ) : (
+                                  <RefreshCw className="h-3 w-3 mr-1 text-amber-600" />
+                                )}
+                                Cập nhật SL
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive rounded-lg"
+                              onClick={() => setDesignToDelete(design)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );

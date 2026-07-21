@@ -789,10 +789,13 @@ const ProductionTableRow = React.memo(
       setActiveImageIdx(0);
     }, [orderImages]);
 
+    const [isImageHovered, setIsImageHovered] = useState(false);
+
     React.useEffect(() => {
       const el = imageContainerRef.current;
-      if (!el || orderImages.length <= 1) return;
+      if (!el || !isImageHovered || orderImages.length <= 1) return;
       const handleWheel = (e: WheelEvent) => {
+        if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
         e.preventDefault();
         e.stopPropagation();
         if (e.deltaY > 0) {
@@ -805,7 +808,7 @@ const ProductionTableRow = React.memo(
       return () => {
         el.removeEventListener("wheel", handleWheel);
       };
-    }, [orderImages]);
+    }, [isImageHovered, orderImages]);
 
     const productionItems = (prod as any).items || [];
 
@@ -962,7 +965,7 @@ const ProductionTableRow = React.memo(
     return (
       <>
         <TableRow
-          className={`border-b transition-all duration-300 ${isHighlighted
+          className={`border-b transition-colors duration-150 ${isHighlighted
             ? "bg-amber-100/50 dark:bg-amber-900/30 font-medium border-amber-500 dark:border-amber-700"
             : isDraft
               ? "bg-blue-50/20 dark:bg-blue-900/10"
@@ -1024,6 +1027,7 @@ const ProductionTableRow = React.memo(
                         <img
                           src={orderImages[0]}
                           alt="Hình bài"
+                          decoding="async"
                           className="w-full h-full object-cover select-none"
                         />
                       </div>
@@ -1042,11 +1046,15 @@ const ProductionTableRow = React.memo(
                   <div className="mt-1 flex flex-col items-center gap-1 shrink-0">
                     <div
                       ref={imageContainerRef}
+                      onMouseEnter={() => setIsImageHovered(true)}
+                      onMouseLeave={() => setIsImageHovered(false)}
                       className="relative w-16 h-16 rounded border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-slate-50 dark:bg-slate-900 group/img cursor-zoom-in shrink-0"
                     >
                       <img
                         src={orderImages[activeImageIdx]}
                         alt="Hình bài"
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover select-none"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1443,6 +1451,8 @@ const ProductionTableRow = React.memo(
                                         <img
                                           src={dieImg}
                                           alt="Hình ảnh khuôn"
+                                          loading="lazy"
+                                          decoding="async"
                                           className="w-full h-full object-contain select-none"
                                         />
                                       </div>
