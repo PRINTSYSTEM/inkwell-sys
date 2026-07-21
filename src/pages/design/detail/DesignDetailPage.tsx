@@ -65,6 +65,7 @@ import {
   AlertCircle,
   CheckCircle2,
   ArrowRight,
+  RotateCcw,
   FileSpreadsheet,
   Receipt,
   Truck,
@@ -569,6 +570,7 @@ export default function DesignDetailPage() {
       });
 
       refetchDesign();
+      refetchTimeline();
     } catch (err: unknown) {
       const error = err as { response?: { data?: { message?: string } } };
       const msg = error?.response?.data?.message;
@@ -681,7 +683,7 @@ export default function DesignDetailPage() {
     event.stopPropagation();
   };
 
-  const handleTimelineAdd = async (image: File, description: string) => {
+  const handleTimelineAdd = async (image: File | null, description: string) => {
     if (!enabled) return;
     try {
       // Call mutate and wait for it to complete
@@ -697,13 +699,15 @@ export default function DesignDetailPage() {
 
       // Open image viewer dialog to show the uploaded image
       // Use result.imageUrl if available, otherwise get from the first entry in updated timeline
-      const imageUrl =
-        result?.fileUrl || updatedTimelineData?.items?.[0]?.fileUrl;
-      if (imageUrl) {
-        setViewingImage({
-          url: imageUrl as string,
-          title: description || "Timeline mới",
-        });
+      if (image) {
+        const imageUrl =
+          result?.fileUrl || updatedTimelineData?.items?.[0]?.fileUrl;
+        if (imageUrl) {
+          setViewingImage({
+            url: imageUrl as string,
+            title: description || "Timeline mới",
+          });
+        }
       }
 
       toast.success("Thành công", {
@@ -940,7 +944,7 @@ export default function DesignDetailPage() {
         {/* ===== BODY: 2 COLUMNS ===== */}
         <div className="flex-1 flex min-h-0">
           {/* ===== LEFT: INFO & SPECS ===== */}
-          <div className="flex-[7] min-w-0 border-r flex flex-col min-h-0 bg-card/30">
+          <div className="flex-[6.5] min-w-0 border-r flex flex-col min-h-0 bg-card/30">
             <ScrollArea className="flex-1">
               <div className="p-3 space-y-3">
                 {/* Design summary */}
@@ -1766,7 +1770,7 @@ export default function DesignDetailPage() {
           </div>
 
           {/* ===== RIGHT: FILE & TIMELINE ===== */}
-          <div className="flex-[3] flex flex-col min-h-0 min-w-0">
+          <div className="flex-[3.5] flex flex-col min-h-0 min-w-0">
             {/* Header actions */}
             <div className="shrink-0 px-5 py-3 border-b bg-card/50 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
@@ -1931,26 +1935,38 @@ export default function DesignDetailPage() {
               </div>
 
               {/* Timeline */}
-              <ScrollArea className="flex-1 w-1/2 min-w-0">
+              <ScrollArea className="flex-1 w-1/2 min-w-0 h-full">
                 <div
                   className="w-full min-w-0 max-w-full"
-                  style={{ padding: "20px", maxWidth: "100%", width: "100%" }}
+                  style={{ padding: "14px 16px", maxWidth: "100%", width: "100%" }}
                 >
-                  <div className="flex items-center gap-3 mb-5 pb-3 border-b">
-                    <div className="p-1.5 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                      <History className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                    </div>
-                    <div className="flex-1">
-                      <span className="font-bold text-base">
+                  <div className="flex items-center justify-between gap-2 mb-4 pb-2.5 border-b">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="p-1.5 bg-purple-100 dark:bg-purple-900/30 rounded-lg shrink-0">
+                        <History className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <span className="font-bold text-sm text-foreground whitespace-nowrap">
                         Timeline tiến trình
                       </span>
+                      {timelineEntries.length > 0 && (
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] px-1.5 py-0 font-normal shrink-0"
+                        >
+                          {timelineEntries.length}
+                        </Badge>
+                      )}
                     </div>
-                    {timelineLoading && (
-                      <span className="text-xs text-muted-foreground flex items-center gap-1 font-medium">
-                        <Clock className="h-3 w-3" />
-                        Đang tải timeline...
-                      </span>
-                    )}
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => refetchTimeline()}
+                      className="h-7 px-2 gap-1 text-xs text-muted-foreground hover:text-foreground shrink-0"
+                      title="Làm mới tiến trình"
+                    >
+                      <RotateCcw className={cn("h-3 w-3", timelineLoading && "animate-spin")} />
+                      <span className="whitespace-nowrap">Làm mới</span>
+                    </Button>
                   </div>
 
                   {timelineLoading ? (
@@ -1992,7 +2008,7 @@ export default function DesignDetailPage() {
                       className="relative w-full min-w-0 max-w-full"
                       style={{ maxWidth: "100%", width: "100%" }}
                     >
-                      {/* Line - dừng ở giữa dot cuối cùng (dot cũ nhất) */}
+                      {/* Line */}
                       <div
                         className="absolute left-4 top-0 w-px bg-gradient-to-b from-violet-300 via-blue-300 to-emerald-300 dark:from-violet-800 dark:via-blue-800 dark:to-emerald-800"
                         style={{
@@ -2009,95 +2025,94 @@ export default function DesignDetailPage() {
                             {/* Date header */}
                             <div className="flex items-center gap-2 pl-6">
                               <div className="h-px flex-1 bg-border/60" />
-                              <div className="px-3 py-1 rounded-full text-[11px] font-semibold border bg-muted/60 text-muted-foreground uppercase tracking-wide">
+                              <div className="px-3 py-0.5 rounded-full text-[11px] font-semibold border bg-muted/60 text-muted-foreground uppercase tracking-wide">
                                 {formatTimelineDateLabel(group.date)}
                               </div>
                             </div>
 
                             <div className="space-y-3">
-                              {timelineEntries.map((entry, index) => {
-                                const timelineNumber =
-                                  timelineEntries.length - index;
-                                const isLast =
-                                  index === timelineEntries.length - 1;
+                              {group.items.map((entry, index) => {
+                                const visual = getTimelineVisual(entry);
+                                const imageUrl =
+                                  entry.fileUrl || (entry as any).imageUrl;
                                 return (
                                   <div
                                     key={entry.id}
-                                    className="relative flex gap-4 group"
+                                    className="relative flex gap-3 group"
                                   >
                                     {/* Dot */}
-                                    <div className="relative z-10 shrink-0 flex items-center">
-                                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-purple-600 border-2 border-background shadow-md flex items-center justify-center">
-                                        <span className="text-[10px] font-bold text-white">
-                                          {timelineNumber}
-                                        </span>
+                                    <div className="relative z-10 shrink-0 flex items-start pt-1">
+                                      <div
+                                        className={cn(
+                                          "w-7 h-7 rounded-full border-2 border-background shadow flex items-center justify-center text-white",
+                                          visual.dotClass
+                                        )}
+                                      >
+                                        <visual.icon className="h-3.5 w-3.5" />
                                       </div>
                                     </div>
 
                                     {/* Card */}
                                     <Card
-                                      className={`flex-1 group-hover:border-purple-400/70 transition-colors ${entry.imageUrl ? "cursor-pointer" : ""
-                                        }`}
-                                      onClick={() => {
-                                        if (entry.imageUrl) {
-                                          setViewingImage({
-                                            url: entry.imageUrl as string,
-                                            title:
-                                              (entry.title as string) ||
-                                              `Timeline #${timelineNumber}`,
-                                          });
-                                        }
-                                      }}
+                                      className="flex-1 overflow-hidden transition-all hover:border-purple-400/80 hover:shadow-sm"
                                     >
-                                      <CardContent
-                                        className="p-4 flex gap-3 hover:bg-muted/50 transition-colors cursor-pointer"
-                                        onClick={() => {
-                                          if (entry.fileUrl) {
-                                            setViewingImage({
-                                              url: entry.fileUrl as string,
-                                              title:
-                                                (entry.title as string) ||
-                                                `Timeline #${timelineNumber}`,
-                                            });
-                                          }
-                                        }}
-                                      >
-                                        <CursorTooltip
-                                          content={entry.description}
-                                          delayDuration={200}
-                                          className="p-4 max-w-md"
-                                        >
-                                          <div className="flex-1 min-w-0 space-y-1">
-                                            <div className="flex items-center justify-between gap-2">
-                                              <p className="font-medium text-sm truncate max-w-[60px] cursor-pointer">
-                                                {entry.description}
-                                              </p>
-                                              <span className="text-[11px] text-muted-foreground whitespace-nowrap">
-                                                {entry.createdAt
-                                                  ? new Date(
-                                                    entry.createdAt
-                                                  ).toLocaleString("vi-VN", {
-                                                    day: "2-digit",
-                                                    month: "2-digit",
-                                                    hour: "2-digit",
-                                                    minute: "2-digit",
-                                                  })
-                                                  : ""}
-                                              </span>
-                                            </div>
+                                      <CardContent className="p-3.5 space-y-2">
+                                        <div className="flex items-start justify-between gap-2">
+                                          <p className="font-semibold text-sm text-foreground break-words flex-1 leading-snug">
+                                            {entry.description || "Ghi nhận hệ thống"}
+                                          </p>
+                                          <span className="text-[11px] text-muted-foreground whitespace-nowrap shrink-0 font-medium bg-muted/50 px-2 py-0.5 rounded">
+                                            {entry.createdAt
+                                              ? new Date(
+                                                  entry.createdAt
+                                                ).toLocaleTimeString("vi-VN", {
+                                                  hour: "2-digit",
+                                                  minute: "2-digit",
+                                                })
+                                              : ""}
+                                          </span>
+                                        </div>
 
-                                            {entry.createdByName && (
-                                              <p className="text-[11px] text-muted-foreground">
-                                                Người tạo:{" "}
-                                                <span className="font-medium">
-                                                  {
-                                                    entry.createdByName as string
-                                                  }
-                                                </span>
-                                              </p>
-                                            )}
+                                        {/* Optional Image Thumbnail */}
+                                        {imageUrl && (
+                                          <div
+                                            className="relative mt-2 rounded-lg border overflow-hidden bg-black/5 dark:bg-white/5 cursor-pointer group/img max-h-48"
+                                            onClick={() =>
+                                              setViewingImage({
+                                                url: imageUrl,
+                                                title:
+                                                  entry.description ||
+                                                  "Hình ảnh timeline",
+                                              })
+                                            }
+                                          >
+                                            <img
+                                              src={imageUrl}
+                                              alt="Timeline attachment"
+                                              className="w-full max-h-48 object-cover group-hover/img:scale-105 transition-transform duration-200"
+                                            />
+                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-medium">
+                                              <Eye className="h-4 w-4" /> Xem ảnh lớn
+                                            </div>
                                           </div>
-                                        </CursorTooltip>
+                                        )}
+
+                                        <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/40 text-[11px] text-muted-foreground">
+                                          <span>
+                                            {entry.createdByName
+                                              ? `Bởi: ${entry.createdByName}`
+                                              : "Hệ thống ghi nhận"}
+                                          </span>
+                                          <Badge
+                                            variant="outline"
+                                            className={cn(
+                                              "text-[10px] px-1.5 py-0 font-normal",
+                                              visual.badgeClass
+                                            )}
+                                          >
+                                            {visual.label}
+                                          </Badge>
+                                        </div>
                                       </CardContent>
                                     </Card>
                                   </div>

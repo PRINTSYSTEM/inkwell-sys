@@ -111,7 +111,9 @@ export const useDesignTimeline = (id: number | null, enabled = true) => {
       );
       return res.data;
     },
-    staleTime: 2 * 60 * 1000,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 };
 
@@ -123,10 +125,12 @@ export const useAddDesignTimelineEntry = () => {
 
   const { data, loading, error, execute, reset } = useAsyncCallback<
     DesignTimelineEntryResponse,
-    [{ id: number; file: File; description?: string }]
+    [{ id: number; file?: File | null; description?: string }]
   >(async ({ id, file, description }) => {
     const formData = new FormData();
-    formData.append("File", file);
+    if (file) {
+      formData.append("File", file);
+    }
     if (description) formData.append("Description", description);
 
     const res = await apiRequest.post<DesignTimelineEntryResponse>(
@@ -138,7 +142,7 @@ export const useAddDesignTimelineEntry = () => {
 
   const mutate = async (payload: {
     id: number;
-    file: File;
+    file?: File | null;
     description?: string;
   }) => {
     try {
