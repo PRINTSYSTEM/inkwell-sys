@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useDebounce } from "use-debounce";
 import { DateRange } from "react-day-picker";
 import {
@@ -138,11 +138,25 @@ export default function PrepressList() {
     queryClient.invalidateQueries({ queryKey: proofingKeys.all });
   }, [queryClient]);
 
+  const [searchParams, setSearchParams] = useSearchParams();
+
   // ===== Mode: Orders list (default) vs Waiting designs (when filters active) =====
-  const [selectedDesignTypes, setSelectedDesignTypes] = useState<number[]>([]);
-  const [selectedMaterialTypes, setSelectedMaterialTypes] = useState<number[]>(
-    [],
-  );
+  const [selectedDesignTypes, setSelectedDesignTypes] = useState<number[]>(() => {
+    const dtParam = searchParams.get("designTypeId");
+    if (dtParam) {
+      const parsed = Number(dtParam);
+      return !isNaN(parsed) && parsed > 0 ? [parsed] : [];
+    }
+    return [];
+  });
+  const [selectedMaterialTypes, setSelectedMaterialTypes] = useState<number[]>(() => {
+    const mtParam = searchParams.get("materialTypeId");
+    if (mtParam) {
+      const parsed = Number(mtParam);
+      return !isNaN(parsed) && parsed > 0 ? [parsed] : [];
+    }
+    return [];
+  });
 
   const [viewMode, setViewMode] = useState<"orders" | "designs">("orders");
 
@@ -519,6 +533,26 @@ export default function PrepressList() {
 
   const materialTypeOptions = availableDesignsData?.materialTypeOptions ?? [];
 
+  const updateUrlFilter = (dtId: number | null, mtId: number | null) => {
+    setSearchParams(
+      (prev) => {
+        const newParams = new URLSearchParams(prev);
+        if (dtId) {
+          newParams.set("designTypeId", dtId.toString());
+        } else {
+          newParams.delete("designTypeId");
+        }
+        if (mtId) {
+          newParams.set("materialTypeId", mtId.toString());
+        } else {
+          newParams.delete("materialTypeId");
+        }
+        return newParams;
+      },
+      { replace: true },
+    );
+  };
+
   // Handlers that keep design/material filters in sync:
   const handleDesignTypeChange = (ids: number[]) => {
     // When user actively picks a design type, reset material selection so
@@ -527,12 +561,15 @@ export default function PrepressList() {
     setSelectedMaterialTypes([]);
     setIncompleteOrdersPage(1);
     setCompletedOrdersPage(1);
+    updateUrlFilter(ids.length > 0 ? ids[0] : null, null);
   };
 
   const handleMaterialTypeChange = (ids: number[]) => {
     setSelectedMaterialTypes(ids);
     setIncompleteOrdersPage(1);
     setCompletedOrdersPage(1);
+
+    let targetDtId = selectedDesignTypes.length > 0 ? selectedDesignTypes[0] : null;
 
     // If user selected exactly one material and no design type is selected,
     // pick a corresponding design type that uses that material (if available).
@@ -549,13 +586,17 @@ export default function PrepressList() {
 
       if (matchedDesignTypeIds.length > 0) {
         // Pick the first matching design type as the 'corresponding' one.
-        setSelectedDesignTypes([matchedDesignTypeIds[0]]);
+        targetDtId = matchedDesignTypeIds[0] as number;
+        setSelectedDesignTypes([targetDtId]);
       }
     }
     // If material cleared, also clear design type selection
     if (ids.length === 0) {
       setSelectedDesignTypes([]);
+      targetDtId = null;
     }
+
+    updateUrlFilter(targetDtId, ids.length > 0 ? ids[0] : null);
   };
 
   // ===== Actions =====
@@ -813,6 +854,7 @@ export default function PrepressList() {
     setDesignsPageInput("1");
     setViewMode("orders");
     clearSelection();
+    updateUrlFilter(null, null);
     queryClient.invalidateQueries({ queryKey: proofingKeys.all });
   };
 
