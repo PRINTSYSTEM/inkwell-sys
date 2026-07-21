@@ -22,22 +22,17 @@ function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"all" | "unread">("all");
 
+  // Single query for both list AND count
   const { data, isLoading, refetch } = useNotifications({ 
     pageSize: 10,
     isRead: tab === "unread" ? false : undefined 
   });
 
-  const { data: unreadData, refetch: refetchUnreadCount } = useNotifications({ 
-    pageSize: 1,
-    isRead: false 
-  });
-
+  const unreadCount = data?.total ?? 0;
+  const notifications = data?.items ?? [];
   const markAllAsRead = useMarkAllNotificationsAsRead();
   const markAsRead = useMarkNotificationAsRead();
   const { connection } = useNotification();
-
-  const notifications = data?.items ?? [];
-  const unreadCount = unreadData?.total ?? 0;
 
   // Real-time SignalR listener
   useEffect(() => {
@@ -45,7 +40,6 @@ function NotificationBell() {
 
     const handleNewNotification = () => {
       refetch();
-      refetchUnreadCount();
     };
 
     connection.on("ReceiveNotification", handleNewNotification);
@@ -53,7 +47,7 @@ function NotificationBell() {
     return () => {
       connection.off("ReceiveNotification", handleNewNotification);
     };
-  }, [connection, refetch, refetchUnreadCount]);
+  }, [connection, refetch]);
 
   const handleDoubleClick = async (e: React.MouseEvent) => {
     e.preventDefault();
