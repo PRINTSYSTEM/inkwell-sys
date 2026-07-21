@@ -53,6 +53,9 @@ export const useDebtNotifications = (params?: DebtNotificationListParams) => {
       return res.data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 };
 
@@ -126,6 +129,9 @@ export const useDebtNotificationPreview = (
       return res.data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 };
 

@@ -164,12 +164,16 @@ export const ReadyDesignResponseSchema =
   GenReadyDesignResponseSchema.extend({
     notes: z.string().nullable().optional(),
     isUrgent: z.boolean().nullable().optional(),
+    isPendingOrderUpdate: z.boolean().nullable().optional(),
+    is_pending_order_update: z.boolean().nullable().optional(),
   }).passthrough();
 export type ReadyDesignResponse = z.infer<typeof ReadyDesignResponseSchema>;
 
 // ===== ReadyDesignResponsePaginate =====
 export const ReadyDesignResponsePaginateSchema =
-  GenReadyDesignResponsePaginateSchema.passthrough();
+  GenReadyDesignResponsePaginateSchema.extend({
+    items: z.array(ReadyDesignResponseSchema).nullable().optional(),
+  }).passthrough();
 export type ReadyDesignResponsePaginate = z.infer<
   typeof ReadyDesignResponsePaginateSchema
 >;

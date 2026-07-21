@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef } from "react";
+import React, { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/http";
 import { API_SUFFIX } from "@/apis/util.api";
@@ -89,6 +89,17 @@ export default function KCSPage() {
 
   // ImageViewer Dialog State
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
+
+  const handleOpenPrintLabel = useCallback((poId: number, itemId: number, defaultQty: number) => {
+    setPrintPoId(poId);
+    setPrintItemId(itemId);
+    setPrintDefaultQty(defaultQty);
+    setIsPrintLabelOpen(true);
+  }, []);
+
+  const handleOpenImageViewer = useCallback((url: string) => {
+    setViewingImageUrl(url);
+  }, []);
 
   // Table container ref
   const tableContainerRef = useRef<HTMLDivElement>(null);
@@ -453,13 +464,8 @@ export default function KCSPage() {
                   <KcsOrderRow
                     key={prod.productionOrderId}
                     prod={prod}
-                    onOpenPrintLabel={(poId, itemId, defaultQty) => {
-                      setPrintPoId(poId);
-                      setPrintItemId(itemId);
-                      setPrintDefaultQty(defaultQty);
-                      setIsPrintLabelOpen(true);
-                    }}
-                    onOpenImageViewer={(url) => setViewingImageUrl(url)}
+                    onOpenPrintLabel={handleOpenPrintLabel}
+                    onOpenImageViewer={handleOpenImageViewer}
                   />
                 ))}
               </TableBody>
@@ -523,7 +529,11 @@ interface KcsOrderRowProps {
   onOpenImageViewer: (url: string) => void;
 }
 
-function KcsOrderRow({ prod, onOpenPrintLabel, onOpenImageViewer }: KcsOrderRowProps) {
+const KcsOrderRow = React.memo(function KcsOrderRow({
+  prod,
+  onOpenPrintLabel,
+  onOpenImageViewer,
+}: KcsOrderRowProps) {
   const queryClient = useQueryClient();
 
   const [isEditing, setIsEditing] = useState(false);
@@ -821,7 +831,7 @@ function KcsOrderRow({ prod, onOpenPrintLabel, onOpenImageViewer }: KcsOrderRowP
       {/* Flat layout image */}
       <TableCell className="align-top py-3">
         {layoutImageUrl ? (
-          <div className="w-20 h-20 border rounded bg-white overflow-hidden flex items-center justify-center cursor-zoom-in hover:ring-2 hover:ring-primary/40 transition-all shadow-sm">
+          <div className="w-20 h-20 border rounded bg-white overflow-hidden flex items-center justify-center cursor-zoom-in hover:ring-2 hover:ring-primary/40 transition-colors shadow-sm">
             <img
               src={layoutImageUrl}
               alt={prod.proofingOrderCode || "Flat layout"}
@@ -1163,4 +1173,4 @@ function KcsOrderRow({ prod, onOpenPrintLabel, onOpenImageViewer }: KcsOrderRowP
       </TableCell>
     </TableRow>
   );
-}
+});

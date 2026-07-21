@@ -28,7 +28,7 @@ const statusTransitions: Record<DesignStatus, DesignStatus[]> = {
   waiting_for_customer_approval: ["editing", "confirmed_for_printing"],
   editing: ["waiting_for_customer_approval"],
   confirmed_for_printing: [], // Final status - no further transitions allowed
-  returned: ["editing"], // Returned designs can only go to editing
+  returned: ["editing", "confirmed_for_printing"], // Returned designs can go to editing or directly be confirmed for printing
   cancelled: [], // Terminal status
 };
 

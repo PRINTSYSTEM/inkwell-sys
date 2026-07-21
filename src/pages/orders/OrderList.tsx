@@ -566,6 +566,8 @@ export default function OrderList() {
                                                     alt={
                                                       designCode || "Thiết kế"
                                                     }
+                                                    loading="lazy"
+                                                    decoding="async"
                                                     className="h-full w-full object-cover cursor-zoom-in"
                                                     onClick={(e) =>
                                                       handleImageClick(

@@ -24,15 +24,18 @@ function NotificationBell() {
 
   // Single query for both list AND count
   const { data, isLoading, refetch } = useNotifications({ 
-    pageSize: 10,
-    isRead: tab === "unread" ? false : undefined 
+    pageSize: 15,
   });
 
-  const unreadCount = data?.total ?? 0;
-  const notifications = data?.items ?? [];
   const markAllAsRead = useMarkAllNotificationsAsRead();
   const markAsRead = useMarkNotificationAsRead();
   const { connection } = useNotification();
+
+  const allNotifications = data?.items ?? [];
+  const notifications = tab === "unread" 
+    ? allNotifications.filter((n) => !n.isRead)
+    : allNotifications;
+  const unreadCount = allNotifications.filter((n) => !n.isRead).length;
 
   // Real-time SignalR listener
   useEffect(() => {

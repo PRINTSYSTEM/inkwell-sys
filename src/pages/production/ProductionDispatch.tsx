@@ -775,6 +775,8 @@ export default function ProductionDispatch() {
                             <img
                               src={thumbnail}
                               alt={po.code || "Bài bình"}
+                              loading="lazy"
+                              decoding="async"
                               className="h-full w-full object-cover cursor-zoom-in hover:scale-105 transition-transform"
                               onClick={() => setViewingImageUrl(getProofingOriginalUrl(po))}
                             />

@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
@@ -49,7 +49,7 @@ export default function ProductionListPage() {
   const [dateFilterType, setDateFilterType] = useState<string>("all");
   const [customFromDate, setCustomFromDate] = useState<string>("");
   const [customToDate, setCustomToDate] = useState<string>("");
-  const itemsPerPage = dateFilterType === "all" ? 10 : 1000;
+  const itemsPerPage = 10;
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
   // View tab
@@ -396,19 +396,19 @@ export default function ProductionListPage() {
     }
   };
 
-  const handlePreviousPage = () => {
+  const handlePreviousPage = useCallback(() => {
     if (currentPage > 1) {
       setCurrentPage((prev) => prev - 1);
     }
-  };
+  }, [currentPage]);
 
-  const handleNextPage = () => {
+  const handleNextPage = useCallback(() => {
     if (currentPage < totalPages) {
       setCurrentPage((prev) => prev + 1);
     }
-  };
+  }, [currentPage, totalPages]);
 
-  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePageInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     if (value === "") {
       setPageInput("");
@@ -418,20 +418,20 @@ export default function ProductionListPage() {
     if (!isNaN(page)) {
       setPageInput(page.toString());
     }
-  };
+  }, []);
 
-  const handlePageInputBlur = () => {
+  const handlePageInputBlur = useCallback(() => {
     const page = parseInt(pageInput, 10);
     if (!isNaN(page) && page >= 1 && page <= totalPages) {
       setCurrentPage(page);
     } else {
       setPageInput(currentPage.toString());
     }
-  };
+  }, [pageInput, totalPages, currentPage]);
 
-  const handleProductionClick = (productionId: number) => {
+  const handleProductionClick = useCallback((productionId: number) => {
     navigate(`/productions/${productionId}`);
-  };
+  }, [navigate]);
 
   const stats = useMemo(
     () => ({

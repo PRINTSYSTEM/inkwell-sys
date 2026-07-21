@@ -39,7 +39,10 @@ export const useNotifications = (params?: NotificationsParams) => {
       );
       return res.data;
     },
-    staleTime: 30 * 1000, // 30 seconds for real-time updates
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 };
 
@@ -55,6 +58,10 @@ export const useNotification = (id: number | null, enabled: boolean = true) => {
       return res.data;
     },
     enabled: enabled && id !== null,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 };
 
