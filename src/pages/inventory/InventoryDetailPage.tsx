@@ -41,7 +41,8 @@ function getTxnIcon(type: string) {
 export default function InventoryDetail() {
   const { id: idStr } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const id = idStr ? parseInt(idStr) : null;
+  const rawId = idStr ? parseInt(idStr) : null;
+  const id = rawId !== null && !Number.isNaN(rawId) ? rawId : null;
 
   const { data: material, isLoading: loadingMat } = useMaterial(id);
   const { data: historyData, isLoading: loadingHist } = useMaterialHistory(id);
