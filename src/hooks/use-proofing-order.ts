@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiRequest } from "@/lib/http";
 import { buildFilename, formatDateForFilename } from "@/utils/file-name";
-import { createCrudHooks } from "./use-base";
+import { createCrudHooks, getErrorMessage } from "./use-base";
 import { DesignTypeCountResponseSchema } from "@/Schema/generated";
 
 // Error type for API responses
@@ -552,12 +552,8 @@ export const useUploadProofingFile = () => {
 
       return result;
     } catch (err: unknown) {
-      const error = err as ApiError;
       toast.error("Lỗi", {
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Không thể tải lên file bình bài",
+        description: getErrorMessage(err, "Không thể tải lên file bình bài"),
       });
       throw err;
     }
@@ -605,12 +601,8 @@ export const useUploadProofingImage = () => {
 
       return result;
     } catch (err: unknown) {
-      const error = err as ApiError;
       toast.error("Lỗi", {
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Không thể upload ảnh bình bài",
+        description: getErrorMessage(err, "Không thể upload ảnh bình bài"),
       });
       throw err;
     }
@@ -660,12 +652,8 @@ export const useUploadProofingImages = () => {
 
       return result;
     } catch (err: unknown) {
-      const error = err as ApiError;
       toast.error("Lỗi", {
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Không thể tải lên ảnh bình bài",
+        description: getErrorMessage(err, "Không thể tải lên ảnh bình bài"),
       });
       throw err;
     }
@@ -704,12 +692,8 @@ export const useDeleteProofingImage = () => {
 
       return result;
     } catch (err: unknown) {
-      const error = err as ApiError;
       toast.error("Lỗi", {
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Không thể xóa ảnh bình bài",
+        description: getErrorMessage(err, "Không thể xóa ảnh bình bài"),
       });
       throw err;
     }
@@ -1386,10 +1370,7 @@ export const useAddDesignsToProofingOrder = () => {
         });
       } else {
         toast.error("Lỗi", {
-          description:
-            error.response?.data?.message ||
-            error.message ||
-            "Không thể thêm design",
+          description: getErrorMessage(error, "Không thể thêm design"),
         });
       }
     },
@@ -1442,10 +1423,7 @@ export const useRemoveDesignFromProofingOrder = () => {
     },
     onError: (error: ApiError) => {
       toast.error("Lỗi", {
-        description:
-          error.response?.data?.message ||
-          error.message ||
-          "Không thể xóa design",
+        description: getErrorMessage(error, "Không thể xóa design"),
       });
     },
   });
@@ -1480,10 +1458,7 @@ export const useRejectDesignFromProofingOrder = () => {
     },
     onError: (error: ApiError) => {
       toast.error("Lỗi", {
-        description:
-          error.response?.data?.message ||
-          error.message ||
-          "Không thể từ chối thiết kế",
+        description: getErrorMessage(error, "Không thể từ chối thiết kế"),
       });
     },
   });
@@ -1509,7 +1484,7 @@ export const useCancelProofingOrder = () => {
     },
     onError: (error: ApiError) => {
       toast.error("Hủy hình bài thất bại", {
-        description: error.response?.data?.message || error.message,
+        description: getErrorMessage(error, "Không thể hủy lệnh bình bài"),
       });
     },
   });
@@ -1597,7 +1572,7 @@ export const useUpdateProofingOrderScheduleStatus = () => {
     },
     onError: (error: ApiError) => {
       toast.error("Cập nhật trạng thái thất bại", {
-        description: error.response?.data?.message || error.message,
+        description: getErrorMessage(error, "Không thể cập nhật trạng thái"),
       });
     },
   });

@@ -70,12 +70,35 @@ export const getErrorMessage = (
   if (error && typeof error === "object" && "response" in error) {
     const axiosError = error as any;
     const data = axiosError.response?.data;
-    if (data && typeof data === "object") {
-      return data.Error || data.error || data.message || axiosError.message;
+    if (typeof data === "string" && data.trim()) {
+      return data.trim();
     }
+    if (data && typeof data === "object") {
+      const serverMsg =
+        data.Error ||
+        data.error ||
+        data.message ||
+        data.Message ||
+        data.detail ||
+        (typeof data.title === "string" && data.title !== "One or more validation errors occurred." ? data.title : undefined);
+      if (serverMsg && typeof serverMsg === "string" && serverMsg.trim()) {
+        return serverMsg.trim();
+      }
+    }
+    const status = axiosError.response?.status;
+    if (status === 400 && fallback !== "Đã xảy ra lỗi không xác định") return fallback;
+    if (status === 400) return "Yêu cầu không hợp lệ. Vui lòng kiểm tra lại thông tin.";
+    if (status === 401) return "Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.";
+    if (status === 403) return "Bạn không có quyền thực hiện thao tác này.";
+    if (status === 404) return "Không tìm thấy dữ liệu yêu cầu.";
+    if (status === 409) return "Dữ liệu bị trùng lặp hoặc đang được xử lý ở thao tác khác.";
+    if (status && status >= 500) return "Lỗi hệ thống máy chủ. Vui lòng thử lại sau.";
   }
 
   if (error instanceof Error) {
+    if (error.message.startsWith("Request failed with status code") || error.message.includes("Network Error")) {
+      return fallback;
+    }
     return error.message;
   }
 
