@@ -72,6 +72,7 @@ export const useMaterials = (
 };
 
 export const useMaterial = (id: number | null, enabled = true) => {
+  const isValid = id !== null && !Number.isNaN(id);
   return useQuery<MaterialResponse>({
     queryKey: materialKeys.detail(id!),
     queryFn: async () => {
@@ -80,7 +81,7 @@ export const useMaterial = (id: number | null, enabled = true) => {
       );
       return response.data;
     },
-    enabled: enabled && id !== null,
+    enabled: enabled && isValid,
   });
 };
 
@@ -89,6 +90,7 @@ export const useMaterialHistory = (
   params?: MaterialHistoryParams,
   enabled = true
 ) => {
+  const isValid = id !== null && !Number.isNaN(id);
   return useQuery<InventoryTransactionResponseIPaginate>({
     queryKey: materialKeys.history(id!, params || {}),
     queryFn: async () => {
@@ -100,7 +102,7 @@ export const useMaterialHistory = (
       );
       return response.data;
     },
-    enabled: enabled && id !== null,
+    enabled: enabled && isValid,
   });
 };
 
