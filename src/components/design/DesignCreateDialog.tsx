@@ -578,7 +578,9 @@ export default function DesignCreateDialog({
             {/* 5. Dimensions */}
             {!isPE_PA ? (
               <div className="space-y-2">
-                <Label className="font-semibold text-foreground">Kích thước (Dài x Cao {needsWidth && "x Rộng"}) (mm)</Label>
+                <Label className="font-semibold text-foreground">
+                  Kích thước ({needsWidth ? "Dài x Rộng x Cao" : "Dài x Cao"}) (mm)
+                </Label>
                 <div className="grid grid-cols-3 gap-2">
                   <div>
                     <Label className="text-xs text-muted-foreground">Dài *</Label>
@@ -588,17 +590,6 @@ export default function DesignCreateDialog({
                       placeholder="Dài"
                       value={length || ""}
                       onChange={(e) => setLength(e.target.value === "" ? 0 : Number(e.target.value))}
-                      className="h-11 bg-background"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Cao *</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      placeholder="Cao"
-                      value={height || ""}
-                      onChange={(e) => setHeight(e.target.value === "" ? 0 : Number(e.target.value))}
                       className="h-11 bg-background"
                     />
                   </div>
@@ -614,7 +605,19 @@ export default function DesignCreateDialog({
                         className="h-11 bg-background"
                       />
                     </div>
-                  ) : needsAdhesiveOffset ? (
+                  ) : null}
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Cao *</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="Cao"
+                      value={height || ""}
+                      onChange={(e) => setHeight(e.target.value === "" ? 0 : Number(e.target.value))}
+                      className="h-11 bg-background"
+                    />
+                  </div>
+                  {!needsWidth && needsAdhesiveOffset ? (
                     <div>
                       <Label className="text-xs text-muted-foreground">Mép dán</Label>
                       <Input
@@ -628,9 +631,9 @@ export default function DesignCreateDialog({
                         className="h-11 bg-background"
                       />
                     </div>
-                  ) : (
+                  ) : !needsWidth ? (
                     <div className="invisible" />
-                  )}
+                  ) : null}
                 </div>
               </div>
             ) : null}

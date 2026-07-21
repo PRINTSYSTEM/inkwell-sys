@@ -1482,35 +1482,21 @@ export default function DesignDetailPage() {
                           Số lượng
                         </p>
                         {isEditing && canEditDesign ? (
-                          currentStatus === "confirmed_for_printing" ? (
-                            <div className="space-y-1">
-                              <Input
-                                type="number"
-                                value={editFormData.requestedQuantity ?? ""}
-                                disabled
-                                className="h-9 w-full font-bold text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-900 border-slate-300 dark:border-slate-700 cursor-not-allowed opacity-80"
-                              />
-                              <p className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
-                                Không thể sửa số lượng khi ở trạng thái Đã chốt in
-                              </p>
-                            </div>
-                          ) : (
-                            <Input
-                              type="number"
-                              min="0"
-                              value={editFormData.requestedQuantity ?? ""}
-                              onChange={(e) =>
-                                setEditFormData((prev) => ({
-                                  ...prev,
-                                  requestedQuantity:
-                                    e.target.value === ""
-                                      ? undefined
-                                      : Number(e.target.value),
-                                }))
-                              }
-                              className="h-9 w-full font-bold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 focus-visible:ring-1"
-                            />
-                          )
+                          <Input
+                            type="number"
+                            min="0"
+                            value={editFormData.requestedQuantity ?? ""}
+                            onChange={(e) =>
+                              setEditFormData((prev) => ({
+                                ...prev,
+                                requestedQuantity:
+                                  e.target.value === ""
+                                    ? undefined
+                                    : Number(e.target.value),
+                              }))
+                            }
+                            className="h-9 w-full font-bold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-950 border-slate-300 dark:border-slate-700 focus-visible:ring-1"
+                          />
                         ) : (
                           <p className="font-bold text-sm text-blue-900 dark:text-blue-100">
                             {typeof d.requestedQuantity === "number"

@@ -881,7 +881,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
               {/* Kích thước */}
               <div className="space-y-3">
                 <Label className="text-sm font-medium">
-                  Kích thước (mm) <span className="text-destructive">*</span>
+                  Kích thước ({isHop || isTuiXepHong ? "Dài x Rộng x Cao" : "Dài x Cao"}) (mm) <span className="text-destructive">*</span>
                 </Label>
                 <div
                   className={`grid gap-4 ${
@@ -910,24 +910,6 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                       disabled={!!isExistingDesign}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">
-                      Cao <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      type="number"
-                      placeholder="0"
-                      value={formData.height || ""}
-                      onChange={(e) =>
-                        updateField(
-                          "height",
-                          e.target.value === "" ? 0 : Number(e.target.value),
-                        )
-                      }
-                      className="h-11"
-                      disabled={!!isExistingDesign}
-                    />
-                  </div>
                   {(isHop || isTuiXepHong) && (
                     <div className="space-y-2">
                       <Label className="text-xs text-muted-foreground">
@@ -948,6 +930,24 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                       />
                     </div>
                   )}
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">
+                      Cao <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      type="number"
+                      placeholder="0"
+                      value={formData.height || ""}
+                      onChange={(e) =>
+                        updateField(
+                          "height",
+                          e.target.value === "" ? 0 : Number(e.target.value),
+                        )
+                      }
+                      className="h-11"
+                      disabled={!!isExistingDesign}
+                    />
+                  </div>
                   {/* Mép dán - hiển thị cho nhãn giấy và decal, cùng hàng với kích thước */}
                   {(isNhan || isDecal) && !isHop && !isTuiXepHong && (
                     <div className="space-y-2">
