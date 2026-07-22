@@ -217,6 +217,8 @@ export const useAvailableOrderDetailsForProofing = (
             thumbnailUrl: (design as any).designThumbnailUrl || design.designImageUrl || "",
             largeImageUrl: design.designImageUrl || "",
             createdAt: od.createdAt || design.createdAt || "",
+            designCreatedAt: design.createdAt || undefined,
+            designUpdatedAt: design.updatedAt || undefined,
             designId: od.designId || design?.id, // Store designId for fallback fetching if needed
              isUrgent: (od as any).isUrgent ?? (od as any).readyDesign?.isUrgent ?? (design as any).isUrgent ?? false,
             orderCode: od.orderCode || undefined,

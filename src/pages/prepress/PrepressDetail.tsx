@@ -803,6 +803,8 @@ export default function ProofingOrderDetailPage() {
       customerName: "",
       thumbnailUrl: firstDesign.designImageUrl || "",
       createdAt: firstDesign.createdAt || "",
+      designCreatedAt: firstDesign.createdAt || undefined,
+      designUpdatedAt: firstDesign.updatedAt || undefined,
       designId: firstDesign.id,
       laminationType: firstDesign.laminationType ?? undefined,
       processClassificationOptionName:

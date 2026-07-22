@@ -331,6 +331,47 @@ export function DesignTable({
                         </div>
                       </div>
 
+                      {(design.designCreatedAt || design.designUpdatedAt) && (
+                        <div className="space-y-1.5">
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            Thời gian thiết kế
+                          </p>
+                          <div className="bg-muted/30 rounded-md p-2 space-y-1 border text-[11px]">
+                            {design.designCreatedAt && (
+                              <div className="flex justify-between items-center gap-4">
+                                <span className="text-muted-foreground whitespace-nowrap">Ngày tạo:</span>
+                                <span className="font-medium text-foreground text-right">
+                                  {new Date(design.designCreatedAt).toLocaleString("vi-VN", {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    second: "2-digit",
+                                  })}
+                                </span>
+                              </div>
+                            )}
+                            {design.designUpdatedAt && (
+                              <div className="flex justify-between items-center gap-4">
+                                <span className="text-muted-foreground whitespace-nowrap">Cập nhật cuối:</span>
+                                <span className="font-medium text-foreground text-right">
+                                  {new Date(design.designUpdatedAt).toLocaleString("vi-VN", {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    second: "2-digit",
+                                  })}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                       {(design.processClassificationOptionName ||
                         design.laminationType ||
                         (design.specification &&
