@@ -90,7 +90,7 @@ export const MENU_ITEMS: MenuItem[] = [
         title: "Danh sách thiết kế",
         icon: Eye,
         path: ROUTE_PATHS.DESIGN.ALL,
-        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.DESIGN_LEAD],
+        allowedRoles: [ROLE.ADMIN, ROLE.MANAGER, ROLE.DESIGN_LEAD, ROLE.SALE],
       },
       {
         id: "design-my-work",
