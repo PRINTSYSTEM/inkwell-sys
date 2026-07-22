@@ -354,36 +354,44 @@ export function DetailDesignsListCard({
                       </div>
                     </div>
 
-                    {(pod.design?.processClassification ||
-                      pod.design?.sidesClassification ||
-                      pod.design?.laminationType) && (
-                        <div className="pt-2 flex flex-wrap gap-1 justify-between border-t space-y-1">
-                          {pod.design?.processClassification && (
-                            <Badge variant="secondary" className="text-xs">
-                              <span className="text-muted-foreground">
-                                Quy cách:
-                              </span>
-                              <span className="ml-2">
-                                {processClassificationLabels[
-                                  pod.design.processClassification
-                                ] || pod.design.processClassification}
-                              </span>
-                            </Badge>
-                          )}
-                          {pod.design?.laminationType && (
-                            <Badge variant="secondary" className="text-xs">
-                              <span className="text-muted-foreground">
-                                Cán màng:
-                              </span>
-                              <span className="ml-2">
-                                {laminationTypeLabels[
-                                  pod.design.laminationType
-                                ] || pod.design.laminationType}
-                              </span>
-                            </Badge>
-                          )}
-                        </div>
-                      )}
+                    <div className="pt-2 border-t space-y-1.5 text-xs">
+                      <div className="flex justify-between items-center gap-4">
+                        <span className="text-muted-foreground">Ngày tạo TK:</span>
+                        <span className="font-medium text-foreground">
+                          {pod.design?.createdAt
+                            ? new Date(pod.design.createdAt).toLocaleString("vi-VN", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                second: "2-digit",
+                              })
+                            : "—"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center gap-4">
+                        <span className="text-muted-foreground">Thao tác cuối:</span>
+                        <span className="font-medium text-foreground">
+                          {pod.design?.updatedAt
+                            ? new Date(pod.design.updatedAt).toLocaleString("vi-VN", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                year: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                second: "2-digit",
+                              })
+                            : "—"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center gap-4">
+                        <span className="text-muted-foreground">Mã đơn hàng:</span>
+                        <span className="font-semibold text-primary font-mono">
+                          {pod.design?.latestOrderCode || "—"}
+                        </span>
+                      </div>
+                    </div>
 
                     {/* Full Specifications */}
                     {(() => {
