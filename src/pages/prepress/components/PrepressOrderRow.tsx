@@ -449,10 +449,9 @@ export const PrepressOrderRow = React.memo(function PrepressOrderRow({
         </TableCell>
 
         <TableCell className="py-3 font-medium align-top whitespace-nowrap text-[11px]">
-          <div className="flex flex-col gap-1 text-slate-700 dark:text-slate-300">
+          <div className="flex flex-col gap-0.5 text-slate-700 dark:text-slate-300">
             {order.status === "completed" ? (
               <div>
-                <span className="font-semibold text-slate-500"> </span>
                 {order.completedAt
                   ? format(new Date(order.completedAt), "HH:mm:ss dd/MM/yyyy")
                   : order.updatedAt
@@ -461,6 +460,11 @@ export const PrepressOrderRow = React.memo(function PrepressOrderRow({
               </div>
             ) : (
               <span className="text-muted-foreground italic">Chưa hoàn thành</span>
+            )}
+            {order.createdBy && (
+              <span className="text-[10px] text-muted-foreground/80 mt-0.5">
+                Tạo bởi: {order.createdBy.fullName || order.createdBy.username || "—"}
+              </span>
             )}
           </div>
         </TableCell>
