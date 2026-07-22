@@ -43,6 +43,12 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -835,9 +841,80 @@ export default function ReadyDesignListPage() {
                           </div>
                         </TableCell>
                         <TableCell className={cn("py-2 text-xs", design.isUrgent ? "text-red-650/80 dark:text-red-350/80" : "text-muted-foreground")}>
-                          {design.updatedAt
-                            ? new Date(design.updatedAt).toLocaleDateString("vi-VN")
-                            : "—"}
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (design.designId) {
+                                      navigate(`/design/detail/${design.designId}`);
+                                    }
+                                  }}
+                                  className="text-left hover:text-primary hover:underline transition-colors focus:outline-none flex flex-col font-mono"
+                                >
+                                  {design.updatedAt ? (
+                                    (() => {
+                                      const date = new Date(design.updatedAt);
+                                      if (isNaN(date.getTime())) return "—";
+                                      const day = String(date.getDate()).padStart(2, "0");
+                                      const month = String(date.getMonth() + 1).padStart(2, "0");
+                                      const year = date.getFullYear();
+                                      const hours = String(date.getHours()).padStart(2, "0");
+                                      const minutes = String(date.getMinutes()).padStart(2, "0");
+                                      const seconds = String(date.getSeconds()).padStart(2, "0");
+                                      return (
+                                        <>
+                                          <span>{day}/{month}/{year}</span>
+                                          <span className="text-[10px] opacity-85 text-muted-foreground/80">{hours}:{minutes}:{seconds}</span>
+                                        </>
+                                      );
+                                    })()
+                                  ) : (
+                                    "—"
+                                  )}
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent className="p-3 max-w-[280px] bg-popover text-popover-foreground border shadow-md rounded-md space-y-1.5 text-xs">
+                                <div className="font-semibold border-b pb-1 text-[11px] uppercase tracking-wider text-muted-foreground">
+                                  Thời gian thiết kế
+                                </div>
+                                <div className="space-y-1.5 text-xs text-left">
+                                  <div className="flex justify-between gap-6">
+                                    <span className="text-muted-foreground whitespace-nowrap">Ngày tạo:</span>
+                                    <span className="font-medium text-foreground">
+                                      {design.createdAt
+                                        ? new Date(design.createdAt).toLocaleString("vi-VN", {
+                                            day: "2-digit",
+                                            month: "2-digit",
+                                            year: "numeric",
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                            second: "2-digit",
+                                          })
+                                        : "—"}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between gap-6">
+                                    <span className="text-muted-foreground whitespace-nowrap">Cập nhật cuối:</span>
+                                    <span className="font-medium text-foreground">
+                                      {design.updatedAt
+                                        ? new Date(design.updatedAt).toLocaleString("vi-VN", {
+                                            day: "2-digit",
+                                            month: "2-digit",
+                                            year: "numeric",
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                            second: "2-digit",
+                                          })
+                                        : "—"}
+                                    </span>
+                                  </div>
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </TableCell>
                         <TableCell className="py-2 text-right pr-6" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-1">
