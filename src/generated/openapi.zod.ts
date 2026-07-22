@@ -2641,6 +2641,77 @@ const UpdateMaterialTypeRequest = z
       .nullable(),
   })
   .partial();
+const ImportCustomerOpeningBalanceItem = z
+  .object({
+    customerCode: z.string().nullable(),
+    amount: z.number(),
+    asOfDate: z.string().datetime({ offset: true }),
+    note: z.string().nullable(),
+  })
+  .partial();
+const ImportErrorDetail = z
+  .object({
+    rowIndex: z.number().int(),
+    code: z.string().nullable(),
+    message: z.string().nullable(),
+  })
+  .partial();
+const ImportResultResponse = z
+  .object({
+    successCount: z.number().int(),
+    errorCount: z.number().int(),
+    errors: z.array(ImportErrorDetail).nullable(),
+  })
+  .partial();
+const CustomerOpeningBalanceResponse = z
+  .object({
+    id: z.number().int(),
+    customerId: z.number().int(),
+    customerCode: z.string().nullable(),
+    customerName: z.string().nullable(),
+    amount: z.number(),
+    asOfDate: z.string().datetime({ offset: true }),
+    note: z.string().nullable(),
+    createdById: z.number().int(),
+    createdByName: z.string().nullable(),
+    createdAt: z.string().datetime({ offset: true }),
+  })
+  .partial();
+const UpsertCustomerOpeningBalanceRequest = z
+  .object({
+    amount: z.number(),
+    asOfDate: z.string().datetime({ offset: true }),
+    note: z.string().nullable(),
+  })
+  .partial();
+const ImportVendorOpeningBalanceItem = z
+  .object({
+    vendorCode: z.string().nullable(),
+    amount: z.number(),
+    asOfDate: z.string().datetime({ offset: true }),
+    note: z.string().nullable(),
+  })
+  .partial();
+const VendorOpeningBalanceResponse = z
+  .object({
+    id: z.number().int(),
+    vendorId: z.number().int(),
+    vendorName: z.string().nullable(),
+    amount: z.number(),
+    asOfDate: z.string().datetime({ offset: true }),
+    note: z.string().nullable(),
+    createdById: z.number().int(),
+    createdByName: z.string().nullable(),
+    createdAt: z.string().datetime({ offset: true }),
+  })
+  .partial();
+const UpsertVendorOpeningBalanceRequest = z
+  .object({
+    amount: z.number(),
+    asOfDate: z.string().datetime({ offset: true }),
+    note: z.string().nullable(),
+  })
+  .partial();
 const CreateDesignRequest = z.object({
   designId: z.number().int().nullish(),
   sharedAddressId: z.number().int().nullish(),
@@ -3798,6 +3869,7 @@ const ReadyDesignResponse = z
     updatedAt: z.string().datetime({ offset: true }).nullable(),
     notes: z.string().nullable(),
     isUrgent: z.boolean(),
+    isPendingOrderUpdate: z.boolean(),
   })
   .partial();
 const ReadyDesignResponsePaginate = z
@@ -4818,6 +4890,14 @@ export const schemas = {
   MaterialTypeItem,
   BulkCreateMaterialTypeRequest,
   UpdateMaterialTypeRequest,
+  ImportCustomerOpeningBalanceItem,
+  ImportErrorDetail,
+  ImportResultResponse,
+  CustomerOpeningBalanceResponse,
+  UpsertCustomerOpeningBalanceRequest,
+  ImportVendorOpeningBalanceItem,
+  VendorOpeningBalanceResponse,
+  UpsertVendorOpeningBalanceRequest,
   CreateDesignRequest,
   CreateOrderRequest,
   SharedAddressResponse,
@@ -11060,6 +11140,188 @@ const endpoints = makeApi([
     response: z.void(),
   },
   {
+    method: "get",
+    path: "/api/opening-balances/customers",
+    alias: "getApiopeningBalancescustomers",
+    requestFormat: "json",
+    response: z.array(CustomerOpeningBalanceResponse),
+  },
+  {
+    method: "get",
+    path: "/api/opening-balances/customers/:customerId",
+    alias: "getApiopeningBalancescustomersCustomerId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "customerId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: CustomerOpeningBalanceResponse,
+    errors: [
+      {
+        status: 404,
+        description: `Not Found`,
+        schema: z
+          .object({
+            type: z.string().nullable(),
+            title: z.string().nullable(),
+            status: z.number().int().nullable(),
+            detail: z.string().nullable(),
+            instance: z.string().nullable(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+  {
+    method: "put",
+    path: "/api/opening-balances/customers/:customerId",
+    alias: "putApiopeningBalancescustomersCustomerId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpsertCustomerOpeningBalanceRequest,
+      },
+      {
+        name: "customerId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: CustomerOpeningBalanceResponse,
+  },
+  {
+    method: "delete",
+    path: "/api/opening-balances/customers/:customerId",
+    alias: "deleteApiopeningBalancescustomersCustomerId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "customerId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/opening-balances/customers/export-template",
+    alias: "getApiopeningBalancescustomersexportTemplate",
+    requestFormat: "json",
+    response: z.instanceof(File),
+  },
+  {
+    method: "post",
+    path: "/api/opening-balances/customers/import",
+    alias: "postApiopeningBalancescustomersimport",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: z.array(ImportCustomerOpeningBalanceItem),
+      },
+    ],
+    response: ImportResultResponse,
+  },
+  {
+    method: "get",
+    path: "/api/opening-balances/vendors",
+    alias: "getApiopeningBalancesvendors",
+    requestFormat: "json",
+    response: z.array(VendorOpeningBalanceResponse),
+  },
+  {
+    method: "get",
+    path: "/api/opening-balances/vendors/:vendorId",
+    alias: "getApiopeningBalancesvendorsVendorId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "vendorId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: VendorOpeningBalanceResponse,
+    errors: [
+      {
+        status: 404,
+        description: `Not Found`,
+        schema: z
+          .object({
+            type: z.string().nullable(),
+            title: z.string().nullable(),
+            status: z.number().int().nullable(),
+            detail: z.string().nullable(),
+            instance: z.string().nullable(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+  {
+    method: "put",
+    path: "/api/opening-balances/vendors/:vendorId",
+    alias: "putApiopeningBalancesvendorsVendorId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpsertVendorOpeningBalanceRequest,
+      },
+      {
+        name: "vendorId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: VendorOpeningBalanceResponse,
+  },
+  {
+    method: "delete",
+    path: "/api/opening-balances/vendors/:vendorId",
+    alias: "deleteApiopeningBalancesvendorsVendorId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "vendorId",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/opening-balances/vendors/export-template",
+    alias: "getApiopeningBalancesvendorsexportTemplate",
+    requestFormat: "json",
+    response: z.instanceof(File),
+  },
+  {
+    method: "post",
+    path: "/api/opening-balances/vendors/import",
+    alias: "postApiopeningBalancesvendorsimport",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: z.array(ImportVendorOpeningBalanceItem),
+      },
+    ],
+    response: ImportResultResponse,
+  },
+  {
     method: "post",
     path: "/api/orders",
     alias: "postApiorders",
@@ -13584,6 +13846,20 @@ const endpoints = makeApi([
     method: "delete",
     path: "/api/ready-designs/:id",
     alias: "deleteApireadyDesignsId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "post",
+    path: "/api/ready-designs/:id/reset-available-quantity",
+    alias: "postApireadyDesignsIdresetAvailableQuantity",
     requestFormat: "json",
     parameters: [
       {

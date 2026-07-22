@@ -37,6 +37,7 @@ export * from "./return-note.schema";
 export * from "./generated-form-body";
 export * from "./defect-record.schema";
 export * from "./system-setting.schema";
+export * from "./opening-balance.schema";
 
 
 // Re-export zod for convenience

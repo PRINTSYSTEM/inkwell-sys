@@ -16,7 +16,9 @@ import {
   ChevronRight,
   ChevronLeft,
   Calendar,
+  Scale,
 } from "lucide-react";
+import { ROUTE_PATHS } from "@/constants/route.constant";
 import { DateRangePicker } from "@/components/forms/DateRangePicker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -91,7 +93,9 @@ export default function ARSummaryPage() {
     if (!customerId) return;
     setExportingCustomerId(customerId);
     try {
-      await exportCustomerDebt(customerId);
+      const month = dateRange?.from ? dateRange.from.getMonth() + 1 : new Date().getMonth() + 1;
+      const year = dateRange?.from ? dateRange.from.getFullYear() : new Date().getFullYear();
+      await exportCustomerDebt(customerId, { month, year });
     } catch (err) {
       console.error(err);
     } finally {
@@ -240,6 +244,15 @@ export default function ARSummaryPage() {
             />
           </div>
           <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(ROUTE_PATHS.ACCOUNTING.OPENING_BALANCES)}
+              className="h-9 border-blue-200 hover:bg-blue-50 hover:text-blue-700 text-blue-600 dark:border-blue-900 dark:hover:bg-blue-950/20"
+            >
+              <Scale className="h-4 w-4 mr-2" />
+              Số dư đầu kỳ
+            </Button>
             <Button
               variant="outline"
               size="sm"

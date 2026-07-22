@@ -19,8 +19,98 @@ export const ProductionResponseSchema =
 export type ProductionResponse = z.infer<typeof ProductionResponseSchema>;
 
 // ===== ProductionOrderResponse =====
-export const ProductionOrderResponseSchema =
-  GenProductionOrderResponseSchema.passthrough();
+export const ProductionOrderResponseSchema = GenProductionOrderResponseSchema.extend({
+  isUrgent: z.boolean().nullish(),
+  proofingOrder: z.object({
+    id: z.number(),
+    code: z.string().nullable().optional(),
+    isUrgent: z.boolean().nullish(),
+    imageUrl: z.string().nullable().optional(),
+    thumbnailUrl: z.string().nullable().optional(),
+    notes: z.string().nullable().optional(),
+    additionalNotes: z.string().nullable().optional(),
+    customPaperSize: z.string().nullable().optional(),
+    paperSizeId: z.number().nullable().optional(),
+    paperSize: z.object({
+      id: z.number(),
+      name: z.string(),
+      width: z.number().optional(),
+      height: z.number().optional(),
+    }).nullable().optional(),
+    basisWeight: z.number().nullable().optional(),
+    rollWidth: z.number().nullable().optional(),
+    designTypeId: z.number().nullable().optional(),
+    designType: z.object({
+      id: z.number(),
+      code: z.string().nullable().optional(),
+      name: z.string().nullable().optional(),
+    }).nullable().optional(),
+    processClassification: z.string().nullable().optional(),
+    laminationType: z.string().nullable().optional(),
+    laminationTypeName: z.string().nullable().optional(),
+    completedAt: z.string().nullable().optional(),
+    updatedAt: z.string().nullable().optional(),
+    plateExport: z.object({
+      id: z.number(),
+      plateCount: z.number().nullable().optional(),
+      productionMethod: z.string().nullable().optional(),
+      printingVendorName: z.string().nullable().optional(),
+      printingVendor: z.object({
+        id: z.number(),
+        name: z.string().nullable().optional(),
+      }).nullable().optional(),
+      isReceived: z.boolean().nullable().optional(),
+      receivedAt: z.string().nullable().optional(),
+      estimatedReceiveAt: z.string().nullable().optional(),
+      notes: z.string().nullable().optional(),
+      plate: z.object({
+        notes: z.string().nullable().optional(),
+      }).nullable().optional(),
+    }).nullable().optional(),
+    images: z.array(z.object({
+      id: z.number(),
+      imageUrl: z.string(),
+      thumbnailUrl: z.string().nullable().optional(),
+    })).nullable().optional(),
+    proofingOrderDesigns: z.array(z.object({
+      isUrgent: z.boolean().nullable().optional(),
+      design: z.object({
+        designType: z.object({
+          id: z.number(),
+          code: z.string().nullable().optional(),
+          name: z.string().nullable().optional(),
+        }).nullable().optional(),
+        basisWeight: z.number().nullable().optional(),
+        laminationType: z.string().nullable().optional(),
+        isUrgent: z.boolean().nullable().optional(),
+      }).nullable().optional(),
+      quantity: z.number().nullable().optional(),
+      itemsPerSheet: z.number().nullable().optional(),
+    })).nullable().optional(),
+    proofingOrderDies: z.array(z.object({
+      id: z.number(),
+      code: z.string().nullable().optional(),
+      size: z.string().nullable().optional(),
+      isReceived: z.boolean().nullable().optional(),
+      isNewDie: z.boolean().nullable().optional(),
+      receivedAt: z.string().nullable().optional(),
+      estimatedReceiveAt: z.string().nullable().optional(),
+      notes: z.string().nullable().optional(),
+      dieExportNotes: z.string().nullable().optional(),
+      die: z.object({
+        id: z.number(),
+        code: z.string().nullable().optional(),
+        length: z.number().nullable().optional(),
+        width: z.number().nullable().optional(),
+        height: z.number().nullable().optional(),
+        size: z.string().nullable().optional(),
+        location: z.string().nullable().optional(),
+        imageUrl: z.string().nullable().optional(),
+        notes: z.string().nullable().optional(),
+      }).nullable().optional(),
+    })).nullable().optional(),
+  }).nullable().optional(),
+}).passthrough();
 export type ProductionOrderResponse = z.infer<
   typeof ProductionOrderResponseSchema
 >;

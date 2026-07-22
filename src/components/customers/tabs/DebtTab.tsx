@@ -17,11 +17,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileSpreadsheet, Loader2 } from "lucide-react";
+import { FileSpreadsheet, Loader2, Scale } from "lucide-react";
 import {
   useCustomerDebtStatement,
   useExportDebtComparison,
 } from "@/hooks/use-customer";
+import { useCustomerOpeningBalances } from "@/hooks/use-opening-balance";
+import { EditOpeningBalanceDialog } from "@/pages/accounting/opening-balances/components/EditOpeningBalanceDialog";
 
 interface DebtTabProps {
   customerId: number;
@@ -34,6 +36,13 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
   );
   const [selectedYear, setSelectedYear] = useState<number>(
     new Date().getFullYear(),
+  );
+
+  const [isEditOpeningOpen, setIsEditOpeningOpen] = useState(false);
+
+  const { data: customerOpeningBalances } = useCustomerOpeningBalances();
+  const openingBalance = customerOpeningBalances?.find(
+    (item) => item.customerId === customerId
   );
 
   const { data: statementData, isLoading } = useCustomerDebtStatement(
@@ -73,7 +82,7 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
   const items = statementData?.items || [];
 
   const handleExport = () => {
-    exportDebtComparison(customerId);
+    exportDebtComparison(customerId, { month: selectedMonth, year: selectedYear });
   };
 
   return (
@@ -117,6 +126,16 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
                 ))}
               </SelectContent>
             </Select>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs font-semibold border-blue-200 hover:bg-blue-50 hover:text-blue-750 text-blue-600 dark:border-blue-900 dark:hover:bg-blue-950/20"
+              onClick={() => setIsEditOpeningOpen(true)}
+            >
+              <Scale className="h-3.5 w-3.5 mr-1" />
+              Thiết lập số dư đầu kỳ
+            </Button>
 
             <Button
               variant="outline"
@@ -478,6 +497,12 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
           </CardContent>
         </Card>
       </div>
+      <EditOpeningBalanceDialog
+        open={isEditOpeningOpen}
+        onOpenChange={setIsEditOpeningOpen}
+        type="customer"
+        item={openingBalance || { customerId }}
+      />
     </div>
   );
 }

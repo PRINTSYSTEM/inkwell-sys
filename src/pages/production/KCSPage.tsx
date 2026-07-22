@@ -9,7 +9,7 @@ import {
   KcsDesignTypeSummaryResponse,
 } from "@/hooks/use-kcs";
 import { useBulkUpdateProductionOrderItems } from "@/hooks/use-production";
-import { useDefectRecordsByProductionOrder, defectRecordKeys } from "@/hooks/use-defect-record";
+import { defectRecordKeys } from "@/hooks/use-defect-record";
 import { useAuth } from "@/hooks/use-auth";
 import { useDesignTypeList } from "@/hooks/use-design-type";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -553,12 +553,7 @@ const KcsOrderRow = React.memo(function KcsOrderRow({
 
   const { mutateAsync: bulkUpdateItems, isPending: isSaving } = useBulkUpdateProductionOrderItems();
 
-  const { data: defectRecordsData } = useDefectRecordsByProductionOrder(
-    prod.productionOrderId || null,
-    undefined,
-    !!prod.productionOrderId
-  );
-  const defectRecords = defectRecordsData?.items || [];
+  const defectRecords = prod.defectRecords || [];
 
   // Load user options for defect worker selection
   const loadUsersOptions = async (search?: string) => {
@@ -817,6 +812,20 @@ const KcsOrderRow = React.memo(function KcsOrderRow({
     return null;
   }, [prod.proofingOrderImages]);
 
+  // Get layout thumbnail URL
+  const layoutImageThumbnailUrl = useMemo(() => {
+    if (prod.proofingOrderImages && prod.proofingOrderImages.length > 0) {
+      const img = prod.proofingOrderImages[0];
+      const url = img.thumbnailUrl || img.imageUrl;
+      if (url) {
+        if (url.startsWith("http")) return url;
+        const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "");
+        return `${baseUrl}/${url.replace(/^\//, "")}`;
+      }
+    }
+    return null;
+  }, [prod.proofingOrderImages]);
+
   // Check if KCS has been completely finished for this row
   const isChecked = prod.items && prod.items.length > 0 && prod.items.every((i) => (i.outputQty ?? 0) > 0);
 
@@ -833,7 +842,7 @@ const KcsOrderRow = React.memo(function KcsOrderRow({
         {layoutImageUrl ? (
           <div className="w-20 h-20 border rounded bg-white overflow-hidden flex items-center justify-center cursor-zoom-in hover:ring-2 hover:ring-primary/40 transition-colors shadow-sm">
             <img
-              src={layoutImageUrl}
+              src={layoutImageThumbnailUrl || layoutImageUrl}
               alt={prod.proofingOrderCode || "Flat layout"}
               loading="lazy"
               decoding="async"
@@ -965,14 +974,15 @@ const KcsOrderRow = React.memo(function KcsOrderRow({
                 >
                   {/* Left part: item image & text details */}
                   <div className="flex gap-2 min-w-0">
-                    {item.designImageUrl ? (
+                    {item.designImageUrl || item.designThumbnailUrl ? (
                       <div className="w-10 h-10 border rounded bg-white overflow-hidden flex items-center justify-center shrink-0 cursor-zoom-in hover:ring-1 hover:ring-primary/20">
                         <img
                           src={
-                            item.designImageUrl.startsWith("http")
-                              ? item.designImageUrl
-                              : `${(import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "")
-                              }/${item.designImageUrl.replace(/^\//, "")}`
+                            (() => {
+                              const url = item.designThumbnailUrl || item.designImageUrl || "";
+                              if (url.startsWith("http")) return url;
+                              return `${(import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "")}/${url.replace(/^\//, "")}`;
+                            })()
                           }
                           alt={item.designCode || "design"}
                           loading="lazy"
@@ -980,17 +990,14 @@ const KcsOrderRow = React.memo(function KcsOrderRow({
                           width={40}
                           height={40}
                           className="w-full h-full object-contain"
-                          onClick={() =>
+                          onClick={() => {
+                            const url = item.designImageUrl || item.designThumbnailUrl || "";
                             onOpenImageViewer(
-                              item.designImageUrl!.startsWith("http")
-                                ? item.designImageUrl!
-                                : `${(import.meta.env.VITE_API_BASE_URL || "").replace(
-                                  /\/api\/?$/,
-                                  ""
-                                )
-                                }/${item.designImageUrl!.replace(/^\//, "")}`
-                            )
-                          }
+                              url.startsWith("http")
+                                ? url
+                                : `${(import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "")}/${url.replace(/^\//, "")}`
+                            );
+                          }}
                         />
                       </div>
                     ) : (

@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-07-20T06:07:26.340Z */
+/* Generated at: 2026-07-22T06:28:42.413Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -143,6 +143,7 @@ export const CustomerDebtStatementResponseSchema = schemas.CustomerDebtStatement
 export const CustomerDebtSummaryResponseSchema = schemas.CustomerDebtSummaryResponse;
 export const CustomerFavoriteStatsResponseSchema = schemas.CustomerFavoriteStatsResponse;
 export const CustomerMonthlyDebtResponseSchema = schemas.CustomerMonthlyDebtResponse;
+export const CustomerOpeningBalanceResponseSchema = schemas.CustomerOpeningBalanceResponse;
 export const CustomerOrderHistoryResponseSchema = schemas.CustomerOrderHistoryResponse;
 export const CustomerOrderHistoryResponsePaginateSchema = schemas.CustomerOrderHistoryResponsePaginate;
 export const CustomerResponseSchema = schemas.CustomerResponse;
@@ -191,6 +192,10 @@ export const FailureReasonResponseSchema = schemas.FailureReasonResponse;
 export const FinanceAccountFlatResponseSchema = schemas.FinanceAccountFlatResponse;
 export const FinanceAccountNodeResponseSchema = schemas.FinanceAccountNodeResponse;
 export const FrequentProductResponseSchema = schemas.FrequentProductResponse;
+export const ImportCustomerOpeningBalanceItemSchema = schemas.ImportCustomerOpeningBalanceItem;
+export const ImportErrorDetailSchema = schemas.ImportErrorDetail;
+export const ImportResultResponseSchema = schemas.ImportResultResponse;
+export const ImportVendorOpeningBalanceItemSchema = schemas.ImportVendorOpeningBalanceItem;
 export const InventoryBalanceResponseSchema = schemas.InventoryBalanceResponse;
 export const InventoryBalanceResponseIPaginateSchema = schemas.InventoryBalanceResponseIPaginate;
 export const InventorySummaryItemResponseSchema = schemas.InventorySummaryItemResponse;
@@ -381,12 +386,15 @@ export const UpdateSupplierTypeRequestSchema = schemas.UpdateSupplierTypeRequest
 export const UpdateSystemSettingRequestSchema = schemas.UpdateSystemSettingRequest;
 export const UpdateUserRequestSchema = schemas.UpdateUserRequest;
 export const UpdateVendorRequestSchema = schemas.UpdateVendorRequest;
+export const UpsertCustomerOpeningBalanceRequestSchema = schemas.UpsertCustomerOpeningBalanceRequest;
+export const UpsertVendorOpeningBalanceRequestSchema = schemas.UpsertVendorOpeningBalanceRequest;
 export const UserInfoSchema = schemas.UserInfo;
 export const UserKpiResponseSchema = schemas.UserKpiResponse;
 export const UserResponseSchema = schemas.UserResponse;
 export const UserResponsePaginateSchema = schemas.UserResponsePaginate;
 export const VendorCountOptionResponseSchema = schemas.VendorCountOptionResponse;
 export const VendorCountOptionResponseIPaginateSchema = schemas.VendorCountOptionResponseIPaginate;
+export const VendorOpeningBalanceResponseSchema = schemas.VendorOpeningBalanceResponse;
 export const VendorReceiptStatisticsRowSchema = schemas.VendorReceiptStatisticsRow;
 export const VendorReceiptStatisticsRowIPaginateSchema = schemas.VendorReceiptStatisticsRowIPaginate;
 export const VendorReconciliationItemResponseSchema = schemas.VendorReconciliationItemResponse;
