@@ -48,7 +48,6 @@ import type {
   ProductionStepResponse,
   ProofingOrderResponse,
 } from "@/Schema";
-import { useProofingOrder } from "@/hooks/use-proofing-order";
 import {
   useUpdateProductionStep,
   useUpdateProductionOrderItem,
@@ -714,12 +713,8 @@ const ProductionTableRow = React.memo(
 
     const isDraft = !prod.id;
 
-    const { data: proofingOrderData, isLoading: isProofingLoading } =
-      useProofingOrder(
-        prod.proofingOrderId || null,
-        !!prod.proofingOrderId && isExpanded,
-      );
-    const proofingOrder = (proofingOrderData || prod.proofingOrder) as any;
+    const isProofingLoading = false;
+    const proofingOrder = prod.proofingOrder as any;
 
     const isOrderUrgent = React.useMemo(() => {
       return (
@@ -748,41 +743,47 @@ const ProductionTableRow = React.memo(
       );
     }, [searchHighlight, proofingOrder?.code, proofingOrder?.id, prod.id]);
 
-    const orderImages = React.useMemo(() => {
-      const urls: string[] = [];
+    const formatUrl = (url: string | null | undefined) => {
+      if (!url) return "";
+      if (url.startsWith("http://") || url.startsWith("https://")) return url;
+      const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "");
+      const cleanUrl = url.startsWith("/") ? url : `/${url}`;
+      return baseUrl ? `${baseUrl}${cleanUrl}` : cleanUrl;
+    };
 
-      const formatUrl = (url: string | null | undefined) => {
-        if (!url) return "";
-        if (url.startsWith("http://") || url.startsWith("https://")) return url;
-        const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "");
-        const cleanUrl = url.startsWith("/") ? url : `/${url}`;
-        return baseUrl ? `${baseUrl}${cleanUrl}` : cleanUrl;
+    const { orderImages, orderThumbnails } = React.useMemo(() => {
+      const largeUrls: string[] = [];
+      const thumbUrls: string[] = [];
+
+      const addImage = (large: string | null | undefined, thumb: string | null | undefined) => {
+        if (!large) return;
+        largeUrls.push(formatUrl(large));
+        thumbUrls.push(formatUrl(thumb || large));
       };
 
       // 1. Get from loaded proofingOrder if available
       if (proofingOrder) {
         if (proofingOrder.imageUrl) {
-          urls.push(formatUrl(proofingOrder.imageUrl));
+          addImage(proofingOrder.imageUrl, proofingOrder.thumbnailUrl);
         }
         if (Array.isArray(proofingOrder.images)) {
           proofingOrder.images.forEach((img: any) => {
-            if (img?.imageUrl) {
-              urls.push(formatUrl(img.imageUrl));
-            }
+            addImage(img.imageUrl, img.thumbnailUrl);
           });
         }
       }
 
       // 2. Fallback to batch-loaded images in prod
-      if (urls.length === 0 && Array.isArray((prod as any).proofingOrderImages)) {
+      if (largeUrls.length === 0 && Array.isArray((prod as any).proofingOrderImages)) {
         (prod as any).proofingOrderImages.forEach((img: any) => {
-          if (img?.imageUrl) {
-            urls.push(formatUrl(img.imageUrl));
-          }
+          addImage(img.imageUrl, img.thumbnailUrl);
         });
       }
 
-      return Array.from(new Set(urls.filter(Boolean)));
+      return {
+        orderImages: Array.from(new Set(largeUrls.filter(Boolean))),
+        orderThumbnails: Array.from(new Set(thumbUrls.filter(Boolean))),
+      };
     }, [proofingOrder, prod]);
 
     React.useEffect(() => {
@@ -972,12 +973,18 @@ const ProductionTableRow = React.memo(
               : ""
             }`}
         >
-          <TableCell className="p-1.5 text-center w-10 align-top pt-4 border-r border-border/40 bg-muted/10">
+          <TableCell
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="p-1.5 text-center w-10 align-top pt-4 border-r border-border/40 bg-muted/10 cursor-pointer hover:bg-muted/30 select-none transition-colors"
+          >
             <Button
               variant="outline"
               size="icon"
               className="w-8 h-8 rounded-md bg-background hover:bg-muted text-slate-700 shadow-sm border-slate-200"
-              onClick={() => setIsExpanded(!isExpanded)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsExpanded(!isExpanded);
+              }}
               title={isExpanded ? "Thu gọn" : "Mở rộng"}
             >
               {isExpanded ? (
@@ -987,7 +994,10 @@ const ProductionTableRow = React.memo(
               )}
             </Button>
           </TableCell>
-          <TableCell className="py-3 align-top font-bold text-sm text-primary bg-muted/20 border-r border-border/50 text-center w-[90px] max-w-[90px]">
+          <TableCell
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="py-3 align-top font-bold text-sm text-primary bg-muted/20 border-r border-border/50 text-center w-[90px] max-w-[90px] cursor-pointer hover:bg-muted/30 select-none transition-colors"
+          >
             {isProofingLoading ? (
               <div className="flex justify-center mt-2">
                 <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
@@ -1006,7 +1016,7 @@ const ProductionTableRow = React.memo(
                     )}
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1 px-1 py-0.5 text-slate-700 dark:text-slate-300 w-full justify-center flex-wrap">
+                  <div className="flex items-center gap-1 px-1 py-0.5 text-slate-700 dark:text-slate-300 w-full justify-center flex-wrap animate-fadeIn">
                     <span className="font-bold text-slate-900 dark:text-slate-100 leading-none">
                       {prod.proofingOrderCode || (proofingOrder as any)?.code || `BB${prod.proofingOrderId}`}
                     </span>
@@ -1014,6 +1024,18 @@ const ProductionTableRow = React.memo(
                       <span className="px-1 py-0.5 rounded text-[8px] font-extrabold bg-rose-50 text-rose-600 border border-rose-200 leading-none shrink-0">
                         GẤP
                       </span>
+                    )}
+                    {!isDraft && materialExportStep?.status !== "done" && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowCancelDialog(true);
+                        }}
+                        className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-red-600 hover:bg-red-700 text-white leading-none shrink-0 active:scale-95 transition-transform"
+                        title="Hủy lệnh sản xuất"
+                      >
+                        Hủy
+                      </button>
                     )}
                     {orderImages.length > 0 && (
                       <div
@@ -1025,7 +1047,7 @@ const ProductionTableRow = React.memo(
                         title="Xem nhanh hình ảnh bài in"
                       >
                         <img
-                          src={orderImages[0]}
+                          src={orderThumbnails[0] || orderImages[0]}
                           alt="Hình bài"
                           decoding="async"
                           className="w-full h-full object-cover select-none"
@@ -1051,7 +1073,7 @@ const ProductionTableRow = React.memo(
                       className="relative w-16 h-16 rounded border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-slate-50 dark:bg-slate-900 group/img cursor-zoom-in shrink-0"
                     >
                       <img
-                        src={orderImages[activeImageIdx]}
+                        src={orderThumbnails[activeImageIdx] || orderImages[activeImageIdx]}
                         alt="Hình bài"
                         loading="lazy"
                         decoding="async"

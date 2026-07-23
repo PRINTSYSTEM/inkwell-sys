@@ -180,6 +180,9 @@ const APOverdue = lazy(() => import("@/pages/accounting/ap/APOverduePage"));
 const CollectionSchedule = lazy(
   () => import("@/pages/accounting/CollectionSchedulePage")
 );
+const OpeningBalancesPage = lazy(
+  () => import("@/pages/accounting/opening-balances/OpeningBalancesPage")
+);
 
 // Debt Notifications & Reconciliations
 const DebtNotificationList = lazy(
@@ -1063,6 +1066,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
                 <CollectionSchedule />
+              </Suspense>
+            ),
+          },
+          {
+            path: "opening-balances",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <OpeningBalancesPage />
               </Suspense>
             ),
           },

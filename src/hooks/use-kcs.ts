@@ -23,6 +23,7 @@ export interface KcsProductionOrderResponse {
     designCode: string | null;
     designName: string | null;
     designImageUrl: string | null;
+    designThumbnailUrl?: string | null;
     customerId: number | null;
     customerCode: string | null;
     customerName: string | null;
@@ -33,6 +34,16 @@ export interface KcsProductionOrderResponse {
     orderDetailId: number | null;
     itemsPerSheet?: number | null;
   }[];
+  defectRecords?: {
+    id: number;
+    designId: number;
+    orderDetailId: number | null;
+    defectQuantity: number;
+    description: string | null;
+    defectSource: string;
+    assignedToUserId: number | null;
+    assignedToUserName: string | null;
+  }[] | null;
 }
 
 export interface KcsProductionOrdersPaginate {

@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { Check, ChevronsUpDown, Loader2, Package, Search, Plus, Trash2, Calendar, FileText, User, Image as ImageIcon, X, RefreshCw } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, Package, Search, Plus, Trash2, Calendar, FileText, User, Image as ImageIcon, X, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import { apiRequest, API_SUFFIX } from "@/apis";
@@ -67,24 +67,28 @@ import {
   useCustomer,
   useCreateCustomerAddress,
   useCreateOrderFromReadyDesigns,
-  useDesign,
   useUpdateReadyDesign,
   useDeleteReadyDesign,
   useResetReadyDesignAvailableQuantity,
 } from "@/hooks";
 import type { ReadyDesignResponse } from "@/Schema";
 
-// Component to fetch and render image thumbnail for each ready design
-function DesignImageThumbnail({ designId }: { designId: number }) {
-  const { data: design, isLoading } = useDesign(designId, !!designId);
+// Component to render image thumbnail for each ready design
+function DesignImageThumbnail({
+  thumbnailUrl,
+  largeImageUrl,
+  designName,
+}: {
+  thumbnailUrl?: string | null;
+  largeImageUrl?: string | null;
+  designName?: string | null;
+}) {
   const [hasError, setHasError] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
-  if (isLoading) {
-    return <div className="w-10 h-10 rounded-lg bg-muted animate-pulse border border-border/40" />;
-  }
+  const displayUrl = thumbnailUrl || largeImageUrl;
 
-  if (design?.designImageUrl && !hasError) {
+  if (displayUrl && !hasError) {
     return (
       <>
         <div
@@ -95,8 +99,8 @@ function DesignImageThumbnail({ designId }: { designId: number }) {
           className="relative group w-10 h-10 rounded-lg overflow-hidden border border-border/80 shadow-sm transition-all hover:scale-110 hover:shadow-md cursor-zoom-in bg-white dark:bg-zinc-900 flex items-center justify-center"
         >
           <img
-            src={design.designImageUrl}
-            alt={design.designName || ""}
+            src={displayUrl}
+            alt={designName || ""}
             className="w-full h-full object-cover"
             onError={() => setHasError(true)}
           />
@@ -108,8 +112,8 @@ function DesignImageThumbnail({ designId }: { designId: number }) {
         <ImageViewerDialog
           open={isPreviewOpen}
           onOpenChange={setIsPreviewOpen}
-          imageUrl={design.designImageUrl}
-          title={design.designName || ""}
+          imageUrl={largeImageUrl || displayUrl}
+          title={designName || ""}
         />
       </>
     );
@@ -120,18 +124,6 @@ function DesignImageThumbnail({ designId }: { designId: number }) {
       <ImageIcon className="w-4 h-4 text-muted-foreground/50" />
     </div>
   );
-}
-
-// Component to fetch and render designer name for each ready design
-function DesignerNameCell({ designId }: { designId: number }) {
-  const { data: design, isLoading } = useDesign(designId, !!designId);
-
-  if (isLoading) {
-    return <div className="h-4 w-16 bg-muted animate-pulse rounded" />;
-  }
-
-  const designerName = design?.designer?.fullName || design?.designer?.username || "—";
-  return <span title={designerName}>{designerName}</span>;
 }
 
 // Render a status badge for design statuses (keeps label mapping consistent)
@@ -161,6 +153,13 @@ export default function ReadyDesignListPage() {
 
   // Pagination/Filter reset state
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageInput, setPageInput] = useState("1");
+  const ITEMS_PER_PAGE = 100;
+
+  // Sync pageInput with currentPage
+  useEffect(() => {
+    setPageInput(String(currentPage));
+  }, [currentPage]);
 
   // Selected designs
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -317,6 +316,33 @@ export default function ReadyDesignListPage() {
   }, [designs, selectedTypeName, materialFilter, debouncedDimensions, materialOptions]);
 
   const totalCount = sortedDesigns.length;
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE) || 1;
+
+  const paginatedDesigns = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return sortedDesigns.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [sortedDesigns, currentPage]);
+
+  const handlePreviousPage = () => {
+    setCurrentPage((prev) => Math.max(prev - 1, 1));
+  };
+
+  const handleNextPage = () => {
+    setCurrentPage((prev) => Math.min(prev + 1, totalPages));
+  };
+
+  const handlePageInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPageInput(e.target.value);
+  };
+
+  const handlePageInputBlur = () => {
+    const parsed = parseInt(pageInput, 10);
+    if (!isNaN(parsed) && parsed >= 1 && parsed <= totalPages) {
+      setCurrentPage(parsed);
+    } else {
+      setPageInput(String(currentPage));
+    }
+  };
 
   // Fetch customer addresses for the selected design's customer
   const targetCustomerIdForAddresses = useMemo(() => {
@@ -362,11 +388,6 @@ export default function ReadyDesignListPage() {
   useEffect(() => {
     setSelectedIds([]);
   }, [currentPage, selectedCustomer, debouncedSearchQuery, selectedTypeName, materialFilter, debouncedDimensions]);
-
-  // Refetch designs every time the page is entered/mounted
-  useEffect(() => {
-    refetchDesigns();
-  }, [refetchDesigns]);
 
   // Determine if a row should be disabled for selection
   // Rules: Only allow selecting designs from the SAME customer
@@ -742,8 +763,8 @@ export default function ReadyDesignListPage() {
               <TableBody>
                 {loadingDesigns ? (
                   <TableSkeleton cols={13} rows={8} rowHeight="h-12" />
-                ) : sortedDesigns.length > 0 ? (
-                  sortedDesigns.map((design) => {
+                ) : paginatedDesigns.length > 0 ? (
+                  paginatedDesigns.map((design) => {
                     const isSelected = selectedIds.includes(design.id!);
                     const isDisabled = isRowSelectionDisabled(design);
                     const isPendingUpdate = !!(design as any).isPendingOrderUpdate || !!(design as any).is_pending_order_update;
@@ -767,7 +788,11 @@ export default function ReadyDesignListPage() {
                           />
                         </TableCell>
                         <TableCell className="py-1 flex items-center justify-center">
-                          <DesignImageThumbnail designId={design.designId!} />
+                          <DesignImageThumbnail
+                            thumbnailUrl={design.designThumbnailUrl}
+                            largeImageUrl={design.designImageUrl}
+                            designName={design.designName}
+                          />
                         </TableCell>
                         <TableCell className="py-2 font-mono font-semibold text-sm">
                           {design.designCode}
@@ -777,12 +802,9 @@ export default function ReadyDesignListPage() {
                         </TableCell>
                         <TableCell
                           className="py-2 text-sm font-medium max-w-[160px] truncate"
+                          title={design.designerName || "—"}
                         >
-                          {design.designId ? (
-                            <DesignerNameCell designId={design.designId} />
-                          ) : (
-                            "—"
-                          )}
+                          {design.designerName || "—"}
                         </TableCell>
                         <TableCell className="py-2 text-sm font-medium break-words max-w-[200px]">
                           {design.customerName}
@@ -886,13 +908,13 @@ export default function ReadyDesignListPage() {
                                     <span className="font-medium text-foreground">
                                       {design.createdAt
                                         ? new Date(design.createdAt).toLocaleString("vi-VN", {
-                                            day: "2-digit",
-                                            month: "2-digit",
-                                            year: "numeric",
-                                            hour: "2-digit",
-                                            minute: "2-digit",
-                                            second: "2-digit",
-                                          })
+                                          day: "2-digit",
+                                          month: "2-digit",
+                                          year: "numeric",
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                          second: "2-digit",
+                                        })
                                         : "—"}
                                     </span>
                                   </div>
@@ -901,13 +923,13 @@ export default function ReadyDesignListPage() {
                                     <span className="font-medium text-foreground">
                                       {design.updatedAt
                                         ? new Date(design.updatedAt).toLocaleString("vi-VN", {
-                                            day: "2-digit",
-                                            month: "2-digit",
-                                            year: "numeric",
-                                            hour: "2-digit",
-                                            minute: "2-digit",
-                                            second: "2-digit",
-                                          })
+                                          day: "2-digit",
+                                          month: "2-digit",
+                                          year: "numeric",
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                          second: "2-digit",
+                                        })
                                         : "—"}
                                     </span>
                                   </div>
@@ -962,11 +984,58 @@ export default function ReadyDesignListPage() {
             </table>
           </div>
 
-          {/* Total Count */}
+          {/* Pagination & Total Count */}
           {totalCount > 0 && (
-            <div className="flex items-center justify-between px-3 py-2 border-t shrink-0 bg-background">
-              <div className="text-xs text-muted-foreground">
-                Tổng số thiết kế sẵn sàng: <span className="font-semibold text-foreground">{totalCount}</span>
+            <div className="flex items-center justify-between border-t px-4 py-3 shrink-0 bg-background">
+              <div className="text-xs text-muted-foreground flex flex-col gap-0.5">
+                <div className="font-semibold text-foreground">
+                  Hiển thị {Math.min((currentPage - 1) * ITEMS_PER_PAGE + 1, totalCount)} - {Math.min(currentPage * ITEMS_PER_PAGE, totalCount)} trong tổng số {totalCount} thiết kế
+                </div>
+                {selectedIds.length > 0 && (
+                  <span className="text-indigo-650 dark:text-indigo-400 font-medium">Đã chọn {selectedIds.length} thiết kế</span>
+                )}
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs font-semibold px-2 py-1"
+                  onClick={handlePreviousPage}
+                  disabled={currentPage === 1 || loadingDesigns}
+                >
+                  <ChevronLeft className="h-3.5 w-3.5 mr-1" />
+                  Trang trước
+                </Button>
+                <div className="flex items-center space-x-1">
+                  <Input
+                    type="number"
+                    min="1"
+                    max={totalPages}
+                    value={pageInput}
+                    onChange={handlePageInputChange}
+                    onBlur={handlePageInputBlur}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.currentTarget.blur();
+                      }
+                    }}
+                    className="w-12 h-8 text-center text-xs font-semibold px-1"
+                    disabled={loadingDesigns}
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    / {totalPages}
+                  </span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs font-semibold px-2 py-1"
+                  onClick={handleNextPage}
+                  disabled={currentPage === totalPages || loadingDesigns}
+                >
+                  Trang sau
+                  <ChevronRight className="h-3.5 w-3.5 ml-1" />
+                </Button>
               </div>
             </div>
           )}

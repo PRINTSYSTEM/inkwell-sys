@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -17,11 +18,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FileSpreadsheet, Loader2 } from "lucide-react";
+import { FileSpreadsheet, Loader2, Scale } from "lucide-react";
 import {
   useCustomerDebtStatement,
+  useCustomerDebtStatementByRange,
   useExportDebtComparison,
 } from "@/hooks/use-customer";
+import { useCustomerOpeningBalances } from "@/hooks/use-opening-balance";
+import { EditOpeningBalanceDialog } from "@/pages/accounting/opening-balances/components/EditOpeningBalanceDialog";
 
 interface DebtTabProps {
   customerId: number;
@@ -29,6 +33,7 @@ interface DebtTabProps {
 }
 
 export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
+  const [viewMode, setViewMode] = useState<"monthly" | "date_range">("monthly");
   const [selectedMonth, setSelectedMonth] = useState<number>(
     new Date().getMonth() + 1,
   );
@@ -36,14 +41,47 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
     new Date().getFullYear(),
   );
 
-  const { data: statementData, isLoading } = useCustomerDebtStatement(
+  const getFormattedDate = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  };
+
+  const [fromDate, setFromDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return getFormattedDate(d);
+  });
+  const [toDate, setToDate] = useState<string>(() => getFormattedDate(new Date()));
+
+  const [isEditOpeningOpen, setIsEditOpeningOpen] = useState(false);
+
+  const { data: customerOpeningBalances } = useCustomerOpeningBalances();
+  const openingBalance = customerOpeningBalances?.find(
+    (item) => item.customerId === customerId
+  );
+
+  const { data: monthlyData, isLoading: isLoadingMonthly } = useCustomerDebtStatement(
     customerId,
     {
       month: selectedMonth,
       year: selectedYear,
     },
-    isActive,
+    isActive && viewMode === "monthly",
   );
+
+  const { data: rangeData, isLoading: isLoadingRange } = useCustomerDebtStatementByRange(
+    customerId,
+    {
+      fromDate,
+      toDate,
+    },
+    isActive && viewMode === "date_range",
+  );
+
+  const statementData = viewMode === "monthly" ? monthlyData : rangeData;
+  const isLoading = viewMode === "monthly" ? isLoadingMonthly : isLoadingRange;
 
   const { mutate: exportDebtComparison, loading: exporting } =
     useExportDebtComparison();
@@ -73,65 +111,112 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
   const items = statementData?.items || [];
 
   const handleExport = () => {
-    exportDebtComparison(customerId);
+    exportDebtComparison(customerId, { month: selectedMonth, year: selectedYear });
   };
 
   return (
     <div className="space-y-4 h-full flex flex-col overflow-hidden">
       {/* Filters */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-semibold">Lịch sử thanh toán</h3>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <Select
-              value={selectedYear.toString()}
-              onValueChange={(val) => setSelectedYear(parseInt(val))}
+              value={viewMode}
+              onValueChange={(val) => setViewMode(val as "monthly" | "date_range")}
             >
-              <SelectTrigger className="h-8 w-[95px] text-xs">
-                <SelectValue placeholder="Năm" />
+              <SelectTrigger className="h-8 w-[150px] text-xs font-semibold">
+                <SelectValue placeholder="Phương thức xem" />
               </SelectTrigger>
               <SelectContent>
-                {[2024, 2025, 2026, 2027].map((y) => (
-                  <SelectItem key={y} value={y.toString()}>
-                    Năm {y}
-                  </SelectItem>
-                ))}
+                <SelectItem value="monthly">Xem theo tháng</SelectItem>
+                <SelectItem value="date_range">Xem theo khoảng ngày</SelectItem>
               </SelectContent>
             </Select>
 
-            <Select
-              value={selectedMonth.toString()}
-              onValueChange={(val) => setSelectedMonth(parseInt(val))}
-            >
-              <SelectTrigger className="h-8 w-[95px] text-xs">
-                <SelectValue placeholder="Tháng" />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                  <SelectItem key={m} value={m.toString()}>
-                    Tháng {m}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {viewMode === "monthly" && (
+              <>
+                <Select
+                  value={selectedYear.toString()}
+                  onValueChange={(val) => setSelectedYear(parseInt(val))}
+                >
+                  <SelectTrigger className="h-8 w-[95px] text-xs">
+                    <SelectValue placeholder="Năm" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[2024, 2025, 2026, 2027].map((y) => (
+                      <SelectItem key={y} value={y.toString()}>
+                        Năm {y}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  value={selectedMonth.toString()}
+                  onValueChange={(val) => setSelectedMonth(parseInt(val))}
+                >
+                  <SelectTrigger className="h-8 w-[95px] text-xs">
+                    <SelectValue placeholder="Tháng" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                      <SelectItem key={m} value={m.toString()}>
+                        Tháng {m}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            )}
+
+            {viewMode === "date_range" && (
+              <div className="flex items-center gap-1.5">
+                <Input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  className="h-8 w-[125px] text-xs bg-background"
+                />
+                <span className="text-xs text-muted-foreground font-medium">đến</span>
+                <Input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  className="h-8 w-[125px] text-xs bg-background"
+                />
+              </div>
+            )}
 
             <Button
               variant="outline"
               size="sm"
-              className="h-8 text-xs font-medium border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 text-emerald-600 dark:border-emerald-900 dark:hover:bg-emerald-950/20"
-              onClick={handleExport}
-              disabled={exporting}
+              className="h-8 text-xs font-semibold border-blue-200 hover:bg-blue-50 hover:text-blue-750 text-blue-600 dark:border-blue-900 dark:hover:bg-blue-950/20"
+              onClick={() => setIsEditOpeningOpen(true)}
             >
-              {exporting ? (
-                <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-              ) : (
-                <FileSpreadsheet className="h-3.5 w-3.5 mr-1" />
-              )}
-              Xuất Excel
+              <Scale className="h-3.5 w-3.5 mr-1" />
+              Thiết lập số dư đầu kỳ
             </Button>
+
+            {viewMode === "monthly" && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs font-medium border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 text-emerald-600 dark:border-emerald-900 dark:hover:bg-emerald-950/20"
+                onClick={handleExport}
+                disabled={exporting}
+              >
+                {exporting ? (
+                  <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                ) : (
+                  <FileSpreadsheet className="h-3.5 w-3.5 mr-1" />
+                )}
+                Xuất Excel
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -380,11 +465,14 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
                           >
                             <div className="flex flex-col items-center gap-1.5 text-muted-foreground">
                               <p className="text-sm font-semibold">
-                                Chưa có lịch sử công nợ trong tháng
+                                {viewMode === "monthly"
+                                  ? "Chưa có lịch sử công nợ trong tháng"
+                                  : "Chưa có lịch sử công nợ trong khoảng ngày đã chọn"}
                               </p>
                               <p className="text-xs">
-                                Dữ liệu sẽ hiển thị khi có phát sinh giao hàng,
-                                VAT hoặc thanh toán trong tháng đã chọn
+                                {viewMode === "monthly"
+                                  ? "Dữ liệu sẽ hiển thị khi có phát sinh giao hàng, VAT hoặc thanh toán trong tháng đã chọn"
+                                  : "Dữ liệu sẽ hiển thị khi có phát sinh giao hàng, VAT hoặc thanh toán trong khoảng ngày đã chọn"}
                               </p>
                             </div>
                           </TableCell>
@@ -478,6 +566,12 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
           </CardContent>
         </Card>
       </div>
+      <EditOpeningBalanceDialog
+        open={isEditOpeningOpen}
+        onOpenChange={setIsEditOpeningOpen}
+        type="customer"
+        item={openingBalance || { customerId }}
+      />
     </div>
   );
 }

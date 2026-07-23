@@ -42,6 +42,7 @@ import {
   FileSpreadsheet,
   MapPin,
   Scissors,
+  Scale,
 } from "lucide-react";
 import type { UserRole } from "@/Schema";
 import { ROLE, ROUTE_PATHS } from "@/constants";
@@ -334,6 +335,7 @@ export const MENU_ITEMS: MenuItem[] = [
       ROLE.MANAGER,
       ROLE.ACCOUNTING,
       ROLE.ACCOUNTING_LEAD,
+      ROLE.SALE,
     ],
     children: [
       {
@@ -394,6 +396,19 @@ export const MENU_ITEMS: MenuItem[] = [
           ROLE.MANAGER,
           ROLE.ACCOUNTING,
           ROLE.ACCOUNTING_LEAD,
+        ],
+      },
+      {
+        id: "opening-balances",
+        title: "Số dư đầu kỳ",
+        icon: Scale,
+        path: ROUTE_PATHS.ACCOUNTING.OPENING_BALANCES,
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.ACCOUNTING,
+          ROLE.ACCOUNTING_LEAD,
+          ROLE.SALE,
         ],
       },
     ],

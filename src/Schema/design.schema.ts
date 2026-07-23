@@ -166,6 +166,9 @@ export const ReadyDesignResponseSchema =
     isUrgent: z.boolean().nullable().optional(),
     isPendingOrderUpdate: z.boolean().nullable().optional(),
     is_pending_order_update: z.boolean().nullable().optional(),
+    designImageUrl: z.string().nullable().optional(),
+    designThumbnailUrl: z.string().nullable().optional(),
+    designerName: z.string().nullable().optional(),
   }).passthrough();
 export type ReadyDesignResponse = z.infer<typeof ReadyDesignResponseSchema>;
 
