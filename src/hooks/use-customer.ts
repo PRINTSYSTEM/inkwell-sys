@@ -15,6 +15,7 @@ import type {
   UpdateCustomerAddressRequest,
   CustomerFavoriteStatsResponse,
   CustomerDebtStatementResponse,
+  CustomerDebtStatementByRangeResponse,
 } from "@/Schema/customer.schema";
 import { createCrudHooks } from "./use-base";
 import {
@@ -429,6 +430,28 @@ export const useCustomerDebtStatement = (
       const normalizedParams = normalizeParams((params ?? {}) as Record<string, unknown>);
       const res = await apiRequest.get<CustomerDebtStatementResponse>(
         API_SUFFIX.CUSTOMER_DEBT_STATEMENT(customerId as number),
+        { params: normalizedParams }
+      );
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
+// ================== GET CUSTOMER DEBT STATEMENT BY RANGE ==================
+// GET /customers/{id}/debt-statement-by-range
+export const useCustomerDebtStatementByRange = (
+  customerId: number | null,
+  params?: { fromDate?: string; toDate?: string },
+  enabled: boolean = true
+) => {
+  return useQuery({
+    queryKey: ["customers", customerId, "debt-statement-by-range", params],
+    enabled: enabled && !!customerId,
+    queryFn: async () => {
+      const normalizedParams = normalizeParams((params ?? {}) as Record<string, unknown>);
+      const res = await apiRequest.get<CustomerDebtStatementByRangeResponse>(
+        API_SUFFIX.CUSTOMER_DEBT_STATEMENT_BY_RANGE(customerId as number),
         { params: normalizedParams }
       );
       return res.data;

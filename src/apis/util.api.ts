@@ -111,6 +111,7 @@ export const API_SUFFIX = {
   //   )}`,
   CUSTOMER_DEBT_HISTORY: (id: number) => `/customers/${id}/debt-history`,
   CUSTOMER_DEBT_STATEMENT: (id: number) => `/customers/${id}/debt-statement`,
+  CUSTOMER_DEBT_STATEMENT_BY_RANGE: (id: number) => `/customers/${id}/debt-statement-by-range`,
   CUSTOMER_MONTHLY_DEBT: (id: number) => `/customers/${id}/monthly-debt`,
   CUSTOMER_DEBT_SUMMARY: (id: number) => `/customers/${id}/debt-summary`,
   CUSTOMER_STATISTICS: (id: number) => `/customers/${id}/statistics`,

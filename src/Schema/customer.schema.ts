@@ -304,3 +304,19 @@ export type CustomerDebtStatementResponse = z.infer<
   typeof CustomerDebtStatementResponseSchema
 >;
 
+// ===== CustomerDebtStatementByRangeResponse =====
+export const CustomerDebtStatementByRangeResponseSchema = z.object({
+  customerId: z.number().int(),
+  customerName: z.string().nullable().optional(),
+  fromDate: z.string(),
+  toDate: z.string(),
+  beginningBalance: z.number(),
+  totalIncrease: z.number(),
+  totalDecrease: z.number(),
+  endingBalance: z.number(),
+  items: z.array(DebtStatementItemSchema),
+});
+export type CustomerDebtStatementByRangeResponse = z.infer<
+  typeof CustomerDebtStatementByRangeResponseSchema
+>;
+
