@@ -18,12 +18,14 @@ import {
   AddDesignsToProofingOrderRequestSchema as GenAddDesignsToProofingOrderRequestSchema,
   AddProofingOrderDetailItemSchema as GenAddProofingOrderDetailItemSchema,
   ProofingOrderImageResponseSchema as GenProofingOrderImageResponseSchema,
+  ProofingAllocationResponseSchema,
 } from "./generated";
 
 // ===== ProofingOrderDesignResponse =====
 export const ProofingOrderDesignResponseSchema =
   GenProofingOrderDesignResponseSchema.extend({
     designThumbnailUrl: z.string().nullable().optional(),
+    proofingAllocations: z.array(ProofingAllocationResponseSchema).nullable().optional(),
   }).passthrough();
 export type ProofingOrderDesignResponse = z.infer<
   typeof ProofingOrderDesignResponseSchema

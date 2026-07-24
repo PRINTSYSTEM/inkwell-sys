@@ -151,86 +151,79 @@ export function DetailPlateExportCard({
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-x-2 gap-y-1">
-                        <div className="flex items-center gap-1 col-span-2">
-                          <span className="text-slate-400 dark:text-slate-500">NCC:</span>
-                          <span className={cn(
-                            "font-semibold",
-                            isLatest ? "text-foreground" : "text-slate-600"
-                          )}>
-                            {exportItem?.vendorName ||
-                              exportItem?.plateVendor?.name ||
-                              "—"}
-                          </span>
+                      <div className="space-y-1 text-[10.5px]">
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-1">
+                            <span className="text-slate-400 dark:text-slate-500">NCC:</span>
+                            <span className={cn(
+                              "font-semibold truncate max-w-[95px]",
+                              isLatest ? "text-foreground" : "text-slate-600"
+                            )}>
+                              {exportItem?.vendorName || exportItem?.plateVendor?.name || "—"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-slate-400 dark:text-slate-500">SL:</span>
+                            <span className={cn(
+                              "font-semibold",
+                              isLatest ? "text-foreground" : "text-slate-600"
+                            )}>
+                              {exportItem?.plateCount || 0} bản
+                            </span>
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-1 col-span-2">
-                          <span className="text-slate-400 dark:text-slate-500">Số lượng:</span>
-                          <span className={cn(
-                            "font-semibold",
-                            isLatest ? "text-foreground" : "text-slate-600"
-                          )}>
-                            {exportItem?.plateCount || 0} bản
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-1 col-span-2">
+                        <div className="flex items-center gap-1 flex-wrap">
                           <span className="text-slate-400 dark:text-slate-500">Hình thức:</span>
-                          <span className="font-semibold">
+                          <span className="font-semibold truncate max-w-[140px]">
                             {(exportItem?.productionMethod || "").toLowerCase() === "outsource" ? (
                               <span className={isLatest ? "text-orange-600 dark:text-orange-400" : "text-orange-600/80"}>
-                                In gia công: {exportItem?.printingVendorName || exportItem?.printingVendor?.name || "ngoài"}
+                                Gia công: {exportItem?.printingVendorName || exportItem?.printingVendor?.name || "ngoài"}
                               </span>
                             ) : (
                               <span className={isLatest ? "text-blue-600 dark:text-blue-400" : "text-blue-600/80"}>
-                                {exportItem?.productionMethodName || productionMethodLabels.in_house || "In tại xưởng"}
+                                {exportItem?.productionMethodName || "In tại xưởng"}
                               </span>
                             )}
                           </span>
-                        </div>
-
-                        {((exportItem?.productionMethod || "").toLowerCase() === "outsource") && (exportItem?.outsourceCost > 0) && (
-                          <div className="flex items-center gap-1">
-                            <span className="text-slate-400 dark:text-slate-500">Chi phí:</span>
+                          {((exportItem?.productionMethod || "").toLowerCase() === "outsource") && (exportItem?.outsourceCost > 0) && (
                             <span className={cn(
-                              "font-semibold",
+                              "font-semibold ml-auto",
                               isLatest ? "text-orange-600" : "text-orange-600/85"
                             )}>
                               {formatCurrency(exportItem.outsourceCost)}
                             </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2 flex-wrap">
+                          <div className="flex items-center gap-1">
+                            <span className="text-slate-400 dark:text-slate-500">Tạo:</span>
+                            <span className={cn(
+                              "font-medium",
+                              isLatest ? "text-slate-700 dark:text-slate-300" : "text-slate-600"
+                            )}>
+                              {exportItem?.createdAt || exportItem?.exportedAt
+                                ? format(new Date(exportItem.createdAt || exportItem.exportedAt), "dd/MM HH:mm")
+                                : "—"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-slate-400 dark:text-slate-500">Nhận:</span>
+                            <span className={cn(
+                              "font-semibold",
+                              exportItem.isReceived ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"
+                            )}>
+                              {exportItem.isReceived ? "Đã nhận" : "Chưa nhận"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {!exportItem.isReceived && exportItem.estimatedReceiveAt && (
+                          <div className="text-[9px] text-amber-600 dark:text-amber-400/80 text-right">
+                            Hẹn nhận: {format(new Date(exportItem.estimatedReceiveAt), "dd/MM HH:mm")}
                           </div>
                         )}
-
-                        <div className="flex items-center gap-1 col-span-2">
-                          <span className="text-slate-400 dark:text-slate-500">Ngày tạo:</span>
-                          <span className={cn(
-                            "font-medium",
-                            isLatest ? "text-foreground" : "text-slate-600"
-                          )}>
-                            {exportItem?.createdAt || exportItem?.exportedAt
-                              ? format(
-                                new Date(
-                                  exportItem.createdAt || exportItem.exportedAt,
-                                ),
-                                "dd/MM/yyyy HH:mm",
-                              )
-                              : "—"}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-1 col-span-2">
-                          <span className="text-slate-400 dark:text-slate-500">Nhận kẽm:</span>
-                          <span className={cn(
-                            "font-semibold",
-                            exportItem.isReceived ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"
-                          )}>
-                            {exportItem.isReceived ? (
-                              `Đã nhận${exportItem.receivedAt ? ` lúc ${format(new Date(exportItem.receivedAt), "dd/MM/yyyy HH:mm")}` : ""}`
-                            ) : (
-                              `Chưa nhận${exportItem.estimatedReceiveAt ? ` (Hẹn: ${format(new Date(exportItem.estimatedReceiveAt), "dd/MM/yyyy HH:mm")})` : ""}`
-                            )}
-                          </span>
-                        </div>
                       </div>
 
                       {exportItem?.notes && (

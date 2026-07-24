@@ -2432,7 +2432,7 @@ export default function ProofingOrderDetailPage() {
           </div>
         ) : (
           <div className="flex-1 flex flex-col gap-4 overflow-y-auto pb-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[0.7fr_1.9fr_0.7fr_0.7fr] gap-4 w-full">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[0.7fr_2.3fr_0.5fr_0.5fr] gap-4 w-full">
               <DetailOrderInfoCard
                 order={order}
                 editingField={editingField}
