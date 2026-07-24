@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +40,8 @@ import {
 import { formatDesignDimensions } from "@/utils/format-die-size";
 import { downloadFile } from "@/lib/download-utils";
 import { QuantityCell } from "./QuantityCell";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 function HoverInfoCopy({ value, label }: { value: string; label: string }) {
   const [copied, setCopied] = React.useState(false);
@@ -135,6 +137,7 @@ export function DetailDesignsListCard({
   isProofer = true,
 }: DetailDesignsListCardProps) {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const highlightDesignIds = React.useMemo(() => {
     const raw = searchParams.get("highlightDesignId");
     if (!raw) return [];
@@ -213,7 +216,7 @@ export function DetailDesignsListCard({
           <Table>
             <TableHeader>
               <TableRow className="h-10">
-                <TableHead className="w-12 text-center">STT</TableHead>
+                <TableHead className="w-8 text-center">STT</TableHead>
 
                 <TableHead className="w-20 text-center">
                   Ảnh
@@ -243,7 +246,7 @@ export function DetailDesignsListCard({
                   Quy cách đầy đủ
                 </TableHead>
 
-                <TableHead className="w-48 text-right">
+                <TableHead className="w-36 text-right">
                   Thao tác
                 </TableHead>
               </TableRow>
@@ -251,6 +254,11 @@ export function DetailDesignsListCard({
             <TableBody>
               {orderDesigns.map((pod, index) => {
                 const isHighlighted = pod.design?.id ? highlightDesignIds.includes(pod.design.id) : false;
+                const podIsDecal = pod.design?.designType?.name?.toLowerCase().includes("decal") ||
+                                   pod.design?.materialType?.name?.toLowerCase().includes("decal");
+                const isBo = podIsDecal && pod.design?.sidesClassification === "two_side";
+                const allocations = (pod.proofingAllocations || pod.design?.proofingAllocations || [])
+                  .filter((alloc: any) => alloc.proofingOrderId !== order?.id);
                 const fullInfo = (
                   <div className="space-y-2 text-sm max-w-md">
                     <div className="font-semibold text-base border-b pb-2 flex flex-col gap-1 w-full">
@@ -472,11 +480,11 @@ export function DetailDesignsListCard({
                         ref={isHighlighted ? rowRef : undefined}
                         className={`h-14 transition-all duration-300 ${isHighlighted ? "bg-emerald-100/90 dark:bg-emerald-950/40 ring-2 ring-emerald-400/60 shadow-[inset_4px_0_0_0_#10b981] animate-pulse" : ""}`}
                       >
-                        <TableCell className="px-2 py-1 text-center">
-                          <p className="text-xs text-muted-foreground">
-                            {index + 1}
-                          </p>
-                        </TableCell>
+                         <TableCell className="px-1 py-1 text-center w-8">
+                           <p className="text-xs text-muted-foreground font-medium">
+                             {index + 1}
+                           </p>
+                         </TableCell>
                         <TableCell className="px-2 py-1">
                           {pod.design?.designThumbnailUrl || pod.design?.designImageUrl ? (
                             <img
@@ -536,11 +544,52 @@ export function DetailDesignsListCard({
                             }
                             updatingDesignId={updatingDesignId}
                           />
+                          {allocations && allocations.length > 0 && (
+                            <div className="mt-1.5 space-y-1 border-t border-dashed pt-1.5 text-[11px] text-muted-foreground">
+                              {allocations.map((alloc: any, idx: number) => (
+                                <div key={idx} className="flex justify-between gap-2.5 whitespace-nowrap">
+                                  <span
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (alloc.proofingOrderId) {
+                                        navigate(`/proofing/${alloc.proofingOrderId}?highlightDesignId=${pod.design?.id || pod.designId}`);
+                                      }
+                                    }}
+                                    className="font-mono text-blue-600 dark:text-blue-400 font-medium hover:underline cursor-pointer"
+                                  >
+                                    {alloc.proofingOrderCode || `Bài #${alloc.proofingOrderId}`}
+                                  </span>
+                                  <span className={cn(
+                                    "font-semibold text-[11px]",
+                                    isBo ? "text-green-600 dark:text-green-400 font-bold" : "text-foreground"
+                                  )}>
+                                    {(() => {
+                                      const qty = alloc.quantityTaken ?? 0;
+                                      if (isBo) {
+                                        const pieces = qty * 2;
+                                        return `${pieces.toLocaleString("vi-VN")} / ${qty.toLocaleString("vi-VN")} bộ`;
+                                      }
+                                      return qty.toLocaleString("vi-VN");
+                                    })()}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </TableCell>
-                        <TableCell className="px-2 py-1 whitespace-nowrap">
-                          <span className="text-xs text-muted-foreground">
-                            {formatDesignCreatedDate(pod.design?.createdAt)}
-                          </span>
+                        <TableCell className="px-2 py-1 whitespace-nowrap text-xs">
+                          {pod.design?.createdAt ? (
+                            <div className="flex flex-col">
+                              <span className="text-foreground font-medium">
+                                {formatDesignCreatedDate(pod.design.createdAt)}
+                              </span>
+                              <span className="text-[10.5px] text-muted-foreground mt-0.5">
+                                {format(new Date(pod.design.createdAt), "HH:mm")}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
                         </TableCell>
                         <TableCell className="px-2 py-1">
                           <span className="text-xs">
@@ -622,7 +671,7 @@ export function DetailDesignsListCard({
                             })()}
                           </div>
                         </TableCell>
-                        <TableCell className="px-6 py-2 text-right">
+                        <TableCell className="px-3 py-2 text-right">
                           <div className="flex flex-col gap-1 items-stretch w-28 ml-auto py-1">
                             {hasDieCutDesigns && pod.design?.id && pod.design?.processClassification === "die_cut" && (
                               <Button

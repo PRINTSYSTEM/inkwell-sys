@@ -200,68 +200,56 @@ export function DetailDieExportCard({
                             </div>
 
                             {/* Info list */}
-                            <div className="flex-1 flex flex-col gap-1 min-w-0">
-                              <div className="flex items-center justify-between text-[10px]">
-                                <span className="text-slate-400 dark:text-slate-500">Kích thước</span>
-                                <p className="font-semibold truncate ml-2 text-foreground">
+                            <div className="flex-1 flex flex-col gap-1.5 min-w-0 text-[10px]">
+                              <div className="flex items-center justify-between gap-1 text-[10px]">
+                                <span className="text-slate-400 dark:text-slate-500">Kích thước:</span>
+                                <p className="font-semibold truncate ml-2 text-foreground max-w-[125px]" title={formatDieSize(dieExport.die)}>
                                   {formatDieSize(dieExport.die)}
                                 </p>
                               </div>
-                              <div className="flex items-center justify-between text-[10px]">
-                                <span className="text-slate-400 dark:text-slate-500">Vị trí</span>
-                                <p className="font-semibold truncate ml-2 text-green-600">
+                              <div className="flex items-center justify-between gap-1 text-[10px]">
+                                <span className="text-slate-400 dark:text-slate-500">Vị trí:</span>
+                                <p className="font-semibold truncate ml-2 text-green-600 max-w-[125px]">
                                   {dieLocationLabels[dieExport.die?.location || ""] ||
                                     dieExport.die?.location ||
                                     "Đang sử dụng"}
                                 </p>
                               </div>
-                              <div className="flex items-center justify-between text-[10px]">
-                                <span className="text-slate-400 dark:text-slate-500">NCC</span>
-                                <p className="font-semibold truncate ml-2 text-foreground">
-                                  {dieExport.die?.vendorName ||
-                                    dieExport.die?.vendor?.name ||
-                                    "An Tâm"}
-                                </p>
-                              </div>
-                              <div className="flex items-center justify-between text-[10px]">
-                                <span className="text-slate-400 dark:text-slate-500">Ngày xuất</span>
-                                <p className="text-slate-500 font-medium truncate ml-2">
-                                  {dieExport.createdAt
-                                    ? format(new Date(dieExport.createdAt), "dd/MM/yyyy HH:mm")
-                                    : "—"}
-                                </p>
+                              <div className="flex items-center justify-between gap-2 flex-wrap text-[10px]">
+                                <div className="flex items-center gap-1">
+                                  <span className="text-slate-400 dark:text-slate-500">NCC:</span>
+                                  <span className="font-semibold truncate max-w-[55px]">
+                                    {dieExport.die?.vendorName ||
+                                      dieExport.die?.vendor?.name ||
+                                      "An Tâm"}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1 ml-auto">
+                                  <span className="text-slate-400 dark:text-slate-500">Xuất:</span>
+                                  <span className="text-slate-500 font-medium">
+                                    {dieExport.createdAt
+                                      ? format(new Date(dieExport.createdAt), "dd/MM HH:mm")
+                                      : "—"}
+                                  </span>
+                                </div>
                               </div>
                               {isNewDie && (
-                                <>
-                                  <div className="flex items-center justify-between text-[10px]">
-                                    <span className="text-slate-400 dark:text-slate-500">Trạng thái nhận</span>
-                                    <p className={cn(
-                                      "font-semibold truncate ml-2",
+                                <div className="flex items-center justify-between gap-2 flex-wrap border-t border-dashed pt-1 mt-0.5 text-[10px]">
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-slate-400 dark:text-slate-500">Nhận:</span>
+                                    <span className={cn(
+                                      "font-semibold",
                                       dieExport.isReceived ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"
                                     )}>
                                       {dieExport.isReceived ? "Đã nhận" : "Chưa nhận"}
-                                    </p>
+                                    </span>
                                   </div>
-                                  {dieExport.isReceived ? (
-                                    dieExport.receivedAt && (
-                                      <div className="flex items-center justify-between text-[10px]">
-                                        <span className="text-slate-400 dark:text-slate-500">Ngày nhận</span>
-                                        <p className="text-slate-500 font-medium truncate ml-2">
-                                          {format(new Date(dieExport.receivedAt), "dd/MM/yyyy HH:mm")}
-                                        </p>
-                                      </div>
-                                    )
-                                  ) : (
-                                    dieExport.estimatedReceiveAt && (
-                                      <div className="flex items-center justify-between text-[10px]">
-                                        <span className="text-slate-400 dark:text-slate-500">Hẹn có khuôn</span>
-                                        <p className="text-slate-500 font-medium truncate ml-2">
-                                          {format(new Date(dieExport.estimatedReceiveAt), "dd/MM/yyyy HH:mm")}
-                                        </p>
-                                      </div>
-                                    )
-                                  )}
-                                </>
+                                  <div className="text-[9px] text-slate-500 ml-auto font-medium">
+                                    {dieExport.isReceived
+                                      ? dieExport.receivedAt && `${format(new Date(dieExport.receivedAt), "dd/MM HH:mm")}`
+                                      : dieExport.estimatedReceiveAt && `Hẹn: ${format(new Date(dieExport.estimatedReceiveAt), "dd/MM HH:mm")}`}
+                                  </div>
+                                </div>
                               )}
                             </div>
                           </div>
