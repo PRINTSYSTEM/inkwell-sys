@@ -615,6 +615,56 @@ export const useDeleteReadyDesign = () => {
   };
 };
 
+// POST /api/designs/{id}/cancel-from-pool
+export const useCancelDesignFromPool = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    void,
+    [number]
+  >(async (id: number) => {
+    const res = await apiRequest.post(API_SUFFIX.DESIGN_CANCEL_FROM_POOL(id));
+    return res.data;
+  });
+
+  const mutate = async (id: number) => {
+    try {
+      const result = await execute(id);
+
+      // Invalidate queries to trigger refetch
+      queryClient.invalidateQueries({ queryKey: ["ready-designs"] });
+      queryClient.invalidateQueries({ queryKey: ["designs"] });
+      queryClient.invalidateQueries({ queryKey: ["design-detail"] });
+
+      toast.success("Thành công", {
+        description: "Thiết kế đã được hủy và xóa khỏi kho sẵn sàng",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể hủy thiết kế khỏi kho",
+      });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
+};
+
 // POST /api/ready-designs/{id}/reset-available-quantity
 export const useResetReadyDesignAvailableQuantity = () => {
   const queryClient = useQueryClient();

@@ -780,6 +780,22 @@ export default function DesignDetailPage() {
 
   const handleSaveEdit = async () => {
     if (!design) return;
+
+    const isPE_PA = designTypeName
+      ? (designTypeName.toLowerCase().includes("pe") || designTypeName.toLowerCase().includes("pa"))
+      : false;
+
+    if (!isPE_PA) {
+      if (!editFormData.length || editFormData.length <= 0) {
+        toast.error("Vui lòng nhập chiều dài hợp lệ (> 0)");
+        return;
+      }
+      if (!editFormData.height || editFormData.height <= 0) {
+        toast.error("Vui lòng nhập chiều cao hợp lệ (> 0)");
+        return;
+      }
+    }
+
     try {
       await updateDesign.mutateAsync({
         id: designId,
@@ -850,8 +866,10 @@ export default function DesignDetailPage() {
       user?.role === ROLE.SALE ||
       user?.role === ROLE.ADMIN) &&
     !hasProofingOrder &&
-    currentStatus !== "confirmed_for_printing" &&
-    currentStatus !== "cancelled";
+    currentStatus !== "cancelled" &&
+    (currentStatus !== "confirmed_for_printing" ||
+      user?.role === ROLE.SALE ||
+      user?.role === ROLE.ADMIN);
 
   const canEditCode =
     user?.role === ROLE.DESIGN ||

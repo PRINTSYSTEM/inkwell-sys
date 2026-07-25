@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { Check, ChevronsUpDown, Loader2, Package, Search, Plus, Trash2, Calendar, FileText, User, Image as ImageIcon, X, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, Package, Search, Plus, Trash2, Calendar, FileText, User, Image as ImageIcon, X, RefreshCw, ChevronLeft, ChevronRight, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import { apiRequest, API_SUFFIX } from "@/apis";
@@ -70,7 +70,10 @@ import {
   useUpdateReadyDesign,
   useDeleteReadyDesign,
   useResetReadyDesignAvailableQuantity,
+  useCancelDesignFromPool,
+  useAuth,
 } from "@/hooks";
+import { ROLE } from "@/constants";
 import type { ReadyDesignResponse } from "@/Schema";
 
 // Component to render image thumbnail for each ready design
@@ -135,6 +138,7 @@ function renderStatusBadge(status: string | null | undefined) {
 
 export default function ReadyDesignListPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   // Filter & Search states
   const [customerSearch, setCustomerSearch] = useState("");
@@ -453,9 +457,12 @@ export default function ReadyDesignListPage() {
   const { mutate: updateReadyDesign } = useUpdateReadyDesign();
   const { mutate: deleteReadyDesign } = useDeleteReadyDesign();
   const { mutate: resetAvailableQuantity } = useResetReadyDesignAvailableQuantity();
+  const { mutate: cancelDesignFromPool } = useCancelDesignFromPool();
   const [updatingUrgentId, setUpdatingUrgentId] = useState<number | null>(null);
   const [resettingId, setResettingId] = useState<number | null>(null);
   const [designToDelete, setDesignToDelete] = useState<ReadyDesignResponse | null>(null);
+  const [designToCancelFromPool, setDesignToCancelFromPool] = useState<ReadyDesignResponse | null>(null);
+  const canCancelFromPool = user?.role === ROLE.ADMIN || user?.role === ROLE.SALE;
 
   const handleResetQuantity = async (designId: number) => {
     setResettingId(designId);
@@ -957,6 +964,17 @@ export default function ReadyDesignListPage() {
                                 Cập nhật SL
                               </Button>
                             )}
+                            {canCancelFromPool && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-amber-650 hover:bg-amber-50 hover:text-amber-700 dark:text-amber-550 dark:hover:bg-amber-950/30 rounded-lg"
+                                onClick={() => setDesignToCancelFromPool(design)}
+                                title="Hủy thiết kế và xóa khỏi kho"
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="icon"
@@ -1346,6 +1364,41 @@ export default function ReadyDesignListPage() {
               }}
             >
               Xác nhận xóa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel from Pool Confirmation Dialog */}
+      <Dialog open={!!designToCancelFromPool} onOpenChange={(open) => !open && setDesignToCancelFromPool(null)}>
+        <DialogContent className="max-w-md bg-background border border-border shadow-2xl rounded-2xl p-6">
+          <DialogHeader className="pb-3 border-b border-border/40">
+            <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-2">
+              <XCircle className="h-5 w-5 text-amber-600" />
+              Xác nhận hủy và xóa thiết kế khỏi kho
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground mt-1">
+              Bạn có chắc chắn muốn xóa thiết kế <span className="font-bold text-foreground">{designToCancelFromPool?.designCode}</span> khỏi kho và chuyển trạng thái thiết kế <span className="font-bold text-foreground">{designToCancelFromPool?.designName}</span> thành <span className="font-bold text-destructive">"Hủy"</span> không?
+              <p className="mt-2 text-xs font-semibold text-amber-600">Hành động này không thể hoàn tác sau khi xác nhận.</p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="pt-3 border-t border-border/40 gap-2 shrink-0">
+            <Button
+              variant="outline"
+              onClick={() => setDesignToCancelFromPool(null)}
+            >
+              Hủy bỏ
+            </Button>
+            <Button
+              className="bg-amber-600 hover:bg-amber-700 text-white font-semibold"
+              onClick={async () => {
+                if (designToCancelFromPool?.designId) {
+                  await cancelDesignFromPool(designToCancelFromPool.designId);
+                  setDesignToCancelFromPool(null);
+                }
+              }}
+            >
+              Xác nhận
             </Button>
           </DialogFooter>
         </DialogContent>

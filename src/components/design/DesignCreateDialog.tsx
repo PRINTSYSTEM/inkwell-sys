@@ -303,6 +303,17 @@ export default function DesignCreateDialog({
 
     const isPE_PA = designTypeName.toLowerCase().includes("pe") || designTypeName.toLowerCase().includes("pa");
 
+    if (!isPE_PA) {
+      if (!length || length <= 0) {
+        toast.error("Vui lòng nhập chiều dài hợp lệ (> 0)");
+        return;
+      }
+      if (!height || height <= 0) {
+        toast.error("Vui lòng nhập chiều cao hợp lệ (> 0)");
+        return;
+      }
+    }
+
     try {
       await createDesign({
         customerId: selectedCustomer.id!,
