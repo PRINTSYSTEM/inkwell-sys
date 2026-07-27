@@ -132,6 +132,7 @@ import {
   useAssignDieToProofingOrder,
   useRemoveDieFromProofingOrder,
   useRelatedDies,
+  useDiesByProofingOrder,
 } from "@/hooks/use-die";
 import type {
   DieResponse,
@@ -507,20 +508,16 @@ export default function ProofingOrderDetailPage() {
   const order = (orderResp as ProofingOrderResponse | undefined) ?? null;
   const orderDesigns = order?.proofingOrderDesigns ?? [];
 
-  // Compute isDieExported from dieExports array (if not provided by API)
-  // Schema has dieExports but may not have isDieExported field
+  const { data: diesByOrder } = useDiesByProofingOrder(idValid ? idValue : null, idValid);
+
+  // Compute isDieExported from active dies list or fallback to proofingOrderDies array
   const isDieExported = useMemo(() => {
     if (!order) return false;
-    // Check if API provides isDieExported field (may be in response but not in schema)
-    if (
-      "isDieExported" in order &&
-      typeof (order as any).isDieExported === "boolean"
-    ) {
-      return (order as any).isDieExported;
+    if (diesByOrder) {
+      return diesByOrder.length > 0;
     }
-    // Fallback: compute from dieExports array or proofingOrderDies array
-    return (order.dieExports?.length ?? 0) > 0 || (order.proofingOrderDies?.length ?? 0) > 0;
-  }, [order]);
+    return (order.proofingOrderDies?.length ?? 0) > 0;
+  }, [order, diesByOrder]);
 
   // Check if any design has processClassification === "die_cut" (Bế)
   const hasDieCutDesigns = useMemo(() => {

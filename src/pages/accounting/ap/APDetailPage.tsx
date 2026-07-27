@@ -2,6 +2,7 @@ import { useState, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Download,
@@ -12,11 +13,19 @@ import {
   FileText,
   TrendingDown,
   CircleDollarSign,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
+import UpdateStockInPricesDialog from "./components/UpdateStockInPricesDialog";
+import { apiRequest } from "@/lib/http";
+import { toast } from "sonner";
 import { Helmet } from "react-helmet-async";
 import { DateRangePicker } from "@/components/forms/DateRangePicker";
 import { addDays } from "date-fns";
 import type { DateRange } from "react-day-picker";
+import { Input } from "@/components/ui/input";
+import { useUpdateStockInPrices } from "@/hooks/use-stock";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,6 +81,173 @@ export default function APDetailPage() {
 
   const [paymentTab, setPaymentTab] = useState<"unpaid" | "all">("unpaid");
   const [activeDetailTab, setActiveDetailTab] = useState<"ledger" | "reconciliation">("ledger");
+  const [selectedStockInId, setSelectedStockInId] = useState<number | null>(null);
+  const [isEditPricesOpen, setIsEditPricesOpen] = useState(false);
+  const [isSearchingStockIn, setIsSearchingStockIn] = useState<string | null>(null);
+  const [editingReconRow, setEditingReconRow] = useState<{
+    index: number;
+    documentNumber: string;
+    stockInId: number;
+    stockInItemId: number;
+    quantity: number;
+    unitPrice: number;
+    lineAmount: number;
+  } | null>(null);
+
+  const queryClient = useQueryClient();
+  const { mutateAsync: updatePricesAsync, isPending: isUpdatingPrices } = useUpdateStockInPrices();
+
+  const handleReconStockInEdit = async (index: number, row: any) => {
+    const documentNumber = row.documentNumber;
+    if (!documentNumber) return;
+    setIsSearchingStockIn(documentNumber);
+    try {
+      const docType = row.documentType || "";
+      const isStockIn = docType === "StockIn" || docType === "Nhập hàng";
+
+      if (isStockIn) {
+        const response = await apiRequest.get<{ items: Array<{ id: number; code: string }> }>("/stock-ins", {
+          params: { search: documentNumber }
+        });
+        const stockInSummary = response.data?.items?.find(item => item.code === documentNumber);
+        if (!stockInSummary) {
+          toast.error(`Không tìm thấy phiếu nhập kho với mã ${documentNumber}`);
+          return;
+        }
+
+        const detailResponse = await apiRequest.get<any>(`/stock-ins/${stockInSummary.id}`);
+        const stockInDetail = detailResponse.data;
+        if (!stockInDetail) {
+          toast.error("Không tải được chi tiết phiếu nhập kho.");
+          return;
+        }
+
+        // Match item
+        const itemsList = stockInDetail.items || [];
+        let matchedItem = itemsList.find((i: any) => 
+          i.itemName?.trim().toLowerCase() === row.description?.trim().toLowerCase()
+        );
+        if (!matchedItem) {
+          matchedItem = itemsList.find((i: any) => 
+            i.itemCode?.trim().toLowerCase() === row.spec1?.trim().toLowerCase()
+          );
+        }
+        const rowQty = row.quantity !== undefined && row.quantity !== null 
+          ? row.quantity 
+          : (row.amount && row.unitPrice ? row.amount / row.unitPrice : 0);
+        if (!matchedItem) {
+          matchedItem = itemsList.find((i: any) => 
+            Math.abs((i.quantity || 0) - rowQty) < 0.01
+          );
+        }
+        const finalItem = matchedItem || itemsList[0];
+        if (!finalItem) {
+          toast.error("Phiếu nhập kho này không chứa mặt hàng nào.");
+          return;
+        }
+
+        setEditingReconRow({
+          index,
+          documentNumber,
+          stockInId: stockInSummary.id,
+          stockInItemId: finalItem.id,
+          quantity: rowQty,
+          unitPrice: row.unitPrice ?? 0,
+          lineAmount: row.amount ?? 0,
+        });
+      } else {
+        // For Plate, Printing, Die
+        const id = Number(documentNumber);
+        if (isNaN(id)) {
+          toast.error(`Mã chứng từ ${documentNumber} không hợp lệ để chỉnh sửa.`);
+          return;
+        }
+
+        const rowQty = row.quantity !== undefined && row.quantity !== null 
+          ? row.quantity 
+          : (row.amount && row.unitPrice ? row.amount / row.unitPrice : 1);
+
+        setEditingReconRow({
+          index,
+          documentNumber,
+          stockInId: id, // Target record ID stored in stockInId
+          stockInItemId: 0,
+          quantity: rowQty,
+          unitPrice: row.unitPrice ?? 0,
+          lineAmount: row.amount ?? 0,
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Lỗi khi tải thông tin chứng từ!");
+    } finally {
+      setIsSearchingStockIn(null);
+    }
+  };
+
+  const handleReconSave = async () => {
+    if (!editingReconRow) return;
+    const toastId = toast.loading("Đang cập nhật đơn giá...");
+    
+    const row = reconData?.rows?.[editingReconRow.index];
+    if (!row) {
+      toast.error("Không tìm thấy dòng dữ liệu đang sửa.", { id: toastId });
+      return;
+    }
+    const docType = row.documentType || "";
+    const isStockIn = docType === "StockIn" || docType === "Nhập hàng";
+    const isPlate = docType === "PlateExport" || docType === "Xuất kẽm";
+    const isPrinting = docType === "PrintingExport" || docType === "In gia công";
+    const isDie = docType === "DieExport" || docType === "Xuất khuôn";
+
+    try {
+      if (isStockIn) {
+        await updatePricesAsync({
+          id: editingReconRow.stockInId,
+          data: {
+            stockInId: editingReconRow.stockInId,
+            items: [
+              {
+                stockInItemId: editingReconRow.stockInItemId,
+                unitPrice: editingReconRow.unitPrice,
+                lineAmount: editingReconRow.lineAmount,
+              }
+            ]
+          }
+        });
+      } else if (isPlate) {
+        const res = await apiRequest.get(`/plate-exports/${editingReconRow.stockInId}`);
+        await apiRequest.put(`/plate-exports/${editingReconRow.stockInId}`, {
+          ...res.data,
+          unitPrice: editingReconRow.unitPrice,
+        });
+        queryClient.invalidateQueries({ queryKey: ["plate-exports"] });
+      } else if (isPrinting) {
+        const res = await apiRequest.get(`/outsource-orders/${editingReconRow.stockInId}`);
+        await apiRequest.put(`/outsource-orders/${editingReconRow.stockInId}`, {
+          ...res.data,
+          outsourceCost: editingReconRow.unitPrice,
+        });
+        queryClient.invalidateQueries({ queryKey: ["outsource-orders"] });
+      } else if (isDie) {
+        await apiRequest.put(`/dies/${editingReconRow.stockInId}`, {
+          price: editingReconRow.unitPrice,
+        });
+        queryClient.invalidateQueries({ queryKey: ["dies"] });
+      }
+
+      // Invalidate AP reports to refresh table data
+      queryClient.invalidateQueries({ queryKey: ["ap-reconciliation"] });
+      queryClient.invalidateQueries({ queryKey: ["ap-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["ap-detail"] });
+
+      toast.success("Cập nhật đơn giá thành công!", { id: toastId });
+      setEditingReconRow(null);
+    } catch (error) {
+      console.error(error);
+      toast.error("Lỗi khi cập nhật đơn giá: " + (error instanceof Error ? error.message : "Vui lòng thử lại."), { id: toastId });
+    }
+  };
 
   // Fetch Ledger data (API #3)
   const {
@@ -401,13 +577,14 @@ export default function APDetailPage() {
                       <TableHead className="text-right">Đã trả</TableHead>
                       <TableHead className="text-right">Còn nợ</TableHead>
                       <TableHead className="text-center">Quá hạn</TableHead>
+                      <TableHead className="text-center w-[80px]">Thao tác</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isLoadingDetail ? (
                       Array.from({ length: 4 }).map((_, i) => (
                         <TableRow key={i}>
-                          {Array.from({ length: 8 }).map((_, j) => (
+                          {Array.from({ length: 9 }).map((_, j) => (
                             <TableCell key={j}>
                               <Skeleton className="h-5 w-full" />
                             </TableCell>
@@ -416,7 +593,7 @@ export default function APDetailPage() {
                       ))
                     ) : !detailData?.items || detailData.items.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={8} className="h-24 text-center text-muted-foreground italic text-sm">
+                        <TableCell colSpan={9} className="h-24 text-center text-muted-foreground italic text-sm">
                           Không tìm thấy chứng từ công nợ nào
                         </TableCell>
                       </TableRow>
@@ -481,6 +658,24 @@ export default function APDetailPage() {
                                 <Badge variant="outline" className="font-medium text-[10px] text-green-600 border-green-200 bg-green-50/20">
                                   Chưa đến hạn
                                 </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {item.documentType === "StockIn" && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-primary hover:text-primary-dark"
+                                  onClick={() => {
+                                    if (item.documentId) {
+                                      setSelectedStockInId(item.documentId);
+                                      setIsEditPricesOpen(true);
+                                    }
+                                  }}
+                                  title="Chỉnh sửa đơn giá / thành tiền"
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
                               )}
                             </TableCell>
                           </TableRow>
@@ -588,13 +783,14 @@ export default function APDetailPage() {
                         <TableHead className="text-right w-[80px]">VAT</TableHead>
                         <TableHead className="text-right w-[110px]">Thanh toán</TableHead>
                         <TableHead className="text-right w-[130px]">Dư sau GD</TableHead>
+                        <TableHead className="text-center w-[85px]">Thao tác</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {isLoadingRecon ? (
                         Array.from({ length: 4 }).map((_, i) => (
                           <TableRow key={i}>
-                            {Array.from({ length: 11 + activeSpecs.length }).map((_, j) => (
+                            {Array.from({ length: 12 + activeSpecs.length }).map((_, j) => (
                               <TableCell key={j}>
                                 <Skeleton className="h-5 w-full" />
                               </TableCell>
@@ -603,7 +799,7 @@ export default function APDetailPage() {
                         ))
                       ) : !reconData?.rows || reconData.rows.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={11 + activeSpecs.length} className="h-24 text-center text-muted-foreground italic text-sm">
+                          <TableCell colSpan={12 + activeSpecs.length} className="h-24 text-center text-muted-foreground italic text-sm">
                             Không phát sinh đối chiếu nào trong kỳ đã chọn
                           </TableCell>
                         </TableRow>
@@ -638,17 +834,52 @@ export default function APDetailPage() {
                                 const qtyVal = row.quantity !== undefined && row.quantity !== null 
                                   ? row.quantity 
                                   : (row.amount && row.unitPrice ? row.amount / row.unitPrice : null);
-                                return qtyVal !== null ? qtyVal.toLocaleString() : "—";
+                                  return qtyVal !== null ? qtyVal.toLocaleString() : "—";
                               })()}
                             </TableCell>
                             <TableCell className="text-center text-xs text-slate-600">
                               {row.unit || "—"}
                             </TableCell>
                             <TableCell className="text-right font-semibold tabular-nums text-xs">
-                              {row.unitPrice !== null && row.unitPrice !== undefined ? formatCurrency(row.unitPrice) : "—"}
+                              {editingReconRow?.index === index ? (
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="any"
+                                  value={editingReconRow.unitPrice}
+                                  onChange={(e) => {
+                                    const price = parseFloat(e.target.value) || 0;
+                                    setEditingReconRow({
+                                      ...editingReconRow,
+                                      unitPrice: price,
+                                      lineAmount: Math.round(editingReconRow.quantity * price),
+                                    });
+                                  }}
+                                  className="h-8 text-right text-xs font-mono font-bold border-slate-200 focus-visible:ring-primary/40 bg-white w-[110px] ml-auto"
+                                />
+                              ) : (
+                                row.unitPrice !== null && row.unitPrice !== undefined ? formatCurrency(row.unitPrice) : "—"
+                              )}
                             </TableCell>
                             <TableCell className="text-right font-semibold tabular-nums text-xs">
-                              {row.amount !== null && row.amount !== undefined ? formatCurrency(row.amount) : "—"}
+                              {editingReconRow?.index === index ? (
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="any"
+                                  value={editingReconRow.lineAmount}
+                                  onChange={(e) => {
+                                    const amount = parseFloat(e.target.value) || 0;
+                                    setEditingReconRow({
+                                      ...editingReconRow,
+                                      lineAmount: amount,
+                                    });
+                                  }}
+                                  className="h-8 text-right text-xs font-mono font-bold border-slate-200 focus-visible:ring-primary/40 bg-white w-[120px] ml-auto"
+                                />
+                              ) : (
+                                row.amount !== null && row.amount !== undefined ? formatCurrency(row.amount) : "—"
+                              )}
                             </TableCell>
                             <TableCell className="text-right font-semibold tabular-nums text-xs text-muted-foreground">
                               {row.vat !== null && row.vat !== undefined ? formatCurrency(row.vat) : "—"}
@@ -658,6 +889,49 @@ export default function APDetailPage() {
                             </TableCell>
                             <TableCell className="text-right font-bold tabular-nums text-xs">
                               {row.balanceAfter !== null && row.balanceAfter !== undefined ? formatCurrency(row.balanceAfter) : "—"}
+                            </TableCell>
+                            <TableCell className="text-center py-1">
+                              {editingReconRow?.index === index ? (
+                                <div className="flex items-center justify-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-green-600 hover:text-green-700 hover:bg-green-50"
+                                    onClick={handleReconSave}
+                                    disabled={isUpdatingPrices}
+                                    title="Lưu thay đổi"
+                                  >
+                                    <Check className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    onClick={() => setEditingReconRow(null)}
+                                    disabled={isUpdatingPrices}
+                                    title="Hủy bỏ"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ) : (
+                                (row.documentType === "StockIn" || row.documentType === "Nhập hàng" || row.documentType === "PlateExport" || row.documentType === "Xuất kẽm" || row.documentType === "PrintingExport" || row.documentType === "In gia công" || row.documentType === "DieExport" || row.documentType === "Xuất khuôn") && row.documentNumber && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-primary hover:text-primary-dark"
+                                    disabled={isSearchingStockIn === row.documentNumber}
+                                    onClick={() => handleReconStockInEdit(index, row)}
+                                    title="Chỉnh sửa đơn giá / thành tiền trực tiếp"
+                                  >
+                                    {isSearchingStockIn === row.documentNumber ? (
+                                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                    ) : (
+                                      <Pencil className="h-3.5 w-3.5" />
+                                    )}
+                                  </Button>
+                                )
+                              )}
                             </TableCell>
                           </TableRow>
                         ))
@@ -669,6 +943,12 @@ export default function APDetailPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <UpdateStockInPricesDialog
+        stockInId={selectedStockInId}
+        open={isEditPricesOpen}
+        onOpenChange={setIsEditPricesOpen}
+      />
     </div>
   );
 }

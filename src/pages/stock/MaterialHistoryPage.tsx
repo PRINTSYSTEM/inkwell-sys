@@ -53,6 +53,7 @@ import {
   useCreateStockInFromVendor,
   useCreateDirectIssue,
   useCreateOpeningBalance,
+  useDeleteOpeningBalance,
 } from "@/hooks/use-stock";
 import { useProductionOrders } from "@/hooks/use-production";
 import { DateRangePicker } from "@/components/forms/DateRangePicker";
@@ -239,24 +240,28 @@ export default function MaterialHistoryPage() {
   const [inlineStockInQty, setInlineStockInQty] = useState<number>(0);
   const [inlineStockInNotes, setInlineStockInNotes] = useState<string>("");
   const [inlineStockInJobCode, setInlineStockInJobCode] = useState<string>("");
-  const [inlineStockInUnitPrice, setInlineStockInUnitPrice] = useState<number>(0);
-  const [inlineStockInTotalAmount, setInlineStockInTotalAmount] = useState<number>(0);
+  const [inlineStockInUnitPrice, setInlineStockInUnitPrice] = useState<number | undefined>(undefined);
+  const [inlineStockInTotalAmount, setInlineStockInTotalAmount] = useState<number | undefined>(undefined);
   const [isSubmittingStockIn, setIsSubmittingStockIn] = useState(false);
 
   const handleQtyChange = (qty: number) => {
     setInlineStockInQty(qty);
-    setInlineStockInTotalAmount(Math.round(qty * inlineStockInUnitPrice));
+    if (inlineStockInUnitPrice !== undefined) {
+      setInlineStockInTotalAmount(Math.round(qty * inlineStockInUnitPrice));
+    }
   };
 
-  const handleUnitPriceChange = (price: number) => {
+  const handleUnitPriceChange = (price: number | undefined) => {
     setInlineStockInUnitPrice(price);
-    setInlineStockInTotalAmount(Math.round(inlineStockInQty * price));
+    setInlineStockInTotalAmount(price !== undefined ? Math.round(inlineStockInQty * price) : undefined);
   };
 
-  const handleTotalAmountChange = (amount: number) => {
+  const handleTotalAmountChange = (amount: number | undefined) => {
     setInlineStockInTotalAmount(amount);
-    if (inlineStockInQty > 0) {
+    if (amount !== undefined && inlineStockInQty > 0) {
       setInlineStockInUnitPrice(Math.round((amount / inlineStockInQty) * 100) / 100);
+    } else {
+      setInlineStockInUnitPrice(undefined);
     }
   };
 
@@ -294,9 +299,9 @@ export default function MaterialHistoryPage() {
   );
 
   useEffect(() => {
-    if (materialDetail?.unitPrice) {
-      setInlineStockInUnitPrice(materialDetail.unitPrice);
-      setInlineStockInTotalAmount(Math.round(inlineStockInQty * materialDetail.unitPrice));
+    if (materialDetail) {
+      setInlineStockInUnitPrice(materialDetail.unitPrice ?? undefined);
+      setInlineStockInTotalAmount(materialDetail.unitPrice ? Math.round(inlineStockInQty * materialDetail.unitPrice) : undefined);
     }
   }, [materialDetail]);
 
@@ -381,6 +386,7 @@ export default function MaterialHistoryPage() {
   const { mutateAsync: createDirectIssue } = useCreateDirectIssue();
   const updateMaterialMutation = useUpdateMaterial();
   const createOpeningBalanceMutation = useCreateOpeningBalance();
+  const deleteOpeningBalanceMutation = useDeleteOpeningBalance();
 
   const [isOpeningBalanceOpen, setIsOpeningBalanceOpen] = useState(false);
   const [openingBalanceQty, setOpeningBalanceQty] = useState<number>(0);
@@ -450,7 +456,27 @@ export default function MaterialHistoryPage() {
         itemCode: materialDetail.code,
         itemType: "material",
         quantity: openingBalanceQty,
-        effectiveDate: openingBalanceDate,
+        effectiveDate: `${openingBalanceDate}T00:00:00.000Z`,
+      });
+      setIsOpeningBalanceOpen(false);
+      refetchAll();
+    } catch {
+      // Handled in mutation hook toast
+    }
+  };
+
+  const handleDeleteOpeningBalance = async () => {
+    if (!materialDetail?.code) {
+      toast.error("Không tìm thấy mã vật tư!");
+      return;
+    }
+    if (!confirm("Bạn có chắc chắn muốn xóa số dư đầu kỳ của vật tư này?")) {
+      return;
+    }
+    try {
+      await deleteOpeningBalanceMutation.mutateAsync({
+        itemCode: materialDetail.code,
+        itemType: "material",
       });
       setIsOpeningBalanceOpen(false);
       refetchAll();
@@ -486,7 +512,7 @@ export default function MaterialHistoryPage() {
             {
               materialId: Number(materialId),
               quantity: inlineStockInQty,
-              unitPrice: inlineStockInUnitPrice || 0,
+              unitPrice: inlineStockInUnitPrice === undefined ? undefined : inlineStockInUnitPrice,
             },
           ],
           notes: inlineStockInNotes.trim() || "Nhập xuất trực tiếp",
@@ -520,7 +546,7 @@ export default function MaterialHistoryPage() {
               itemCode: materialDetail.code || undefined,
               unit: materialDetail.unit || undefined,
               quantity: inlineStockInQty,
-              unitPrice: inlineStockInUnitPrice || undefined,
+              unitPrice: inlineStockInUnitPrice === undefined ? undefined : inlineStockInUnitPrice,
               notes: inlineStockInNotes.trim() || undefined,
               materialId: materialId ? Number(materialId) : undefined,
               lineKind: lineKind,
@@ -1120,8 +1146,11 @@ export default function MaterialHistoryPage() {
                   min="0"
                   step="any"
                   placeholder="Nhập đơn giá..."
-                  value={inlineStockInUnitPrice || ""}
-                  onChange={(e) => handleUnitPriceChange(parseFloat(e.target.value) || 0)}
+                  value={inlineStockInUnitPrice === undefined ? "" : inlineStockInUnitPrice}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    handleUnitPriceChange(val === "" ? undefined : parseFloat(val));
+                  }}
                   className="h-10 text-xs border-slate-200 focus-visible:ring-[#93631F] font-mono font-bold text-slate-800"
                 />
               </div>
@@ -1135,8 +1164,11 @@ export default function MaterialHistoryPage() {
                   min="0"
                   step="any"
                   placeholder="Thành tiền..."
-                  value={inlineStockInTotalAmount || ""}
-                  onChange={(e) => handleTotalAmountChange(parseFloat(e.target.value) || 0)}
+                  value={inlineStockInTotalAmount === undefined ? "" : inlineStockInTotalAmount}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    handleTotalAmountChange(val === "" ? undefined : parseFloat(val));
+                  }}
                   className="h-10 text-xs border-slate-200 focus-visible:ring-[#93631F] font-mono font-bold text-slate-800"
                 />
               </div>
@@ -1827,18 +1859,28 @@ export default function MaterialHistoryPage() {
                 className="h-11 cursor-pointer"
               />
             </div>
-            <DialogFooter className="pt-3 border-t border-border/40 gap-2 shrink-0">
+             <DialogFooter className="pt-3 border-t border-border/40 gap-2 shrink-0">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setIsOpeningBalanceOpen(false)}
-                disabled={createOpeningBalanceMutation.isPending}
+                disabled={createOpeningBalanceMutation.isPending || deleteOpeningBalanceMutation.isPending}
               >
                 Hủy bỏ
               </Button>
+              {summaryStats.openingBalance > 0 && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={handleDeleteOpeningBalance}
+                  disabled={createOpeningBalanceMutation.isPending || deleteOpeningBalanceMutation.isPending}
+                >
+                  {deleteOpeningBalanceMutation.isPending ? "Đang xóa..." : "Xóa số dư"}
+                </Button>
+              )}
               <Button
                 type="submit"
-                disabled={createOpeningBalanceMutation.isPending}
+                disabled={createOpeningBalanceMutation.isPending || deleteOpeningBalanceMutation.isPending}
                 className="font-semibold bg-blue-600 hover:bg-blue-700 text-white border-none"
               >
                 {createOpeningBalanceMutation.isPending ? "Đang lưu..." : "Cập nhật"}

@@ -270,6 +270,7 @@ export const API_SUFFIX = {
   STOCK_IN_BY_ID: (id: number) => `/stock-ins/${id}`,
   STOCK_IN_CANCEL: (id: number) => `/stock-ins/${id}/cancel`,
   STOCK_IN_COMPLETE: (id: number) => `/stock-ins/${id}/complete`,
+  STOCK_IN_UPDATE_PRICES: (id: number) => `/stock-ins/${id}/update-prices`,
   STOCK_IN_FROM_VENDOR: "/stock-ins/from-vendor",
   STOCK_IN_DIRECT_ISSUE: "/stock-ins/direct-issue",
   STOCK_IN_AUXILIARY: "/stock-ins/auxiliary",
