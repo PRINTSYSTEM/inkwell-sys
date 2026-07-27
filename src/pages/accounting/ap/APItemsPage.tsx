@@ -12,7 +12,9 @@ import {
   FileText,
   Building2,
   ListFilter,
+  Pencil,
 } from "lucide-react";
+import UpdateStockInPricesDialog from "./components/UpdateStockInPricesDialog";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -86,6 +88,8 @@ export default function APItemsPage() {
   const [selectedDocType, setSelectedDocType] = useState<string>("all");
   
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedStockInId, setSelectedStockInId] = useState<number | null>(null);
+  const [isEditPricesOpen, setIsEditPricesOpen] = useState(false);
   const itemsPerPage = 10;
 
   // Fetch vendors for filter dropdown
@@ -271,13 +275,14 @@ export default function APItemsPage() {
                 <TableHead className="text-right">Số tiền</TableHead>
                 <TableHead className="text-right">Đã trả</TableHead>
                 <TableHead className="text-right font-bold text-red-600">Còn nợ</TableHead>
+                <TableHead className="text-center w-[80px]">Thao tác</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 Array.from({ length: 6 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: 8 }).map((_, j) => (
+                    {Array.from({ length: 9 }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
                       </TableCell>
@@ -286,7 +291,7 @@ export default function APItemsPage() {
                 ))
               ) : !itemsData?.items || itemsData.items.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-32 text-center text-muted-foreground italic text-sm">
+                  <TableCell colSpan={9} className="h-32 text-center text-muted-foreground italic text-sm">
                     Không tìm thấy khoản chi phí nào phù hợp bộ lọc
                   </TableCell>
                 </TableRow>
@@ -321,6 +326,24 @@ export default function APItemsPage() {
                     </TableCell>
                     <TableCell className="text-right font-bold tabular-nums text-red-600 text-xs bg-red-50/10">
                       {item.outstanding !== undefined ? formatCurrency(item.outstanding) : "—"}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {item.documentType === "StockIn" && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-primary hover:text-primary-dark"
+                          onClick={() => {
+                            if (item.documentId) {
+                              setSelectedStockInId(item.documentId);
+                              setIsEditPricesOpen(true);
+                            }
+                          }}
+                          title="Chỉnh sửa đơn giá / thành tiền"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))
@@ -361,6 +384,12 @@ export default function APItemsPage() {
           </div>
         )}
       </div>
+
+      <UpdateStockInPricesDialog
+        stockInId={selectedStockInId}
+        open={isEditPricesOpen}
+        onOpenChange={setIsEditPricesOpen}
+      />
     </div>
   );
 }

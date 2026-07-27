@@ -1021,3 +1021,82 @@ export const useCreateOpeningBalance = () => {
     },
   });
 };
+
+export interface DeleteOpeningBalanceRequest {
+  itemCode: string;
+  itemType: string;
+}
+
+export const useDeleteOpeningBalance = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<any, ApiError, DeleteOpeningBalanceRequest>({
+    mutationFn: async (data: DeleteOpeningBalanceRequest) => {
+      const response = await apiRequest.delete(
+        API_SUFFIX.INVENTORY_OPENING_BALANCE,
+        { data }
+      );
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["materials"] });
+      queryClient.invalidateQueries({ queryKey: stockInKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["inventory-balance"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory-transactions"] });
+      toast.success("Xóa số dư đầu kỳ thành công");
+    },
+    onError: (error: ApiError) => {
+      toast.error("Xóa số dư đầu kỳ thất bại", {
+        description: error.response?.data?.message || error.message,
+      });
+    },
+  });
+};
+
+export interface UpdateStockInPricesItem {
+  stockInItemId: number;
+  unitPrice: number;
+  lineAmount?: number;
+}
+
+export interface UpdateStockInPricesRequest {
+  stockInId: number;
+  items: UpdateStockInPricesItem[];
+}
+
+export const useUpdateStockInPrices = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    any,
+    ApiError,
+    { id: number; data: UpdateStockInPricesRequest }
+  >({
+    mutationFn: async ({
+      id,
+      data,
+    }: {
+      id: number;
+      data: UpdateStockInPricesRequest;
+    }) => {
+      const response = await apiRequest.put(
+        API_SUFFIX.STOCK_IN_UPDATE_PRICES(id),
+        data
+      );
+      return response.data;
+    },
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: stockInKeys.all });
+      queryClient.invalidateQueries({ queryKey: stockInKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: ["ap-detail"] });
+      queryClient.invalidateQueries({ queryKey: ["ap-items"] });
+      queryClient.invalidateQueries({ queryKey: ["ap-reconciliation"] });
+      toast.success("Cập nhật đơn giá thành công");
+    },
+    onError: (error: ApiError) => {
+      toast.error("Cập nhật đơn giá thất bại", {
+        description: error.response?.data?.message || error.message,
+      });
+    },
+  });
+};

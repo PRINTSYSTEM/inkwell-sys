@@ -17,7 +17,7 @@ import { formatDieSize } from "@/utils/format-die-size";
 import { dieLocationLabels } from "@/lib/status-utils";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useDieExportHistory } from "@/hooks/use-die";
+import { useDieExportHistory, useDiesByProofingOrder } from "@/hooks/use-die";
 
 interface DetailDieExportCardProps {
   hasDieCutDesigns: boolean;
@@ -49,20 +49,24 @@ export function DetailDieExportCard({
 }: DetailDieExportCardProps) {
   const [showDebug, setShowDebug] = useState(false);
 
-  const { data: dieHistory, isLoading: isLoadingHistory } = useDieExportHistory(
-    order?.id,
-    isDieExported
-  );
+  const { data: diesByOrder } = useDiesByProofingOrder(order?.id || null);
 
   const activeDies = useMemo(() => {
-    return order?.proofingOrderDies || [];
-  }, [order?.proofingOrderDies]);
+    return diesByOrder !== undefined ? diesByOrder : (order?.proofingOrderDies || []);
+  }, [diesByOrder, order?.proofingOrderDies]);
 
   const allExports = useMemo(() => {
     return (order?.dieExports && order.dieExports.length > 0)
       ? order.dieExports
       : activeDies;
   }, [order?.dieExports, activeDies]);
+
+  const hasExports = allExports.length > 0;
+
+  const { data: dieHistory, isLoading: isLoadingHistory } = useDieExportHistory(
+    order?.id,
+    hasExports
+  );
 
   const activeExportIds = useMemo(() => {
     return new Set(activeDies.map((d: any) => d.id).filter(Boolean));
@@ -79,7 +83,7 @@ export function DetailDieExportCard({
               Xuất khuôn bế (Sử dụng: {activeDies.length} / Tổng: {allExports.length})
             </CardTitle>
             <div className="flex items-center gap-1.5">
-              {isDieExported && (
+              {hasExports && (
                 <Button
                   variant="outline"
                   size="sm"
@@ -94,7 +98,7 @@ export function DetailDieExportCard({
         </CardHeader>
 
         <CardContent className="px-4 pb-4 flex-1 flex flex-col overflow-hidden">
-          {!isDieExported ? (
+          {!hasExports ? (
             <div className="flex flex-col items-center py-6 space-y-4 bg-muted/20 rounded-lg border border-dashed border-muted-foreground/20">
               <div className="text-center space-y-1">
                 <p className="font-bold text-sm text-muted-foreground">

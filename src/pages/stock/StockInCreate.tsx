@@ -553,8 +553,8 @@ export default function StockInCreatePage() {
             name: item.itemName.trim(),
             quantity: item.quantity || 0,
             unit: item.unit?.trim() || "cái",
-            unitPrice: item.unitPrice || 0,
-            lineAmount: (item.quantity || 0) * (item.unitPrice || 0),
+            unitPrice: item.unitPrice ?? undefined,
+            lineAmount: item.unitPrice !== undefined ? (item.quantity || 0) * item.unitPrice : undefined,
             note: item.notes?.trim() || undefined,
           })),
         },
@@ -911,7 +911,7 @@ export default function StockInCreatePage() {
 
                           <div className="grid grid-cols-2 gap-2">
                             <div className="space-y-1">
-                              <Label className="text-[10px] uppercase font-bold text-slate-400">Đơn giá *</Label>
+                              <Label className="text-[10px] uppercase font-bold text-slate-400">Đơn giá</Label>
                               <Input
                                 type="number"
                                 min="0"
@@ -1121,7 +1121,7 @@ export default function StockInCreatePage() {
                           <TableHead className="min-w-[200px]">Tên vật phẩm *</TableHead>
                           <TableHead className="w-[120px] text-right">Số lượng *</TableHead>
                           <TableHead className="w-[100px]">ĐVT *</TableHead>
-                          <TableHead className="w-[150px] text-right">Đơn giá *</TableHead>
+                          <TableHead className="w-[150px] text-right">Đơn giá</TableHead>
                           <TableHead className="w-[150px] text-right">Thành tiền</TableHead>
                           <TableHead>Ghi chú</TableHead>
                           <TableHead className="w-10"></TableHead>

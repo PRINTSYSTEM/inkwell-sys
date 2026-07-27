@@ -524,7 +524,7 @@ export default function StockInDetailPage() {
                               <TableCell className="text-right text-slate-600 text-sm py-3 px-4">
                                 {item.unitPrice
                                   ? formatCurrency(item.unitPrice)
-                                  : "Không có"}
+                                  : "Chưa có đơn giá"}
                               </TableCell>
                               <TableCell className="text-right text-slate-600 text-sm py-3 px-4">
                                 {item.laborCost !== undefined && item.laborCost !== null
