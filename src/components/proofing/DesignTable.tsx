@@ -67,7 +67,8 @@ export function DesignTable({
     ROLE.MANAGER,
     ROLE.DESIGN_LEAD,
     ROLE.DESIGN,
-    ROLE.PROOFER
+    ROLE.PROOFER,
+    ROLE.SALE
   ].includes(role as any);
 
   const handleSaveQuantity = async (design: DesignItem) => {
