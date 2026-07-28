@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { useDebounce } from "use-debounce";
 import { DateRange } from "react-day-picker";
 import {
@@ -127,6 +127,8 @@ function useHasActiveProofingFilters(args: {
 
 export default function PrepressList() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const onlyCompleted = location.pathname.includes("/productions/proofing");
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const role = user?.role as UserRole | undefined;
@@ -190,10 +192,22 @@ export default function PrepressList() {
   const [selectedMaterialTypeId, setSelectedMaterialTypeId] = useState<
     number | null
   >(null);
-  const [incompleteOrdersPage, setIncompleteOrdersPage] = useState(1);
-  const [completedOrdersPage, setCompletedOrdersPage] = useState(1);
+  const [incompleteOrdersPage, setIncompleteOrdersPage] = useState(() => {
+    const p = searchParams.get("incompletePage");
+    const parsed = p ? parseInt(p, 10) : 1;
+    return !isNaN(parsed) && parsed >= 1 ? parsed : 1;
+  });
+  const [completedOrdersPage, setCompletedOrdersPage] = useState(() => {
+    const p = searchParams.get("completedPage");
+    const parsed = p ? parseInt(p, 10) : 1;
+    return !isNaN(parsed) && parsed >= 1 ? parsed : 1;
+  });
   const [completedDateRange, setCompletedDateRange] = useState<DateRange | undefined>();
-  const [productionReturnedOrdersPage, setProductionReturnedOrdersPage] = useState(1);
+  const [productionReturnedOrdersPage, setProductionReturnedOrdersPage] = useState(() => {
+    const p = searchParams.get("returnedPage");
+    const parsed = p ? parseInt(p, 10) : 1;
+    return !isNaN(parsed) && parsed >= 1 ? parsed : 1;
+  });
   const [incompleteOrdersPageInput, setIncompleteOrdersPageInput] =
     useState<string>("");
   const [completedOrdersPageInput, setCompletedOrdersPageInput] =
@@ -201,6 +215,8 @@ export default function PrepressList() {
   const [productionReturnedOrdersPageInput, setProductionReturnedOrdersPageInput] =
     useState<string>("");
   const ordersTableRef = useRef<HTMLDivElement>(null);
+  const prevDesignCode = useRef(debouncedDesignCode);
+  const prevMaterialTypeId = useRef(selectedMaterialTypeId);
 
   const itemsPerPage = 10;
 
@@ -370,18 +386,57 @@ export default function PrepressList() {
     setProductionReturnedOrdersPageInput(productionReturnedOrdersPage.toString());
   }, [productionReturnedOrdersPage]);
 
+  // Sync page states to searchParams
+  useEffect(() => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      let changed = false;
+
+      const pIncomplete = incompleteOrdersPage > 1 ? incompleteOrdersPage.toString() : null;
+      if (next.get("incompletePage") !== pIncomplete) {
+        if (pIncomplete) next.set("incompletePage", pIncomplete);
+        else next.delete("incompletePage");
+        changed = true;
+      }
+
+      const pCompleted = completedOrdersPage > 1 ? completedOrdersPage.toString() : null;
+      if (next.get("completedPage") !== pCompleted) {
+        if (pCompleted) next.set("completedPage", pCompleted);
+        else next.delete("completedPage");
+        changed = true;
+      }
+
+      const pReturned = productionReturnedOrdersPage > 1 ? productionReturnedOrdersPage.toString() : null;
+      if (next.get("returnedPage") !== pReturned) {
+        if (pReturned) next.set("returnedPage", pReturned);
+        else next.delete("returnedPage");
+        changed = true;
+      }
+
+      return changed ? next : prev;
+    }, { replace: true });
+  }, [incompleteOrdersPage, completedOrdersPage, productionReturnedOrdersPage, setSearchParams]);
+
   useEffect(() => {
     if (ordersTableRef.current) ordersTableRef.current.scrollTop = 0;
   }, [incompleteOrdersPage, completedOrdersPage, productionReturnedOrdersPage]);
 
   useEffect(() => {
-    // reset orders pagination when list filters change
-    setIncompleteOrdersPage(1);
-    setIncompleteOrdersPageInput("1");
-    setCompletedOrdersPage(1);
-    setCompletedOrdersPageInput("1");
-    setProductionReturnedOrdersPage(1);
-    setProductionReturnedOrdersPageInput("1");
+    if (
+      prevDesignCode.current !== debouncedDesignCode ||
+      prevMaterialTypeId.current !== selectedMaterialTypeId
+    ) {
+      // reset orders pagination when list filters change
+      setIncompleteOrdersPage(1);
+      setIncompleteOrdersPageInput("1");
+      setCompletedOrdersPage(1);
+      setCompletedOrdersPageInput("1");
+      setProductionReturnedOrdersPage(1);
+      setProductionReturnedOrdersPageInput("1");
+
+      prevDesignCode.current = debouncedDesignCode;
+      prevMaterialTypeId.current = selectedMaterialTypeId;
+    }
   }, [debouncedDesignCode, selectedMaterialTypeId]);
 
   const handleIncompletePageInputBlur = () => {
@@ -662,10 +717,10 @@ export default function PrepressList() {
   const parsedCustomPaperSize = useMemo(() => {
     if (!customPaperSize || paperSizeId !== "custom") return null;
     const trimmed = customPaperSize.trim();
-    const match = trimmed.match(/^(\d+)\s*[×xX*]\s*(\d+)$/);
+    const match = trimmed.match(/^(\d+(?:[.,]\d+)?)\s*[×xX*]\s*(\d+(?:[.,]\d+)?)$/);
     if (match) {
-      const width = parseInt(match[1], 10);
-      const height = parseInt(match[2], 10);
+      const width = parseFloat(match[1].replace(",", "."));
+      const height = parseFloat(match[2].replace(",", "."));
       if (!isNaN(width) && !isNaN(height) && width > 0 && height > 0) {
         return { width, height };
       }
@@ -908,14 +963,18 @@ export default function PrepressList() {
           <header className="shrink-0">
             <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
               <div className="space-y-1">
-                <h1 className="text-xl font-bold text-foreground">Bình bài</h1>
+                <h1 className="text-xl font-bold text-foreground">
+                  {onlyCompleted ? "Bình bài đã hoàn thành" : "Bình bài"}
+                </h1>
                 <p className="text-xs text-muted-foreground">
-                  Danh sách mã bài & thiết kế chờ bình bài
+                  {onlyCompleted
+                    ? "Danh sách mã bài đã hoàn thành"
+                    : "Danh sách mã bài & thiết kế chờ bình bài"}
                 </p>
               </div>
 
               <div className="flex items-center gap-2">
-                {isProofer && (
+                {!onlyCompleted && isProofer && (
                   isConfiguring ? (
                     <Button
                       size="sm"
@@ -954,7 +1013,7 @@ export default function PrepressList() {
               <Card
                 className={cn(
                   "h-full overflow-hidden",
-                  isConfiguring ? "w-[72%] min-w-0 flex-none" : "w-full",
+                  isConfiguring ? "flex-1 min-w-0" : "w-full",
                 )}
               >
                 <CardContent className="h-full p-0">
@@ -997,6 +1056,7 @@ export default function PrepressList() {
                       </div>
 
                       <PrepressOrdersHeader
+                        onlyCompleted={onlyCompleted}
                         designCode={designCode}
                         setDesignCode={setDesignCode}
                         selectedMaterialTypeId={selectedMaterialTypeId}

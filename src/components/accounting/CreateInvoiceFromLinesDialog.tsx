@@ -36,13 +36,23 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { DateRangePicker } from "@/components/forms/DateRangePicker";
+import type { DateRange } from "react-day-picker";
+import { format } from "date-fns";
 import { formatCurrency } from "@/lib/status-utils";
 import type {
   BillableItemResponse,
   InvoiceLineInput,
   CreateInvoiceFromLinesRequest,
 } from "@/Schema/invoice.schema";
-import { Loader2, ShoppingCart, Check, ChevronsUpDown, Search, X } from "lucide-react";
+import { Loader2, ShoppingCart, Check, ChevronsUpDown, Search, X, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface CreateInvoiceFromLinesDialogProps {
@@ -75,10 +85,85 @@ export function CreateInvoiceFromLinesDialog({
   const [buyerAddress, setBuyerAddress] = useState<string>("");
   const [buyerEmail, setBuyerEmail] = useState<string>("");
 
+  // Filtering states
+  const [filterType, setFilterType] = useState<"all" | "month" | "range">("month");
+  const [selectedMonth, setSelectedMonth] = useState<string>(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  });
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRange | undefined>(undefined);
+
+  // Generate month options back to Jan 2025
+  const monthOptions = useMemo(() => {
+    const options = [];
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1;
+
+    const startYear = 2025;
+    const startMonth = 1;
+
+    let y = currentYear;
+    let m = currentMonth;
+
+    while (y > startYear || (y === startYear && m >= startMonth)) {
+      const value = `${y}-${String(m).padStart(2, "0")}`;
+      const label = `Tháng ${m}/${y}`;
+      options.push({ value, label });
+
+      m--;
+      if (m === 0) {
+        m = 12;
+        y--;
+      }
+    }
+    return options;
+  }, []);
+
+  const handleFilterTypeChange = (type: "all" | "month" | "range") => {
+    setFilterType(type);
+    if (type === "month" && monthOptions.length > 0 && !selectedMonth) {
+      setSelectedMonth(monthOptions[0].value);
+    }
+  };
+
+  useEffect(() => {
+    if (filterType === "month" && monthOptions.length > 0 && !selectedMonth) {
+      setSelectedMonth(monthOptions[0].value);
+    }
+  }, [monthOptions, filterType, selectedMonth]);
+
+  // Compute fromDate / toDate for API
+  const apiDateParams = useMemo(() => {
+    if (filterType === "month" && selectedMonth) {
+      const [year, month] = selectedMonth.split("-");
+      const fromDate = `${year}-${month}-01`;
+      const lastDay = new Date(parseInt(year, 10), parseInt(month, 10), 0).getDate();
+      const toDate = `${year}-${month}-${String(lastDay).padStart(2, "0")}`;
+      return { fromDate, toDate };
+    }
+
+    if (filterType === "range" && selectedDateRange?.from) {
+      const formatLocalISO = (date: Date) => {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, "0");
+        const d = String(date.getDate()).padStart(2, "0");
+        return `${y}-${m}-${d}`;
+      };
+      const fromDate = formatLocalISO(selectedDateRange.from);
+      const toDate = selectedDateRange.to ? formatLocalISO(selectedDateRange.to) : fromDate;
+      return { fromDate, toDate };
+    }
+
+    return { fromDate: undefined, toDate: undefined };
+  }, [filterType, selectedMonth, selectedDateRange]);
+
   // Use local selection billToCustomerId if available, otherwise fall back to customerId prop
   const { data: billableItems, isLoading, refetch } = useBillableItems(
     {
       customerId: billToCustomerId || customerId || undefined,
+      fromDate: apiDateParams.fromDate,
+      toDate: apiDateParams.toDate,
       sortColumn: "DeliveredAt",
       sortOrder: "desc",
       SortColumn: "DeliveredAt",
@@ -86,12 +171,12 @@ export function CreateInvoiceFromLinesDialog({
     }
   );
 
-  // Refetch billable items when dialog opens & when customer changes
+  // Refetch billable items when dialog opens & when customer or date-filters change
   useEffect(() => {
     if (open) {
       refetch();
     }
-  }, [open, refetch, billToCustomerId]);
+  }, [open, refetch, billToCustomerId, apiDateParams.fromDate, apiDateParams.toDate]);
 
   const createInvoiceMutation = useCreateInvoiceFromLines();
 
@@ -108,6 +193,12 @@ export function CreateInvoiceFromLinesDialog({
       setBuyerTaxCode("");
       setBuyerAddress("");
       setBuyerEmail("");
+
+      // Reset filter states
+      setFilterType("month");
+      const d = new Date();
+      setSelectedMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
+      setSelectedDateRange(undefined);
     }
     onOpenChange(open);
   };
@@ -270,19 +361,69 @@ export function CreateInvoiceFromLinesDialog({
     });
   }, [billableItems, searchQuery]);
 
-  // Selected lines mapped with details for visual layout & editing
-  const selectedLinesArray = useMemo(() => {
-    return Array.from(selectedLines.values()).map((line) => {
-      const item = billableItems?.find((i) => i.deliveryLineId === line.deliveryLineId);
-      return {
-        line,
-        item,
-      };
-    }).filter((x) => x.item != null) as Array<{
-      line: InvoiceLineInput;
-      item: BillableItemResponse;
-    }>;
-  }, [selectedLines, billableItems]);
+  // Check if all filtered items are selected
+  const isAllFilteredSelected = useMemo(() => {
+    if (filteredItems.length === 0) return false;
+    return filteredItems.every((item) => item.deliveryLineId && selectedLines.has(item.deliveryLineId));
+  }, [filteredItems, selectedLines]);
+
+  // Select/Deselect all filtered items
+  const handleToggleSelectAll = () => {
+    const newSelected = new Map(selectedLines);
+    if (isAllFilteredSelected) {
+      // Remove all filtered items
+      filteredItems.forEach((item) => {
+        if (item.deliveryLineId) {
+          newSelected.delete(item.deliveryLineId);
+        }
+      });
+    } else {
+      // Add all filtered items
+      filteredItems.forEach((item) => {
+        if (item.deliveryLineId) {
+          newSelected.set(item.deliveryLineId, {
+            deliveryLineId: item.deliveryLineId,
+            invoiceQty: item.remainingToInvoice || 1,
+            discountPercent: null,
+          });
+        }
+      });
+    }
+    setSelectedLines(newSelected);
+
+    // Re-calculate customer mapping if needed
+    const uniqueCustomerIds = new Set<number>();
+    newSelected.forEach((line, deliveryLineId) => {
+      const bItem = billableItems?.find(
+        (i) => i.deliveryLineId === deliveryLineId
+      );
+      if (bItem && bItem.customerId) {
+        uniqueCustomerIds.add(bItem.customerId);
+      }
+    });
+
+    if (uniqueCustomerIds.size === 1) {
+      const singleCustId = Array.from(uniqueCustomerIds)[0];
+      const cust = customers.find((c: any) => c.id === singleCustId);
+      if (cust) {
+        setBillToCustomerId(singleCustId);
+        setBuyerCompanyName(cust.companyName || "");
+        setBuyerName(cust.name || "");
+        setBuyerTaxCode(cust.taxCode || "");
+        setBuyerAddress(cust.address || "");
+        setBuyerEmail(cust.email || "");
+      }
+    } else {
+      setBillToCustomerId(null);
+      setBuyerCompanyName("");
+      setBuyerName("");
+      setBuyerTaxCode("");
+      setBuyerAddress("");
+      setBuyerEmail("");
+    }
+  };
+
+
 
   // Calculate totals
   const totals = useMemo(() => {
@@ -319,7 +460,7 @@ export function CreateInvoiceFromLinesDialog({
       discountPercent: null,
       discountAmount: null,
       discountReason: null,
-      taxRate: undefined,
+      taxRate: 0.08,
       notes: notes || null,
       buyerName: buyerName || null,
       buyerCompanyName: buyerCompanyName || null,
@@ -333,7 +474,7 @@ export function CreateInvoiceFromLinesDialog({
       const result = await createInvoiceMutation.mutateAsync(requestData);
       handleOpenChange(false);
       if (result && result.id) {
-        navigate(`/invoices/${result.id}`);
+        navigate(`/accounting/invoice/${result.id}`);
       }
     } catch (error) {
       // Error is handled by the hook
@@ -364,12 +505,30 @@ export function CreateInvoiceFromLinesDialog({
                   </span>
                 </h3>
 
-                <Badge variant="outline" className="text-xs">
-                  Đã chọn: {selectedLines.size}
-                </Badge>
+                <div className="flex items-center gap-2">
+                  {filteredItems.length > 0 && (
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="h-auto p-0 text-xs text-blue-600 hover:text-blue-700 font-semibold cursor-pointer"
+                      onClick={handleToggleSelectAll}
+                    >
+                      {isAllFilteredSelected ? "Bỏ chọn tất cả" : "Chọn tất cả"}
+                    </Button>
+                  )}
+                  <Badge
+                    variant={selectedLines.size > 0 ? "default" : "outline"}
+                    className={cn(
+                      "text-xs transition-colors",
+                      selectedLines.size > 0 && "bg-blue-600 hover:bg-blue-600 text-white font-bold"
+                    )}
+                  >
+                    Đã chọn: {selectedLines.size}
+                  </Badge>
+                </div>
               </div>
 
-              <div className="relative">
+              <div className="relative mb-2.5">
                 <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
                   placeholder="Tìm khách hàng, sản phẩm, mã đơn..."
@@ -377,6 +536,53 @@ export function CreateInvoiceFromLinesDialog({
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-8 h-9 text-sm bg-white"
                 />
+              </div>
+
+              <div className="mt-2.5 p-2.5 bg-slate-50 rounded-lg border border-slate-200/60 flex items-center gap-3">
+                <div className="flex-1 min-w-[125px] space-y-1">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Lọc ngày giao</span>
+                  <Select value={filterType} onValueChange={(val: any) => handleFilterTypeChange(val)}>
+                    <SelectTrigger className="h-8 text-xs bg-white border-slate-200 shadow-xs focus:ring-0">
+                      <SelectValue placeholder="Kiểu lọc" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all" className="text-xs">Tất cả thời gian</SelectItem>
+                      <SelectItem value="month" className="text-xs">Theo tháng</SelectItem>
+                      <SelectItem value="range" className="text-xs">Khoảng ngày</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {filterType === "month" && (
+                  <div className="flex-1 min-w-[125px] space-y-1 animate-in fade-in duration-200">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Chọn tháng</span>
+                    <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                      <SelectTrigger className="h-8 text-xs bg-white border-slate-200 shadow-xs focus:ring-0">
+                        <SelectValue placeholder="Chọn tháng..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {monthOptions.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {filterType === "range" && (
+                  <div className="flex-1 min-w-[180px] space-y-1 animate-in fade-in duration-200">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Khoảng ngày</span>
+                    <DateRangePicker
+                      value={selectedDateRange}
+                      onValueChange={setSelectedDateRange}
+                      className="h-8 text-xs w-full bg-white border border-slate-200 shadow-xs hover:bg-slate-50 focus:ring-0"
+                      numberOfMonths={1}
+                      showPresets={false}
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
@@ -403,9 +609,9 @@ export function CreateInvoiceFromLinesDialog({
                         type="button"
                         onClick={() => toggleLine(item)}
                         className={cn(
-                          "w-full text-left rounded-lg border bg-background p-3 transition-all",
+                          "w-full text-left rounded-lg border bg-background p-3 transition-all border-l-4 border-l-transparent",
                           "hover:border-primary/50 hover:bg-primary/5",
-                          isSelected && "border-primary bg-primary/5 shadow-sm"
+                          isSelected && "border-primary border-l-blue-600 bg-blue-50/20 shadow-sm"
                         )}
                       >
                         <div className="flex items-start gap-3">
@@ -428,6 +634,13 @@ export function CreateInvoiceFromLinesDialog({
                                     {item.customerName}
                                   </div>
                                 )}
+
+                                {item.deliveredAt && (
+                                  <div className="mt-1.5 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 text-[10px] font-semibold border border-amber-200/50">
+                                    <Calendar className="w-3 h-3 text-amber-600 shrink-0" />
+                                    <span>Ngày giao: {format(new Date(item.deliveredAt), "dd/MM/yyyy")}</span>
+                                  </div>
+                                )}
                               </div>
 
                               <Badge
@@ -447,7 +660,7 @@ export function CreateInvoiceFromLinesDialog({
                               </div>
 
                               <div>
-                                <div className="text-muted-foreground">SL còn</div>
+                                <div className="text-muted-foreground">SL</div>
                                 <div className="font-semibold tabular-nums">
                                   {item.remainingToInvoice || 0}{" "}
                                   {(item.unit as string | undefined) || "Tờ"}
@@ -455,7 +668,7 @@ export function CreateInvoiceFromLinesDialog({
                               </div>
 
                               <div className="text-right">
-                                <div className="text-muted-foreground">Tạm tính</div>
+                                <div className="text-muted-foreground">Thành tiền</div>
                                 <div className="font-bold tabular-nums">
                                   {formatCurrency(
                                     (item.unitPrice || 0) *
@@ -563,57 +776,24 @@ export function CreateInvoiceFromLinesDialog({
                   </div>
 
                   {/* Auto-loaded / Editable Buyer Fields */}
-                  <div className="space-y-2 border-t pt-2.5 mt-2">
+                  <div className="space-y-2.5 border-t pt-3 mt-3 bg-slate-50/50 p-2.5 rounded-lg border border-slate-200/60">
                     <div className="space-y-1">
-                      <Label className="text-[11px] text-muted-foreground font-medium">Tên đơn vị mua hàng</Label>
+                      <Label className="text-[11px] font-bold text-slate-700">Tên đơn vị mua hàng</Label>
                       <Input
                         value={buyerCompanyName}
                         onChange={(e) => setBuyerCompanyName(e.target.value)}
                         placeholder="Tên công ty xuất hóa đơn..."
-                        className="h-8 text-xs font-semibold bg-white"
+                        className="h-8 text-xs font-semibold bg-white border-slate-200"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <Label className="text-[11px] text-muted-foreground font-medium">Họ tên người mua</Label>
+                      <Label className="text-[11px] font-bold text-slate-700">Họ tên người mua</Label>
                       <Input
                         value={buyerName}
                         onChange={(e) => setBuyerName(e.target.value)}
                         placeholder="Tên người mua..."
-                        className="h-8 text-xs bg-white"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="space-y-1">
-                        <Label className="text-[11px] text-muted-foreground font-medium">Mã số thuế</Label>
-                        <Input
-                          value={buyerTaxCode}
-                          onChange={(e) => setBuyerTaxCode(e.target.value)}
-                          placeholder="MST..."
-                          className="h-8 text-xs font-mono bg-white"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[11px] text-muted-foreground font-medium">Email nhận hóa đơn</Label>
-                        <Input
-                          type="email"
-                          value={buyerEmail}
-                          onChange={(e) => setBuyerEmail(e.target.value)}
-                          placeholder="email@..."
-                          className="h-8 text-xs bg-white"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label className="text-[11px] text-muted-foreground font-medium">Địa chỉ xuất hóa đơn</Label>
-                      <Textarea
-                        value={buyerAddress}
-                        onChange={(e) => setBuyerAddress(e.target.value)}
-                        placeholder="Địa chỉ công ty..."
-                        className="text-xs p-2 min-h-[50px] resize-none bg-white"
-                        rows={2}
+                        className="h-8 text-xs bg-white border-slate-200"
                       />
                     </div>
                   </div>
@@ -631,84 +811,6 @@ export function CreateInvoiceFromLinesDialog({
                   />
                 </div>
 
-                {/* Selected Lines Customizer */}
-                {selectedLinesArray.length > 0 && (
-                  <div className="space-y-2 border-t pt-2 mt-2">
-                    <Label className="text-[11px] font-bold text-slate-700">Chi tiết dòng hàng xuất hóa đơn</Label>
-                    <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-                      {selectedLinesArray.map(({ line, item }) => {
-                        const maxQty = item.remainingToInvoice || 1;
-                        return (
-                          <div key={line.deliveryLineId} className="p-2.5 border rounded-lg bg-white space-y-2 shadow-xs border-slate-200">
-                            <div className="flex justify-between items-start gap-2">
-                              <div className="text-xs font-bold truncate text-slate-800">
-                                {item.designName || item.designCode || "—"}
-                              </div>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="h-5 w-5 text-muted-foreground hover:text-destructive shrink-0 cursor-pointer"
-                                onClick={() => toggleLine(item)}
-                              >
-                                <X className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                            <div className="text-[10px] text-muted-foreground flex justify-between">
-                              <span>Mã đơn: <span className="font-semibold text-slate-700">{item.orderCode}</span></span>
-                              <span>Đơn giá: <span className="font-semibold text-slate-700">{formatCurrency(item.unitPrice || 0)}</span></span>
-                            </div>
-                            <div className="grid grid-cols-2 gap-2">
-                              <div className="space-y-1">
-                                <Label className="text-[10px] text-slate-500 font-medium">Số lượng (max {maxQty})</Label>
-                                <Input
-                                  type="number"
-                                  min={1}
-                                  max={maxQty}
-                                  value={line.invoiceQty}
-                                  onChange={(e) => {
-                                    const val = parseInt(e.target.value, 10);
-                                    if (isNaN(val)) return;
-                                    const clamped = Math.max(1, Math.min(maxQty, val));
-                                    const newSelected = new Map(selectedLines);
-                                    newSelected.set(line.deliveryLineId, {
-                                      ...line,
-                                      invoiceQty: clamped
-                                    });
-                                    setSelectedLines(newSelected);
-                                  }}
-                                  className="h-7 text-[11px] px-2 bg-slate-50/50"
-                                />
-                              </div>
-                              <div className="space-y-1">
-                                <Label className="text-[10px] text-slate-500 font-medium">Chiết khấu (%)</Label>
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  max={100}
-                                  value={line.discountPercent ?? ""}
-                                  placeholder="0"
-                                  onChange={(e) => {
-                                    const val = e.target.value === "" ? null : parseInt(e.target.value, 10);
-                                    if (val !== null && (isNaN(val) || val < 0 || val > 100)) return;
-                                    const newSelected = new Map(selectedLines);
-                                    newSelected.set(line.deliveryLineId, {
-                                      ...line,
-                                      discountPercent: val
-                                    });
-                                    setSelectedLines(newSelected);
-                                  }}
-                                  className="h-7 text-[11px] px-2 bg-slate-50/50"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
                 {/* Summary Card */}
                 <Card className="shadow-sm bg-slate-50 border-slate-200 mt-2">
                   <CardHeader className="py-2 px-3 border-b bg-slate-100/50">
@@ -716,22 +818,21 @@ export function CreateInvoiceFromLinesDialog({
                   </CardHeader>
                   <CardContent className="p-3 space-y-2 text-xs">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Số dòng hàng đã chọn:</span>
-                      <span className="font-bold text-slate-800">{selectedLines.size} dòng</span>
+                      <span className="text-muted-foreground">Số lượng mã hàng:</span>
+                      <span className="font-bold text-slate-800">{selectedLines.size} mã</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Tổng số lượng sản phẩm:</span>
-                      <span className="font-bold text-slate-800">
-                        {Array.from(selectedLines.values())
-                          .reduce((sum, line) => sum + (line.invoiceQty || 0), 0)
-                          .toLocaleString()}{" "}
-                        SP
-                      </span>
+                      <span className="text-muted-foreground">Thành tiền:</span>
+                      <span className="font-bold text-slate-800">{formatCurrency(totals.subTotal)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">VAT (8%):</span>
+                      <span className="font-bold text-slate-800">{formatCurrency(totals.subTotal * 0.08)}</span>
                     </div>
                     <Separator />
                     <div className="flex justify-between text-sm font-bold text-blue-600">
-                      <span>Tổng tiền thanh toán:</span>
-                      <span>{formatCurrency(totals.subTotal)}</span>
+                      <span>Tổng cộng:</span>
+                      <span>{formatCurrency(totals.subTotal * 1.08)}</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -762,6 +863,8 @@ export function CreateInvoiceFromLinesDialog({
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Đang tạo...
               </>
+            ) : selectedLines.size > 0 ? (
+              `Tạo hóa đơn (${selectedLines.size} dòng)`
             ) : (
               "Tạo hóa đơn"
             )}

@@ -23,6 +23,7 @@ import {
   MaterialListParamsSchema as GenMaterialListParamsSchema,
   DesignListParamsSchema as GenDesignListParamsSchema,
   ProofingOrderListParamsSchema as GenProofingOrderListParamsSchema,
+  InvoicBillableItemsParamsSchema as GenInvoicBillableItemsParamsSchema,
 } from "./generated-params";
 
 export const DesignListParamsSchema = GenDesignListParamsSchema.extend({
@@ -42,3 +43,11 @@ export const ProofingOrderListParamsSchema = GenProofingOrderListParamsSchema.ex
   code: z.string().nullable().optional(),
 });
 export type ProofingOrderListParams = z.infer<typeof ProofingOrderListParamsSchema>;
+
+export const InvoicBillableItemsParamsSchema = GenInvoicBillableItemsParamsSchema.extend({
+  fromDate: z.string().nullable().optional(),
+  toDate: z.string().nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
+});
+export type InvoicBillableItemsParams = z.infer<typeof InvoicBillableItemsParamsSchema>;

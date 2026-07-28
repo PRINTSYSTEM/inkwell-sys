@@ -41,6 +41,7 @@ import { useNavigate } from "react-router-dom";
 import { DateRangePicker } from "@/components/forms/DateRangePicker";
 import { addDays } from "date-fns";
 import type { DateRange } from "react-day-picker";
+import { useDebounce } from "use-debounce";
 
 import { useAvailableOrdersForDelivery, useCreateDeliveryNote } from "@/hooks/use-delivery-note";
 import { useCreateStockOutForDelivery } from "@/hooks/use-stock";
@@ -50,6 +51,7 @@ import { CreateDeliveryNoteDialog, getDefaultLineNote, SelectedOrderDetail } fro
 export default function InventorySummaryPage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch] = useDebounce(searchQuery, 300);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
@@ -90,7 +92,7 @@ export default function InventorySummaryPage() {
   } = useInventorySummary({
     pageNumber: currentPage,
     pageSize: itemsPerPage,
-    search: searchQuery || undefined,
+    itemCode: debouncedSearch || undefined,
     fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
     toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
     itemType: "product",
@@ -104,7 +106,7 @@ export default function InventorySummaryPage() {
 
   const handleExportExcel = async () => {
     exportMutation.mutate({
-      search: searchQuery || undefined,
+      itemCode: searchQuery || undefined,
       fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
       toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
       itemType: "product",

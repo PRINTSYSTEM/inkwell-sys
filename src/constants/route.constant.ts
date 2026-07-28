@@ -55,6 +55,7 @@ export const ROUTE_PATHS = {
     DETAIL: "/productions/:id" as const,
     DEFECT_RECORDS: "/production/defect-records" as const,
     DISPATCH: "/productions/dispatch" as const,
+    PROOFING: "/productions/proofing" as const,
     KCS: "/productions/kcs" as const,
   },
 

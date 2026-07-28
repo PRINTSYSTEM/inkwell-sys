@@ -67,6 +67,7 @@ export interface InventorySummaryParams {
   fromDate?: string;
   toDate?: string;
   search?: string;
+  itemCode?: string;
   itemType?: string;
   itemGroup?: string;
   hideEmpty?: boolean;

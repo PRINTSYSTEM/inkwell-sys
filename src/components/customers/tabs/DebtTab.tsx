@@ -128,7 +128,7 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
               value={viewMode}
               onValueChange={(val) => setViewMode(val as "monthly" | "date_range")}
             >
-              <SelectTrigger className="h-8 w-[150px] text-xs font-semibold">
+              <SelectTrigger className="h-8 w-[175px] text-xs font-semibold">
                 <SelectValue placeholder="Phương thức xem" />
               </SelectTrigger>
               <SelectContent>
@@ -179,14 +179,14 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
                   type="date"
                   value={fromDate}
                   onChange={(e) => setFromDate(e.target.value)}
-                  className="h-8 w-[125px] text-xs bg-background"
+                  className="h-8 w-[130px] text-xs bg-background"
                 />
                 <span className="text-xs text-muted-foreground font-medium">đến</span>
                 <Input
                   type="date"
                   value={toDate}
                   onChange={(e) => setToDate(e.target.value)}
-                  className="h-8 w-[125px] text-xs bg-background"
+                  className="h-8 w-[130px] text-xs bg-background"
                 />
               </div>
             )}

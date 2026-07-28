@@ -12,6 +12,7 @@ import { useBulkUpdateProductionOrderItems } from "@/hooks/use-production";
 import { defectRecordKeys } from "@/hooks/use-defect-record";
 import { useAuth } from "@/hooks/use-auth";
 import { useDesignTypeList } from "@/hooks/use-design-type";
+import { useDesign } from "@/hooks/use-design";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -522,6 +523,222 @@ export default function KCSPage() {
   );
 }
 
+interface KcsItemRowProps {
+  item: KcsProductionOrderResponse["items"][number];
+  prod: KcsProductionOrderResponse;
+  idx: number;
+  isEditing: boolean;
+  itemVals: any;
+  existingDefect: any;
+  handleValChange: (itemId: number, field: string, value: string) => void;
+  loadUsersOptions: (search?: string) => Promise<any>;
+  onOpenPrintLabel: (poId: number, itemId: number, defaultQty: number) => void;
+  onOpenImageViewer: (url: string) => void;
+}
+
+const KcsItemRow = React.memo(function KcsItemRow({
+  item,
+  prod,
+  idx,
+  isEditing,
+  itemVals,
+  existingDefect,
+  handleValChange,
+  loadUsersOptions,
+  onOpenPrintLabel,
+  onOpenImageViewer,
+}: KcsItemRowProps) {
+  // Query design detail to get sidesClassification
+  const { data: design } = useDesign(item.designId || null, !!item.designId);
+
+  const isDecal =
+    (prod.designTypeName || "").toLowerCase().includes("decal") ||
+    (design?.designType?.name || "").toLowerCase().includes("decal") ||
+    (design?.materialType?.name || "").toLowerCase().includes("decal");
+
+  const isBo = isDecal && design?.sidesClassification === "two_side";
+
+  const formatQty = (qty: number | undefined | null) => {
+    if (qty == null) return "0";
+    if (isBo) {
+      const sets = Math.floor(qty / 2);
+      return `${qty.toLocaleString("vi-VN")} / ${sets.toLocaleString("vi-VN")} bộ`;
+    }
+    return qty.toLocaleString("vi-VN");
+  };
+
+  const formatRawQty = (qty: number | undefined | null) => {
+    if (qty == null) return "0";
+    return qty.toLocaleString("vi-VN");
+  };
+
+  return (
+    <div
+      className="grid grid-cols-[1fr_auto] gap-3 p-2 border rounded-md bg-slate-50/50 dark:bg-slate-900/10 hover:shadow-sm transition-shadow items-start"
+    >
+      {/* Left part: item image & text details */}
+      <div className="flex gap-2 min-w-0">
+        {item.designImageUrl || item.designThumbnailUrl ? (
+          <div className="w-10 h-10 border rounded bg-white overflow-hidden flex items-center justify-center shrink-0 cursor-zoom-in hover:ring-1 hover:ring-primary/20">
+            <img
+              src={
+                (() => {
+                  const url = item.designThumbnailUrl || item.designImageUrl || "";
+                  if (url.startsWith("http")) return url;
+                  return `${(import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "")}/${url.replace(/^\//, "")}`;
+                })()
+              }
+              alt={item.designCode || "design"}
+              loading="lazy"
+              decoding="async"
+              width={40}
+              height={40}
+              className="w-full h-full object-contain"
+              onClick={() => {
+                const url = item.designImageUrl || item.designThumbnailUrl || "";
+                onOpenImageViewer(
+                  url.startsWith("http")
+                    ? url
+                    : `${(import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "")}/${url.replace(/^\//, "")}`
+                );
+              }}
+            />
+          </div>
+        ) : (
+          <div className="w-10 h-10 border rounded bg-slate-100 flex items-center justify-center shrink-0 text-slate-400">
+            <FileImage className="w-4 h-4 opacity-40" />
+          </div>
+        )}
+        <div className="min-w-0 text-xs leading-normal">
+          <p className="text-sm font-black text-slate-900 dark:text-slate-100 truncate" title={item.designName || ""}>
+            {item.designName || "—"}
+          </p>
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-slate-500 mt-1">
+            <span>Mã: <strong className="text-slate-800 dark:text-slate-200 font-bold">{item.designCode || "—"}</strong></span>
+            <span>•</span>
+            <span>Khách: <strong className="text-slate-800 dark:text-slate-200 font-bold">{item.customerName || item.customerCompanyName || "—"}</strong></span>
+            <span>•</span>
+            <span>SL Bình bài: <strong className="text-amber-800 dark:text-amber-500 font-extrabold text-sm">{formatQty(item.inputQty)}</strong></span>
+            <span>•</span>
+            <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded font-bold text-[11px] border">
+              {(item.itemsPerSheet != null && item.itemsPerSheet > 0 ? item.itemsPerSheet : 1)} con/bài
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Right part: numeric input inputs or read-only quantities */}
+      <div className="flex items-center gap-3">
+        {isEditing && itemVals ? (
+          <div className="flex flex-col gap-1.5 w-[220px] shrink-0 border-l pl-3">
+            {/* Quantity Out Input */}
+            <div className="flex items-center gap-1.5 justify-between">
+              <span className="text-[10px] font-bold text-emerald-600 uppercase">Hàng Ra</span>
+              <Input
+                type="number"
+                value={itemVals.outputQty}
+                onChange={(e) => handleValChange(item.productionOrderItemId, "outputQty", e.target.value)}
+                onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                className="h-7 text-xs font-bold w-24 tabular-nums focus-visible:ring-emerald-500"
+                data-output-index={idx}
+              />
+            </div>
+            {/* Defect Quantity Input */}
+            <div className="flex items-center gap-1.5 justify-between">
+              <span className="text-[10px] font-bold text-red-600 uppercase">Hàng Lỗi</span>
+              <Input
+                type="number"
+                value={itemVals.defectQty}
+                onChange={(e) => handleValChange(item.productionOrderItemId, "defectQty", e.target.value)}
+                onWheel={(e) => (e.target as HTMLInputElement).blur()}
+                className="h-7 text-xs font-bold w-24 tabular-nums text-red-600 border-red-200 focus-visible:ring-red-500"
+              />
+            </div>
+
+            {/* Defect Employee & Defect Source Dropdowns (if defectQty > 0) */}
+            {Number(itemVals.defectQty) > 0 && (
+              <div className="flex flex-col gap-1.5 pt-1.5 border-t border-dashed mt-0.5 text-left">
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[9px] font-bold text-red-500 uppercase">N/V phụ trách lỗi</span>
+                  <AsyncSelect
+                    value={itemVals.assignedToUserId}
+                    onValueChange={(val) => handleValChange(item.productionOrderItemId, "assignedToUserId", val?.toString() || "")}
+                    loadOptions={loadUsersOptions}
+                    placeholder="Chọn người..."
+                    className="w-full h-7 text-[10px] min-h-7"
+                  />
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <span className="text-[9px] font-bold text-slate-500 uppercase">Nguồn lỗi</span>
+                  <Select
+                    value={itemVals.defectSource}
+                    onValueChange={(val) => handleValChange(item.productionOrderItemId, "defectSource", val)}
+                  >
+                    <SelectTrigger className="h-7 text-[10px] bg-background border-muted px-1.5">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="design" className="text-xs">Lỗi thiết kế</SelectItem>
+                      <SelectItem value="proofing" className="text-xs">Lỗi bình bài</SelectItem>
+                      <SelectItem value="production" className="text-xs">Lỗi sản xuất</SelectItem>
+                      <SelectItem value="management_decision" className="text-xs">Quyết định QL</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+
+            {/* Item Note */}
+            <Input
+              placeholder="Ghi chú hàng..."
+              value={itemVals.notes}
+              onChange={(e) => handleValChange(item.productionOrderItemId, "notes", e.target.value)}
+              className="h-7 text-[10px] px-2"
+            />
+          </div>
+        ) : (
+          // Read-only state
+          <div className="flex items-center gap-4 text-xs font-bold shrink-0">
+            <div className="text-right">
+              <span className="text-[10px] block text-slate-400 dark:text-slate-500 font-bold uppercase leading-none mb-1">Ra</span>
+              <span className="text-emerald-700 dark:text-emerald-500 text-base font-black tabular-nums">
+                {formatRawQty(item.outputQty)}
+              </span>
+            </div>
+            <div className="text-right">
+              <span className="text-[10px] block text-slate-400 dark:text-slate-500 font-bold uppercase leading-none mb-1">Lỗi</span>
+              <span className="text-red-600 dark:text-red-400 text-base font-black tabular-nums">
+                {formatRawQty(item.defectQty)}
+              </span>
+            </div>
+            {existingDefect && (
+              <div className="text-[9px] text-muted-foreground w-20 leading-tight text-left border-l pl-2">
+                <span className="block font-bold text-slate-700 truncate" title={existingDefect.assignedToUserName}>
+                  {existingDefect.assignedToUserName}
+                </span>
+                <span className="text-red-500 italic block text-[8px]">
+                  ({existingDefect.defectSource === "production" ? "Sản xuất" : existingDefect.defectSource === "design" ? "Thiết kế" : "Bình bài"})
+                </span>
+              </div>
+            )}
+
+            {/* Print label button */}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 w-8 p-0 border-slate-300 hover:bg-slate-100 shrink-0"
+              onClick={() => onOpenPrintLabel(prod.productionOrderId, item.productionOrderItemId, item.outputQty || item.inputQty || 0)}
+              title="In tem nhãn dán thùng"
+            >
+              <Printer className="w-3.5 h-3.5 text-slate-600" />
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+});
+
 // Inner row component to manage edit state for each production order
 interface KcsOrderRowProps {
   prod: KcsProductionOrderResponse;
@@ -968,170 +1185,19 @@ const KcsOrderRow = React.memo(function KcsOrderRow({
               );
 
               return (
-                <div
+                <KcsItemRow
                   key={item.productionOrderItemId}
-                  className="grid grid-cols-[1fr_auto] gap-3 p-2 border rounded-md bg-slate-50/50 dark:bg-slate-900/10 hover:shadow-sm transition-shadow items-start"
-                >
-                  {/* Left part: item image & text details */}
-                  <div className="flex gap-2 min-w-0">
-                    {item.designImageUrl || item.designThumbnailUrl ? (
-                      <div className="w-10 h-10 border rounded bg-white overflow-hidden flex items-center justify-center shrink-0 cursor-zoom-in hover:ring-1 hover:ring-primary/20">
-                        <img
-                          src={
-                            (() => {
-                              const url = item.designThumbnailUrl || item.designImageUrl || "";
-                              if (url.startsWith("http")) return url;
-                              return `${(import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "")}/${url.replace(/^\//, "")}`;
-                            })()
-                          }
-                          alt={item.designCode || "design"}
-                          loading="lazy"
-                          decoding="async"
-                          width={40}
-                          height={40}
-                          className="w-full h-full object-contain"
-                          onClick={() => {
-                            const url = item.designImageUrl || item.designThumbnailUrl || "";
-                            onOpenImageViewer(
-                              url.startsWith("http")
-                                ? url
-                                : `${(import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "")}/${url.replace(/^\//, "")}`
-                            );
-                          }}
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-10 h-10 border rounded bg-slate-100 flex items-center justify-center shrink-0 text-slate-400">
-                        <FileImage className="w-4 h-4 opacity-40" />
-                      </div>
-                    )}
-                    <div className="min-w-0 text-xs leading-normal">
-                      <p className="text-sm font-black text-slate-900 dark:text-slate-100 truncate" title={item.designName || ""}>
-                        {item.designName || "—"}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-slate-500 mt-1">
-                        <span>Mã: <strong className="text-slate-800 dark:text-slate-200 font-bold">{item.designCode || "—"}</strong></span>
-                        <span>•</span>
-                        <span>Khách: <strong className="text-slate-800 dark:text-slate-200 font-bold">{item.customerName || item.customerCompanyName || "—"}</strong></span>
-                        <span>•</span>
-                        <span>SL Yêu cầu: <strong className="text-amber-800 dark:text-amber-500 font-extrabold text-sm">{item.inputQty ? item.inputQty.toLocaleString("vi-VN") : "0"}</strong></span>
-                        <span>•</span>
-                        <span className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-1.5 py-0.5 rounded font-bold text-[11px] border">
-                          {(item.itemsPerSheet != null && item.itemsPerSheet > 0 ? item.itemsPerSheet : 1)} con/bài
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right part: numeric input inputs or read-only quantities */}
-                  <div className="flex items-center gap-3">
-                    {isEditing && itemVals ? (
-                      <div className="flex flex-col gap-1.5 w-[220px] shrink-0 border-l pl-3">
-                        {/* Quantity Out Input */}
-                        <div className="flex items-center gap-1.5 justify-between">
-                          <span className="text-[10px] font-bold text-emerald-600 uppercase">Hàng Ra</span>
-                          <Input
-                            type="number"
-                            value={itemVals.outputQty}
-                            onChange={(e) => handleValChange(item.productionOrderItemId, "outputQty", e.target.value)}
-                            onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                            className="h-7 text-xs font-bold w-24 tabular-nums focus-visible:ring-emerald-500"
-                            data-output-index={idx}
-                          />
-                        </div>
-                        {/* Defect Quantity Input */}
-                        <div className="flex items-center gap-1.5 justify-between">
-                          <span className="text-[10px] font-bold text-red-600 uppercase">Hàng Lỗi</span>
-                          <Input
-                            type="number"
-                            value={itemVals.defectQty}
-                            onChange={(e) => handleValChange(item.productionOrderItemId, "defectQty", e.target.value)}
-                            onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                            className="h-7 text-xs font-bold w-24 tabular-nums text-red-600 border-red-200 focus-visible:ring-red-500"
-                          />
-                        </div>
-
-                        {/* Defect Employee & Defect Source Dropdowns (if defectQty > 0) */}
-                        {Number(itemVals.defectQty) > 0 && (
-                          <div className="flex flex-col gap-1.5 pt-1.5 border-t border-dashed mt-0.5 text-left">
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-[9px] font-bold text-red-500 uppercase">N/V phụ trách lỗi</span>
-                              <AsyncSelect
-                                value={itemVals.assignedToUserId}
-                                onValueChange={(val) => handleValChange(item.productionOrderItemId, "assignedToUserId", val?.toString() || "")}
-                                loadOptions={loadUsersOptions}
-                                placeholder="Chọn người..."
-                                className="w-full h-7 text-[10px] min-h-7"
-                              />
-                            </div>
-                            <div className="flex flex-col gap-0.5">
-                              <span className="text-[9px] font-bold text-slate-500 uppercase">Nguồn lỗi</span>
-                              <Select
-                                value={itemVals.defectSource}
-                                onValueChange={(val) => handleValChange(item.productionOrderItemId, "defectSource", val)}
-                              >
-                                <SelectTrigger className="h-7 text-[10px] bg-background border-muted px-1.5">
-                                  <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="design" className="text-xs">Lỗi thiết kế</SelectItem>
-                                  <SelectItem value="proofing" className="text-xs">Lỗi bình bài</SelectItem>
-                                  <SelectItem value="production" className="text-xs">Lỗi sản xuất</SelectItem>
-                                  <SelectItem value="management_decision" className="text-xs">Quyết định QL</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Item Note */}
-                        <Input
-                          placeholder="Ghi chú hàng..."
-                          value={itemVals.notes}
-                          onChange={(e) => handleValChange(item.productionOrderItemId, "notes", e.target.value)}
-                          className="h-7 text-[10px] px-2"
-                        />
-                      </div>
-                    ) : (
-                      // Read-only state
-                      <div className="flex items-center gap-4 text-xs font-bold shrink-0">
-                        <div className="text-right">
-                          <span className="text-[10px] block text-slate-400 dark:text-slate-500 font-bold uppercase leading-none mb-1">Ra</span>
-                          <span className="text-emerald-700 dark:text-emerald-500 text-base font-black tabular-nums">
-                            {item.outputQty !== null ? item.outputQty.toLocaleString("vi-VN") : "0"}
-                          </span>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-[10px] block text-slate-400 dark:text-slate-500 font-bold uppercase leading-none mb-1">Lỗi</span>
-                          <span className="text-red-600 dark:text-red-400 text-base font-black tabular-nums">
-                            {item.defectQty !== null ? item.defectQty.toLocaleString("vi-VN") : "0"}
-                          </span>
-                        </div>
-                        {existingDefect && (
-                          <div className="text-[9px] text-muted-foreground w-20 leading-tight text-left border-l pl-2">
-                            <span className="block font-bold text-slate-700 truncate" title={existingDefect.assignedToUserName}>
-                              {existingDefect.assignedToUserName}
-                            </span>
-                            <span className="text-red-500 italic block text-[8px]">
-                              ({existingDefect.defectSource === "production" ? "Sản xuất" : existingDefect.defectSource === "design" ? "Thiết kế" : "Bình bài"})
-                            </span>
-                          </div>
-                        )}
-
-                        {/* Print label button */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 w-8 p-0 border-slate-300 hover:bg-slate-100 shrink-0"
-                          onClick={() => onOpenPrintLabel(prod.productionOrderId, item.productionOrderItemId, item.outputQty || item.inputQty || 0)}
-                          title="In tem nhãn dán thùng"
-                        >
-                          <Printer className="w-3.5 h-3.5 text-slate-600" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                  item={item}
+                  prod={prod}
+                  idx={idx}
+                  isEditing={isEditing}
+                  itemVals={itemVals}
+                  existingDefect={existingDefect}
+                  handleValChange={handleValChange}
+                  loadUsersOptions={loadUsersOptions}
+                  onOpenPrintLabel={onOpenPrintLabel}
+                  onOpenImageViewer={onOpenImageViewer}
+                />
               );
             })}
           </div>

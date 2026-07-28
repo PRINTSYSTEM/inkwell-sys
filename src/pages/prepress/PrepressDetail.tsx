@@ -1108,11 +1108,11 @@ export default function ProofingOrderDetailPage() {
   const parsedCustomPaperSize = useMemo(() => {
     if (!customPaperSize || paperSizeId !== "custom") return null;
     const trimmed = customPaperSize.trim();
-    // Support multiple formats: 31×43, 31x43, 31 X 43, 31 x 43, etc.
-    const match = trimmed.match(/^(\d+)\s*[×xX*]\s*(\d+)$/);
+    // Support multiple formats: 31×43, 31.5x43, 31,5 X 43.5, etc.
+    const match = trimmed.match(/^(\d+(?:[.,]\d+)?)\s*[×xX*]\s*(\d+(?:[.,]\d+)?)$/);
     if (match) {
-      const width = parseInt(match[1], 10);
-      const height = parseInt(match[2], 10);
+      const width = parseFloat(match[1].replace(",", "."));
+      const height = parseFloat(match[2].replace(",", "."));
       if (!isNaN(width) && !isNaN(height) && width > 0 && height > 0) {
         return { width, height };
       }
@@ -1180,11 +1180,11 @@ export default function ProofingOrderDetailPage() {
   const parsedUpdateCustomPaperSize = useMemo(() => {
     if (!updateCustomPaperSize || updatePaperSizeId !== "custom") return null;
     const trimmed = updateCustomPaperSize.trim();
-    // Support multiple formats: 31×43, 31x43, 31 X 43, 31 x 43, etc.
-    const match = trimmed.match(/^(\d+)\s*[×xX*]\s*(\d+)$/);
+    // Support multiple formats: 31×43, 31.5x43, 31,5 X 43.5, etc.
+    const match = trimmed.match(/^(\d+(?:[.,]\d+)?)\s*[×xX*]\s*(\d+(?:[.,]\d+)?)$/);
     if (match) {
-      const width = parseInt(match[1], 10);
-      const height = parseInt(match[2], 10);
+      const width = parseFloat(match[1].replace(",", "."));
+      const height = parseFloat(match[2].replace(",", "."));
       if (!isNaN(width) && !isNaN(height) && width > 0 && height > 0) {
         return { width, height };
       }
@@ -1217,13 +1217,13 @@ export default function ProofingOrderDetailPage() {
 
     // Parse custom paper size
     const trimmed = customSize.trim();
-    const match = trimmed.match(/^(\d+)\s*[×xX*]\s*(\d+)$/);
+    const match = trimmed.match(/^(\d+(?:[.,]\d+)?)\s*[×xX*]\s*(\d+(?:[.,]\d+)?)$/);
     if (!match) {
       return null;
     }
 
-    const width = parseInt(match[1], 10);
-    const height = parseInt(match[2], 10);
+    const width = parseFloat(match[1].replace(",", "."));
+    const height = parseFloat(match[2].replace(",", "."));
     if (isNaN(width) || isNaN(height) || width <= 0 || height <= 0) {
       return null;
     }
@@ -1459,10 +1459,10 @@ export default function ProofingOrderDetailPage() {
   const findMatchingPaperSize = (customSizeStr: string | null | undefined) => {
     if (!customSizeStr || !paperSizes) return null;
     const trimmed = customSizeStr.trim();
-    const match = trimmed.match(/^(\d+)\s*[×xX*]\s*(\d+)$/);
+    const match = trimmed.match(/^(\d+(?:[.,]\d+)?)\s*[×xX*]\s*(\d+(?:[.,]\d+)?)$/);
     if (!match) return null;
-    const w = parseInt(match[1], 10);
-    const h = parseInt(match[2], 10);
+    const w = parseFloat(match[1].replace(",", "."));
+    const h = parseFloat(match[2].replace(",", "."));
     return paperSizes.find(
       (ps) =>
         (ps.width === w && ps.height === h) ||
@@ -2270,7 +2270,13 @@ export default function ProofingOrderDetailPage() {
         nextStatusInfo={nextStatusInfo}
         canMarkCompleted={canMarkCompleted}
         completionMissingItems={completionMissingItems}
-        onBack={() => navigate("/proofing")}
+        onBack={() => {
+          if (window.history.length > 1) {
+            navigate(-1);
+          } else {
+            navigate("/proofing");
+          }
+        }}
         onOpenDieList={() => setIsDieListDialogOpen(true)}
         onUploadClick={() => setIsUploadDialogOpen(true)}
         onStatusChangeClick={handleStatusChangeClick}
@@ -2293,7 +2299,7 @@ export default function ProofingOrderDetailPage() {
         {isEmptyOrder ? (
           <div className="flex-1 flex flex-row gap-4 overflow-hidden">
             {/* Left: selectable designs */}
-            <div className="w-2/3 min-w-0 flex flex-col">
+            <div className="flex-1 min-w-0 flex flex-col">
               <div className="flex-1 flex flex-col overflow-hidden border rounded-xl bg-card">
                 {/* Filters Header */}
                 <div className="shrink-0 p-4 border-b space-y-4">
@@ -2400,7 +2406,7 @@ export default function ProofingOrderDetailPage() {
             </div>
 
             {/* Right: configuration panel (existing) */}
-            <div className="w-1/3 min-w-0 shrink-0 h-full flex flex-col">
+            <div className="w-1/3 min-w-[320px] shrink-0 h-full flex flex-col">
               <DetailEmptyOrderView
                 toggleSelection={toggleSelection}
                 selectedDesigns={selectedDesigns}
