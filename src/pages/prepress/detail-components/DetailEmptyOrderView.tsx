@@ -73,7 +73,7 @@ export function DetailEmptyOrderView({
   nextOrderId,
 }: DetailEmptyOrderViewProps) {
   return (
-    <div className="flex-1 flex min-h-0 w-full max-w-full overflow-hidden border rounded-lg shadow-sm bg-background relative">
+    <div className="flex-1 flex flex-col min-h-0 w-full max-w-full overflow-hidden border rounded-lg shadow-sm bg-background relative">
       {/* LEFT SIDE - DESIGN LIST */}
       <div className="flex-1 flex flex-col min-h-0 bg-background">
         {/* Right header */}
@@ -120,7 +120,7 @@ export function DetailEmptyOrderView({
                     {selectedDesigns.map((design, index) => (
                       <div
                         key={design.id}
-                        className="group relative flex items-center gap-2 p-1.5 border rounded-lg bg-card/50 hover:border-primary/50 transition-all shadow-sm"
+                        className="group relative flex items-center gap-2 p-1.5 border rounded-lg bg-card/50 hover:border-primary/50 transition-all shadow-sm min-w-0 w-full"
                       >
                         <div className="w-5 h-5 shrink-0 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] font-extrabold shadow-sm">
                           {index + 1}
@@ -141,7 +141,7 @@ export function DetailEmptyOrderView({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-1.5">
                             <div className="flex items-center gap-1 min-w-0">
-                              <span className="font-bold text-xs truncate" title={design.code}>
+                              <span className="font-bold text-xs block truncate max-w-[100px]" title={design.code}>
                                 {design.code}
                               </span>
                             </div>
@@ -161,8 +161,8 @@ export function DetailEmptyOrderView({
                               </span>
                             </span>
                           </div>
-                          <p className="text-[11px] text-muted-foreground font-medium break-all leading-tight truncate" title={design.name}>
-                            {design.name}
+                          <p className="text-[11px] text-muted-foreground font-medium leading-tight truncate max-w-[140px] sm:max-w-[180px]" title={design.name}>
+                            {design.name && design.name.length > 80 ? design.name.slice(0, 77) + "..." : design.name}
                           </p>
                         </div>
                         <div className="w-20 shrink-0">
@@ -282,7 +282,7 @@ export function DetailEmptyOrderView({
                             value={customPaperSize}
                             onChange={(e) => {
                               const val = e.target.value;
-                              const filtered = val.replace(/[^0-9xX×*]/g, "");
+                              const filtered = val.replace(/[^0-9xX×*.,]/g, "");
                               setCustomPaperSize(filtered.toLowerCase());
                             }}
                             className="h-8.5 text-xs border-primary/30 focus:border-primary shadow-sm"

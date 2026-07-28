@@ -570,6 +570,14 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            path: "proofing",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <ProofingList />
+              </Suspense>
+            ),
+          },
+          {
             path: "dispatch",
             element: (
               <Suspense fallback={<PageLoadingFallback />}>

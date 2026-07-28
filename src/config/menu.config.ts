@@ -246,6 +246,21 @@ export const MENU_ITEMS: MenuItem[] = [
         ],
       },
       {
+        id: "production-proofing",
+        title: "Bình bài",
+        icon: Layers,
+        path: ROUTE_PATHS.PRODUCTION.PROOFING,
+        allowedRoles: [
+          ROLE.ADMIN,
+          ROLE.MANAGER,
+          ROLE.PRODUCTION,
+          ROLE.PRODUCTION_LEAD,
+          ROLE.ACCOUNTING,
+          ROLE.ACCOUNTING_LEAD,
+          ROLE.KCS,
+        ],
+      },
+      {
         id: "production-orders",
         title: "Lệnh sản xuất",
         icon: Factory,

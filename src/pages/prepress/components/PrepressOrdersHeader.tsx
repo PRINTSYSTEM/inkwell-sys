@@ -111,6 +111,7 @@ interface PrepressOrdersHeaderProps {
   onAddToExistingClick?: () => void;
   completedDateRange?: DateRange;
   setCompletedDateRange: (range: DateRange | undefined) => void;
+  onlyCompleted?: boolean;
 }
 
 export function PrepressOrdersHeader({
@@ -188,10 +189,12 @@ export function PrepressOrdersHeader({
   onAddToExistingClick,
   completedDateRange,
   setCompletedDateRange,
+  onlyCompleted = false,
 }: PrepressOrdersHeaderProps) {
   const [materialTypeSearchOpen, setMaterialTypeSearchOpen] = useState(false);
 
   const isSearchActiveAndEmpty =
+    !onlyCompleted &&
     !loadingIncomplete &&
     !loadingCompleted &&
     !loadingProductionReturned &&
@@ -203,20 +206,22 @@ export function PrepressOrdersHeader({
   return (
     <div className="relative shrink-0">
       {/* FilterSection */}
-      <FilterSection
-        designTypeOptions={designTypeOptions}
-        materialTypeOptions={materialTypeOptions}
-        selectedDesignTypes={selectedDesignTypes}
-        selectedMaterialTypes={selectedMaterialTypes}
-        currentMaterialTypeId={currentMaterialTypeId}
-        onDesignTypeChange={onDesignTypeChange}
-        onMaterialTypeChange={onMaterialTypeChange}
-        onClearFilters={onClearFilters}
-        hasActiveFilters={hasActiveFilters}
-        isConfiguring={isConfiguring}
-        selectedCount={selectedCount}
-        onAddToExistingClick={onAddToExistingClick}
-      />
+      {!onlyCompleted && (
+        <FilterSection
+          designTypeOptions={designTypeOptions}
+          materialTypeOptions={materialTypeOptions}
+          selectedDesignTypes={selectedDesignTypes}
+          selectedMaterialTypes={selectedMaterialTypes}
+          currentMaterialTypeId={currentMaterialTypeId}
+          onDesignTypeChange={onDesignTypeChange}
+          onMaterialTypeChange={onMaterialTypeChange}
+          onClearFilters={onClearFilters}
+          hasActiveFilters={hasActiveFilters}
+          isConfiguring={isConfiguring}
+          selectedCount={selectedCount}
+          onAddToExistingClick={onAddToExistingClick}
+        />
+      )}
 
       {/* DesignTable - shown when filters are active or search matches no orders */}
       {(hasActiveFilters || isSearchActiveAndEmpty) && (
@@ -325,7 +330,7 @@ export function PrepressOrdersHeader({
       {!hasActiveFilters && !isSearchActiveAndEmpty && (
         <div className="mt-4 space-y-8">
           {/* Production Returned Orders Section */}
-          {productionReturnedTotalCount > 0 && (
+          {!onlyCompleted && productionReturnedTotalCount > 0 && (
             <div className="space-y-4">
               <PrepressOrdersTable
                 title="Bình bài sản xuất trả về"
@@ -409,8 +414,9 @@ export function PrepressOrdersHeader({
           )}
 
           {/* Incomplete Orders Section */}
-          <div className="space-y-4">
-            <PrepressOrdersTable
+          {!onlyCompleted && (
+            <div className="space-y-4">
+              <PrepressOrdersTable
               title="Bình bài chờ xử lý"
               count={incompleteTotalCount}
               orders={incompleteOrders}
@@ -423,7 +429,8 @@ export function PrepressOrdersHeader({
               showAllDesignsByDefault={true}
             />
 
-          </div>
+            </div>
+          )}
 
           {/* Completed Orders Section */}
           <div className="space-y-4">

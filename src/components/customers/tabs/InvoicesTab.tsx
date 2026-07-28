@@ -4,6 +4,7 @@ import { Search, ExternalLink, Package, Receipt } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CreateInvoiceFromLinesDialog } from "@/components/accounting/CreateInvoiceFromLinesDialog";
 import {
   Table,
   TableBody,
@@ -51,10 +52,12 @@ export function InvoicesTab({ customerId, isActive = true }: InvoicesTabProps) {
     isActive
   );
 
+  const [isCreateInvoiceOpen, setIsCreateInvoiceOpen] = useState(false);
+
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-3">
         <div className="relative flex-1 max-w-xs">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -64,6 +67,14 @@ export function InvoicesTab({ customerId, isActive = true }: InvoicesTabProps) {
             className="pl-8 h-9 text-sm"
           />
         </div>
+
+        <Button 
+          onClick={() => setIsCreateInvoiceOpen(true)}
+          className="h-9 text-xs font-semibold cursor-pointer"
+        >
+          <Receipt className="h-4 w-4 mr-2" />
+          Xuất hóa đơn
+        </Button>
       </div>
 
       {/* Table */}
@@ -221,6 +232,12 @@ export function InvoicesTab({ customerId, isActive = true }: InvoicesTabProps) {
           </Pagination>
         </div>
       )}
+
+      <CreateInvoiceFromLinesDialog
+        open={isCreateInvoiceOpen}
+        onOpenChange={setIsCreateInvoiceOpen}
+        customerId={customerId}
+      />
     </div>
   );
 }
