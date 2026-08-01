@@ -96,6 +96,8 @@ import { OrderFlowDiagram } from "@/components/orders/order-flow-diagram";
 import { DepositDialog } from "@/components/orders/deposit-dialog";
 import { InvoiceDialog } from "@/components/orders/invoice-dialog";
 import { PrintOrderDialog } from "@/components/orders/print-order-dialog";
+import { StatusUpdateDialog } from "@/components/orders/status-update-dialog";
+import { OrderDetailStatusDialog } from "@/components/orders/order-detail-status-dialog";
 
 import {
   orderStatusLabels,
@@ -169,6 +171,9 @@ export default function OrderDetailPage() {
     useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [detailStatusDialogOpen, setDetailStatusDialogOpen] = useState(false);
+  const [selectedOrderDetail, setSelectedOrderDetail] = useState<any>(null);
   // Card-level editing states
   const [editingCard, setEditingCard] = useState<string | null>(null);
   const [cardEditValues, setCardEditValues] = useState<any>({});
@@ -803,10 +808,23 @@ export default function OrderDetailPage() {
               <span className="text-sm text-muted-foreground">
                 Trạng thái hiện tại:
               </span>{" "}
-              <StatusBadge
-                status={order.status}
-                label={orderStatusLabels[order.status || ""] || "N/A"}
-              />
+              <div className="flex items-center gap-2">
+                <StatusBadge
+                  status={order.status}
+                  label={orderStatusLabels[order.status || ""] || "N/A"}
+                />
+                {role === ROLE.ADMIN && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 px-2 text-xs gap-1 border-dashed hover:border-primary hover:text-primary transition-colors"
+                    onClick={() => setStatusDialogOpen(true)}
+                  >
+                    <Edit className="w-3 h-3" />
+                    Thay đổi
+                  </Button>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
               <span className="flex items-center gap-1.5">
@@ -1076,10 +1094,27 @@ export default function OrderDetailPage() {
                                   <span className="text-sm text-muted-foreground">
                                     Trạng thái hiện tại:
                                   </span>{" "}
-                                  <StatusBadge
-                                    status={statusValue || ""}
-                                    label={statusLabel}
-                                  />
+                                  <div className="flex items-center gap-2">
+                                    <StatusBadge
+                                      status={statusValue || ""}
+                                      label={statusLabel}
+                                    />
+                                    {role === ROLE.ADMIN && (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-6 px-1.5 text-xs gap-1 border-dashed hover:border-primary hover:text-primary transition-colors shrink-0"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedOrderDetail(orderDetail);
+                                          setDetailStatusDialogOpen(true);
+                                        }}
+                                      >
+                                        <Edit className="w-2.5 h-2.5" />
+                                        Thay đổi
+                                      </Button>
+                                    )}
+                                  </div>
                                 </div>
                                 <h4 className="font-medium break-all">
                                   {design?.designName || "Chưa đặt tên"}
@@ -2374,6 +2409,20 @@ export default function OrderDetailPage() {
         open={printDialogOpen}
         onOpenChange={setPrintDialogOpen}
         orderId={order.id}
+      />
+
+      <StatusUpdateDialog
+        open={statusDialogOpen}
+        onOpenChange={setStatusDialogOpen}
+        orderId={order.id}
+        currentStatus={order.status || ""}
+      />
+
+      <OrderDetailStatusDialog
+        open={detailStatusDialogOpen}
+        onOpenChange={setDetailStatusDialogOpen}
+        orderDetail={selectedOrderDetail}
+        onSuccess={refetch}
       />
 
       {/* Add Design Dialog */}

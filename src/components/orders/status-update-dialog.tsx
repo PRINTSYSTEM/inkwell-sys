@@ -15,16 +15,9 @@ import { Label } from "@/components/ui/label";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { orderStatusLabels, orderStatusDescription } from "@/lib/status-utils";
 import { useUpdateOrder } from "@/hooks";
+import { ENTITY_CONFIG } from "@/config/entities.config";
 
-type OrderStatus =
-  | "pending"
-  | "waiting_for_proofing"
-  | "proofed"
-  | "waiting_for_production"
-  | "in_production"
-  | "completed"
-  | "invoice_issued"
-  | "cancelled";
+type OrderStatus = string;
 
 type StatusUpdateDialogProps = {
   open: boolean;
@@ -49,7 +42,7 @@ export function StatusUpdateDialog({
   const { mutateAsync: updateOrder, isPending } = useUpdateOrder();
 
   const statusOptions = useMemo(
-    () => allowedStatuses ?? (Object.keys(orderStatusLabels) as OrderStatus[]),
+    () => allowedStatuses ?? (Object.keys(ENTITY_CONFIG.orderStatuses.values) as OrderStatus[]),
     [allowedStatuses]
   );
 
@@ -68,20 +61,23 @@ export function StatusUpdateDialog({
       return;
     }
 
-    await updateOrder({
-      id: orderId,
-      data: {
-        status: selectedStatus,
-        note: note || undefined,
-      },
-    });
-
-    handleClose();
+    try {
+      await updateOrder({
+        id: orderId,
+        data: {
+          status: selectedStatus,
+          note: note || undefined,
+        },
+      });
+      handleClose();
+    } catch (error) {
+      console.error("Failed to update status:", error);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg flex flex-col max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>Cập nhật trạng thái đơn hàng</DialogTitle>
           <DialogDescription>
@@ -89,8 +85,8 @@ export function StatusUpdateDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="flex items-center justify-between rounded-md border bg-muted/40 px-3 py-2 text-sm">
+        <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
+          <div className="flex items-center justify-between rounded-md border bg-muted/40 px-3 py-2 text-sm shrink-0">
             <span className="text-muted-foreground">Trạng thái hiện tại:</span>
             <StatusBadge
               status={currentStatus}
@@ -98,40 +94,42 @@ export function StatusUpdateDialog({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Trạng thái mới</Label>
-            <RadioGroup
-              value={selectedStatus}
-              onValueChange={(v) => setSelectedStatus(v as OrderStatus)}
-              className="grid grid-cols-1 sm:grid-cols-2 gap-2"
-            >
-              {statusOptions.map((status) => {
-                const id = `status-${status}`;
-                return (
-                  <div
-                    key={status}
-                    className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-muted/60"
-                  >
-                    <RadioGroupItem value={status} id={id} />
-                    <Label htmlFor={id} className="flex-1 cursor-pointer">
-                      <div className="flex flex-col">
-                        <span className="font-medium">
-                          {orderStatusLabels[status] || status}
-                        </span>
-                        {orderStatusDescription[status] && (
-                          <span className="text-xs text-muted-foreground">
-                            {orderStatusDescription[status]}
+          <div className="space-y-2 flex-1 flex flex-col overflow-hidden">
+            <Label className="text-sm font-medium shrink-0">Trạng thái mới</Label>
+            <div className="flex-1 overflow-y-auto pr-1 min-h-[150px] max-h-[320px] border rounded-md p-2 bg-muted/10">
+              <RadioGroup
+                value={selectedStatus}
+                onValueChange={(v) => setSelectedStatus(v as OrderStatus)}
+                className="grid grid-cols-1 gap-2"
+              >
+                {statusOptions.map((status) => {
+                  const id = `status-${status}`;
+                  return (
+                    <div
+                      key={status}
+                      className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm hover:bg-muted/60"
+                    >
+                      <RadioGroupItem value={status} id={id} />
+                      <Label htmlFor={id} className="flex-1 cursor-pointer">
+                        <div className="flex flex-col">
+                          <span className="font-medium">
+                            {orderStatusLabels[status] || status}
                           </span>
-                        )}
-                      </div>
-                    </Label>
-                  </div>
-                );
-              })}
-            </RadioGroup>
+                          {orderStatusDescription[status] && (
+                            <span className="text-xs text-muted-foreground">
+                              {orderStatusDescription[status]}
+                            </span>
+                          )}
+                        </div>
+                      </Label>
+                    </div>
+                  );
+                })}
+              </RadioGroup>
+            </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 shrink-0">
             <Label htmlFor="status-note">Ghi chú</Label>
             <Textarea
               id="status-note"
@@ -143,7 +141,7 @@ export function StatusUpdateDialog({
           </div>
         </div>
 
-        <DialogFooter className="mt-4 flex gap-2">
+        <DialogFooter className="mt-4 flex gap-2 shrink-0">
           <Button variant="outline" onClick={handleClose} disabled={isPending}>
             Hủy
           </Button>
