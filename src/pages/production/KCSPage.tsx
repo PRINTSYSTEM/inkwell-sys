@@ -572,9 +572,17 @@ const KcsItemRow = React.memo(function KcsItemRow({
     return qty.toLocaleString("vi-VN");
   };
 
+  const hasValue = isEditing
+    ? Number(itemVals?.outputQty || 0) > 0
+    : Number(item.outputQty || 0) > 0;
+
   return (
     <div
-      className="grid grid-cols-[1fr_auto] gap-3 p-2 border rounded-md bg-slate-50/50 dark:bg-slate-900/10 hover:shadow-sm transition-shadow items-start"
+      className={`grid grid-cols-[1fr_auto] gap-3 p-2 border rounded-md transition-all items-start shadow-sm border-l-4 ${
+        hasValue
+          ? "bg-emerald-100/90 dark:bg-emerald-900/30 border-emerald-400 dark:border-emerald-800 border-l-emerald-600 dark:border-l-emerald-500 hover:bg-emerald-200/60 dark:hover:bg-emerald-900/40"
+          : "bg-slate-50/50 dark:bg-slate-900/10 border-slate-200 dark:border-slate-800 border-l-slate-300 dark:border-l-slate-700 hover:shadow-sm"
+      }`}
     >
       {/* Left part: item image & text details */}
       <div className="flex gap-2 min-w-0">
@@ -639,7 +647,11 @@ const KcsItemRow = React.memo(function KcsItemRow({
                 value={itemVals.outputQty}
                 onChange={(e) => handleValChange(item.productionOrderItemId, "outputQty", e.target.value)}
                 onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                className="h-7 text-xs font-bold w-24 tabular-nums focus-visible:ring-emerald-500"
+                className={`h-7 text-xs font-bold w-24 tabular-nums focus-visible:ring-emerald-500 transition-colors ${
+                  Number(itemVals.outputQty || 0) > 0
+                    ? "text-emerald-700 dark:text-emerald-500 border-emerald-300 dark:border-emerald-800 bg-emerald-50/20 dark:bg-emerald-950/10"
+                    : ""
+                }`}
                 data-output-index={idx}
               />
             </div>
@@ -701,7 +713,11 @@ const KcsItemRow = React.memo(function KcsItemRow({
           <div className="flex items-center gap-4 text-xs font-bold shrink-0">
             <div className="text-right">
               <span className="text-[10px] block text-slate-400 dark:text-slate-500 font-bold uppercase leading-none mb-1">Ra</span>
-              <span className="text-emerald-700 dark:text-emerald-500 text-base font-black tabular-nums">
+              <span className={`text-base font-black tabular-nums ${
+                (item.outputQty || 0) > 0
+                  ? "text-emerald-800 dark:text-emerald-400 font-extrabold"
+                  : "text-slate-400 dark:text-slate-650"
+              }`}>
                 {formatRawQty(item.outputQty)}
               </span>
             </div>
