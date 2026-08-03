@@ -82,6 +82,8 @@ import {
   useRejectDesignFromProofingOrder,
   proofingKeys,
   useDeleteProofingOrder,
+  useUpdateProofingOrderScheduleStatus,
+  useUpdateProofingDeliveryVisibility,
 } from "@/hooks/use-proofing-order";
 import { useProductionOrders } from "@/hooks/use-production";
 import { useAvailableOrderDetailsForProofing, useAuth } from "@/hooks";
@@ -373,6 +375,10 @@ export default function ProofingOrderDetailPage() {
   const { user } = useAuth();
   const { cartItems } = useProofingCart();
   const isProofer = user?.role === ROLE.ADMIN || user?.role === ROLE.MANAGER || user?.role === ROLE.PROOFER;
+  const isAuthorizedForVisibility =
+    user?.role === ROLE.ADMIN ||
+    user?.role === ROLE.ACCOUNTING ||
+    user?.role === ROLE.ACCOUNTING_LEAD;
 
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [isUpdateFileDialogOpen, setIsUpdateFileDialogOpen] = useState(false);
@@ -653,6 +659,16 @@ export default function ProofingOrderDetailPage() {
 
   const { mutateAsync: deleteProofingOrder, isPending: isDeleting } =
     useDeleteProofingOrder();
+
+  const updateVisibilityMutation = useUpdateProofingDeliveryVisibility();
+
+  const handleToggleDeliveryVisibility = () => {
+    if (!order?.id) return;
+    updateVisibilityMutation.mutate({
+      id: order.id,
+      isHiddenFromDelivery: !order.isHiddenFromDelivery,
+    });
+  };
 
   const handleConfirmDelete = async () => {
     if (!order?.id) return;
@@ -2293,6 +2309,9 @@ export default function ProofingOrderDetailPage() {
         onDeleteClick={() => setIsConfirmDeleteDialogOpen(true)}
         isDeleting={isDeleting}
         onUpdateCompletedAt={handleUpdateCompletedAt}
+        isAuthorizedForVisibility={isAuthorizedForVisibility}
+        isTogglingVisibility={updateVisibilityMutation.isPending}
+        onToggleDeliveryVisibility={handleToggleDeliveryVisibility}
       />
 
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden">

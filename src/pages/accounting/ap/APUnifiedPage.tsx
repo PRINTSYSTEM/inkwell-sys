@@ -41,12 +41,17 @@ import { Badge } from "@/components/ui/badge";
 import { useAPSummary, useAPSummaryReport, useExportAPSummary, useAPReconciliation } from "@/hooks/use-ar-ap";
 import { useUpdateStockInPrices } from "@/hooks/use-stock";
 import { APCreatePaymentDialog } from "./APCreatePaymentDialog";
+import SettleVendorDebtBatchDialog from "./components/SettleVendorDebtBatchDialog";
 import { formatCurrency } from "@/lib/status-utils";
 import { cn } from "@/lib/utils";
 import { APVendorExportButton } from "./APVendorExportButton";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/hooks/use-auth";
+import { useSettleVendorDebtBatch } from "@/hooks/use-vendor";
+import { Textarea } from "@/components/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
@@ -55,14 +60,47 @@ const formatDate = (dateStr: string | null | undefined) => {
 
 export default function APUnifiedPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [currentPage, setCurrentPage] = useState(1);
   const [expandedVendors, setExpandedVendors] = useState<Set<number>>(new Set());
   const [selectedOrders, setSelectedOrders] = useState<Map<number, any>>(new Map());
+  const [selectedVendors, setSelectedVendors] = useState<Map<number, { vendorId: number; vendorCode: string; vendorName: string; currentDebt: number }>>(new Map());
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isBatchSettleOpen, setIsBatchSettleOpen] = useState(false);
   const itemsPerPage = 1000;
   const isReport = true;
+
+  const handleSelectVendor = (vendorId: number, vendorCode: string, vendorName: string, currentDebt: number) => {
+    const newSelected = new Map(selectedVendors);
+    if (newSelected.has(vendorId)) {
+      newSelected.delete(vendorId);
+    } else {
+      newSelected.set(vendorId, { vendorId, vendorCode, vendorName, currentDebt });
+    }
+    setSelectedVendors(newSelected);
+  };
+
+  const handleSelectAllVendors = (checked: boolean) => {
+    if (!checked) {
+      setSelectedVendors(new Map());
+      return;
+    }
+    const newSelected = new Map();
+    filteredAPItems.forEach((item: any) => {
+      if (item.vendorId) {
+        newSelected.set(item.vendorId, {
+          vendorId: item.vendorId,
+          vendorCode: item.vendorCode || "",
+          vendorName: item.vendorName || "",
+          currentDebt: item.closingCredit ?? item.closingBalance ?? 0
+        });
+      }
+    });
+    setSelectedVendors(newSelected);
+  };
 
   const {
     data: apReportData,
@@ -282,6 +320,17 @@ export default function APUnifiedPage() {
                 Tạo phiếu chi ({selectedOrders.size})
               </Button>
             )}
+            {isAdmin && selectedVendors.size > 0 && (
+              <Button
+                variant="default"
+                size="sm"
+                className="h-9 bg-amber-600 hover:bg-amber-700 text-white font-medium"
+                onClick={() => setIsBatchSettleOpen(true)}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Tất toán hàng loạt ({selectedVendors.size})
+              </Button>
+            )}
           </div>
         </div>
 
@@ -291,6 +340,16 @@ export default function APUnifiedPage() {
           selectedOrders={selectedOrders}
           onSuccess={() => {
             setSelectedOrders(new Map());
+            refetch();
+          }}
+        />
+
+        <SettleVendorDebtBatchDialog
+          open={isBatchSettleOpen}
+          onOpenChange={setIsBatchSettleOpen}
+          selectedVendors={selectedVendors}
+          onSuccess={() => {
+            setSelectedVendors(new Map());
             refetch();
           }}
         />
@@ -314,6 +373,17 @@ export default function APUnifiedPage() {
             <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
               <TableRow className="bg-muted/30 hover:bg-muted/30">
                 <TableHead className="w-[40px]"></TableHead>
+                {isAdmin && (
+                  <TableHead className="w-[40px] text-center">
+                    <Checkbox
+                      checked={
+                        filteredAPItems.length > 0 &&
+                        selectedVendors.size === filteredAPItems.filter((i) => i.vendorId).length
+                      }
+                      onCheckedChange={(checked) => handleSelectAllVendors(checked === true)}
+                    />
+                  </TableHead>
+                )}
                 <TableHead className="w-[120px]">Mã NCC</TableHead>
                 <TableHead>Tên nhà cung cấp</TableHead>
                 {!isReport ? (
@@ -341,7 +411,7 @@ export default function APUnifiedPage() {
               {isLoading ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <TableRow key={i}>
-                    {Array.from({ length: isReport ? 10 : 9 }).map((_, j) => (
+                    {Array.from({ length: (isReport ? 10 : 9) + (isAdmin ? 1 : 0) }).map((_, j) => (
                       <TableCell key={j}>
                         <Skeleton className="h-5 w-full" />
                       </TableCell>
@@ -350,7 +420,7 @@ export default function APUnifiedPage() {
                 ))
               ) : !filteredAPItems || filteredAPItems.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={isReport ? 10 : 9} className="h-32 text-center">
+                  <TableCell colSpan={(isReport ? 10 : 9) + (isAdmin ? 1 : 0)} className="h-32 text-center">
                     <div className="flex flex-col items-center justify-center text-muted-foreground">
                       <Calendar className="h-8 w-8 mb-2 opacity-20" />
                       <p>Không tìm thấy dữ liệu công nợ trong khoảng thời gian này</p>
@@ -377,6 +447,21 @@ export default function APUnifiedPage() {
                             <ChevronRight className="h-4 w-4 text-muted-foreground" />
                           )}
                         </TableCell>
+                        {isAdmin && (
+                          <TableCell className="text-center" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={selectedVendors.has(item.vendorId)}
+                              onCheckedChange={() =>
+                                handleSelectVendor(
+                                  item.vendorId,
+                                  item.vendorCode || "",
+                                  item.vendorName || "",
+                                  item.closingCredit ?? item.closingBalance ?? 0
+                                )
+                              }
+                            />
+                          </TableCell>
+                        )}
                         <TableCell className="font-medium font-mono text-xs">
                           {item.vendorCode || "—"}
                         </TableCell>
@@ -457,7 +542,7 @@ export default function APUnifiedPage() {
                       </TableRow>
                       {isExpanded && item.vendorId && (
                         <TableRow className="bg-muted/10 hover:bg-muted/10 border-t-0 select-none">
-                          <TableCell colSpan={isReport ? 10 : 9} className="p-3 pl-8 md:pl-12 bg-stone-50/50 dark:bg-stone-900/10">
+                          <TableCell colSpan={(isReport ? 10 : 9) + (isAdmin ? 1 : 0)} className="p-3 pl-8 md:pl-12 bg-stone-50/50 dark:bg-stone-900/10">
                             <VendorDetailRow 
                               vendorId={item.vendorId}
                               vendorName={item.vendorName || ""}

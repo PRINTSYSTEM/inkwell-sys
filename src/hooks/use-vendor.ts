@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiRequest } from "@/lib/http";
 import { createCrudHooks } from "./use-base";
@@ -15,6 +15,9 @@ import type {
   VendorCountOptionResponsePaginate,
   CreateVendorRequest,
   UpdateVendorRequest,
+  SettleVendorDebtRequest,
+  SettleVendorDebtBatchItem,
+  VendorDebtHistoryResponse,
 } from "@/Schema/vendor.schema";
 import { API_SUFFIX } from "@/apis";
 import { normalizeParams } from "@/apis/util.api";
@@ -117,6 +120,106 @@ export const usePlateCountOptions = (enabled: boolean = true) => {
       return res.data;
     },
     staleTime: 5 * 60 * 1000,
+  });
+};
+
+// GET /vendors/{id}/debt/settlements
+export const useVendorDebtSettlements = (vendorId: number, enabled: boolean = true) => {
+  return useQuery({
+    queryKey: ["vendor-settlements", vendorId],
+    enabled: enabled && !!vendorId,
+    queryFn: async () => {
+      const res = await apiRequest.get<VendorDebtHistoryResponse[]>(
+        API_SUFFIX.VENDOR_DEBT_SETTLEMENTS(vendorId)
+      );
+      return res.data;
+    },
+  });
+};
+
+// POST /vendors/{id}/debt/settle
+export const useSettleVendorDebt = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    { message: string; vendorId: number; vendorName: string; currentDebt: number },
+    ApiError,
+    { id: number; data: SettleVendorDebtRequest }
+  >({
+    mutationFn: async ({ id, data }) => {
+      const res = await apiRequest.post<{ message: string; vendorId: number; vendorName: string; currentDebt: number }>(
+        API_SUFFIX.VENDOR_SETTLE_DEBT(id),
+        data
+      );
+      return res.data;
+    },
+    onSuccess: (data, { id }) => {
+      queryClient.invalidateQueries({ queryKey: vendorKeys.all });
+      queryClient.invalidateQueries({ queryKey: vendorKeys.detail(id) });
+      queryClient.invalidateQueries({ queryKey: ["vendors"] });
+      queryClient.invalidateQueries({ queryKey: ["vendors", id] });
+      queryClient.invalidateQueries({ queryKey: ["ap-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["ap-detail"] });
+      queryClient.invalidateQueries({ queryKey: ["ap-detail-ledger"] });
+      queryClient.invalidateQueries({ queryKey: ["vendor-settlements", id] });
+      toast.success(data.message || "Tất toán công nợ thành công");
+    },
+  });
+};
+
+// POST /vendors/debt/settle-batch
+export const useSettleVendorDebtBatch = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    { message: string; successCount: number },
+    ApiError,
+    SettleVendorDebtBatchItem[]
+  >({
+    mutationFn: async (data) => {
+      const res = await apiRequest.post<{ message: string; successCount: number }>(
+        API_SUFFIX.VENDOR_SETTLE_DEBT_BATCH,
+        data
+      );
+      return res.data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: vendorKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["vendors"] });
+      queryClient.invalidateQueries({ queryKey: ["ap-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["ap-detail"] });
+      queryClient.invalidateQueries({ queryKey: ["ap-detail-ledger"] });
+      queryClient.invalidateQueries({ queryKey: ["vendor-settlements"] });
+      toast.success(data.message || `Tất toán hàng loạt thành công ${data.successCount} nhà cung cấp`);
+    },
+  });
+};
+
+// DELETE /vendors/debt/settlements/{historyId}
+export const useDeleteVendorDebtSettlement = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    void,
+    ApiError,
+    { historyId: number; vendorId: number }
+  >({
+    mutationFn: async ({ historyId }) => {
+      await apiRequest.delete(
+        API_SUFFIX.VENDOR_DELETE_DEBT_SETTLEMENT(historyId)
+      );
+    },
+    onSuccess: (_, { vendorId }) => {
+      queryClient.invalidateQueries({ queryKey: vendorKeys.all });
+      queryClient.invalidateQueries({ queryKey: vendorKeys.detail(vendorId) });
+      queryClient.invalidateQueries({ queryKey: ["vendors"] });
+      queryClient.invalidateQueries({ queryKey: ["vendors", vendorId] });
+      queryClient.invalidateQueries({ queryKey: ["ap-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["ap-detail"] });
+      queryClient.invalidateQueries({ queryKey: ["ap-detail-ledger"] });
+      queryClient.invalidateQueries({ queryKey: ["vendor-settlements", vendorId] });
+      toast.success("Hoàn tác tất toán công nợ thành công");
+    },
   });
 };
 

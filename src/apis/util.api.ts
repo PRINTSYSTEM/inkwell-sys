@@ -189,6 +189,7 @@ export const API_SUFFIX = {
   // ========== PROOFING ORDERS ==========
   PROOFING_ORDERS: "/proofing-orders",
   PROOFING_ORDER_BY_ID: (id: number) => `/proofing-orders/${id}`,
+  PROOFING_DELIVERY_VISIBILITY: (id: number) => `/proofing-orders/${id}/delivery-visibility`,
   PROOFING_FROM_DESIGNS: "/proofing-orders/from-designs",
   PROOFING_AVAILABLE_BINS: "/proofing-orders/available-bins",
   PROOFING_AVAILABLE_ORDER_DETAILS: "/proofing-orders/available-order-details",
@@ -238,6 +239,10 @@ export const API_SUFFIX = {
   VENDORS: "/vendors",
   VENDOR_BY_ID: (id: number) => `/vendors/${id}`,
   VENDORS_ACTIVE: "/vendors/active",
+  VENDOR_SETTLE_DEBT: (id: number) => `/vendors/${id}/debt/settle`,
+  VENDOR_SETTLE_DEBT_BATCH: "/vendors/debt/settle-batch",
+  VENDOR_DEBT_SETTLEMENTS: (id: number) => `/vendors/${id}/debt/settlements`,
+  VENDOR_DELETE_DEBT_SETTLEMENT: (historyId: number) => `/vendors/debt/settlements/${historyId}`,
 
   // ========== DIES ==========
   DIES: "/dies",
@@ -324,6 +329,10 @@ export const API_SUFFIX = {
     `/production-orders/steps/${id}/status`,
   PRODUCTION_ORDERS_KCS: "/production-orders/kcs",
   PRODUCTION_ORDERS_KCS_SUMMARY: "/production-orders/kcs/design-type-summary",
+
+  // ========== OUTSOURCE ORDERS ==========
+  OUTSOURCE_ORDERS: "/outsource-orders",
+  OUTSOURCE_ORDER_BY_ID: (id: number) => `/outsource-orders/${id}`,
   PRODUCTION_ORDER_PRINT_LABEL: (poId: number, itemId: number) =>
     `/production-orders/${poId}/items/${itemId}/print-label`,
 

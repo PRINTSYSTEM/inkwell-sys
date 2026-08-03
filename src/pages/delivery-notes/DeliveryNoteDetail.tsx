@@ -29,6 +29,7 @@ import {
   RotateCcw,
   History,
   Printer,
+  Trash2,
 } from "lucide-react";
 
 import PrintPreviewDialog from "./PrintPreviewDialog";
@@ -72,6 +73,7 @@ import {
   useRecreateDeliveryNote,
   useUpdateDeliveryLineResult,
   useUpdateDeliveryNote,
+  useDeleteDeliveryNote,
 } from "@/hooks/use-delivery-note";
 import {
   useCreateReturnNote,
@@ -79,6 +81,7 @@ import {
   useReturnableLines,
 } from "@/hooks/use-return-note";
 import { useAuth } from "@/hooks/use-auth";
+import { ROLE } from "@/constants";
 import {
   formatCurrency,
   deliveryNoteStatusLabels,
@@ -163,6 +166,22 @@ export default function DeliveryNoteDetailPage() {
   const [affectsDebt, setAffectsDebt] = useState(false);
   const [notes, setNotes] = useState("");
   const [isRecreateDialogOpen, setIsRecreateDialogOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const deleteMutation = useDeleteDeliveryNote();
+  const isAuthorizedToDelete =
+    user?.role === ROLE.ADMIN ||
+    user?.role === ROLE.ACCOUNTING ||
+    user?.role === ROLE.ACCOUNTING_LEAD;
+
+  const handleDeleteDeliveryNote = () => {
+    if (!deliveryNoteId) return;
+    deleteMutation.mutate(deliveryNoteId, {
+      onSuccess: () => {
+        setIsDeleteConfirmOpen(false);
+        navigate("/delivery-notes");
+      },
+    });
+  };
 
   const {
     data: deliveryNote,
@@ -734,6 +753,18 @@ export default function DeliveryNoteDetailPage() {
                 Tạo lại phiếu
               </Button>
             )}
+
+            {isAuthorizedToDelete && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsDeleteConfirmOpen(true)}
+                className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20 font-semibold"
+              >
+                <Trash2 className="w-4 h-4" />
+                Xóa phiếu
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -1173,6 +1204,51 @@ export default function DeliveryNoteDetailPage() {
               className="bg-amber-600 hover:bg-amber-700 text-white"
             >
               {createReturnNoteMutation.isPending ? "Đang xử lý..." : "Xác nhận trả hàng"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Xác nhận Xóa Phiếu Giao Hàng */}
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DialogContent className="max-w-md bg-white border border-slate-200 shadow-xl rounded-xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-red-600 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+              Xác nhận xóa phiếu giao hàng
+            </DialogTitle>
+            <div className="text-sm text-slate-500 space-y-3 mt-2">
+              <p>
+                Bạn có chắc chắn muốn xóa phiếu giao hàng{" "}
+                <strong className="text-slate-900">
+                  {deliveryNote?.code || deliveryNote?.id}
+                </strong>
+                ?
+              </p>
+              <div className="text-xs text-red-600 border border-red-100 bg-red-50/50 p-2.5 rounded-lg font-medium leading-relaxed">
+                <span className="font-bold block mb-1">Cảnh báo:</span>
+                Hành động này sẽ xóa vĩnh viễn phiếu giao hàng, hoàn tác số lượng đã giao, khôi phục trạng thái hàng hóa/đơn hàng, reverse phiếu xuất kho và cập nhật lại công nợ.
+              </div>
+            </div>
+          </DialogHeader>
+
+          <DialogFooter className="mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsDeleteConfirmOpen(false)}
+              disabled={deleteMutation.isPending}
+              className="h-9"
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              onClick={handleDeleteDeliveryNote}
+              disabled={deleteMutation.isPending}
+              className="h-9 bg-red-600 hover:bg-red-700 text-white font-semibold"
+            >
+              {deleteMutation.isPending ? "Đang xóa..." : "Xác nhận xóa"}
             </Button>
           </DialogFooter>
         </DialogContent>

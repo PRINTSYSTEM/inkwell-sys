@@ -706,6 +706,19 @@ const CustomerDebtStatementResponse = z
     items: z.array(DebtStatementItemResponse).nullable(),
   })
   .partial();
+const CustomerDebtStatementByRangeResponse = z
+  .object({
+    customerId: z.number().int(),
+    customerName: z.string().nullable(),
+    fromDate: z.string().datetime({ offset: true }),
+    toDate: z.string().datetime({ offset: true }),
+    beginningBalance: z.number(),
+    totalIncrease: z.number(),
+    totalDecrease: z.number(),
+    endingBalance: z.number(),
+    items: z.array(DebtStatementItemResponse).nullable(),
+  })
+  .partial();
 const FrequentProductResponse = z
   .object({
     designTypeId: z.number().int().nullable(),
@@ -1958,6 +1971,10 @@ const SetOpeningBalanceRequest = z.object({
   itemType: z.string().min(1),
   quantity: z.number().int(),
   effectiveDate: z.string().datetime({ offset: true }),
+});
+const DeleteOpeningBalanceRequest = z.object({
+  itemCode: z.string().min(1),
+  itemType: z.string().min(1),
 });
 const InventoryBalanceResponse = z
   .object({
@@ -3327,13 +3344,134 @@ const ProductionOrderResponse = z
     hasDeliveryNote: z.boolean(),
   })
   .partial();
-const ProductionOrderResponsePaginate = z
+const ProductionOrderItemListResponse = z
+  .object({
+    id: z.number().int(),
+    designId: z.number().int(),
+    designCode: z.string().nullable(),
+    designName: z.string().nullable(),
+    designImageUrl: z.string().nullable(),
+    orderDetailId: z.number().int().nullable(),
+    inputQty: z.number().int(),
+    outputQty: z.number().int(),
+    defectQty: z.number().int(),
+  })
+  .partial();
+const ProductionStepListResponse = z
+  .object({
+    id: z.number().int(),
+    stepType: z.string().nullable(),
+    stepTypeName: z.string().nullable(),
+    status: z.string().nullable(),
+    inputQty: z.number().int(),
+    outputQty: z.number().int(),
+    defectQty: z.number().int(),
+    defectNotes: z.string().nullable(),
+  })
+  .partial();
+const DesignExpandResponse = z
+  .object({
+    designType: DesignTypeResponse,
+    basisWeight: z.number().int().nullable(),
+    laminationType: z.string().nullable(),
+  })
+  .partial();
+const ProofingOrderDesignExpandResponse = z
+  .object({
+    isUrgent: z.boolean(),
+    design: DesignExpandResponse,
+    quantity: z.number().int(),
+    itemsPerSheet: z.number().int(),
+    designImageUrl: z.string().nullable(),
+    designThumbnailUrl: z.string().nullable(),
+  })
+  .partial();
+const DieSimpleResponse = z
+  .object({
+    id: z.number().int(),
+    code: z.string().nullable(),
+    size: z.string().nullable(),
+    location: z.string().nullable(),
+    imageUrl: z.string().nullable(),
+    notes: z.string().nullable(),
+  })
+  .partial();
+const DieExportExpandResponse = z
+  .object({
+    id: z.number().int(),
+    code: z.string().nullable(),
+    size: z.string().nullable(),
+    isReceived: z.boolean(),
+    receivedAt: z.string().datetime({ offset: true }).nullable(),
+    estimatedReceiveAt: z.string().datetime({ offset: true }).nullable(),
+    notes: z.string().nullable(),
+    die: DieSimpleResponse,
+  })
+  .partial();
+const PlateExportExpandResponse = z
+  .object({
+    id: z.number().int(),
+    plateCount: z.number().int(),
+    productionMethod: z.string().nullable(),
+    printingVendorName: z.string().nullable(),
+    printingVendor: VendorResponse,
+    isReceived: z.boolean(),
+    receivedAt: z.string().datetime({ offset: true }).nullable(),
+    estimatedReceiveAt: z.string().datetime({ offset: true }).nullable(),
+    notes: z.string().nullable(),
+  })
+  .partial();
+const ProofingOrderExpandResponse = z
+  .object({
+    id: z.number().int(),
+    code: z.string().nullable(),
+    isUrgent: z.boolean(),
+    imageUrl: z.string().nullable(),
+    thumbnailUrl: z.string().nullable(),
+    notes: z.string().nullable(),
+    paperSizeId: z.number().int().nullable(),
+    paperSize: PaperSizeResponse,
+    basisWeight: z.number().int().nullable(),
+    rollWidth: z.number().int().nullable(),
+    designTypeId: z.number().int().nullable(),
+    designType: DesignTypeResponse,
+    processClassification: z.string().nullable(),
+    laminationType: z.string().nullable(),
+    laminationTypeName: z.string().nullable(),
+    completedAt: z.string().datetime({ offset: true }).nullable(),
+    images: z.array(ProofingOrderImageResponse).nullable(),
+    proofingOrderDesigns: z.array(ProofingOrderDesignExpandResponse).nullable(),
+    proofingOrderDies: z.array(DieExportExpandResponse).nullable(),
+    plateExport: PlateExportExpandResponse,
+  })
+  .partial();
+const ProductionOrderListResponse = z
+  .object({
+    id: z.number().int(),
+    proofingOrderId: z.number().int(),
+    proofingOrderCode: z.string().nullable(),
+    status: z.string().nullable(),
+    createdAt: z.string().datetime({ offset: true }),
+    isUrgent: z.boolean(),
+    designTypeId: z.number().int().nullable(),
+    designType: DesignTypeResponse,
+    customerName: z.string().nullable(),
+    customerCompanyName: z.string().nullable(),
+    deliveryStatus: z.string().nullable(),
+    hasDeliveryNote: z.boolean(),
+    proofingOrderImages: z.array(ProofingOrderImageResponse).nullable(),
+    items: z.array(ProductionOrderItemListResponse).nullable(),
+    steps: z.array(ProductionStepListResponse).nullable(),
+    proofingOrder: ProofingOrderExpandResponse,
+  })
+  .partial();
+const ProductionOrderListResponsePaginate = z
   .object({
     size: z.number().int(),
     page: z.number().int(),
     total: z.number().int(),
     totalPages: z.number().int(),
-    items: z.array(ProductionOrderResponse).nullable(),
+    items: z.array(ProductionOrderListResponse).nullable(),
   })
   .partial();
 const ProductionOrderSummaryStatsResponse = z
@@ -3388,6 +3526,18 @@ const KcsItemResponse = z
     itemsPerSheet: z.number().int(),
   })
   .partial();
+const KcsDefectRecordResponse = z
+  .object({
+    id: z.number().int(),
+    designId: z.number().int(),
+    orderDetailId: z.number().int().nullable(),
+    defectQuantity: z.number().int(),
+    description: z.string().nullable(),
+    defectSource: z.string().nullable(),
+    assignedToUserId: z.number().int(),
+    assignedToUserName: z.string().nullable(),
+  })
+  .partial();
 const KcsProductionOrderResponse = z
   .object({
     productionOrderId: z.number().int(),
@@ -3400,6 +3550,7 @@ const KcsProductionOrderResponse = z
     designTypeCode: z.string().nullable(),
     proofingOrderImages: z.array(ProofingOrderImageResponse).nullable(),
     items: z.array(KcsItemResponse).nullable(),
+    defectRecords: z.array(KcsDefectRecordResponse).nullable(),
   })
   .partial();
 const KcsProductionOrderResponsePaginate = z
@@ -3445,6 +3596,7 @@ const ProofingOrderDesignResponse = z
     designImageUrl: z.string().nullable(),
     designThumbnailUrl: z.string().nullable(),
     isUrgent: z.boolean(),
+    proofingAllocations: z.array(ProofingAllocationResponse).nullable(),
   })
   .partial();
 const ProductionResponse = z
@@ -3490,6 +3642,7 @@ const ProofingOrderResponse = z
     laminationType: z.string().nullable(),
     laminationTypeName: z.string().nullable(),
     isPlateExported: z.boolean(),
+    isHiddenFromDelivery: z.boolean(),
     plateOutputCount: z.number().int(),
     plateExport: PlateExportResponse,
     plateExports: z.array(PlateExportResponse).nullable(),
@@ -3582,6 +3735,7 @@ const ProofingOrderListResponse = z
     updatedAt: z.string().datetime({ offset: true }),
     completedAt: z.string().datetime({ offset: true }).nullable(),
     scheduleStatus: z.string().nullable(),
+    isHiddenFromDelivery: z.boolean(),
     proofingOrderDesigns: z.array(ProofingOrderDesignListResponse).nullable(),
     dieExports: z.array(DieExportResponse).nullable(),
     proofingOrderDies: z.array(DieExportResponse).nullable(),
@@ -3637,6 +3791,9 @@ const RejectDesignRequest = z.object({
 });
 const UpdateScheduleStatusRequest = z.object({
   scheduleStatus: z.string().min(1),
+});
+const UpdateDeliveryVisibilityRequest = z.object({
+  isHiddenFromDelivery: z.boolean(),
 });
 const OrderDetailAvailableResponse = z
   .object({
@@ -3870,6 +4027,9 @@ const ReadyDesignResponse = z
     notes: z.string().nullable(),
     isUrgent: z.boolean(),
     isPendingOrderUpdate: z.boolean(),
+    designImageUrl: z.string().nullable(),
+    designThumbnailUrl: z.string().nullable(),
+    designerName: z.string().nullable(),
   })
   .partial();
 const ReadyDesignResponsePaginate = z
@@ -4279,7 +4439,7 @@ const UpdateStockInRequest = z
 const DirectIssueItem = z.object({
   materialId: z.number().int(),
   quantity: z.number().int().gte(1).lte(2147483647),
-  unitPrice: z.number().gte(0),
+  unitPrice: z.number().nullish(),
 });
 const DirectMaterialIssueRequest = z.object({
   vendorId: z.number().int(),
@@ -4287,6 +4447,72 @@ const DirectMaterialIssueRequest = z.object({
   items: z.array(DirectIssueItem).min(1),
   notes: z.string().nullish(),
 });
+const UpdateStockInPriceItem = z.object({
+  stockInItemId: z.number().int(),
+  unitPrice: z.number().gte(0),
+  lineAmount: z.number().nullish(),
+});
+const UpdateStockInPricesRequest = z.object({
+  stockInId: z.number().int(),
+  stockInDate: z.string().datetime({ offset: true }).nullish(),
+  items: z.array(UpdateStockInPriceItem),
+});
+const StockInItemResponse = z
+  .object({
+    id: z.number().int(),
+    lineKind: z.string().nullable(),
+    itemName: z.string().nullable(),
+    itemCode: z.string().nullable(),
+    unit: z.string().nullable(),
+    quantity: z.number().int(),
+    unitPrice: z.number().nullable(),
+    lineAmount: z.number().nullable(),
+    notes: z.string().nullable(),
+    materialId: z.number().int().nullable(),
+    materialName: z.string().nullable(),
+    orderDetailId: z.number().int().nullable(),
+    length: z.number().nullable(),
+    width: z.number().nullable(),
+    height: z.number().nullable(),
+    ramQuantity: z.number().nullable(),
+    ramAmount: z.number().nullable(),
+    proofingOrderId: z.number().int().nullable(),
+    proofingOrderCode: z.string().nullable(),
+    jobCode: z.string().nullable(),
+    isPricePending: z.boolean(),
+  })
+  .partial();
+const StockInResponse = z
+  .object({
+    id: z.number().int(),
+    code: z.string().nullable(),
+    source: z.string().nullable(),
+    sourceName: z.string().nullable(),
+    itemType: z.string().nullable(),
+    itemTypeName: z.string().nullable(),
+    status: z.string().nullable(),
+    statusName: z.string().nullable(),
+    vendorId: z.number().int().nullable(),
+    vendorName: z.string().nullable(),
+    productionOrderId: z.number().int().nullable(),
+    productionOrderCode: z.string().nullable(),
+    deliveryNoteId: z.number().int().nullable(),
+    deliveryNoteCode: z.string().nullable(),
+    originalStockOutId: z.number().int().nullable(),
+    originalStockOutCode: z.string().nullable(),
+    orderId: z.number().int().nullable(),
+    orderCode: z.string().nullable(),
+    totalAmount: z.number(),
+    laborCost: z.number(),
+    notes: z.string().nullable(),
+    stockInDate: z.string().datetime({ offset: true }),
+    createdBy: UserInfo,
+    createdAt: z.string().datetime({ offset: true }),
+    updatedAt: z.string().datetime({ offset: true }).nullable(),
+    items: z.array(StockInItemResponse).nullable(),
+    totalQuantity: z.number().int(),
+  })
+  .partial();
 const StockOutItemRequest = z.object({
   itemName: z.string().min(1),
   itemCode: z.string().nullish(),
@@ -4672,6 +4898,37 @@ const VendorCountOptionResponseIPaginate = z
     items: z.array(VendorCountOptionResponse).nullable(),
   })
   .partial();
+const SettleVendorDebtRequest = z.object({
+  amount: z.number().gte(0).nullish(),
+  note: z.string().min(1),
+  settledAt: z.string().datetime({ offset: true }).nullish(),
+  allowAdvance: z.boolean().optional(),
+});
+const SettleVendorDebtBatchItem = z.object({
+  vendorId: z.number().int(),
+  amount: z.number().gte(0).nullish(),
+  note: z.string().min(1),
+  settledAt: z.string().datetime({ offset: true }).nullish(),
+  allowAdvance: z.boolean().optional(),
+});
+const VendorDebtHistoryResponse = z
+  .object({
+    id: z.number().int(),
+    createdAt: z.string().datetime({ offset: true }),
+    previousDebt: z.number(),
+    changeAmount: z.number(),
+    newDebt: z.number(),
+    changeType: z.string().nullable(),
+    changeTypeDisplay: z.string().nullable(),
+    note: z.string().nullable(),
+    stockInId: z.number().int().nullable(),
+    stockInCode: z.string().nullable(),
+    cashPaymentId: z.number().int().nullable(),
+    cashPaymentCode: z.string().nullable(),
+    createdById: z.number().int(),
+    createdByName: z.string().nullable(),
+  })
+  .partial();
 
 export const schemas = {
   AccountingResponse,
@@ -4728,6 +4985,7 @@ export const schemas = {
   CustomerDebtSummaryResponse,
   DebtStatementItemResponse,
   CustomerDebtStatementResponse,
+  CustomerDebtStatementByRangeResponse,
   FrequentProductResponse,
   CustomerStatisticsResponse,
   OrderHistoryDetailResponse,
@@ -4839,6 +5097,7 @@ export const schemas = {
   FinanceAccountNodeResponse,
   AdjustInventoryRequest,
   SetOpeningBalanceRequest,
+  DeleteOpeningBalanceRequest,
   InventoryBalanceResponse,
   InventoryBalanceResponseIPaginate,
   InventoryTransactionResponse,
@@ -4938,7 +5197,16 @@ export const schemas = {
   ProductionOrderItemResponse,
   ProofingOrderImageResponse,
   ProductionOrderResponse,
-  ProductionOrderResponsePaginate,
+  ProductionOrderItemListResponse,
+  ProductionStepListResponse,
+  DesignExpandResponse,
+  ProofingOrderDesignExpandResponse,
+  DieSimpleResponse,
+  DieExportExpandResponse,
+  PlateExportExpandResponse,
+  ProofingOrderExpandResponse,
+  ProductionOrderListResponse,
+  ProductionOrderListResponsePaginate,
   ProductionOrderSummaryStatsResponse,
   UpdateProductionStepRequest,
   AssignProductionStepRequest,
@@ -4946,6 +5214,7 @@ export const schemas = {
   BulkUpdateItem,
   BulkUpdateProductionOrderItemsRequest,
   KcsItemResponse,
+  KcsDefectRecordResponse,
   KcsProductionOrderResponse,
   KcsProductionOrderResponsePaginate,
   KcsDesignTypeCountResponse,
@@ -4964,6 +5233,7 @@ export const schemas = {
   UpdateProofingOrderRequest,
   RejectDesignRequest,
   UpdateScheduleStatusRequest,
+  UpdateDeliveryVisibilityRequest,
   OrderDetailAvailableResponse,
   OrderDetailAvailableResponsePaginate,
   DesignTypeCountResponse,
@@ -5029,6 +5299,10 @@ export const schemas = {
   UpdateStockInRequest,
   DirectIssueItem,
   DirectMaterialIssueRequest,
+  UpdateStockInPriceItem,
+  UpdateStockInPricesRequest,
+  StockInItemResponse,
+  StockInResponse,
   StockOutItemRequest,
   CreateStockOutRequest,
   CreateStockOutForProductionRequest,
@@ -5070,6 +5344,9 @@ export const schemas = {
   UpdateVendorRequest,
   VendorCountOptionResponse,
   VendorCountOptionResponseIPaginate,
+  SettleVendorDebtRequest,
+  SettleVendorDebtBatchItem,
+  VendorDebtHistoryResponse,
 };
 
 const endpoints = makeApi([
@@ -6338,6 +6615,30 @@ const endpoints = makeApi([
       },
     ],
     response: CustomerDebtStatementResponse,
+  },
+  {
+    method: "get",
+    path: "/api/customers/:id/debt-statement-by-range",
+    alias: "getApicustomersIddebtStatementByRange",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+    ],
+    response: CustomerDebtStatementByRangeResponse,
   },
   {
     method: "get",
@@ -8267,6 +8568,20 @@ const endpoints = makeApi([
     response: DeliveryNoteResponse,
   },
   {
+    method: "delete",
+    path: "/api/delivery-notes/:id",
+    alias: "deleteApideliveryNotesId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
     method: "get",
     path: "/api/delivery-notes/:id/export-pdf",
     alias: "getApideliveryNotesIdexportPdf",
@@ -8562,6 +8877,20 @@ const endpoints = makeApi([
     method: "put",
     path: "/api/designs/:id/cancel",
     alias: "putApidesignsIdcancel",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: DesignResponse,
+  },
+  {
+    method: "post",
+    path: "/api/designs/:id/cancel-from-pool",
+    alias: "postApidesignsIdcancelFromPool",
     requestFormat: "json",
     parameters: [
       {
@@ -10246,6 +10575,50 @@ const endpoints = makeApi([
     ],
   },
   {
+    method: "delete",
+    path: "/api/inventory/opening-balance",
+    alias: "deleteApiinventoryopeningBalance",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: DeleteOpeningBalanceRequest,
+      },
+    ],
+    response: z.void(),
+    errors: [
+      {
+        status: 400,
+        description: `Bad Request`,
+        schema: z
+          .object({
+            type: z.string().nullable(),
+            title: z.string().nullable(),
+            status: z.number().int().nullable(),
+            detail: z.string().nullable(),
+            instance: z.string().nullable(),
+          })
+          .partial()
+          .passthrough(),
+      },
+      {
+        status: 404,
+        description: `Not Found`,
+        schema: z
+          .object({
+            type: z.string().nullable(),
+            title: z.string().nullable(),
+            status: z.number().int().nullable(),
+            detail: z.string().nullable(),
+            instance: z.string().nullable(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+  {
     method: "get",
     path: "/api/inventory/transactions",
     alias: "getApiinventorytransactions",
@@ -10495,6 +10868,26 @@ const endpoints = makeApi([
         name: "customerId",
         type: "Query",
         schema: z.number().int().optional(),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "sortColumn",
+        type: "Query",
+        schema: z.string().optional(),
+      },
+      {
+        name: "sortOrder",
+        type: "Query",
+        schema: z.string().optional(),
       },
     ],
     response: z.array(BillableItemResponse),
@@ -12389,7 +12782,7 @@ const endpoints = makeApi([
         schema: z.string().optional(),
       },
     ],
-    response: ProductionOrderResponsePaginate,
+    response: ProductionOrderListResponsePaginate,
   },
   {
     method: "get",
@@ -12518,7 +12911,7 @@ const endpoints = makeApi([
         schema: z.string().optional(),
       },
     ],
-    response: ProductionOrderResponsePaginate,
+    response: ProductionOrderListResponsePaginate,
   },
   {
     method: "get",
@@ -12625,7 +13018,7 @@ const endpoints = makeApi([
         schema: z.string().optional(),
       },
     ],
-    response: ProductionOrderResponsePaginate,
+    response: ProductionOrderListResponsePaginate,
   },
   {
     method: "put",
@@ -12824,6 +13217,25 @@ const endpoints = makeApi([
     alias: "putApiproofingOrdersIdcomplete",
     requestFormat: "json",
     parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: ProofingOrderResponse,
+  },
+  {
+    method: "put",
+    path: "/api/proofing-orders/:id/delivery-visibility",
+    alias: "putApiproofingOrdersIddeliveryVisibility",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: z.object({ isHiddenFromDelivery: z.boolean() }),
+      },
       {
         name: "id",
         type: "Path",
@@ -15164,6 +15576,55 @@ const endpoints = makeApi([
     response: z.void(),
   },
   {
+    method: "put",
+    path: "/api/stock-ins/:id/update-prices",
+    alias: "putApistockInsIdupdatePrices",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: UpdateStockInPricesRequest,
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: StockInResponse,
+    errors: [
+      {
+        status: 400,
+        description: `Bad Request`,
+        schema: z
+          .object({
+            type: z.string().nullable(),
+            title: z.string().nullable(),
+            status: z.number().int().nullable(),
+            detail: z.string().nullable(),
+            instance: z.string().nullable(),
+          })
+          .partial()
+          .passthrough(),
+      },
+      {
+        status: 404,
+        description: `Not Found`,
+        schema: z
+          .object({
+            type: z.string().nullable(),
+            title: z.string().nullable(),
+            status: z.number().int().nullable(),
+            detail: z.string().nullable(),
+            instance: z.string().nullable(),
+          })
+          .partial()
+          .passthrough(),
+      },
+    ],
+  },
+  {
     method: "post",
     path: "/api/stock-ins/auxiliary",
     alias: "postApistockInsauxiliary",
@@ -16562,12 +17023,83 @@ const endpoints = makeApi([
   },
   {
     method: "post",
+    path: "/api/vendors/:id/debt/settle",
+    alias: "postApivendorsIddebtsettle",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: SettleVendorDebtRequest,
+      },
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "get",
+    path: "/api/vendors/:id/debt/settlements",
+    alias: "getApivendorsIddebtsettlements",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+      {
+        name: "fromDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "toDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+    ],
+    response: z.array(VendorDebtHistoryResponse),
+  },
+  {
+    method: "post",
     path: "/api/vendors/:id/recalculate-debt",
     alias: "postApivendorsIdrecalculateDebt",
     requestFormat: "json",
     parameters: [
       {
         name: "id",
+        type: "Path",
+        schema: z.number().int(),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "post",
+    path: "/api/vendors/debt/settle-batch",
+    alias: "postApivendorsdebtsettleBatch",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "body",
+        type: "Body",
+        schema: z.array(SettleVendorDebtBatchItem),
+      },
+    ],
+    response: z.void(),
+  },
+  {
+    method: "delete",
+    path: "/api/vendors/debt/settlements/:historyId",
+    alias: "deleteApivendorsdebtsettlementsHistoryId",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "historyId",
         type: "Path",
         schema: z.number().int(),
       },

@@ -125,7 +125,7 @@ export const useUpdateDeliveryNote = (
 };
 
 const getCachedDeliveryNote = (queryClient: any, id: number) => {
-  let note = queryClient.getQueryData<any>(["deliveryNote", id]);
+  let note = queryClient.getQueryData(["deliveryNote", id]);
   if (!note) {
     const queries = queryClient.getQueryCache().findAll({ queryKey: ["deliveryNotes"] });
     for (const query of queries) {
@@ -304,6 +304,34 @@ export const useAvailableOrdersForDelivery = (
         { params: normalizedParams }
       );
       return res.data;
+    },
+  });
+};
+
+// ================== DELETE DELIVERY NOTE ==================
+// DELETE /delivery-notes/{id}
+export const useDeleteDeliveryNote = (
+  options?: UseMutationOptions<void, Error, number>
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, number>({
+    ...options,
+    mutationFn: async (id) => {
+      await apiRequest.delete(API_SUFFIX.DELIVERY_NOTE_BY_ID(id));
+    },
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: ["deliveryNotes"] });
+      queryClient.invalidateQueries({ queryKey: ["deliveryNote", variables] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["proofing-orders"] });
+      toast.success("Xóa phiếu giao hàng thành công");
+      if (options?.onSuccess) options.onSuccess(data, variables, context);
+    },
+    onError: (error: any, variables, context) => {
+      const message = error.response?.data?.message || error.message || "Xóa phiếu giao hàng thất bại";
+      toast.error("Xóa phiếu giao hàng thất bại", { description: message });
+      if (options?.onError) options.onError(error, variables, context);
     },
   });
 };

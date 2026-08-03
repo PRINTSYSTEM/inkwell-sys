@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Calendar } from "lucide-react";
+import { Calendar, Trash2, Plus, ArrowUpDown, History } from "lucide-react";
 import type { VendorResponse } from "@/Schema";
 import { useAPSummary, useAPDetail } from "@/hooks/use-ar-ap";
 import { formatCurrency } from "@/lib/status-utils";
@@ -8,6 +9,22 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
+import { useAuth } from "@/hooks/use-auth";
+import { useSettleVendorDebt, useVendorDebtSettlements, useDeleteVendorDebtSettlement } from "@/hooks/use-vendor";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface VendorDebtTabProps {
   vendor: VendorResponse;
@@ -22,7 +39,20 @@ const formatDate = (dateStr: string | null | undefined) => {
   }
 };
 
+const formatDateTime = (dateStr: string | null | undefined) => {
+  if (!dateStr) return "—";
+  try {
+    return format(new Date(dateStr), "dd/MM/yyyy HH:mm", { locale: vi });
+  } catch (e) {
+    return "—";
+  }
+};
+
 export function VendorDebtTab({ vendor }: VendorDebtTabProps) {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
+  const todayStr = new Date().toISOString().split("T")[0];
+
   const { data: apSummaryData, isLoading: isLoadingSummary } = useAPSummary({
     searchTerm: vendor.code || vendor.name,
   });
@@ -32,13 +62,91 @@ export function VendorDebtTab({ vendor }: VendorDebtTabProps) {
     pageSize: 50,
   });
 
+  // Chỉ gọi API lịch sử tất toán nếu người dùng là Admin
+  const { data: settlementsData, isLoading: isLoadingSettlements } = useVendorDebtSettlements(
+    vendor.id,
+    isAdmin
+  );
+
+  const settleMutation = useSettleVendorDebt();
+  const deleteMutation = useDeleteVendorDebtSettlement();
+
+  const [isSettleOpen, setIsSettleOpen] = useState(false);
+  const [settleAmount, setSettleAmount] = useState<string>("");
+  const [settleNote, setSettleNote] = useState<string>("");
+  const [allowAdvance, setAllowAdvance] = useState(true);
+  const [settleDate, setSettleDate] = useState<string>(todayStr);
+
   const summary = apSummaryData?.items?.find(item => item.vendorId === vendor.id);
   const outstandingInvoices = apDetailData?.items || [];
+  const settlements = settlementsData || [];
+
+  const handleSettleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!settleNote.trim()) {
+      toast.error("Vui lòng nhập lý do tất toán");
+      return;
+    }
+
+    const amountVal = settleAmount === "" ? null : parseFloat(settleAmount);
+    if (amountVal !== null && (isNaN(amountVal) || amountVal < 0)) {
+      toast.error("Số tiền tất toán phải lớn hơn hoặc bằng 0");
+      return;
+    }
+
+    // Chặn ngày tương lai ở client side
+    if (settleDate && new Date(settleDate) > new Date()) {
+      toast.error("Ngày tất toán không được ở tương lai");
+      return;
+    }
+
+    settleMutation.mutate(
+      {
+        id: vendor.id,
+        data: {
+          amount: amountVal,
+          note: settleNote.trim(),
+          allowAdvance,
+          settledAt: settleDate ? new Date(`${settleDate}T12:00:00`).toISOString() : null,
+        },
+      },
+      {
+        onSuccess: () => {
+          setIsSettleOpen(false);
+          setSettleAmount("");
+          setSettleNote("");
+          setAllowAdvance(true);
+          setSettleDate(todayStr);
+        },
+      }
+    );
+  };
+
+  const handleDeleteSettlement = (historyId: number) => {
+    if (!confirm("Bạn có chắc chắn muốn hoàn tác lần tất toán công nợ này? Dư nợ của nhà cung cấp sẽ được khôi phục.")) {
+      return;
+    }
+
+    deleteMutation.mutate({
+      historyId,
+      vendorId: vendor.id,
+    });
+  };
 
   return (
     <div className="h-full flex flex-col gap-6 overflow-auto pr-2">
       <div className="flex items-center justify-between shrink-0">
         <h2 className="text-lg font-semibold tracking-tight">Tổng quan công nợ</h2>
+        {isAdmin && (
+          <Button
+            size="sm"
+            onClick={() => setIsSettleOpen(true)}
+            className="bg-amber-600 hover:bg-amber-700 text-white font-medium"
+          >
+            <Plus className="h-4 w-4 mr-1.5" />
+            Tất toán ngoài hệ thống
+          </Button>
+        )}
       </div>
 
       {/* Summary Cards from APUnifiedPage style */}
@@ -116,7 +224,7 @@ export function VendorDebtTab({ vendor }: VendorDebtTabProps) {
       </div>
 
       {/* Detailed Outstanding Invoices Table from APUnifiedPage */}
-      <div className="space-y-4 mb-4">
+      <div className="space-y-4">
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2 px-1">
           <Calendar className="h-4 w-4" />
           Hóa đơn còn nợ (Outstanding Invoices)
@@ -185,6 +293,188 @@ export function VendorDebtTab({ vendor }: VendorDebtTabProps) {
           </Table>
         </div>
       </div>
+
+      {/* Lịch sử tất toán ngoài hệ thống (Chỉ hiển thị cho Admin) */}
+      {isAdmin && (
+        <div className="space-y-4 mb-4">
+          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2 px-1">
+            <History className="h-4 w-4" />
+            Lịch sử tất toán công nợ (Ngoài hệ thống)
+          </h3>
+          <div className="border rounded-xl overflow-hidden bg-background shadow-sm">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/30 hover:bg-muted/30">
+                  <TableHead className="font-bold text-[10px] uppercase text-muted-foreground">Ngày tất toán</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase text-muted-foreground">Loại giao dịch</TableHead>
+                  <TableHead className="text-right font-bold text-[10px] uppercase text-muted-foreground">Số tiền tất toán</TableHead>
+                  <TableHead className="text-right font-bold text-[10px] uppercase text-muted-foreground">Nợ trước đó</TableHead>
+                  <TableHead className="text-right font-bold text-[10px] uppercase text-muted-foreground">Nợ sau khi giảm</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase text-muted-foreground">Người thực hiện</TableHead>
+                  <TableHead className="font-bold text-[10px] uppercase text-muted-foreground">Ghi chú</TableHead>
+                  <TableHead className="text-center font-bold text-[10px] uppercase text-muted-foreground w-[80px]">Thao tác</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoadingSettlements ? (
+                  Array.from({ length: 3 }).map((_, i) => (
+                    <TableRow key={i}>
+                      {Array.from({ length: 8 }).map((_, j) => (
+                        <TableCell key={j}><Skeleton className="h-5 w-full" /></TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : settlements.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground italic text-xs">
+                      Chưa có lịch sử tất toán ngoài hệ thống cho đối tác này
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  settlements.map((item) => (
+                    <TableRow key={item.id} className="hover:bg-muted/5 text-xs">
+                      <TableCell className="font-medium text-slate-600">
+                        {item.createdAt ? formatDateTime(item.createdAt) : "—"}
+                      </TableCell>
+                      <TableCell className="font-semibold text-slate-800">
+                        {item.changeTypeDisplay || (item.changeType === "Settlement" ? "Tất toán công nợ (ngoài hệ thống)" : item.changeType)}
+                      </TableCell>
+                      <TableCell className="text-right font-bold text-green-600 tabular-nums">
+                        {item.changeAmount !== undefined ? `-${formatCurrency(Math.abs(item.changeAmount))}` : "—"} ₫
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-slate-600">
+                        {item.previousDebt !== undefined ? formatCurrency(item.previousDebt) : "—"} ₫
+                      </TableCell>
+                      <TableCell className="text-right font-semibold tabular-nums text-slate-800">
+                        {item.newDebt !== undefined ? formatCurrency(item.newDebt) : "—"} ₫
+                      </TableCell>
+                      <TableCell className="font-medium text-slate-600">
+                        {item.createdByName || "—"}
+                      </TableCell>
+                      <TableCell className="max-w-[200px] truncate text-slate-500" title={item.note || ""}>
+                        {item.note || "—"}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteSettlement(item.id)}
+                          disabled={deleteMutation.isPending}
+                          className="h-7 w-7 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          title="Hoàn tác tất toán"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      )}
+
+      {/* Dialog Settle Debt */}
+      <Dialog open={isSettleOpen} onOpenChange={setIsSettleOpen}>
+        <DialogContent className="max-w-md bg-white border border-slate-200 shadow-xl rounded-xl">
+          <form onSubmit={handleSettleSubmit}>
+            <DialogHeader>
+              <DialogTitle className="text-lg font-bold text-slate-900">
+                Tất toán công nợ ngoài hệ thống
+              </DialogTitle>
+              <DialogDescription className="text-xs text-slate-500">
+                Hành động này giúp giảm trừ trực tiếp công nợ NCC **{vendor.name}** mà không phát sinh phiếu chi trên hệ thống.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4 text-sm">
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="amount" className="text-xs font-semibold text-slate-700">
+                  Số tiền tất toán
+                </Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  min="0"
+                  step="any"
+                  placeholder="Để trống để tất toán toàn bộ dư nợ"
+                  value={settleAmount}
+                  onChange={(e) => setSettleAmount(e.target.value)}
+                  className="h-9 border-slate-200"
+                />
+                <span className="text-[10px] text-muted-foreground italic">
+                  Dư nợ hiện tại: {formatCurrency(vendor.currentDebt ?? 0)} ₫
+                </span>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="date" className="text-xs font-semibold text-slate-700">
+                  Ngày ghi nhận
+                </Label>
+                <Input
+                  id="date"
+                  type="date"
+                  max={todayStr}
+                  value={settleDate}
+                  onChange={(e) => setSettleDate(e.target.value)}
+                  className="h-9 border-slate-200"
+                  required
+                />
+              </div>
+
+              <div className="flex items-center justify-between border rounded-lg p-2.5 bg-slate-50/50">
+                <div className="space-y-0.5">
+                  <Label htmlFor="allowAdvance" className="text-xs font-semibold text-slate-700 cursor-pointer">
+                    Cho phép số dư âm
+                  </Label>
+                  <p className="text-[10px] text-muted-foreground">
+                    Cho phép tất toán vượt quá số nợ hiện tại.
+                  </p>
+                </div>
+                <Switch
+                  id="allowAdvance"
+                  checked={allowAdvance}
+                  onCheckedChange={setAllowAdvance}
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <Label htmlFor="note" className="text-xs font-semibold text-slate-700">
+                  Lý do tất toán <span className="text-red-500">*</span>
+                </Label>
+                <Textarea
+                  id="note"
+                  placeholder="Nhập lý do tất toán công nợ..."
+                  value={settleNote}
+                  onChange={(e) => setSettleNote(e.target.value)}
+                  className="min-h-[80px] text-xs border-slate-200"
+                  required
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsSettleOpen(false)}
+                disabled={settleMutation.isPending}
+                className="h-9"
+              >
+                Hủy
+              </Button>
+              <Button
+                type="submit"
+                disabled={settleMutation.isPending}
+                className="h-9 bg-amber-600 hover:bg-amber-700 text-white font-semibold"
+              >
+                {settleMutation.isPending ? "Đang xử lý..." : "Xác nhận"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -5,7 +5,6 @@ import { IdSchema, DateSchema, createPagedResponseSchema } from "./Common";
 import {
   ProductionResponseSchema as GenProductionResponseSchema,
   ProductionOrderResponseSchema as GenProductionOrderResponseSchema,
-  ProductionOrderResponsePaginateSchema as GenProductionOrderResponsePaginateSchema,
   ProductionStepResponseSchema as GenProductionStepResponseSchema,
   CreateProductionOrderRequestSchema as GenCreateProductionOrderRequestSchema,
   UpdateProductionStepRequestSchema as GenUpdateProductionStepRequestSchema,
@@ -116,8 +115,9 @@ export type ProductionOrderResponse = z.infer<
 >;
 
 // ===== ProductionOrderResponsePaginate =====
-export const ProductionOrderResponsePaginateSchema =
-  GenProductionOrderResponsePaginateSchema.passthrough();
+export const ProductionOrderResponsePaginateSchema = createPagedResponseSchema(
+  ProductionOrderResponseSchema
+);
 export type ProductionOrderResponsePaginate = z.infer<
   typeof ProductionOrderResponsePaginateSchema
 >;

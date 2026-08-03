@@ -53,6 +53,7 @@ import {
   useDeleteStockIn,
   useUpdateStockIn,
 } from "@/hooks/use-stock";
+import UpdateStockInPricesDialog from "../accounting/ap/components/UpdateStockInPricesDialog";
 import {
   formatDate,
   formatDateTime,
@@ -114,6 +115,7 @@ export default function StockInDetailPage() {
 
   // Update Price & Notes Dialog state
   const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
+  const [isUpdatePricesOpen, setIsUpdatePricesOpen] = useState(false);
   const [editItems, setEditItems] = useState<any[]>([]);
   const { mutate: updateStockIn, isPending: isUpdating } = useUpdateStockIn();
 
@@ -399,7 +401,7 @@ export default function StockInDetailPage() {
                     </Button>
                   </>
                 )}
-                {(status === "pending" || status === "completed") && (
+                {status === "pending" && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -408,6 +410,17 @@ export default function StockInDetailPage() {
                   >
                     <Edit className="h-4 w-4 mr-2" />
                     Cập nhật số lượng, đơn giá & ghi chú
+                  </Button>
+                )}
+                {status === "completed" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsUpdatePricesOpen(true)}
+                    className="cursor-pointer transition-colors duration-200 border-[#93631F]/30 text-[#93631F] hover:bg-[#93631F]/5 hover:border-[#93631F]/50"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Điều chỉnh ngày & đơn giá
                   </Button>
                 )}
                 <Button
@@ -1056,6 +1069,11 @@ export default function StockInDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <UpdateStockInPricesDialog
+        stockInId={stockInId}
+        open={isUpdatePricesOpen}
+        onOpenChange={setIsUpdatePricesOpen}
+      />
     </>
   );
 }
