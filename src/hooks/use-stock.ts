@@ -1061,6 +1061,7 @@ export interface UpdateStockInPricesItem {
 
 export interface UpdateStockInPricesRequest {
   stockInId: number;
+  stockInDate?: string;
   items: UpdateStockInPricesItem[];
 }
 

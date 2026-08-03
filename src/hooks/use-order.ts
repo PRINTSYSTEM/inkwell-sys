@@ -89,7 +89,7 @@ export const useOrder = (id: number | null, enabled = true) =>
   useOrderDetailBase(id, enabled);
 
 const getCachedOrder = (queryClient: any, id: number) => {
-  let order = queryClient.getQueryData<any>(["orders", "detail", id]);
+  let order = queryClient.getQueryData(["orders", "detail", id]);
   if (!order) {
     const queries = queryClient.getQueryCache().findAll({ queryKey: ["orders"] });
     for (const query of queries) {

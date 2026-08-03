@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-07-22T06:28:42.462Z */
+/* Generated at: 2026-08-03T00:31:51.027Z */
 
 import { z } from "zod";
 import { IdSchema, PagedParamsSchema } from "./Common";
@@ -113,6 +113,13 @@ export const CustomerDebtHistoryParamsSchema = PagedParamsSchema.extend({
   sortOrder: z.string().nullable().optional(),
 });
 export type CustomerDebtHistoryParams = z.infer<typeof CustomerDebtHistoryParamsSchema>;
+
+// ==== CustomerDebtStatementByRangeParams (GET /api/customers/:id/debt-statement-by-range) ====
+export const CustomerDebtStatementByRangeParamsSchema = z.object({
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+}).passthrough();
+export type CustomerDebtStatementByRangeParams = z.infer<typeof CustomerDebtStatementByRangeParamsSchema>;
 
 // ==== CustomerDebtStatementParams (GET /api/customers/:id/debt-statement) ====
 export const CustomerDebtStatementParamsSchema = z.object({
@@ -836,6 +843,10 @@ export type InventoryTransactionsParams = z.infer<typeof InventoryTransactionsPa
 // ==== InvoicBillableItemsParams (GET /api/invoices/billable-items) ====
 export const InvoicBillableItemsParamsSchema = z.object({
   customerId: z.number().int().nullable().optional(),
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+  sortColumn: z.string().nullable().optional(),
+  sortOrder: z.string().nullable().optional(),
 }).passthrough();
 export type InvoicBillableItemsParams = z.infer<typeof InvoicBillableItemsParamsSchema>;
 
@@ -1580,6 +1591,13 @@ export const UserListParamsSchema = PagedParamsSchema.extend({
   sortOrder: z.string().nullable().optional(),
 });
 export type UserListParams = z.infer<typeof UserListParamsSchema>;
+
+// ==== VendorDebtSettlementsParams (GET /api/vendors/:id/debt/settlements) ====
+export const VendorDebtSettlementsParamsSchema = z.object({
+  fromDate: z.string().datetime({ offset: true }).nullable().optional(),
+  toDate: z.string().datetime({ offset: true }).nullable().optional(),
+}).passthrough();
+export type VendorDebtSettlementsParams = z.infer<typeof VendorDebtSettlementsParamsSchema>;
 
 // ==== VendorListParams (GET /api/vendors) ====
 export const VendorListParamsSchema = PagedParamsSchema.extend({

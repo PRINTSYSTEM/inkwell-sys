@@ -61,4 +61,19 @@ export type VendorCountOptionResponsePaginate = z.infer<
   typeof GenVendorCountOptionResponsePaginateSchema
 >;
 
+// ===== SettleVendorDebtRequest =====
+export const SettleVendorDebtRequestSchema =
+  schemas.SettleVendorDebtRequest?.passthrough() || z.any();
+export type SettleVendorDebtRequest = z.infer<typeof SettleVendorDebtRequestSchema>;
+
+// ===== SettleVendorDebtBatchItem =====
+export const SettleVendorDebtBatchItemSchema =
+  schemas.SettleVendorDebtBatchItem?.passthrough() || z.any();
+export type SettleVendorDebtBatchItem = z.infer<typeof SettleVendorDebtBatchItemSchema>;
+
+// ===== VendorDebtHistoryResponse =====
+export const VendorDebtHistoryResponseSchema =
+  schemas.VendorDebtHistoryResponse?.passthrough() || z.any();
+export type VendorDebtHistoryResponse = z.infer<typeof VendorDebtHistoryResponseSchema>;
+
 

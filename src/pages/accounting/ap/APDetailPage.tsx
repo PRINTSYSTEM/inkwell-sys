@@ -62,6 +62,8 @@ const translateDocType = (docType: string | null | undefined) => {
       return "In gia công";
     case "DieExport":
       return "Xuất khuôn";
+    case "Settlement":
+      return "Tất toán công nợ (ngoài hệ thống)";
     default:
       return docType;
   }

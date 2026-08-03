@@ -324,6 +324,7 @@ export const apDocumentTypeLabels: Record<string, string> = {
   PlateExport: "Xuất kẽm",
   PrintingExport: "In gia công",
   DieExport: "Xuất khuôn",
+  Settlement: "Tất toán công nợ (ngoài hệ thống)",
 };
 
 // Trạng thái thanh toán AP (APPaymentStatusFilter)
@@ -342,6 +343,7 @@ export const vendorDebtChangeTypeLabels: Record<string, string> = {
   PlateExport: "Xuất kẽm",
   DieExport: "Xuất khuôn",
   Cancellation: "Hủy bỏ",
+  Settlement: "Tất toán công nợ (ngoài hệ thống)",
 };
 
 // ===== DESIGN STATUS CONFIG (cho UI) =====

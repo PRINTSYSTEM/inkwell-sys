@@ -198,7 +198,7 @@ export const usePostCashPayment = () => {
 };
 
 const getCachedCashPayment = (queryClient: any, id: number) => {
-  let payment = queryClient.getQueryData<any>(["cash-payment", id]);
+  let payment = queryClient.getQueryData(["cash-payment", id]);
   if (!payment) {
     const queries = queryClient.getQueryCache().findAll({ queryKey: ["cash-payments"] });
     for (const query of queries) {
@@ -222,7 +222,7 @@ const getCachedCashPayment = (queryClient: any, id: number) => {
 };
 
 const getCachedCashReceipt = (queryClient: any, id: number) => {
-  let receipt = queryClient.getQueryData<any>(["cash-receipt", id]);
+  let receipt = queryClient.getQueryData(["cash-receipt", id]);
   if (!receipt) {
     const queries = queryClient.getQueryCache().findAll({ queryKey: ["cash-receipts"] });
     for (const query of queries) {

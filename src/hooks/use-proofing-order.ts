@@ -1579,3 +1579,34 @@ export const useUpdateProofingOrderScheduleStatus = () => {
     },
   });
 };
+
+// ================== UPDATE PROOFING DELIVERY VISIBILITY ==================
+// PUT /api/proofing-orders/{id}/delivery-visibility
+export const useUpdateProofingDeliveryVisibility = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<ProofingOrderResponse, Error, { id: number; isHiddenFromDelivery: boolean }>({
+    mutationFn: async ({ id, isHiddenFromDelivery }) => {
+      const res = await apiRequest.put<ProofingOrderResponse>(
+        API_SUFFIX.PROOFING_DELIVERY_VISIBILITY(id),
+        { isHiddenFromDelivery }
+      );
+      return res.data;
+    },
+    onSuccess: (updatedData, variables) => {
+      const id = variables.id;
+      queryClient.setQueryData(proofingKeys.detail(id), updatedData);
+      queryClient.invalidateQueries({ queryKey: proofingKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["deliveryNotes"] });
+      toast.success(
+        variables.isHiddenFromDelivery 
+          ? "Đã ẩn bình bài khỏi màn hình tạo phiếu giao hàng" 
+          : "Đã hiện bình bài trên màn hình tạo phiếu giao hàng"
+      );
+    },
+    onError: (error: any) => {
+      const message = error.response?.data?.message || error.message || "Cập nhật trạng thái hiển thị thất bại";
+      toast.error("Cập nhật thất bại", { description: message });
+    },
+  });
+};
