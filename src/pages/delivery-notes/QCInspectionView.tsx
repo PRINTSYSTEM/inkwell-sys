@@ -612,21 +612,23 @@ function QCInspectionRow({ prod, searchTerm }: QCInspectionRowProps) {
                   i.id === pod.id,
               );
 
-              const designImgUrl = pod.designImageUrl || pod.design?.designImageUrl || pod.design?.designImageUrlConverted || pod.thumbnailUrl || pod.design?.thumbnailUrl;
+              const highResImgUrl = pod.designImageUrl || pod.design?.designImageUrl || pod.design?.designImageUrlConverted || pod.thumbnailUrl || pod.design?.thumbnailUrl;
+              const thumbnailImgUrl = pod.designThumbnailUrl || pod.design?.designThumbnailUrl || pod.thumbnailUrl || pod.design?.thumbnailUrl || highResImgUrl;
 
               return (
                 <div key={pod.id} className="grid grid-cols-[1fr_200px] gap-6 pt-3.5 first:pt-0">
                   {/* Left: Item metadata */}
                   <div className="flex gap-3.5 items-start">
-                    {designImgUrl && (
+                    {thumbnailImgUrl && (
                       <div
-                        onClick={() => setViewingImageUrl(designImgUrl)}
+                        onClick={() => setViewingImageUrl(highResImgUrl)}
                         className="w-12 h-12 rounded border border-slate-200 overflow-hidden bg-white shrink-0 cursor-zoom-in shadow-sm"
                       >
                         <img
-                          src={designImgUrl}
+                          src={thumbnailImgUrl}
                           alt={pod.design?.code || "design"}
                           className="w-full h-full object-contain"
+                          loading="lazy"
                         />
                       </div>
                     )}

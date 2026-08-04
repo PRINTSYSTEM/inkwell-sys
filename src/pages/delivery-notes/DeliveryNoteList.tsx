@@ -1902,11 +1902,12 @@ function OrdersView({
                               </TableCell>
                               <TableCell className="w-12">
                                 <div className="h-8 w-8 rounded-lg bg-stone-100 dark:bg-stone-850 border flex items-center justify-center overflow-hidden relative">
-                                  {detail.designImageUrl ? (
+                                  {detail.designImageUrl || detail.designThumbnailUrl ? (
                                     <img
-                                      src={detail.designImageUrl}
+                                      src={detail.designThumbnailUrl || detail.designImageUrl || ""}
                                       alt={detail.designCode || "Thiết kế"}
                                       className="h-full w-full object-cover cursor-zoom-in"
+                                      loading="lazy"
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         onImageClick(detail.designImageUrl!, e);
@@ -2547,11 +2548,12 @@ function DeliveryNotesView({
                                         >
                                           <TableCell className="pl-4 w-12" onClick={(e) => e.stopPropagation()}>
                                             <div className="h-8 w-8 rounded-lg bg-stone-100 dark:bg-stone-800 border flex items-center justify-center overflow-hidden relative">
-                                              {line.designImageUrl ? (
+                                              {line.designImageUrl || line.designThumbnailUrl ? (
                                                 <img
-                                                  src={line.designImageUrl}
+                                                  src={line.designThumbnailUrl || line.designImageUrl || ""}
                                                   alt={line.designCode || "Thiết kế"}
                                                   className="h-full w-full object-cover cursor-zoom-in"
+                                                  loading="lazy"
                                                   onClick={(e) => onImageClick(line.designImageUrl!, e)}
                                                 />
                                               ) : (
@@ -3177,11 +3179,12 @@ export function SelectedOrderCard({
           {/* Header row: name + qty input */}
           <div className="flex items-start gap-3">
             <div className="h-10 w-10 rounded-md bg-muted/50 border flex items-center justify-center flex-shrink-0 overflow-hidden relative">
-              {od.designImageUrl ? (
+              {od.designImageUrl || od.designThumbnailUrl ? (
                 <img
-                  src={od.designImageUrl}
+                  src={od.designThumbnailUrl || od.designImageUrl || ""}
                   alt={od.designCode || "Thiết kế"}
                   className="h-full w-full object-cover cursor-zoom-in"
+                  loading="lazy"
                   onClick={(e) => onImageClick(od.designImageUrl!, e)}
                 />
               ) : (
@@ -3540,11 +3543,12 @@ function RecreateDeliveryNoteDialog({
                     <div className="flex flex-col gap-3">
                       <div className="flex items-start gap-3">
                         <div className="h-10 w-10 rounded-md bg-muted/50 border flex items-center justify-center flex-shrink-0 overflow-hidden relative">
-                          {item.designImageUrl ? (
+                          {item.designImageUrl || item.designThumbnailUrl ? (
                             <img
-                              src={item.designImageUrl}
+                              src={item.designThumbnailUrl || item.designImageUrl || ""}
                               alt={item.designCode || "Thiết kế"}
                               className="h-full w-full object-cover cursor-zoom-in"
+                              loading="lazy"
                               onClick={(e) => onImageClick(item.designImageUrl!, e)}
                             />
                           ) : (

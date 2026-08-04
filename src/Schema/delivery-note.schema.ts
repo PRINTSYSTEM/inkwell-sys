@@ -124,6 +124,7 @@ export const DeliveryNoteLineResponseSchema =
     customerAddress: CustomerAddressSchema.nullable().optional(),
     note: z.string().nullable().optional(),
     designImageUrl: z.string().nullable().optional(),
+    designThumbnailUrl: z.string().nullable().optional(),
     proofingOrderCodes: z.array(z.string()).nullable().optional(),
   }).passthrough();
 export type DeliveryNoteLineResponse = z.infer<
@@ -147,6 +148,7 @@ export const OrderDetailForDeliveryResponseSchema = z
     designCode: z.string().nullable(),
     designName: z.string().nullable(),
     designImageUrl: z.string().nullable().optional(),
+    designThumbnailUrl: z.string().nullable().optional(),
     itemStatus: z.string().nullable(),
     orderedQty: z.number().int(),
     netQtyTotal: z.number().int(),
