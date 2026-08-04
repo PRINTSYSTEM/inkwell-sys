@@ -318,11 +318,12 @@ export default function DeliveryLineRow({
         <TableCell>
           <div className="flex items-center gap-3">
             <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-muted/60 flex items-center justify-center border border-border">
-              {line.designImageUrl ? (
+              {line.designImageUrl || line.designThumbnailUrl ? (
                 <img
-                  src={line.designImageUrl}
+                  src={line.designThumbnailUrl || line.designImageUrl || ""}
                   alt={line.designCode || "Thiết kế"}
                   className="h-full w-full object-cover cursor-zoom-in"
+                  loading="lazy"
                   onClick={(e) => {
                     e.stopPropagation();
                     setPreviewImageUrl(line.designImageUrl || null);
