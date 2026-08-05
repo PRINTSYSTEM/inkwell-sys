@@ -305,7 +305,7 @@ export default function PrintPreviewDialog({
                     </div>
                     <div className="delivery-meta" style={{ whiteSpace: "nowrap", paddingLeft: "15px", fontSize: "13px" }}>
                       <span style={{ fontWeight: "bold" }}>Số phiếu: </span>
-                      <span style={{ fontWeight: "bold" }}>{deliveryNote.code || deliveryNote.id}</span>
+                      <span style={{ fontWeight: "bold" }}>{deliveryNote.displayCode || deliveryNote.code || deliveryNote.id}</span>
                     </div>
                   </div>
 
@@ -318,9 +318,14 @@ export default function PrintPreviewDialog({
                     </div>
                   </div>
 
-                  {/* Row 3: Contact (left) */}
+                  {/* Row 3: Contact (left) & Code (right) */}
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                     <div>MST: 0317703989 - Điện thoại: 0906 649 812</div>
+                    {deliveryNote.code && (
+                      <div className="delivery-meta" style={{ whiteSpace: "nowrap", paddingLeft: "15px", fontSize: "11px", color: "#444" }}>
+                        Mã tra cứu: {deliveryNote.code}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
