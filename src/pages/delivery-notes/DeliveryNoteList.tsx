@@ -917,7 +917,9 @@ export default function DeliveryNoteListPage() {
     if (debouncedDeliveryNoteSearchQuery.trim() !== "") {
       const q = debouncedDeliveryNoteSearchQuery.toLowerCase();
       result = result.filter(note => {
-        const matchCode = String(note.code || "").toLowerCase().includes(q);
+        const matchCode =
+          String(note.code || "").toLowerCase().includes(q) ||
+          String(note.displayCode || "").toLowerCase().includes(q);
         const matchId = String(note.id || "").includes(q);
         const matchOrders = (note.orders || []).some(order => 
           String(order.customerName || "").toLowerCase().includes(q) ||
@@ -2117,7 +2119,11 @@ function DeliveryNotesView({
       }
 
       // 2. Search query match
-      if (String(note.code || "").toLowerCase().includes(q)) return true;
+      if (
+        String(note.code || "").toLowerCase().includes(q) ||
+        String(note.displayCode || "").toLowerCase().includes(q)
+      )
+        return true;
       if (String(note.recipientName || "").toLowerCase().includes(q)) return true;
       if (String(note.recipientPhone || "").toLowerCase().includes(q)) return true;
       if (note.orders?.some((o: any) => 

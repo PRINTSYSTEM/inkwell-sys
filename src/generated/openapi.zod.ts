@@ -1462,6 +1462,7 @@ const DeliveryNoteResponse = z
   .object({
     id: z.number().int(),
     code: z.string().nullable(),
+    displayCode: z.string().nullable(),
     status: z.string().nullable(),
     statusName: z.string().nullable(),
     recipientName: z.string().nullable(),
