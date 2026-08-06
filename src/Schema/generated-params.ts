@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-08-05T20:37:14.846Z */
+/* Generated at: 2026-08-05T22:25:42.044Z */
 
 import { z } from "zod";
 import { IdSchema, PagedParamsSchema } from "./Common";
@@ -566,8 +566,17 @@ export const DeliveryNoteListParamsSchema = PagedParamsSchema.extend({
   searchTerm: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
+  startDate: z.string().datetime({ offset: true }).nullable().optional(),
+  endDate: z.string().datetime({ offset: true }).nullable().optional(),
 });
 export type DeliveryNoteListParams = z.infer<typeof DeliveryNoteListParamsSchema>;
+
+// ==== DeliveryNoteStatsParams (GET /api/delivery-notes/stats) ====
+export const DeliveryNoteStatsParamsSchema = z.object({
+  startDate: z.string().datetime({ offset: true }).nullable().optional(),
+  endDate: z.string().datetime({ offset: true }).nullable().optional(),
+}).passthrough();
+export type DeliveryNoteStatsParams = z.infer<typeof DeliveryNoteStatsParamsSchema>;
 
 // ==== DesignByCustomerParams (GET /api/designs/by-customer/:customerId) ====
 export const DesignByCustomerParamsSchema = PagedParamsSchema.extend({

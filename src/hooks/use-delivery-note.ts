@@ -17,10 +17,12 @@ import type {
   FailureReasonResponse,
   DeliveryNoteLineResponse,
   UpdateDeliveryLineResultRequest,
+  DeliveryNoteStatsResponse,
 } from "@/Schema/delivery-note.schema";
 import type {
   DeliveryNoteListParams,
   DeliveryNoteFailureReasonsListParams,
+  DeliveryNoteStatsParams,
 } from "@/Schema";
 
 // ================== GET DELIVERY NOTES ==================
@@ -34,6 +36,24 @@ export const useDeliveryNotes = (params?: DeliveryNoteListParams) => {
       );
       const res = await apiRequest.get<DeliveryNoteResponsePaginate>(
         API_SUFFIX.DELIVERY_NOTES,
+        { params: normalizedParams }
+      );
+      return res.data;
+    },
+  });
+};
+
+// ================== GET DELIVERY NOTES STATS ==================
+// GET /delivery-notes/stats
+export const useDeliveryNoteStats = (params?: DeliveryNoteStatsParams) => {
+  return useQuery({
+    queryKey: ["deliveryNoteStats", params],
+    queryFn: async () => {
+      const normalizedParams = normalizeParams(
+        (params ?? {}) as Record<string, unknown>
+      );
+      const res = await apiRequest.get<DeliveryNoteStatsResponse>(
+        API_SUFFIX.DELIVERY_NOTE_STATS,
         { params: normalizedParams }
       );
       return res.data;

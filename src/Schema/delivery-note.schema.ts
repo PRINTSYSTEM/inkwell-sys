@@ -16,6 +16,8 @@ import {
   OrderForDeliveryResponseSchema as GenOrderForDeliveryResponseSchema,
   OrderForDeliveryResponsePaginateSchema as GenOrderForDeliveryResponsePaginateSchema,
   UpdateDeliveryLineResultRequestSchema as GenUpdateDeliveryLineResultRequestSchema,
+  DeliveryNoteHistoryItemResponseSchema as GenDeliveryNoteHistoryItemResponseSchema,
+  DeliveryNoteStatsResponseSchema as GenDeliveryNoteStatsResponseSchema,
 } from "./generated";
 
 // ===== DeliveryNoteOrderResponse =====
@@ -136,6 +138,14 @@ export const FailureReasonResponseSchema =
   GenFailureReasonResponseSchema.passthrough();
 export type FailureReasonResponse = z.infer<typeof FailureReasonResponseSchema>;
 
+// ===== DeliveryNoteHistoryItemResponse =====
+// Một phiếu giao hàng trong lịch sử của mã hàng (đối chiếu khi tạo PGH)
+export const DeliveryNoteHistoryItemResponseSchema =
+  GenDeliveryNoteHistoryItemResponseSchema.passthrough();
+export type DeliveryNoteHistoryItemResponse = z.infer<
+  typeof DeliveryNoteHistoryItemResponseSchema
+>;
+
 // ===== OrderDetailForDeliveryResponse =====
 // Overriding generated schema as it's missing customerId, customerName, orderCode, orderId
 // per backend_new_update.md §2 response spec
@@ -159,6 +169,11 @@ export const OrderDetailForDeliveryResponseSchema = z
     customerId: z.number().int(),
     customerName: z.string().nullable(),
     proofingOrderCodes: z.array(z.string()).nullable().optional(),
+    // Lịch sử phiếu giao hàng hiệu lực của mã hàng (để đối chiếu khi tạo PGH)
+    deliveryHistory: z
+      .array(DeliveryNoteHistoryItemResponseSchema)
+      .nullable()
+      .optional(),
   })
   .partial()
   .passthrough();
@@ -185,4 +200,11 @@ export const UpdateDeliveryLineResultRequestSchema =
   GenUpdateDeliveryLineResultRequestSchema.passthrough();
 export type UpdateDeliveryLineResultRequest = z.infer<
   typeof UpdateDeliveryLineResultRequestSchema
+>;
+
+// ===== DeliveryNoteStatsResponse =====
+export const DeliveryNoteStatsResponseSchema =
+  GenDeliveryNoteStatsResponseSchema.passthrough();
+export type DeliveryNoteStatsResponse = z.infer<
+  typeof DeliveryNoteStatsResponseSchema
 >;
