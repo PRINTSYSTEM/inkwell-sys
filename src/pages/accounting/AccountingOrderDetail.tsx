@@ -58,6 +58,7 @@ import {
   useExportOrderInvoice,
   useExportOrderDeliveryNote,
   useGenerateOrderExcel,
+  useGenerateOrderExcelNoVat,
   useExportOrderPDF,
   useUpdateOrderForAccounting,
   useUpdateOrderForSale,
@@ -421,15 +422,13 @@ export default function AccountingOrderDetail() {
   const [deleteDetailId, setDeleteDetailId] = useState<number | null>(null);
   const [isDeletingDetail, setIsDeletingDetail] = useState(false);
 
-  // PDF preview state
-  const [isPDFPreviewOpen, setIsPDFPreviewOpen] = useState(false);
-  const [isCopyingScreenshot, setIsCopyingScreenshot] = useState(false);
-  const orderPreviewRef = useRef<HTMLDivElement>(null);
+
 
   // Mutations
   const exportInvoiceMutation = useExportOrderInvoice();
   const exportDeliveryNoteMutation = useExportOrderDeliveryNote();
   const generateExcelMutation = useGenerateOrderExcel();
+  const generateExcelNoVatMutation = useGenerateOrderExcelNoVat();
   const exportPDFMutation = useExportOrderPDF();
   const approveDebtMutation = useApproveDebt();
   const createDebtNotificationMutation = useCreateDebtNotification();
@@ -857,48 +856,7 @@ export default function AccountingOrderDetail() {
     }
   };
 
-  const handlePreviewPDF = () => {
-    if (!order) return;
-    setIsPDFPreviewOpen(true);
-  };
 
-  const handleClosePDFPreview = () => {
-    setIsPDFPreviewOpen(false);
-  };
-
-  const handleCopyScreenshot = async () => {
-    if (!orderPreviewRef.current) return;
-    setIsCopyingScreenshot(true);
-    try {
-      const html2canvas = (await import("html2canvas")).default;
-      const canvas = await html2canvas(orderPreviewRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-        logging: false,
-      });
-      canvas.toBlob(async (blob) => {
-        if (!blob) return;
-        try {
-          await navigator.clipboard.write([
-            new ClipboardItem({ "image/png": blob }),
-          ]);
-          toast.success("Đã sao chép!", {
-            description: "Hình ảnh đơn hàng đã được sao chép. Bấm Ctrl+V để dán.",
-          });
-        } catch {
-          toast.error("Không thể sao chép", {
-            description: "Trình duyệt không cho phép sao chép ảnh. Hãy thử tải PDF thay thế.",
-          });
-        } finally {
-          setIsCopyingScreenshot(false);
-        }
-      }, "image/png");
-    } catch {
-      toast.error("Không thể chụp màn hình");
-      setIsCopyingScreenshot(false);
-    }
-  };
 
   const handleUpdatePayment = async () => {
     if (!order) return;
@@ -1188,10 +1146,15 @@ export default function AccountingOrderDetail() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={handlePreviewPDF}
+                  onClick={() => generateExcelNoVatMutation.mutate(order.id)}
+                  disabled={generateExcelNoVatMutation.loading}
                 >
-                  <Eye className="h-4 w-4 mr-2" />
-                  Xem trước đơn hàng
+                  {generateExcelNoVatMutation.loading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4 mr-2" />
+                  )}
+                  Xuất Excel Không VAT
                 </Button>
                 <Button
                   variant="outline"
@@ -2688,275 +2651,6 @@ export default function AccountingOrderDetail() {
               )}
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Order Preview Dialog */}
-      <Dialog open={isPDFPreviewOpen} onOpenChange={(open) => { if (!open) handleClosePDFPreview(); }}>
-        <DialogContent className="max-w-[1200px] w-[98vw] max-h-[97vh] flex flex-col p-0 gap-0 overflow-hidden">
-          {/* Toolbar */}
-          <div className="flex items-center justify-between pl-4 pr-12 py-2.5 border-b bg-muted/30 flex-shrink-0">
-            <DialogTitle className="text-sm font-semibold text-foreground">
-              Xem trước đơn hàng — <span className="font-mono text-primary">{getOrderDocCode()}</span>
-            </DialogTitle>
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleCopyScreenshot}
-                disabled={isCopyingScreenshot}
-                className="gap-1.5"
-              >
-                {isCopyingScreenshot ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                  </svg>
-                )}
-                {isCopyingScreenshot ? "Đang chụp..." : "Chụp & Copy (Ctrl+V)"}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleExportPDF}
-                disabled={exportPDFMutation.loading}
-                className="gap-1.5"
-              >
-                {exportPDFMutation.loading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Download className="h-3.5 w-3.5" />
-                )}
-                Tải PDF
-              </Button>
-            </div>
-          </div>
-
-          {/* Scrollable preview area – A4 landscape, auto-scale to fit width */}
-          <div className="flex-1 overflow-y-auto bg-gray-200 p-4">
-            {/* Scale wrapper: makes the 1052px sheet shrink to fit the dialog */}
-            <div
-              style={{
-                width: "100%",
-                display: "flex",
-                justifyContent: "center",
-              }}
-            >
-              <div
-                style={{
-                  /* Scale the sheet so it fills the container width */
-                  transform: "scale(1)",
-                  transformOrigin: "top center",
-                  flexShrink: 0,
-                }}
-              >
-                <div
-                  ref={orderPreviewRef}
-                  style={{
-                    fontFamily: "'Times New Roman', Times, serif",
-                    fontSize: "13px",
-                    color: "#000",
-                    background: "#fff",
-                    width: "1052px",
-                    minHeight: "744px",
-                    padding: "28px 36px 24px",
-                    boxShadow: "0 4px 24px rgba(0,0,0,0.18)",
-                    lineHeight: 1.3,
-                    boxSizing: "border-box" as const,
-                    WebkitFontSmoothing: "antialiased" as const,
-                    MozOsxFontSmoothing: "grayscale" as const,
-                  }}
-                >
-                  {/* Header – logo left, company info center */}
-                  <div style={{ display: "flex", alignItems: "center", gap: "0", marginBottom: "4px" }}>
-                    {/* Logo */}
-                    <div style={{ width: "140px", flexShrink: 0 }}>
-                      <img
-                        src="/images/logo.png"
-                        alt="Quang Đạt Logo"
-                        crossOrigin="anonymous"
-                        style={{ width: "140px", height: "auto", display: "block", imageRendering: "crisp-edges" as const }}
-                      />
-                    </div>
-                    {/* Company info – paddingRight mirrors logo width so textAlign:center = true page center */}
-                    <div style={{ flex: 1, textAlign: "center", paddingRight: "140px" }}>
-                      <div style={{ color: "#cc0000", fontWeight: "bold", fontSize: "20px", textTransform: "uppercase", lineHeight: 1.3, whiteSpace: "nowrap" }}>
-                        Công ty TNHH sản xuất thương mại dịch vụ quốc tế Quang Đạt
-                      </div>
-                      <div style={{ fontSize: "16px", marginTop: "2px" }}>
-                        Địa chỉ: 43D Ao Đôi, P. Bình Trị Đông A, Q. Bình Tân, TP. Hồ Chí Minh
-                      </div>
-                      <div style={{ fontSize: "16px" }}>Điện thoại: 0906 649 812 | MST: 0317703989</div>
-                      <div style={{ fontWeight: "bold", fontSize: "21px", letterSpacing: "1px", textTransform: "uppercase", marginTop: "4px" }}>Đơn đặt hàng</div>
-                    </div>
-                  </div>
-
-                  {/* Order code & date */}
-                  <div style={{ display: "flex", margin: "4px 0 3px", fontSize: "12.5px" }}>
-                    <span>Số {getOrderDocCode()}</span>
-                    <span style={{ marginLeft: "auto", marginRight: "230px" }}>
-                      Ngày {format(order?.createdAt ? new Date(order.createdAt) : new Date(), "dd/MM/yyyy", { locale: vi })}
-                    </span>
-                  </div>
-
-                  {/* Customer info – flowing inline text instead of table columns */}
-                  <div style={{ fontSize: "12.5px", marginBottom: "4px", lineHeight: "1.4" }}>
-                    <div style={{ marginBottom: "2px" }}>
-                      <span>Kính gửi: </span>
-                      <span style={{ fontWeight: "bold" }}>{order?.customerName || order?.customer?.name || "—"}</span>
-                    </div>
-                    <div style={{ marginBottom: "2px" }}>
-                      <span>Địa chỉ: </span>
-                      <span>{order?.customerAddress || order?.customer?.address || "—"}</span>
-                    </div>
-                    <div style={{ marginBottom: "2px" }}>
-                      <span>ĐC giao hàng: </span>
-                      <span>{order?.deliveryAddress || order?.customer?.address || "—"}</span>
-                    </div>
-                    <div style={{ display: "flex", marginBottom: "2px" }}>
-                      <div>
-                        <span>Email: </span>
-                        <span>{order?.customerEmail || order?.customer?.email || ""}</span>
-                      </div>
-                      <div style={{ marginLeft: "auto", marginRight: "230px" }}>
-                        <span>Điện thoại: </span>
-                        <span>{order?.customerPhone || order?.customer?.phone || "—"}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div style={{ marginBottom: "4px", fontStyle: "italic", fontSize: "11.5px" }}>
-                    Căn cứ vào yêu cầu của quý khách. Chúng tôi trân trọng báo giá sản phẩm theo danh mục như sau:
-                  </div>
-
-                  {/* Items table – full width, black borders matching PDF */}
-                  <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "11.5px", marginBottom: "0", tableLayout: "fixed" }}>
-                    <colgroup>
-                      <col style={{ width: "32px" }} />
-                      <col style={{ width: "140px" }} />
-                      <col />
-                      <col style={{ width: "80px" }} />
-                      <col style={{ width: "36px" }} />
-                      <col style={{ width: "58px" }} />
-                      <col style={{ width: "70px" }} />
-                      <col style={{ width: "80px" }} />
-                      <col style={{ width: "80px" }} />
-                      <col style={{ width: "90px" }} />
-                    </colgroup>
-                    <thead>
-                      <tr style={{ background: "#f2f2f2" }}>
-                        <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>STT</th>
-                        <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>TÊN HÀNG HÓA</th>
-                        <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>CHI TIẾT</th>
-                        <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>KÍCH THƯỚC (mm)</th>
-                        <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>ĐVT</th>
-                        <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>SỐ LƯỢNG</th>
-                        <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>ĐƠN GIÁ<br />(ĐỒNG)</th>
-                        <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>THÀNH TIỀN</th>
-                        <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>THUẾ<br />VAT<br />8%</th>
-                        <th style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center", fontWeight: "bold" }}>TỔNG CỘNG</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(order?.orderDetails || []).map((item, idx) => {
-                        const unitPrice = item.unitPrice || 0;
-                        const qty = item.quantity || 0;
-                        const lineTotal = unitPrice * qty;
-                        const lineVat = Math.round(lineTotal * 0.08);
-                        const lineGrandTotal = lineTotal + lineVat;
-                        const detail = [
-                          item.design?.designType?.name,
-                          item.design?.materialType?.name,
-                          item.requirements,
-                        ].filter(Boolean).join(", ");
-                        return (
-                          <tr key={item.id}>
-                            <td style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center" }}>{idx + 1}</td>
-                            <td style={{ border: "1px solid #333", padding: "5px 6px", textAlign: "center", wordBreak: "break-word" }}>
-                              <div>{item.design?.designName || item.design?.code || "—"}</div>
-                              {item.design?.designImageUrl && (
-                                <img
-                                  src={item.design.designImageUrl.replace("https://developer.quangdatgroup.com/uploads", "/uploads")}
-                                  alt=""
-                                  crossOrigin="anonymous"
-                                  style={{ width: "64px", height: "44px", objectFit: "cover", display: "block", margin: "4px auto 0" }}
-                                />
-                              )}
-                            </td>
-                            <td style={{ border: "1px solid #333", padding: "5px 6px", textAlign: "center", wordBreak: "break-word" }}>
-                              {detail || "—"}
-                            </td>
-                            <td style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center" }}>
-                              {item.design?.dimensions || "—"}
-                            </td>
-                            <td style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center" }}>Bộ</td>
-                            <td style={{ border: "1px solid #333", padding: "5px 3px", textAlign: "center" }}>
-                              {qty.toLocaleString("vi-VN")}
-                            </td>
-                            <td style={{ border: "1px solid #333", padding: "5px 6px", textAlign: "right" }}>
-                              {unitPrice.toLocaleString("vi-VN")}
-                            </td>
-                            <td style={{ border: "1px solid #333", padding: "5px 6px", textAlign: "right", fontWeight: "bold" }}>
-                              {lineTotal.toLocaleString("vi-VN")}
-                            </td>
-                            <td style={{ border: "1px solid #333", padding: "5px 6px", textAlign: "right" }}>
-                              {lineVat.toLocaleString("vi-VN")}
-                            </td>
-                            <td style={{ border: "1px solid #333", padding: "5px 6px", textAlign: "right", fontWeight: "bold" }}>
-                              {lineGrandTotal.toLocaleString("vi-VN")}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                    <tfoot>
-                      <tr>
-                        <td colSpan={9} style={{ border: "1px solid #333", padding: "4px 10px", textAlign: "center", fontWeight: "bold" }}>
-                          CỘNG TIỀN HÀNG
-                        </td>
-                        <td style={{ border: "1px solid #333", padding: "4px 6px", textAlign: "right", fontWeight: "bold" }}>
-                          {Math.round((order?.totalAmount || 0) * 1.08).toLocaleString("vi-VN")}
-                        </td>
-                      </tr>
-                    </tfoot>
-                  </table>
-
-                  {/* Amount in words – in bordered box like PDF */}
-                  <div style={{ border: "1px solid #333", borderTop: "none", padding: "4px 8px", fontSize: "11.5px", marginBottom: "6px" }}>
-                    <strong>Số tiền viết bằng chữ:</strong>{" "}
-                    {numberToVietnamese(Math.round((order?.totalAmount || 0) * 1.08))}
-                  </div>
-
-                  {/* Notes */}
-                  <div style={{ fontSize: "11px", lineHeight: 1.6 }}>
-                    {/* <div>* Đơn giá trên chưa bao gồm VAT 8%</div> */}
-                    <div>* Số lượng giao hàng: +-10%</div>
-                    {order?.note && <div>* Ghi chú: {order.note}</div>}
-                    <div style={{ color: "#cc0000", fontWeight: "bold", marginTop: "2px" }}>
-                      *Khách hàng vui lòng kiểm tra kỹ nội dung file và pháp lý, chính tả, bản in thứ (nếu có), thiết kế, kích thước, và các yếu tố kỹ thuật khác trước khi in hàng loạt.
-                    </div>
-                    <div style={{ color: "#cc0000", fontWeight: "bold" }}>* Sau khi xác nhận đồng ý in, mọi sai sót bên in sẽ không chịu trách nhiệm.</div>
-                    <div>* Trân trọng cảm ơn!</div>
-                  </div>
-
-                  {/* Signatures */}
-                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: "20px", textAlign: "center", fontSize: "12.5px" }}>
-                    <div style={{ width: "38%" }}>
-                      <div style={{ fontWeight: "bold", marginBottom: "52px" }}>XÁC NHẬN CỦA KHÁCH HÀNG</div>
-                    </div>
-                    <div style={{ width: "38%" }}>
-                      <div style={{ fontWeight: "bold", marginBottom: "52px" }}>ĐẠI DIỆN BÁN HÀNG</div>
-                      <div style={{ fontSize: "11.5px" }}>LÊ QUANG DIỆP</div>
-                    </div>
-                  </div>
-
-
-                </div>
-              </div>
-            </div>
-          </div>
         </DialogContent>
       </Dialog>
     </>

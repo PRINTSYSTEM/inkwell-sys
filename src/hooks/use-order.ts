@@ -178,6 +178,69 @@ export const useGenerateOrderExcel = () => {
   };
 };
 
+// POST /orders/{id}/generate-excel-no-vat
+export const useGenerateOrderExcelNoVat = () => {
+  const queryClient = useQueryClient();
+  const { loading, error, execute, reset } = useAsyncCallback<void, [number]>(
+    async (id: number) => {
+      const res = await apiRequest.post<ArrayBuffer>(
+        API_SUFFIX.ORDER_GENERATE_EXCEL_NO_VAT(id),
+        null,
+        {
+          responseType: "arraybuffer",
+        }
+      );
+
+      const blob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+
+      const order = getCachedOrder(queryClient, id);
+      const code = order?.code || id;
+      const customer = order?.customerName || "Khách hàng";
+      const date = formatDateForFilename(order?.createdAt || new Date());
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = buildFilename(["Đơn hàng_Khong_VAT", code, customer, date], "xlsx");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    }
+  );
+
+  const mutate = async (id: number) => {
+    try {
+      await execute(id);
+
+      toast.success("Thành công", {
+        description: "Đã tạo và tải file Excel Không VAT cho đơn hàng",
+      });
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể tạo file Excel Không VAT",
+      });
+      throw err;
+    }
+  };
+
+  return {
+    loading,
+    error,
+    mutate,
+    reset,
+  };
+};
+
 export { orderCrudApi, orderKeys };
 
 // ================== ORDER: THÊM THIẾT KẾ VÀO ĐƠN ==================
