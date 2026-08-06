@@ -146,7 +146,10 @@ export default function ReadyDesignListPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<{ id: number; name: string } | null>(null);
   const [customerComboOpen, setCustomerComboOpen] = useState(false);
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(() => {
+    const searchParam = new URLSearchParams(window.location.search).get("search");
+    return searchParam || "";
+  });
   const [debouncedSearchQuery] = useDebounce(searchQuery, 300);
 
   // New filters (mirrored from SaleDesignSearch)
@@ -154,6 +157,7 @@ export default function ReadyDesignListPage() {
   const [materialFilter, setMaterialFilter] = useState<string | null>(null);
   const [dimensionsFilter, setDimensionsFilter] = useState("");
   const [debouncedDimensions] = useDebounce(dimensionsFilter, 300);
+  const [binhBaiFilter, setBinhBaiFilter] = useState<string>("all");
 
   // Pagination/Filter reset state
   const [currentPage, setCurrentPage] = useState(1);
@@ -312,12 +316,25 @@ export default function ReadyDesignListPage() {
       });
     }
 
+    // Client-side bình bài filtering
+    if (binhBaiFilter === "in-binh-bai") {
+      filtered = filtered.filter((d) => d.isInBinhBai);
+    } else if (binhBaiFilter === "not-in-binh-bai") {
+      filtered = filtered.filter((d) => !d.isInBinhBai);
+    }
+
     return filtered.sort((a, b) => {
+      // 1. isInBinhBai first
+      const bA = a.isInBinhBai ? 1 : 0;
+      const bB = b.isInBinhBai ? 1 : 0;
+      if (bA !== bB) return bB - bA;
+
+      // 2. isUrgent next
       const uA = a.isUrgent ? 1 : 0;
       const uB = b.isUrgent ? 1 : 0;
       return uB - uA; // Urgent first
     });
-  }, [designs, selectedTypeName, materialFilter, debouncedDimensions, materialOptions]);
+  }, [designs, selectedTypeName, materialFilter, debouncedDimensions, materialOptions, binhBaiFilter]);
 
   const totalCount = sortedDesigns.length;
   const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE) || 1;
@@ -391,7 +408,7 @@ export default function ReadyDesignListPage() {
   // Reset selected checkboxes if the page or customer filter changes
   useEffect(() => {
     setSelectedIds([]);
-  }, [currentPage, selectedCustomer, debouncedSearchQuery, selectedTypeName, materialFilter, debouncedDimensions]);
+  }, [currentPage, selectedCustomer, debouncedSearchQuery, selectedTypeName, materialFilter, debouncedDimensions, binhBaiFilter]);
 
   // Determine if a row should be disabled for selection
   // Rules: Only allow selecting designs from the SAME customer
@@ -596,9 +613,9 @@ export default function ReadyDesignListPage() {
       {/* Filters */}
       <Card className="p-3 mb-3 shrink-0 border-border/40">
         <CardContent className="p-0">
-          <div className="grid gap-3 md:grid-cols-4 lg:grid-cols-7">
+          <div className="flex flex-wrap gap-3 items-center">
             {/* Search */}
-            <div className="relative md:col-span-2">
+            <div className="relative flex-1 min-w-[200px] max-w-[280px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
                 placeholder="Tìm theo mã, tên thiết kế..."
@@ -617,7 +634,7 @@ export default function ReadyDesignListPage() {
                 <Button
                   variant="outline"
                   role="combobox"
-                  className="justify-between bg-background border-border/80 h-9 px-3 text-sm font-normal w-full"
+                  className="justify-between bg-background border-border/80 h-9 px-3 text-sm font-normal w-[200px]"
                 >
                   <span className="truncate">
                     {selectedCustomer
@@ -681,48 +698,72 @@ export default function ReadyDesignListPage() {
             </Popover>
 
             {/* Design Type */}
-            <Select
-              value={selectedTypeName ?? "0"}
-              onValueChange={(v) => {
-                setSelectedTypeName(v && v !== "0" ? v : null);
-                setMaterialFilter(null);
-                setCurrentPage(1);
-              }}
-            >
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Loại" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0">Tất cả loại</SelectItem>
-                {designTypes.map((t: any) => (
-                  <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="w-[140px]">
+              <Select
+                value={selectedTypeName ?? "0"}
+                onValueChange={(v) => {
+                  setSelectedTypeName(v && v !== "0" ? v : null);
+                  setMaterialFilter(null);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Loại" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Tất cả loại</SelectItem>
+                  {designTypes.map((t: any) => (
+                    <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* Material */}
-            <Select
-              value={materialFilter ?? "0"}
-              onValueChange={(v) => { setMaterialFilter(v && v !== "0" ? v : null); setCurrentPage(1); }}
-            >
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Chất liệu" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0">Tất cả chất liệu</SelectItem>
-                {materialOptions.map((m: any) => (
-                  <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="w-[155px]">
+              <Select
+                value={materialFilter ?? "0"}
+                onValueChange={(v) => { setMaterialFilter(v && v !== "0" ? v : null); setCurrentPage(1); }}
+              >
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Chất liệu" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Tất cả chất liệu</SelectItem>
+                  {materialOptions.map((m: any) => (
+                    <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* Dimensions */}
             <Input
               placeholder="Kích thước"
               value={dimensionsFilter}
               onChange={(e) => { setDimensionsFilter(e.target.value); setCurrentPage(1); }}
-              className="h-9 text-sm"
+              className="h-9 text-sm w-[110px]"
             />
+
+            {/* Binh Bai Filter */}
+            <div className="w-[150px]">
+              <Select
+                value={binhBaiFilter}
+                onValueChange={(v) => {
+                  setBinhBaiFilter(v);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="h-9 text-sm">
+                  <SelectValue placeholder="Bình bài" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả bình bài</SelectItem>
+                  <SelectItem value="in-binh-bai">Đang bình bài</SelectItem>
+                  <SelectItem value="not-in-binh-bai">Chưa bình bài</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
             {/* Clear Filters */}
             <Button
@@ -735,6 +776,7 @@ export default function ReadyDesignListPage() {
                 setSelectedTypeName(null);
                 setMaterialFilter(null);
                 setDimensionsFilter("");
+                setBinhBaiFilter("all");
                 setCurrentPage(1);
               }}
             >
@@ -748,7 +790,7 @@ export default function ReadyDesignListPage() {
       <Card className="flex-1 flex flex-col min-h-0 overflow-hidden border-border/40">
         <CardContent className="p-0 flex-1 flex flex-col min-h-0 overflow-hidden">
           <div className="overflow-auto flex-1 relative">
-            <table className="w-full caption-bottom text-sm">
+            <table className="w-full caption-bottom text-sm min-w-[1350px]">
               <TableHeader className="sticky top-0 bg-background z-10 border-b">
                 <TableRow>
                   <TableHead className="w-[50px] text-center"></TableHead>
@@ -763,8 +805,8 @@ export default function ReadyDesignListPage() {
                   <TableHead className="h-9 text-sm font-bold">Chất liệu</TableHead>
                   <TableHead className="h-9 text-sm font-bold">Ghi chú</TableHead>
                   <TableHead className="h-9 text-sm font-bold text-center w-[120px]">Giao gấp</TableHead>
-                  <TableHead className="h-9 text-sm font-bold">Ngày cập nhật</TableHead>
-                  <TableHead className="h-9 text-sm font-bold text-right pr-6 w-[80px]">Thao tác</TableHead>
+                  <TableHead className="h-9 text-sm font-bold text-right pr-4">Ngày cập nhật</TableHead>
+                  <TableHead className="h-9 text-sm font-bold text-center pr-2 w-[70px]">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -794,26 +836,28 @@ export default function ReadyDesignListPage() {
                             disabled={isDisabled}
                           />
                         </TableCell>
-                        <TableCell className="py-1 flex items-center justify-center">
-                          <DesignImageThumbnail
-                            thumbnailUrl={design.designThumbnailUrl}
-                            largeImageUrl={design.designImageUrl}
-                            designName={design.designName}
-                          />
+                        <TableCell className="py-1">
+                          <div className="flex items-center justify-center w-full">
+                            <DesignImageThumbnail
+                              thumbnailUrl={design.designThumbnailUrl}
+                              largeImageUrl={design.designImageUrl}
+                              designName={design.designName}
+                            />
+                          </div>
                         </TableCell>
                         <TableCell className="py-2 font-mono font-semibold text-sm">
                           {design.designCode}
                         </TableCell>
-                        <TableCell className="py-2 text-sm font-semibold break-words max-w-[240px]" title={design.designName || ""}>
+                        <TableCell className="py-2 text-sm font-semibold break-words min-w-[240px] max-w-[280px]" title={design.designName || ""}>
                           {design.designName}
                         </TableCell>
                         <TableCell
-                          className="py-2 text-sm font-medium max-w-[160px] truncate"
+                          className="py-2 text-sm font-medium break-words max-w-[100px]"
                           title={design.designerName || "—"}
                         >
                           {design.designerName || "—"}
                         </TableCell>
-                        <TableCell className="py-2 text-sm font-medium break-words max-w-[200px]">
+                        <TableCell className="py-2 text-sm font-medium break-words w-[300px]">
                           {design.customerName}
                         </TableCell>
                         <TableCell className="py-2 text-sm font-medium text-right">
@@ -836,6 +880,27 @@ export default function ReadyDesignListPage() {
                                 Cần cập nhật đơn hàng
                               </Badge>
                             )}
+                            {design.isInBinhBai && (
+                              <TooltipProvider>
+                                <Tooltip delayDuration={200}>
+                                  <TooltipTrigger asChild>
+                                    <Badge className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[10px] px-1 py-0.5 whitespace-nowrap flex items-center gap-0.5 cursor-pointer select-none">
+                                      <span>Đang BB: {design.binhBaiQuantity ?? 0}</span>
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent side="top" className="bg-zinc-950 text-white border border-zinc-800 p-2.5 rounded-lg shadow-xl max-w-xs z-50">
+                                    <p className="font-semibold text-xs mb-1 text-zinc-300">Mã các bài đang chứa thiết kế:</p>
+                                    <ul className="list-disc list-inside text-xs font-mono text-zinc-400">
+                                      {design.activeBinhBaiCodes && design.activeBinhBaiCodes.length > 0 ? (
+                                        design.activeBinhBaiCodes.map((code) => <li key={code}>{code}</li>)
+                                      ) : (
+                                        <li>Không rõ</li>
+                                      )}
+                                    </ul>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className={cn("py-2 font-mono text-xs", design.isUrgent ? "text-red-650/80 dark:text-red-400/80" : "text-muted-foreground")}>
@@ -852,7 +917,7 @@ export default function ReadyDesignListPage() {
                             return (design as any).basisWeight && !isDecalPaper ? ` (${(design as any).basisWeight} gsm)` : "";
                           })()}
                         </TableCell>
-                        <TableCell className={cn("py-2 text-xs break-words max-w-[280px]", design.isUrgent ? "text-red-650/80 dark:text-red-400/80" : "text-muted-foreground")} title={design.notes || ""}>
+                        <TableCell className={cn("py-2 text-xs break-words min-w-[190px] max-w-[250px]", design.isUrgent ? "text-red-650/80 dark:text-red-400/80" : "text-muted-foreground")} title={design.notes || ""}>
                           {design.notes || "—"}
                         </TableCell>
                         <TableCell className="py-2 text-center" onClick={(e) => e.stopPropagation()}>
@@ -869,7 +934,7 @@ export default function ReadyDesignListPage() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className={cn("py-2 text-xs", design.isUrgent ? "text-red-650/80 dark:text-red-350/80" : "text-muted-foreground")}>
+                        <TableCell className={cn("py-2 text-xs text-right pr-4", design.isUrgent ? "text-red-650/80 dark:text-red-355/80" : "text-muted-foreground")}>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -881,7 +946,7 @@ export default function ReadyDesignListPage() {
                                       navigate(`/design/detail/${design.designId}`);
                                     }
                                   }}
-                                  className="text-left hover:text-primary hover:underline transition-colors focus:outline-none flex flex-col font-mono"
+                                  className="text-right items-end hover:text-primary hover:underline transition-colors focus:outline-none flex flex-col font-mono ml-auto"
                                 >
                                   {design.updatedAt ? (
                                     (() => {
@@ -945,8 +1010,8 @@ export default function ReadyDesignListPage() {
                             </Tooltip>
                           </TooltipProvider>
                         </TableCell>
-                        <TableCell className="py-2 text-right pr-6" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-end gap-1">
+                        <TableCell className="py-2 text-center pr-2" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex flex-col items-center gap-1.5 justify-center">
                             {isPendingUpdate && (
                               <Button
                                 variant="outline"
@@ -990,7 +1055,7 @@ export default function ReadyDesignListPage() {
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={13} className="text-center py-12">
+                    <TableCell colSpan={14} className="text-center py-12">
                       <div className="flex flex-col items-center justify-center text-muted-foreground">
                         <Package className="h-10 w-10 mb-2 opacity-50" />
                         <p className="text-sm">Không có thiết kế nào sẵn sàng trong kho</p>

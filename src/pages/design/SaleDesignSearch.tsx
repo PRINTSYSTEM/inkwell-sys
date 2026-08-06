@@ -311,13 +311,21 @@ export default function SaleDesignSearch() {
                       </td>
                       <td className="px-4 py-3 align-middle min-w-[220px]">
                         <div className="flex flex-col gap-0.5">
-                          <div className="flex items-center gap-1.5 group">
+                          <div className="flex items-center gap-1.5 group flex-wrap">
                             <div
-                              className="whitespace-normal break-words flex-1 text-slate-900 dark:text-slate-100 font-semibold"
+                              className="whitespace-normal break-words text-slate-900 dark:text-slate-100 font-semibold"
                               title={design.designName || "Không tên"}
                             >
                               {design.designName || "Không tên"}
                             </div>
+                            {design.isInBinhBai && (
+                              <span
+                                className="inline-flex items-center bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 text-[10px] font-bold px-1.5 py-0.5 rounded border border-blue-200/50 shrink-0 select-none animate-pulse cursor-help"
+                                title="Đang bình bài"
+                              >
+                                BB
+                              </span>
+                            )}
                             {design.designName && (
                               <button
                                 onClick={() => handleCopyDesignName(design.designName, design.id)}
