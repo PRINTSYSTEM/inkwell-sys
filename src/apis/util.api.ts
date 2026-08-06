@@ -345,6 +345,7 @@ export const API_SUFFIX = {
 
   // ========== DELIVERY NOTES ==========
   DELIVERY_NOTES: "/delivery-notes",
+  DELIVERY_NOTE_STATS: "/delivery-notes/stats",
   DELIVERY_NOTE_BY_ID: (id: number) => `/delivery-notes/${id}`,
   DELIVERY_NOTE_STATUS: (id: number) => `/delivery-notes/${id}/status`,
   DELIVERY_NOTE_EXPORT_PDF: (id: number) => `/delivery-notes/${id}/export-pdf`,

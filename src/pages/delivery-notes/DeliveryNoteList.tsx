@@ -30,6 +30,7 @@ import {
   Edit2,
   Loader2,
   ExternalLink,
+  History,
 } from "lucide-react";
 
 import {
@@ -82,6 +83,7 @@ import {
   useRecreateDeliveryNote,
   useUpdateDeliveryNoteStatus,
   useDeliveryNote,
+  useDeliveryNoteStats,
 } from "@/hooks/use-delivery-note";
 import { useCreateStockOutForDelivery } from "@/hooks/use-stock";
 import { useDesign } from "@/hooks/use-design";
@@ -568,6 +570,76 @@ function DeliveryNoteCard({ deliveryNote, onClick }: DeliveryNoteCardProps) {
   );
 }
 
+const isNoteInDateRange = (createdAt: string | null | undefined, filter: string) => {
+  if (filter === "all") return true;
+  if (!createdAt) return false;
+
+  const noteTime = new Date(createdAt).getTime();
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+
+  if (filter === "today") {
+    return noteTime >= today;
+  }
+  if (filter === "yesterday") {
+    const yesterday = today - 24 * 60 * 60 * 1000;
+    return noteTime >= yesterday && noteTime < today;
+  }
+  if (filter === "this-week") {
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+    const startOfWeek = new Date(now.getFullYear(), now.getMonth(), diff).getTime();
+    return noteTime >= startOfWeek;
+  }
+  if (filter === "this-month") {
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    return noteTime >= startOfMonth;
+  }
+  if (filter === "30-days") {
+    const thirtyDaysAgo = now.getTime() - 30 * 24 * 60 * 60 * 1000;
+    return noteTime >= thirtyDaysAgo;
+  }
+  return true;
+};
+
+const getRecentMonths = () => {
+  const months = [];
+  const now = new Date();
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const label = `Tháng ${d.getMonth() + 1}/${d.getFullYear()}`;
+    const value = format(d, "yyyy-MM");
+    months.push({ label, value });
+  }
+  return months;
+};
+
+const getDateRangeForMonthValue = (value: string) => {
+  if (value === "all") {
+    return { startDate: undefined, endDate: undefined };
+  }
+  if (value === "30-days") {
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    return {
+      startDate: format(thirtyDaysAgo, "yyyy-MM-dd"),
+      endDate: format(now, "yyyy-MM-dd"),
+    };
+  }
+
+  const parts = value.split("-");
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1;
+
+  const startOfMonth = new Date(year, month, 1);
+  const endOfMonth = new Date(year, month + 1, 0);
+
+  return {
+    startDate: format(startOfMonth, "yyyy-MM-dd"),
+    endDate: format(endOfMonth, "yyyy-MM-dd"),
+  };
+};
+
 // ============================================================================
 // MAIN COMPONENT
 // ============================================================================
@@ -631,6 +703,9 @@ export default function DeliveryNoteListPage() {
   const [deliveryNoteStatusFilter, setDeliveryNoteStatusFilter] =
     useState<string>("all");
   const [deliveryNoteSearchQuery, setDeliveryNoteSearchQuery] = useState("");
+  const currentMonthValue = useMemo(() => format(new Date(), "yyyy-MM"), []);
+  const recentMonths = useMemo(() => getRecentMonths(), []);
+  const [deliveryNoteDateFilter, setDeliveryNoteDateFilter] = useState<string>(currentMonthValue);
   const [debouncedDeliveryNoteSearchQuery] = useDebounce(deliveryNoteSearchQuery, 300);
   const [deliveryNotePage, setDeliveryNotePage] = useState<number>(() => {
     const pageParam = new URLSearchParams(window.location.search).get("page");
@@ -695,25 +770,41 @@ export default function DeliveryNoteListPage() {
       return;
     }
     setDeliveryNotePage(1);
-  }, [debouncedDeliveryNoteSearchQuery, deliveryNoteStatusFilter]);
+  }, [debouncedDeliveryNoteSearchQuery, deliveryNoteStatusFilter, deliveryNoteDateFilter]);
 
-  // Query background notes to calculate stats and perform client-side search/pagination
+  const { startDate, endDate } = useMemo(() => getDateRangeForMonthValue(deliveryNoteDateFilter), [deliveryNoteDateFilter]);
+
+  // Query paginated delivery notes from backend
   const {
     data: allNotesData,
     isLoading: deliveryNotesLoading,
     isError: deliveryNotesError,
     error: deliveryNotesErrorObj,
     refetch: refetchDeliveryNotes,
-  } = useDeliveryNotes({ pageSize: 200 });
+  } = useDeliveryNotes({
+    pageNumber: deliveryNotePage,
+    pageSize: 10,
+    searchTerm: debouncedDeliveryNoteSearchQuery.trim() || undefined,
+    status: deliveryNoteStatusFilter !== "all" ? deliveryNoteStatusFilter : undefined,
+    startDate,
+    endDate,
+  });
+
+  // Query delivery notes stats from backend
+  const {
+    data: statsData,
+    refetch: refetchStats,
+  } = useDeliveryNoteStats({
+    startDate,
+    endDate,
+  });
 
   const stats = useMemo(() => {
-    const items = allNotesData?.items || [];
-    const total = allNotesData?.total || items.length;
-    const todayStr = format(new Date(), "yyyy-MM-dd");
-    const todayCount = items.filter(note => note.createdAt && note.createdAt.startsWith(todayStr)).length;
-    const deliveredCount = items.filter(note => getDisplayStatus(note) === "completed").length;
-    const pendingCount = items.filter(note => ["pending", "in_transit", "ready_to_ship", "handed_over", "confirmed"].includes(getDisplayStatus(note) || "")).length;
-    const failedCount = items.filter(note => ["failed", "failed_reschedule", "cancelled", "returned", "partial"].includes(getDisplayStatus(note) || "")).length;
+    const total = statsData?.totalCount ?? 0;
+    const todayCount = statsData?.todayCount ?? 0;
+    const deliveredCount = statsData?.deliveredCount ?? 0;
+    const pendingCount = statsData?.pendingCount ?? 0;
+    const failedCount = statsData?.failedCount ?? 0;
     const successRate = total > 0 ? Math.round((deliveredCount / total) * 100) : 0;
 
     return {
@@ -724,7 +815,7 @@ export default function DeliveryNoteListPage() {
       pendingCount,
       failedCount,
     };
-  }, [allNotesData]);
+  }, [statsData]);
 
   const itemsPerPage = 10;
 
@@ -903,62 +994,7 @@ export default function DeliveryNoteListPage() {
     );
   }, [selectedOrders]);
 
-  // Client-side filtering, sorting, and pagination
-  const filteredAndSortedNotes = useMemo(() => {
-    const items = allNotesData?.items || [];
-    let result = [...items];
-
-    // 1. Filter by status
-    if (deliveryNoteStatusFilter !== "all") {
-      result = result.filter(note => getDisplayStatus(note) === deliveryNoteStatusFilter);
-    }
-
-    // 2. Filter by search query (code, id, customer name, order code, design name/code, recipient name/phone)
-    if (debouncedDeliveryNoteSearchQuery.trim() !== "") {
-      const q = debouncedDeliveryNoteSearchQuery.toLowerCase();
-      result = result.filter(note => {
-        const matchCode =
-          String(note.code || "").toLowerCase().includes(q) ||
-          String(note.displayCode || "").toLowerCase().includes(q);
-        const matchId = String(note.id || "").includes(q);
-        const matchOrders = (note.orders || []).some(order => 
-          String(order.customerName || "").toLowerCase().includes(q) ||
-          String(order.orderCode || "").toLowerCase().includes(q)
-        );
-        const matchLines = (note.lines || []).some(line => 
-          String(line.designName || "").toLowerCase().includes(q) ||
-          String(line.designCode || "").toLowerCase().includes(q)
-        );
-        const matchRecipient = 
-          String(note.recipientName || "").toLowerCase().includes(q) ||
-          String(note.recipientPhone || "").toLowerCase().includes(q);
-
-        return matchCode || matchId || matchOrders || matchLines || matchRecipient;
-      });
-    }
-
-    // 3. Sort by ID from largest to smallest (số phiếu từ lớn tới nhỏ)
-    result.sort((a: any, b: any) => {
-      const idA = a?.id ?? 0;
-      const idB = b?.id ?? 0;
-      return idB - idA;
-    });
-
-    return result;
-  }, [allNotesData, deliveryNoteStatusFilter, debouncedDeliveryNoteSearchQuery]);
-
-  const paginatedNotesList = useMemo(() => {
-    const start = (deliveryNotePage - 1) * itemsPerPage;
-    return filteredAndSortedNotes.slice(start, start + itemsPerPage);
-  }, [filteredAndSortedNotes, deliveryNotePage]);
-
-  const deliveryNotesData = useMemo(() => {
-    return {
-      items: paginatedNotesList,
-      totalPages: Math.ceil(filteredAndSortedNotes.length / itemsPerPage),
-      total: filteredAndSortedNotes.length,
-    };
-  }, [paginatedNotesList, filteredAndSortedNotes.length]);
+  const deliveryNotesData = allNotesData;
 
   const handleToggleSelectNote = (noteId?: number) => {
     if (!noteId) return;
@@ -1572,11 +1608,14 @@ export default function DeliveryNoteListPage() {
             setDeliveryNoteStatusFilter={setDeliveryNoteStatusFilter}
             deliveryNoteSearchQuery={deliveryNoteSearchQuery}
             setDeliveryNoteSearchQuery={setDeliveryNoteSearchQuery}
+            deliveryNoteDateFilter={deliveryNoteDateFilter}
+            setDeliveryNoteDateFilter={setDeliveryNoteDateFilter}
             deliveryNotesData={deliveryNotesData}
             deliveryNotesLoading={deliveryNotesLoading}
             deliveryNotesError={deliveryNotesError}
             deliveryNotesErrorObj={deliveryNotesErrorObj}
             refetchDeliveryNotes={refetchDeliveryNotes}
+            refetchStats={refetchStats}
             deliveryNotePage={deliveryNotePage}
             setDeliveryNotePage={setDeliveryNotePage}
             handleViewDeliveryNote={handleViewDeliveryNote}
@@ -1923,8 +1962,69 @@ function OrdersView({
                               <TableCell className="w-[120px] font-mono font-black text-[11px] uppercase text-stone-800 dark:text-stone-200">
                                 {detail.designCode}
                               </TableCell>
-                              <TableCell className="text-[11px] text-stone-500 font-medium truncate max-w-[150px] md:max-w-[200px] text-left" title={detail.designName}>
-                                {detail.designName}
+                              <TableCell className="text-[11px] text-stone-500 font-medium text-left" title={detail.designName}>
+                                <div className="truncate max-w-[150px] md:max-w-[200px]">{detail.designName}</div>
+                                {detail.deliveryHistory && detail.deliveryHistory.length > 0 && (
+                                  <div className="mt-2 flex flex-wrap gap-2 items-center bg-stone-50/70 dark:bg-stone-900/60 border border-stone-150 dark:border-stone-850/80 rounded-lg px-2.5 py-1.5 w-fit" onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex items-center gap-1 text-[9px] text-stone-500 dark:text-stone-400 font-bold uppercase tracking-wider">
+                                      <History className="h-3.5 w-3.5 text-stone-450 dark:text-stone-500" />
+                                      <span>Lịch sử giao:</span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {detail.deliveryHistory.map((hist: any) => {
+                                        const isDelivered = hist.status === "completed" || hist.status === "delivered";
+                                        const isTransit = hist.status === "in_transit" || hist.status === "shipping";
+                                        const statusColor = isDelivered
+                                          ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/50 hover:bg-emerald-100/50"
+                                          : isTransit
+                                            ? "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/20 dark:text-sky-400 dark:border-sky-900/50 hover:bg-sky-100/50"
+                                            : "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900 hover:bg-amber-100/50";
+                                        return (
+                                          <HoverCard key={hist.deliveryNoteId}>
+                                            <HoverCardTrigger asChild>
+                                              <Link
+                                                to={`/delivery-notes/${hist.deliveryNoteId}`}
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="inline-flex items-center"
+                                              >
+                                                <Badge
+                                                  variant="outline"
+                                                  className={`text-[10px] px-2 py-0.5 font-mono font-bold cursor-pointer transition-all duration-150 hover:scale-105 border ${statusColor}`}
+                                                >
+                                                  {isTransit && <span className="mr-1 h-1.5 w-1.5 rounded-full bg-sky-500 animate-pulse inline-block" />}
+                                                  Phiếu #{hist.displayCode || hist.deliveryNoteCode} ({new Intl.NumberFormat("vi-VN").format(hist.deliveryQty)} cái)
+                                                </Badge>
+                                              </Link>
+                                            </HoverCardTrigger>
+                                            <HoverCardContent className="w-80 p-3 text-xs" onClick={(e) => e.stopPropagation()}>
+                                              <div className="space-y-2">
+                                                <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center justify-between">
+                                                  <span>Phiếu giao: {hist.deliveryNoteCode}</span>
+                                                  <Badge className={isDelivered ? "bg-emerald-500 hover:bg-emerald-600" : isTransit ? "bg-sky-500 hover:bg-sky-600" : "bg-amber-500 hover:bg-amber-600"}>
+                                                    {hist.statusName}
+                                                  </Badge>
+                                                </div>
+                                                <div className="grid grid-cols-2 gap-y-1.5 text-stone-600 dark:text-stone-400">
+                                                  <div>Số lượng giao:</div>
+                                                  <div className="font-semibold text-right text-stone-900 dark:text-stone-100">{new Intl.NumberFormat("vi-VN").format(hist.deliveryQty)} cái</div>
+                                                  <div>Thực tế đã nhận:</div>
+                                                  <div className="font-semibold text-right text-stone-900 dark:text-stone-100">{hist.actualDeliveredQty != null ? `${new Intl.NumberFormat("vi-VN").format(hist.actualDeliveredQty)} cái` : "—"}</div>
+                                                  <div>Ngày tạo phiếu:</div>
+                                                  <div className="text-right">{format(new Date(hist.createdAt), "dd/MM/yyyy HH:mm")}</div>
+                                                </div>
+                                                {hist.note && (
+                                                  <div className="border-t border-stone-100 dark:border-stone-800 pt-2 mt-2 text-stone-500 italic">
+                                                    Ghi chú: {hist.note}
+                                                  </div>
+                                                )}
+                                              </div>
+                                            </HoverCardContent>
+                                          </HoverCard>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
                               </TableCell>
                               <TableCell className="text-[11px] text-stone-500 font-semibold text-left truncate max-w-[120px] md:max-w-[150px]" title={detail.customerName || ""}>
                                 {detail.customerName || "—"}
@@ -2029,11 +2129,14 @@ interface DeliveryNotesViewProps {
   setDeliveryNoteStatusFilter: (filter: string) => void;
   deliveryNoteSearchQuery: string;
   setDeliveryNoteSearchQuery: (query: string) => void;
+  deliveryNoteDateFilter: string;
+  setDeliveryNoteDateFilter: (filter: string) => void;
   deliveryNotesData: unknown;
   deliveryNotesLoading: boolean;
   deliveryNotesError: boolean;
   deliveryNotesErrorObj: unknown;
   refetchDeliveryNotes: () => void;
+  refetchStats: () => void;
   deliveryNotePage: number;
   setDeliveryNotePage: (page: number) => void;
   handleViewDeliveryNote: (id: number | undefined) => void;
@@ -2054,10 +2157,13 @@ function DeliveryNotesView({
   setDeliveryNoteStatusFilter,
   deliveryNoteSearchQuery,
   setDeliveryNoteSearchQuery,
+  deliveryNoteDateFilter,
+  setDeliveryNoteDateFilter,
   deliveryNotesLoading,
   deliveryNotesError,
   deliveryNotesErrorObj,
   refetchDeliveryNotes,
+  refetchStats,
   deliveryNotePage,
   setDeliveryNotePage,
   deliveryNotesData,
@@ -2074,6 +2180,7 @@ function DeliveryNotesView({
   allNotesForStats,
 }: DeliveryNotesViewProps) {
   const [expandedNoteIds, setExpandedNoteIds] = useState<Set<number>>(new Set());
+  const recentMonths = useMemo(() => getRecentMonths(), []);
   const itemsPerPage = 10;
   const deliveryNotesDataTyped = deliveryNotesData as
     | {
@@ -2097,74 +2204,24 @@ function DeliveryNotesView({
       }
     | undefined;
 
-  // Local search fallback when backend doesn't support searching prepress code (Mã bài)
   const { searchedNotes, isLocalSearch } = useMemo(() => {
-    const items = deliveryNotesDataTyped?.items || [];
-    const q = deliveryNoteSearchQuery.trim().toLowerCase();
-    if (!q) {
-      return { searchedNotes: items, isLocalSearch: false };
-    }
-    // If backend found items, trust them
-    if (items.length > 0) {
-      return { searchedNotes: items, isLocalSearch: false };
-    }
+    return {
+      searchedNotes: deliveryNotesDataTyped?.items || [],
+      isLocalSearch: false,
+    };
+  }, [deliveryNotesDataTyped]);
 
-    // Backend matched 0 results, fall back to searching locally on allNotesForStats (up to 200 items)
-    const allItems = (allNotesForStats as any)?.items || [];
-    const filtered = allItems.filter((note: any) => {
-      // 1. Status Filter
-      if (deliveryNoteStatusFilter !== "all") {
-        const status = getDisplayStatus(note);
-        if (status !== deliveryNoteStatusFilter) return false;
-      }
-
-      // 2. Search query match
-      if (
-        String(note.code || "").toLowerCase().includes(q) ||
-        String(note.displayCode || "").toLowerCase().includes(q)
-      )
-        return true;
-      if (String(note.recipientName || "").toLowerCase().includes(q)) return true;
-      if (String(note.recipientPhone || "").toLowerCase().includes(q)) return true;
-      if (note.orders?.some((o: any) => 
-        String(o.orderCode || "").toLowerCase().includes(q) ||
-        String(o.customerName || "").toLowerCase().includes(q)
-      )) return true;
-
-      return note.lines?.some((line: any) => {
-        if (String(line.designCode || "").toLowerCase().includes(q)) return true;
-        if (String(line.designName || "").toLowerCase().includes(q)) return true;
-        return line.proofingOrderCodes?.some((code: string) => 
-          String(code || "").toLowerCase().includes(q)
-        );
-      });
-    });
-
-    return { searchedNotes: filtered, isLocalSearch: true };
-  }, [deliveryNotesDataTyped, allNotesForStats, deliveryNoteSearchQuery, deliveryNoteStatusFilter]);
-
-  // Sort delivery notes so items needing action float to top:
-  // 1) status === 'pending' (chờ giao hàng)
-  // 2) notes with no delivered lines (chưa giao)
-  // 3) others
+  // Sort delivery notes: purely chronologically by createdAt (newer first), falling back to id desc
   const sortedDeliveryNotes = useMemo(() => {
     const items = searchedNotes.slice();
-    const priority = (note: any) => {
-      if (!note) return 3;
-      if (String(note.status) === "pending") return 0;
-      const lines = note.lines || [];
-      const hasDelivered = lines.some((l: any) => l && l.status === "delivered");
-      if (!hasDelivered) return 1;
-      return 2;
-    };
-
     items.sort((a: any, b: any) => {
-      const pa = priority(a);
-      const pb = priority(b);
-      if (pa !== pb) return pa - pb;
       const da = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
       const db = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
-      return db - da; // newer first
+      if (da !== db) return db - da; // newer first
+
+      const idA = a?.id ?? 0;
+      const idB = b?.id ?? 0;
+      return idB - idA; // larger ID first (fallback)
     });
     return items;
   }, [searchedNotes]);
@@ -2236,23 +2293,29 @@ function DeliveryNotesView({
               </SelectContent>
             </Select>
 
-            <Select defaultValue="30-days">
+            <Select value={deliveryNoteDateFilter} onValueChange={setDeliveryNoteDateFilter}>
               <SelectTrigger className="w-full md:w-[180px] h-10 border-stone-200 dark:border-stone-800 rounded-lg">
                 <Calendar className="h-4 w-4 mr-2 text-stone-400" />
                 <SelectValue placeholder="Thời gian" />
               </SelectTrigger>
               <SelectContent>
+                {recentMonths.map((m, idx) => (
+                  <SelectItem key={m.value} value={m.value}>
+                    {idx === 0 ? "Tháng hiện tại" : m.label}
+                  </SelectItem>
+                ))}
                 <SelectItem value="30-days">30 ngày gần nhất</SelectItem>
-                <SelectItem value="today">Hôm nay</SelectItem>
-                <SelectItem value="yesterday">Hôm qua</SelectItem>
-                <SelectItem value="this-week">Tuần này</SelectItem>
+                <SelectItem value="all">Tất cả thời gian</SelectItem>
               </SelectContent>
             </Select>
 
             <Button
               variant="outline"
               size="icon"
-              onClick={() => refetchDeliveryNotes()}
+              onClick={() => {
+                refetchDeliveryNotes();
+                refetchStats();
+              }}
               disabled={deliveryNotesLoading}
               className="h-10 w-10 border-stone-200 dark:border-stone-800 rounded-lg animate-none"
             >
@@ -3249,6 +3312,67 @@ export function SelectedOrderCard({
                 <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
                   <MapPin className="h-3 w-3 text-stone-400 shrink-0" />
                   <span className="truncate" title={od.deliveryAddress}>Địa chỉ giao: {od.deliveryAddress}</span>
+                </div>
+              )}
+              {od.deliveryHistory && od.deliveryHistory.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-2 items-center bg-stone-50/70 dark:bg-stone-900/60 border border-stone-150 dark:border-stone-850/80 rounded-lg px-2.5 py-1.5 w-fit" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center gap-1 text-[9px] text-stone-500 dark:text-stone-400 font-bold uppercase tracking-wider">
+                    <History className="h-3.5 w-3.5 text-stone-450 dark:text-stone-500" />
+                    <span>Lịch sử giao:</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {od.deliveryHistory.map((hist: any) => {
+                      const isDelivered = hist.status === "completed" || hist.status === "delivered";
+                      const isTransit = hist.status === "in_transit" || hist.status === "shipping";
+                      const statusColor = isDelivered
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-250 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/50 hover:bg-emerald-100/50"
+                        : isTransit
+                          ? "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/20 dark:text-sky-400 dark:border-sky-900/50 hover:bg-sky-100/50"
+                          : "bg-stone-50 text-stone-700 border-stone-200 dark:bg-stone-900/50 dark:text-stone-400 dark:border-stone-800 hover:bg-stone-100/50";
+                      return (
+                        <HoverCard key={hist.deliveryNoteId}>
+                          <HoverCardTrigger asChild>
+                            <Link
+                              to={`/delivery-notes/${hist.deliveryNoteId}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="inline-flex items-center"
+                            >
+                              <Badge
+                                variant="outline"
+                                className={`text-[10px] px-2 py-0.5 font-mono font-bold cursor-pointer transition-all duration-150 hover:scale-105 border ${statusColor}`}
+                              >
+                                {isTransit && <span className="mr-1 h-1.5 w-1.5 rounded-full bg-sky-500 animate-pulse inline-block" />}
+                                Phiếu #{hist.displayCode || hist.deliveryNoteCode} ({new Intl.NumberFormat("vi-VN").format(hist.deliveryQty)} cái)
+                              </Badge>
+                            </Link>
+                          </HoverCardTrigger>
+                          <HoverCardContent className="w-80 p-3 text-xs" onClick={(e) => e.stopPropagation()}>
+                            <div className="space-y-2">
+                              <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center justify-between">
+                                <span>Phiếu giao: {hist.deliveryNoteCode}</span>
+                                <Badge className={isDelivered ? "bg-emerald-500 hover:bg-emerald-600" : isTransit ? "bg-sky-500 hover:bg-sky-600" : "bg-amber-500 hover:bg-amber-600"}>
+                                  {hist.statusName}
+                                </Badge>
+                              </div>
+                              <div className="grid grid-cols-2 gap-y-1.5 text-stone-600 dark:text-stone-400">
+                                <div>Số lượng giao:</div>
+                                <div className="font-semibold text-right text-stone-900 dark:text-stone-100">{new Intl.NumberFormat("vi-VN").format(hist.deliveryQty)} cái</div>
+                                <div>Thực tế đã nhận:</div>
+                                <div className="font-semibold text-right text-stone-900 dark:text-stone-100">{hist.actualDeliveredQty != null ? `${new Intl.NumberFormat("vi-VN").format(hist.actualDeliveredQty)} cái` : "—"}</div>
+                                <div>Ngày tạo phiếu:</div>
+                                <div className="text-right">{format(new Date(hist.createdAt), "dd/MM/yyyy HH:mm")}</div>
+                              </div>
+                              {hist.note && (
+                                <div className="border-t border-stone-100 dark:border-stone-800 pt-2 mt-2 text-stone-500 italic">
+                                  Ghi chú: {hist.note}
+                                </div>
+                              )}
+                            </div>
+                          </HoverCardContent>
+                        </HoverCard>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>

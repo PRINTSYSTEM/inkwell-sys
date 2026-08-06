@@ -1,6 +1,6 @@
 /* AUTO-GENERATED FILE. DO NOT EDIT. */
 /* Source: src/generated/openapi.zod.ts */
-/* Generated at: 2026-08-05T20:37:14.794Z */
+/* Generated at: 2026-08-05T22:25:41.979Z */
 
 import { schemas, api, createApiClient } from "@/generated/openapi.zod";
 
@@ -166,10 +166,12 @@ export const DefectRecordResponsePaginateSchema = schemas.DefectRecordResponsePa
 export const DefectRecordSummaryByUserResponseSchema = schemas.DefectRecordSummaryByUserResponse;
 export const DeleteOpeningBalanceRequestSchema = schemas.DeleteOpeningBalanceRequest;
 export const DeliveryLineRequestSchema = schemas.DeliveryLineRequest;
+export const DeliveryNoteHistoryItemResponseSchema = schemas.DeliveryNoteHistoryItemResponse;
 export const DeliveryNoteLineResponseSchema = schemas.DeliveryNoteLineResponse;
 export const DeliveryNoteOrderResponseSchema = schemas.DeliveryNoteOrderResponse;
 export const DeliveryNoteResponseSchema = schemas.DeliveryNoteResponse;
 export const DeliveryNoteResponsePaginateSchema = schemas.DeliveryNoteResponsePaginate;
+export const DeliveryNoteStatsResponseSchema = schemas.DeliveryNoteStatsResponse;
 export const DesignExpandResponseSchema = schemas.DesignExpandResponse;
 export const DesignResponseSchema = schemas.DesignResponse;
 export const DesignResponsePaginateSchema = schemas.DesignResponsePaginate;

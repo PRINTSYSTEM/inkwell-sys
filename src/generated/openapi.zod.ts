@@ -1515,6 +1515,15 @@ const CreateDeliveryFromInventoryRequest = z.object({
 const UpdateDeliveryNoteRequest = z
   .object({ code: z.string().min(0).max(50).nullable() })
   .partial();
+const DeliveryNoteStatsResponse = z
+  .object({
+    totalCount: z.number().int(),
+    todayCount: z.number().int(),
+    deliveredCount: z.number().int(),
+    pendingCount: z.number().int(),
+    failedCount: z.number().int(),
+  })
+  .partial();
 const UpdateDeliveryStatusRequest = z.object({
   status: z.string().min(0).max(30),
   cancelReason: z.string().min(0).max(500).nullish(),
@@ -1529,6 +1538,19 @@ const RecreateDeliveryNoteRequest = z.object({
   customerAddressId: z.number().int().nullish(),
   notes: z.string().nullish(),
 });
+const DeliveryNoteHistoryItemResponse = z
+  .object({
+    deliveryNoteId: z.number().int(),
+    deliveryNoteCode: z.string().nullable(),
+    displayCode: z.string().nullable(),
+    status: z.string().nullable(),
+    statusName: z.string().nullable(),
+    deliveryQty: z.number().int(),
+    actualDeliveredQty: z.number().int().nullable(),
+    note: z.string().nullable(),
+    createdAt: z.string().datetime({ offset: true }),
+  })
+  .partial();
 const OrderDetailForDeliveryResponse = z
   .object({
     orderDetailId: z.number().int(),
@@ -1551,6 +1573,7 @@ const OrderDetailForDeliveryResponse = z
     deliveryAddress: z.string().nullable(),
     proofingOrderCodes: z.array(z.string()).nullable(),
     isUrgent: z.boolean(),
+    deliveryHistory: z.array(DeliveryNoteHistoryItemResponse).nullable(),
   })
   .partial();
 const OrderForDeliveryResponse = z
@@ -5058,8 +5081,10 @@ export const schemas = {
   DeliveryNoteResponsePaginate,
   CreateDeliveryFromInventoryRequest,
   UpdateDeliveryNoteRequest,
+  DeliveryNoteStatsResponse,
   UpdateDeliveryStatusRequest,
   RecreateDeliveryNoteRequest,
+  DeliveryNoteHistoryItemResponse,
   OrderDetailForDeliveryResponse,
   OrderForDeliveryResponse,
   OrderForDeliveryResponsePaginate,
@@ -8504,6 +8529,16 @@ const endpoints = makeApi([
         type: "Query",
         schema: z.string().optional(),
       },
+      {
+        name: "startDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "endDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
     ],
     response: DeliveryNoteResponsePaginate,
   },
@@ -8752,6 +8787,25 @@ const endpoints = makeApi([
       },
     ],
     response: DeliveryNoteResponse,
+  },
+  {
+    method: "get",
+    path: "/api/delivery-notes/stats",
+    alias: "getApideliveryNotesstats",
+    requestFormat: "json",
+    parameters: [
+      {
+        name: "startDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+      {
+        name: "endDate",
+        type: "Query",
+        schema: z.string().datetime({ offset: true }).optional(),
+      },
+    ],
+    response: DeliveryNoteStatsResponse,
   },
   {
     method: "post",
