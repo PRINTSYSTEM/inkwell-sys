@@ -66,6 +66,7 @@ export const API_SUFFIX = {
   ORDER_RECALCULATE_TOTAL: (id: number) => `/orders/${id}/recalculate-total`,
   ORDER_VALIDATE_EXPORT: (id: number) => `/orders/${id}/validate-export`,
   ORDER_GENERATE_EXCEL: (id: number) => `/orders/${id}/generate-excel`,
+  ORDER_GENERATE_EXCEL_NO_VAT: (id: number) => `/orders/${id}/generate-excel-no-vat`,
   ORDER_CANCEL: (id: number) => `/orders/${id}/cancel`,
 
   ORDERS_MY: "/orders/my",
