@@ -1722,6 +1722,7 @@ const DesignResponse = z
     createdAt: z.string().datetime({ offset: true }),
     updatedAt: z.string().datetime({ offset: true }).nullable(),
     timelineEntries: z.array(DesignTimelineEntryResponse).nullable(),
+    isInBinhBai: z.boolean(),
   })
   .partial();
 const UpdateDesignRequest = z
@@ -4054,6 +4055,9 @@ const ReadyDesignResponse = z
     designImageUrl: z.string().nullable(),
     designThumbnailUrl: z.string().nullable(),
     designerName: z.string().nullable(),
+    isInBinhBai: z.boolean(),
+    binhBaiQuantity: z.number().int(),
+    activeBinhBaiCodes: z.array(z.string()).nullable(),
   })
   .partial();
 const ReadyDesignResponsePaginate = z

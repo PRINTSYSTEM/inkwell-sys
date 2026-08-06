@@ -13,6 +13,7 @@ export const NotificationTypeEnum = z.enum([
   "reminder",
   "alert",
   "update",
+  "ProofingDesignAddedToBinhBai",
 ]);
 
 // Notification Channel Enum
