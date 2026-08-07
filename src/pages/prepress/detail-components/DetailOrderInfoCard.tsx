@@ -181,7 +181,20 @@ export function DetailOrderInfoCard({
       typeName.includes("couche") ||
       typeName.includes("duplex") ||
       typeName.includes("kraft") ||
-      typeCode.includes("paper")
+      typeName.includes("bao thư") ||
+      typeName.includes("bao thu") ||
+      typeName.includes("envelope") ||
+      typeName.includes("tờ rơi") ||
+      typeName.includes("to roi") ||
+      typeName.includes("flyer") ||
+      typeName.includes("folder") ||
+      typeName.includes("kẹp file") ||
+      typeName.includes("kep file") ||
+      typeCode.includes("paper") ||
+      typeCode.includes("bao-thu") ||
+      typeCode.includes("to-roi") ||
+      typeCode.includes("folder") ||
+      typeCode.includes("kep-file")
     );
   }, [order.materialType]);
 
