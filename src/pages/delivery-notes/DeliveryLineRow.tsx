@@ -351,6 +351,12 @@ export default function DeliveryLineRow({
           <div className="text-sm font-medium line-clamp-2">
             {line.designName || "—"}
           </div>
+          {(line as any).designNotes && (
+            <div className="mt-1 text-xs text-amber-800 dark:text-amber-300 font-mono bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200/50 dark:border-amber-900/40 rounded px-1.5 py-0.5 whitespace-pre-wrap max-w-[280px]">
+              <span className="font-bold font-sans text-amber-700 dark:text-amber-400">Note thiết kế: </span>
+              {(line as any).designNotes}
+            </div>
+          )}
         </TableCell>
 
         {/* Mã bài */}

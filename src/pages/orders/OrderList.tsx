@@ -383,7 +383,7 @@ export default function OrderList() {
               </TableHeader>
               <TableBody>
                 {/* Loading */}
-                {isLoading && (
+                {isLoading && !data && (
                   <TableSkeleton
                     cols={canViewPrice ? 8 : 5}
                     rows={8}
@@ -412,7 +412,7 @@ export default function OrderList() {
                 )}
 
                 {/* Data */}
-                {!isLoading &&
+                {(!isLoading || data) &&
                   !isError &&
                   orders.map((order) => {
                     const orderResponse = order as any;

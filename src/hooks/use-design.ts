@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiRequest } from "@/lib/http";
 import type {
@@ -440,6 +440,7 @@ export const useDesignsSale = (params?: DesignSaleParams) => {
       return res.data;
     },
     staleTime: 5 * 60 * 1000,
+    placeholderData: keepPreviousData,
   });
 };
 
@@ -866,6 +867,82 @@ export const useUpdateDesignCode = () => {
           error?.response?.data?.message ||
           error?.message ||
           "Không thể cập nhật mã thiết kế",
+      });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    loading,
+    error,
+    mutate,
+    reset,
+  };
+};
+
+// PUT /api/designs/{id}/notes
+export const useUpdateDesignNotes = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    DesignResponse,
+    [{ id: number; notes: string }]
+  >(async ({ id, notes }) => {
+    const res = await apiRequest.put<DesignResponse>(
+      API_SUFFIX.DESIGN_UPDATE_NOTES(id),
+      { notes }
+    );
+    return res.data;
+  });
+
+  const mutate = async (payload: { id: number; notes: string }) => {
+    try {
+      const result = await execute(payload);
+
+      // Invalidate design detail query
+      queryClient.invalidateQueries({
+        queryKey: designKeys.detail(payload.id),
+      });
+
+      // Invalidate general design list queries
+      queryClient.invalidateQueries({
+        queryKey: designKeys.all,
+      });
+
+      // Invalidate sale designs
+      queryClient.invalidateQueries({
+        queryKey: [designKeys.all[0], "sale"],
+      });
+
+      // Invalidate ready-designs
+      queryClient.invalidateQueries({
+        queryKey: ["ready-designs"],
+      });
+
+      // Invalidate proofing-orders & orders
+      queryClient.invalidateQueries({
+        queryKey: ["proofing-orders"],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["orders"],
+      });
+
+      toast.success("Thành công", {
+        description: "Đã cập nhật ghi chú thiết kế thành công",
+      });
+
+      return result;
+    } catch (err: unknown) {
+      const error = err as {
+        response?: { data?: { message?: string } };
+        message?: string;
+      };
+      toast.error("Lỗi", {
+        description:
+          error?.response?.data?.message ||
+          error?.message ||
+          "Không thể cập nhật ghi chú thiết kế",
       });
       throw err;
     }

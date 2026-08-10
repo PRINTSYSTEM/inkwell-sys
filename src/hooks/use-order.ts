@@ -22,7 +22,7 @@ import type {
 } from "@/Schema";
 import { API_SUFFIX } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import { useAuth } from "./use-auth";
 import { normalizeParams } from "@/apis/util.api";
 import { ROLE } from "@/constants";
@@ -82,6 +82,7 @@ const useOrderListBaseWithEnabled = (
       return res;
     },
     staleTime: 5 * 60 * 1000, // 5 phút
+    placeholderData: keepPreviousData,
   });
 };
 
@@ -385,6 +386,7 @@ const useOrdersForDesigner = (
       return res.data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
+    placeholderData: keepPreviousData,
   });
 };
 
@@ -969,6 +971,7 @@ export const useMyOrders = (
       return res.data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
+    placeholderData: keepPreviousData,
   });
 };
 

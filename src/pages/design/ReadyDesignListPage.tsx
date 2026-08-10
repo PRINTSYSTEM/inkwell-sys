@@ -1,11 +1,12 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { Check, ChevronsUpDown, Loader2, Package, Search, Plus, Trash2, Calendar, FileText, User, Image as ImageIcon, X, RefreshCw, ChevronLeft, ChevronRight, XCircle, Flame } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, Package, Search, Plus, Trash2, Calendar, FileText, User, Image as ImageIcon, X, RefreshCw, ChevronLeft, ChevronRight, XCircle, Flame, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import { apiRequest, API_SUFFIX } from "@/apis";
 import { cn } from "@/lib/utils";
+import { EditDesignNotesDialog } from "@/components/design/EditDesignNotesDialog";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -160,17 +161,25 @@ export default function ReadyDesignListPage() {
   const [binhBaiFilter, setBinhBaiFilter] = useState<string>("all");
 
   // Pagination/Filter reset state
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageInput, setPageInput] = useState("1");
+  const [currentPage, setCurrentPage] = useState(() => {
+    const saved = sessionStorage.getItem("ready_design_list_page");
+    return saved ? parseInt(saved, 10) || 1 : 1;
+  });
+  const [pageInput, setPageInput] = useState(() => {
+    const saved = sessionStorage.getItem("ready_design_list_page");
+    return saved ? String(parseInt(saved, 10) || 1) : "1";
+  });
   const ITEMS_PER_PAGE = 100;
 
-  // Sync pageInput with currentPage
+  // Sync pageInput with currentPage and persist
   useEffect(() => {
     setPageInput(String(currentPage));
+    sessionStorage.setItem("ready_design_list_page", String(currentPage));
   }, [currentPage]);
 
   // Selected designs
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [selectedDesignForNotes, setSelectedDesignForNotes] = useState<any | null>(null);
 
   // Order dialog state
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
@@ -933,7 +942,7 @@ export default function ReadyDesignListPage() {
                             return (design as any).basisWeight && !isDecalPaper ? ` (${(design as any).basisWeight} gsm)` : "";
                           })()}
                         </TableCell>
-                        <TableCell className={cn("py-2 text-xs break-words min-w-[220px]", design.isUrgent ? "text-red-800 dark:text-red-200 font-medium" : "text-muted-foreground")} title={design.notes || ""}>
+                        <TableCell className={cn("py-2 text-xs break-words min-w-[220px] whitespace-pre-wrap font-mono", design.isUrgent ? "text-red-800 dark:text-red-200 font-medium" : "text-muted-foreground")} title={design.notes || ""}>
                           {design.notes || "—"}
                         </TableCell>
                         <TableCell className={cn("py-2 text-xs text-right pr-4 w-[95px]", design.isUrgent ? "text-red-650/80 dark:text-red-355/80" : "text-muted-foreground")}>
@@ -1032,6 +1041,20 @@ export default function ReadyDesignListPage() {
                               ) : (
                                 <Flame className={cn("h-4 w-4", design.isUrgent ? "fill-red-600 text-red-600 animate-pulse" : "")} />
                               )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-amber-600 hover:bg-amber-50 hover:text-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/30 rounded-lg"
+                              onClick={() => setSelectedDesignForNotes({
+                                id: design.designId || design.id,
+                                code: design.designCode || (design as any).code,
+                                designName: design.designName,
+                                notes: design.notes,
+                              })}
+                              title="Sửa / thêm ghi chú thiết kế"
+                            >
+                              <Pencil className="h-4 w-4" />
                             </Button>
                             {isPendingUpdate && (
                               <Button
@@ -1490,6 +1513,19 @@ export default function ReadyDesignListPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {selectedDesignForNotes && (
+        <EditDesignNotesDialog
+          open={!!selectedDesignForNotes}
+          onOpenChange={(open) => {
+            if (!open) setSelectedDesignForNotes(null);
+          }}
+          designId={selectedDesignForNotes.id}
+          designCode={selectedDesignForNotes.code}
+          designName={selectedDesignForNotes.designName}
+          currentNotes={selectedDesignForNotes.notes}
+        />
+      )}
     </div>
   );
 }

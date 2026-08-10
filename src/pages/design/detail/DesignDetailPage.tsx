@@ -45,6 +45,7 @@ import {
   useUpdateDesignCode,
 } from "@/hooks/use-design";
 import { useMaterialsByDesignType } from "@/hooks/use-material-type";
+import { EditDesignNotesDialog } from "@/components/design/EditDesignNotesDialog";
 import { ErrorBoundary, ErrorDisplay } from "@/components/ui/error-components";
 
 import {
@@ -393,6 +394,9 @@ export default function DesignDetailPage() {
   const updateDesignCodeMutation = useUpdateDesignCode();
   const [editCodeDialogOpen, setEditCodeDialogOpen] = useState(false);
   const [newDesignCode, setNewDesignCode] = useState("");
+  const [isNotesDialogOpen, setIsNotesDialogOpen] = useState(false);
+
+  const isSaleOrAdmin = user?.role === ROLE.SALE || user?.role === ROLE.ADMIN;
 
   // Filter active materials or the currently selected material of this design (even if inactive)
   const filteredDropdownMaterials = useMemo(() => {
@@ -1761,11 +1765,25 @@ export default function DesignDetailPage() {
                 {/* Notes */}
                 <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/20 dark:bg-amber-950/10">
                   <CardContent className="p-3">
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <FileText className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
-                      <span className="text-sm font-bold text-amber-900 dark:text-amber-100">
-                        Ghi chú
-                      </span>
+                    <div className="flex items-center justify-between gap-1.5 mb-2">
+                      <div className="flex items-center gap-1.5">
+                        <FileText className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                        <span className="text-sm font-bold text-amber-900 dark:text-amber-100">
+                          Ghi chú
+                        </span>
+                      </div>
+                      {isSaleOrAdmin && !isEditing && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setIsNotesDialogOpen(true)}
+                          className="h-6 px-2 text-xs font-semibold text-amber-800 dark:text-amber-200 hover:bg-amber-100/80 dark:hover:bg-amber-900/30"
+                        >
+                          <Pencil className="h-3 w-3 mr-1" />
+                          Sửa ghi chú
+                        </Button>
+                      )}
                     </div>
 
                     {isEditing && canEditDesign ? (
@@ -2312,6 +2330,22 @@ export default function DesignDetailPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {d && (
+          <EditDesignNotesDialog
+            open={isNotesDialogOpen}
+            onOpenChange={setIsNotesDialogOpen}
+            designId={d.id}
+            designCode={d.code}
+            designName={d.designName}
+            currentNotes={d.notes}
+            onSuccess={(updated) => {
+              if (updated?.notes) {
+                refetchDesign();
+              }
+            }}
+          />
+        )}
       </div>
     </ErrorBoundary>
   );

@@ -1964,6 +1964,12 @@ function OrdersView({
                               </TableCell>
                               <TableCell className="text-[11px] text-stone-500 font-medium text-left" title={detail.designName}>
                                 <div className="truncate max-w-[150px] md:max-w-[200px]">{detail.designName}</div>
+                                {detail.designNotes && (
+                                  <div className="text-[10px] text-amber-800 dark:text-amber-300 font-mono bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200/50 dark:border-amber-900/40 rounded px-1.5 py-0.5 mt-1 whitespace-pre-wrap max-w-[240px]">
+                                    <span className="font-bold font-sans text-amber-700 dark:text-amber-400">Note: </span>
+                                    {detail.designNotes}
+                                  </div>
+                                )}
                                 {detail.deliveryHistory && detail.deliveryHistory.length > 0 && (
                                   <div className="mt-2 flex flex-wrap gap-2 items-center bg-stone-50/70 dark:bg-stone-900/60 border border-stone-150 dark:border-stone-850/80 rounded-lg px-2.5 py-1.5 w-fit" onClick={(e) => e.stopPropagation()}>
                                     <div className="flex items-center gap-1 text-[9px] text-stone-500 dark:text-stone-400 font-bold uppercase tracking-wider">
@@ -2029,7 +2035,7 @@ function OrdersView({
                               <TableCell className="text-[11px] text-stone-500 font-semibold text-left truncate max-w-[120px] md:max-w-[150px]" title={detail.customerName || ""}>
                                 {detail.customerName || "—"}
                               </TableCell>
-                              <TableCell className="text-[11px] text-stone-500 font-medium truncate max-w-[120px] md:max-w-[150px]" title={detail.deliveryAddress || ""}>
+                              <TableCell className="text-[11px] text-stone-500 font-medium whitespace-normal break-words min-w-[180px] max-w-[320px]" title={detail.deliveryAddress || ""}>
                                 {detail.deliveryAddress || "—"}
                               </TableCell>
                               <TableCell className="text-right text-xs font-semibold text-stone-600 dark:text-stone-400 w-32">
@@ -2633,8 +2639,14 @@ function DeliveryNotesView({
                                           <TableCell className="w-[120px] font-mono font-black text-[11px] uppercase text-stone-800 dark:text-stone-200">
                                             {line.designCode}
                                           </TableCell>
-                                          <TableCell className="text-[11px] text-stone-500 font-medium truncate max-w-[150px] md:max-w-[200px]" title={line.designName}>
-                                            {line.designName}
+                                          <TableCell className="text-[11px] text-stone-500 font-medium max-w-[150px] md:max-w-[200px]" title={line.designName}>
+                                            <div className="truncate">{line.designName}</div>
+                                            {(line as any).designNotes && (
+                                              <div className="text-[10px] text-amber-800 dark:text-amber-300 font-mono bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200/50 dark:border-amber-900/40 rounded px-1.5 py-0.5 mt-1 whitespace-pre-wrap max-w-[240px]">
+                                                <span className="font-bold font-sans text-amber-700 dark:text-amber-400">Note: </span>
+                                                {(line as any).designNotes}
+                                              </div>
+                                            )}
                                           </TableCell>
                                           <TableCell className="text-[11px] text-stone-500 font-semibold truncate max-w-[120px] md:max-w-[150px]" title={lineCustomerName}>
                                             {lineCustomerName}
@@ -3308,10 +3320,19 @@ export function SelectedOrderCard({
                   </span>
                 )}
               </div>
+              {((od as any).designNotes || design?.notes) && (
+                <div className="mt-1.5 rounded bg-amber-50/80 dark:bg-amber-950/30 p-1.5 border border-amber-200/60 dark:border-amber-900/40 text-[11px] text-amber-900 dark:text-amber-200 whitespace-pre-wrap font-mono">
+                  <span className="font-bold font-sans text-amber-800 dark:text-amber-300">Ghi chú thiết kế: </span>
+                  {((od as any).designNotes || design?.notes)}
+                </div>
+              )}
               {od.deliveryAddress && (
-                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-1">
-                  <MapPin className="h-3 w-3 text-stone-400 shrink-0" />
-                  <span className="truncate" title={od.deliveryAddress}>Địa chỉ giao: {od.deliveryAddress}</span>
+                <div className="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-start gap-1">
+                  <MapPin className="h-3.5 w-3.5 text-stone-400 shrink-0 mt-0.5" />
+                  <span className="break-words leading-relaxed" title={od.deliveryAddress}>
+                    <span className="font-semibold text-slate-600 dark:text-slate-300">Địa chỉ giao: </span>
+                    {od.deliveryAddress}
+                  </span>
                 </div>
               )}
               {od.deliveryHistory && od.deliveryHistory.length > 0 && (
@@ -3693,6 +3714,12 @@ function RecreateDeliveryNoteDialog({
                           <div className="text-sm text-slate-700 dark:text-slate-300 mt-0.5 line-clamp-2">
                             {item.designName}
                           </div>
+                          {(item as any).designNotes && (
+                            <div className="mt-1 rounded bg-amber-50/80 dark:bg-amber-950/30 p-1.5 border border-amber-200/60 dark:border-amber-900/40 text-[11px] text-amber-900 dark:text-amber-200 whitespace-pre-wrap font-mono">
+                              <span className="font-bold font-sans text-amber-800 dark:text-amber-300">Ghi chú thiết kế: </span>
+                              {(item as any).designNotes}
+                            </div>
+                          )}
                         </div>
                         <div className="w-[110px] flex-shrink-0">
                           <Label className="text-xs text-slate-500 mb-1 block">Số lượng giao</Label>
