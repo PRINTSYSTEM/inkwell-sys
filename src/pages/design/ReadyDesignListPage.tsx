@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
-import { Check, ChevronsUpDown, Loader2, Package, Search, Plus, Trash2, Calendar, FileText, User, Image as ImageIcon, X, RefreshCw, ChevronLeft, ChevronRight, XCircle } from "lucide-react";
+import { Check, ChevronsUpDown, Loader2, Package, Search, Plus, Trash2, Calendar, FileText, User, Image as ImageIcon, X, RefreshCw, ChevronLeft, ChevronRight, XCircle, Flame } from "lucide-react";
 import { toast } from "sonner";
 import { useDebounce } from "use-debounce";
 import { apiRequest, API_SUFFIX } from "@/apis";
@@ -793,20 +793,19 @@ export default function ReadyDesignListPage() {
             <table className="w-full caption-bottom text-sm min-w-[1350px]">
               <TableHeader className="sticky top-0 bg-background z-10 border-b">
                 <TableRow>
-                  <TableHead className="w-[50px] text-center"></TableHead>
-                  <TableHead className="h-9 text-sm font-bold w-[75px] text-center">Hình ảnh</TableHead>
-                  <TableHead className="h-9 text-sm font-bold">Mã thiết kế</TableHead>
-                  <TableHead className="h-9 text-sm font-bold">Tên thiết kế</TableHead>
-                  <TableHead className="h-9 text-sm font-bold">Người thiết kế</TableHead>
-                  <TableHead className="h-9 text-sm font-bold">Khách hàng</TableHead>
-                  <TableHead className="h-9 text-sm font-bold text-right">SL chốt in</TableHead>
-                  <TableHead className="h-9 text-sm font-bold text-center">Trạng thái</TableHead>
-                  <TableHead className="h-9 text-sm font-bold">Kích thước</TableHead>
-                  <TableHead className="h-9 text-sm font-bold">Chất liệu</TableHead>
-                  <TableHead className="h-9 text-sm font-bold">Ghi chú</TableHead>
-                  <TableHead className="h-9 text-sm font-bold text-center w-[120px]">Giao gấp</TableHead>
-                  <TableHead className="h-9 text-sm font-bold text-right pr-4">Ngày cập nhật</TableHead>
-                  <TableHead className="h-9 text-sm font-bold text-center pr-2 w-[70px]">Thao tác</TableHead>
+                  <TableHead className="w-[45px] text-center"></TableHead>
+                  <TableHead className="h-9 text-sm font-bold w-[70px] text-center">Hình ảnh</TableHead>
+                  <TableHead className="h-9 text-sm font-bold w-[95px] leading-tight">Mã thiết kế</TableHead>
+                  <TableHead className="h-9 text-sm font-bold min-w-[220px]">Tên thiết kế</TableHead>
+                  <TableHead className="h-9 text-sm font-bold w-[80px] leading-tight">Người thiết kế</TableHead>
+                  <TableHead className="h-9 text-sm font-bold min-w-[180px]">Khách hàng</TableHead>
+                  <TableHead className="h-9 text-sm font-bold text-right w-[70px] leading-tight">SL chốt in</TableHead>
+                  <TableHead className="h-9 text-sm font-bold text-center w-[110px]">Trạng thái</TableHead>
+                  <TableHead className="h-9 text-sm font-bold w-[80px] leading-tight">Kích thước</TableHead>
+                  <TableHead className="h-9 text-sm font-bold w-[80px] leading-tight">Chất liệu</TableHead>
+                  <TableHead className="h-9 text-sm font-bold min-w-[220px]">Ghi chú</TableHead>
+                  <TableHead className="h-9 text-sm font-bold text-right pr-4 w-[95px] leading-tight">Ngày cập nhật</TableHead>
+                  <TableHead className="h-9 text-sm font-bold text-center pr-2 w-[65px]">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -823,20 +822,20 @@ export default function ReadyDesignListPage() {
                         className={cn(
                           "h-12 transition-all duration-150 relative",
                           isPendingUpdate && "bg-amber-50/70 hover:bg-amber-100/70 dark:bg-amber-950/30 dark:hover:bg-amber-900/30 text-amber-900 dark:text-amber-200 border-l-4 border-l-amber-500",
-                          !isPendingUpdate && design.isUrgent && (isSelected ? "bg-red-100/60 hover:bg-red-200/60 dark:bg-red-900/30 dark:hover:bg-red-800/30 text-red-700 dark:text-red-300 border-l-4 border-l-red-500 dark:border-l-red-600" : "bg-red-50/50 hover:bg-red-100/50 dark:bg-red-950/20 dark:hover:bg-red-900/20 text-red-700 dark:text-red-300 border-l-4 border-l-red-500 dark:border-l-red-600"),
+                          !isPendingUpdate && design.isUrgent && (isSelected ? "bg-red-200/90 hover:bg-red-200 dark:bg-red-900/50 dark:hover:bg-red-900/60 text-red-950 dark:text-red-100 border-l-4 border-l-red-600 shadow-sm" : "bg-red-100/80 hover:bg-red-150/90 dark:bg-red-950/50 dark:hover:bg-red-900/40 text-red-900 dark:text-red-200 border-l-4 border-l-red-600"),
                           !isPendingUpdate && !design.isUrgent && isSelected && "bg-primary/5 hover:bg-primary/10",
                           !isPendingUpdate && !design.isUrgent && !isSelected && "hover:bg-muted/50",
                           isDisabled && "opacity-45"
                         )}
                       >
-                        <TableCell className="text-center py-2">
+                        <TableCell className="text-center py-2 w-[45px]">
                           <Checkbox
                             checked={isSelected}
                             onCheckedChange={() => handleSelectRow(design.id!, design)}
                             disabled={isDisabled}
                           />
                         </TableCell>
-                        <TableCell className="py-1">
+                        <TableCell className="py-1 w-[70px]">
                           <div className="flex items-center justify-center w-full">
                             <DesignImageThumbnail
                               thumbnailUrl={design.designThumbnailUrl}
@@ -845,25 +844,37 @@ export default function ReadyDesignListPage() {
                             />
                           </div>
                         </TableCell>
-                        <TableCell className="py-2 font-mono font-semibold text-sm">
+                        <TableCell className="py-2 font-mono font-semibold text-sm w-[95px] break-words">
                           {design.designCode}
                         </TableCell>
-                        <TableCell className="py-2 text-sm font-semibold break-words min-w-[240px] max-w-[280px]" title={design.designName || ""}>
+                        <TableCell className="py-2 text-sm font-semibold break-words min-w-[220px]" title={design.designName || ""}>
                           {design.designName}
                         </TableCell>
                         <TableCell
-                          className="py-2 text-sm font-medium break-words max-w-[100px]"
+                          className="py-2 text-xs font-medium break-words w-[80px] leading-snug"
                           title={design.designerName || "—"}
                         >
                           {design.designerName || "—"}
                         </TableCell>
-                        <TableCell className="py-2 text-sm font-medium break-words w-[300px]">
+                        <TableCell className="py-2 text-sm font-medium break-words min-w-[180px]">
                           {design.customerName}
                         </TableCell>
-                        <TableCell className="py-2 text-sm font-medium text-right">
-                          {((design as any).requestedQuantity ?? design.quantity ?? 0).toLocaleString("vi-VN")}
+                        <TableCell className="py-2 text-sm font-medium text-right whitespace-nowrap font-mono w-[70px]">
+                          {(() => {
+                            const qty = (design as any).requestedQuantity ?? design.quantity ?? 0;
+                            const typeName = (design as any).designTypeName || (design as any).designType?.name || "";
+                            const matName = design.materialTypeName || (design as any).materialType?.name || "";
+                            const isDecal = typeName.toLowerCase().includes("decal") || matName.toLowerCase().includes("decal");
+                            const isBo = isDecal && (
+                              design.sidesClassification === "two_side" ||
+                              (design as any).sidesClassificationOption === "two_side" ||
+                              (design as any).sidesClassification === "two_side" ||
+                              (design as any).unitName?.toLowerCase()?.includes("bộ")
+                            );
+                            return `${Number(qty).toLocaleString("vi-VN")}${isBo ? " bộ" : ""}`;
+                          })()}
                         </TableCell>
-                        <TableCell className="py-2 text-center">
+                        <TableCell className="py-2 text-center w-[100px]">
                           <div className="flex flex-col items-center gap-1 justify-center">
                             <StatusBadge
                               status={design.status || ""}
@@ -875,6 +886,11 @@ export default function ReadyDesignListPage() {
                                 "N/A"
                               }
                             />
+                            {design.isUrgent && (
+                              <Badge className="bg-red-600 hover:bg-red-700 text-white font-bold text-[10px] animate-pulse px-1.5 py-0.5 whitespace-nowrap shadow-sm">
+                                Giao gấp
+                              </Badge>
+                            )}
                             {isPendingUpdate && (
                               <Badge className="bg-amber-500 hover:bg-amber-600 text-white font-bold text-[10px] animate-pulse px-1.5 py-0.5 whitespace-nowrap">
                                 Cần cập nhật đơn hàng
@@ -903,10 +919,10 @@ export default function ReadyDesignListPage() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className={cn("py-2 font-mono text-xs", design.isUrgent ? "text-red-650/80 dark:text-red-400/80" : "text-muted-foreground")}>
+                        <TableCell className={cn("py-2 font-mono text-xs w-[80px] whitespace-nowrap", design.isUrgent ? "text-red-650/80 dark:text-red-400/80" : "text-muted-foreground")}>
                           {design.dimensions || "—"}
                         </TableCell>
-                        <TableCell className={cn("py-2 text-xs font-medium truncate max-w-[150px]", design.isUrgent ? "text-red-650/80 dark:text-red-400/80" : "text-muted-foreground")} title={design.materialTypeName || ""}>
+                        <TableCell className={cn("py-2 text-xs font-medium break-words w-[80px]", design.isUrgent ? "text-red-650/80 dark:text-red-400/80" : "text-muted-foreground")} title={design.materialTypeName || ""}>
                           {design.materialTypeName}
                           {(() => {
                             const typeName = (design as any).designTypeName || (design as any).designType?.name || "";
@@ -917,24 +933,10 @@ export default function ReadyDesignListPage() {
                             return (design as any).basisWeight && !isDecalPaper ? ` (${(design as any).basisWeight} gsm)` : "";
                           })()}
                         </TableCell>
-                        <TableCell className={cn("py-2 text-xs break-words min-w-[190px] max-w-[250px]", design.isUrgent ? "text-red-650/80 dark:text-red-400/80" : "text-muted-foreground")} title={design.notes || ""}>
+                        <TableCell className={cn("py-2 text-xs break-words min-w-[220px]", design.isUrgent ? "text-red-800 dark:text-red-200 font-medium" : "text-muted-foreground")} title={design.notes || ""}>
                           {design.notes || "—"}
                         </TableCell>
-                        <TableCell className="py-2 text-center" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-center min-h-[32px]">
-                            {updatingUrgentId === design.id ? (
-                              <Loader2 className="h-4 w-4 animate-spin text-red-550 dark:text-red-400" />
-                            ) : (
-                              <Checkbox
-                                id={`urgent-${design.id}`}
-                                checked={design.isUrgent || false}
-                                onCheckedChange={() => handleToggleUrgent(design)}
-                                className="h-5 w-5 border-red-500/70 data-[state=checked]:bg-red-600 data-[state=checked]:border-red-600 data-[state=checked]:text-white transition-all rounded shadow-sm cursor-pointer"
-                              />
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className={cn("py-2 text-xs text-right pr-4", design.isUrgent ? "text-red-650/80 dark:text-red-355/80" : "text-muted-foreground")}>
+                        <TableCell className={cn("py-2 text-xs text-right pr-4 w-[95px]", design.isUrgent ? "text-red-650/80 dark:text-red-355/80" : "text-muted-foreground")}>
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -1011,7 +1013,26 @@ export default function ReadyDesignListPage() {
                           </TooltipProvider>
                         </TableCell>
                         <TableCell className="py-2 text-center pr-2" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex flex-col items-center gap-1.5 justify-center">
+                          <div className="flex items-center gap-1 justify-center flex-wrap">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              disabled={updatingUrgentId === design.id}
+                              className={cn(
+                                "h-8 w-8 rounded-lg transition-all",
+                                design.isUrgent
+                                  ? "text-red-600 bg-red-100/90 hover:bg-red-200 dark:bg-red-950/60 dark:text-red-400"
+                                  : "text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 dark:hover:text-red-400"
+                              )}
+                              onClick={() => handleToggleUrgent(design)}
+                              title={design.isUrgent ? "Hủy giao gấp" : "Đánh dấu giao gấp"}
+                            >
+                              {updatingUrgentId === design.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Flame className={cn("h-4 w-4", design.isUrgent ? "fill-red-600 text-red-600 animate-pulse" : "")} />
+                              )}
+                            </Button>
                             {isPendingUpdate && (
                               <Button
                                 variant="outline"
@@ -1045,6 +1066,7 @@ export default function ReadyDesignListPage() {
                               size="icon"
                               className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive rounded-lg"
                               onClick={() => setDesignToDelete(design)}
+                              title="Xóa thiết kế khỏi kho"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -1055,7 +1077,7 @@ export default function ReadyDesignListPage() {
                   })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={14} className="text-center py-12">
+                    <TableCell colSpan={13} className="text-center py-12">
                       <div className="flex flex-col items-center justify-center text-muted-foreground">
                         <Package className="h-10 w-10 mb-2 opacity-50" />
                         <p className="text-sm">Không có thiết kế nào sẵn sàng trong kho</p>

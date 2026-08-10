@@ -259,15 +259,18 @@ export default function SaleDesignSearch() {
               <table className="min-w-full text-left text-sm">
                 <thead className="bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
                   <tr>
-                    <th className="px-4 py-3 text-center w-16">Hình ảnh&nbsp;</th>
-                    <th className="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200 text-center">Khách hàng</th>
-                    <th className="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200">Mã thiết kế</th>
-                    <th className="px-4 py-3 min-w-[220px] font-semibold text-slate-700 dark:text-slate-200">Tên thiết kế</th>
-                    <th className="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200">Loại</th>
-                    <th className="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200">Kích thước</th>
-                    <th className="px-4 py-3 w-32 max-w-[130px] font-semibold text-slate-700 dark:text-slate-200">Chất liệu</th>
-                    <th className="px-4 py-3 w-24 max-w-[90px] font-semibold text-slate-700 dark:text-slate-200">Ngày tạo</th>
-                    <th className="px-4 py-3 font-semibold text-slate-700 dark:text-slate-200">Giá</th>
+                    <th className="px-3 py-3 text-center w-14 shrink-0">Hình ảnh&nbsp;</th>
+                    <th className="px-3 py-3 font-semibold text-slate-700 dark:text-slate-200">Khách hàng</th>
+                    <th className="px-3 py-3 font-semibold text-slate-700 dark:text-slate-200 w-[110px] max-w-[115px]">Mã thiết kế</th>
+                    <th className="px-3 py-3 font-semibold text-slate-700 dark:text-slate-200">Tên thiết kế</th>
+                    <th className="px-3 py-3 font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">Loại</th>
+                    <th className="px-3 py-3 font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">Kích thước</th>
+                    <th className="px-3 py-3 font-semibold text-slate-700 dark:text-slate-200 whitespace-nowrap">Chất liệu</th>
+                    <th className="px-3 py-3 font-semibold text-slate-700 dark:text-slate-200 text-right whitespace-nowrap leading-tight">
+                      Số lượng<br />đặt
+                    </th>
+                    <th className="px-3 py-3 font-semibold text-slate-700 dark:text-slate-200 text-center whitespace-nowrap">Ngày tạo</th>
+                    <th className="px-3 py-3 font-semibold text-slate-700 dark:text-slate-200 text-right whitespace-nowrap">Giá</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -276,7 +279,7 @@ export default function SaleDesignSearch() {
                       key={design.id}
                       className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-900/50"
                     >
-                      <td className="px-4 py-3 align-middle text-center w-16">
+                      <td className="px-3 py-3 align-middle text-center w-14 shrink-0">
                         <button
                           onClick={() => {
                             const url = design.designImageUrl || design.designFileUrl;
@@ -303,13 +306,34 @@ export default function SaleDesignSearch() {
                           )}
                         </button>
                       </td>
-                      <td className="px-4 py-3 align-middle max-w-[250px] whitespace-normal break-words font-medium text-slate-800 dark:text-slate-200">
+                      <td className="px-3 py-3 align-middle max-w-[200px] whitespace-normal break-words font-medium text-slate-800 dark:text-slate-200">
                         {design.customer?.name || "—"}
                       </td>
-                      <td className="px-4 py-3 align-middle font-mono font-medium text-slate-800 dark:text-slate-200">
-                        {design.code || `DES-${design.id}`}
+                      <td className="px-3 py-3 align-middle font-mono font-medium text-slate-800 dark:text-slate-200 w-[110px] max-w-[115px]">
+                        {(() => {
+                          const code = design.code || `DES-${design.id}`;
+                          if (code.includes(" (Hủy mã)")) {
+                            const [mainCode] = code.split(" (Hủy mã)");
+                            return (
+                              <div className="flex flex-col leading-tight">
+                                <span>{mainCode}</span>
+                                <span className="text-red-500 dark:text-red-400 text-xs font-sans">(Hủy mã)</span>
+                              </div>
+                            );
+                          }
+                          if (code.includes("(Hủy mã)")) {
+                            const [mainCode] = code.split("(Hủy mã)");
+                            return (
+                              <div className="flex flex-col leading-tight">
+                                <span>{mainCode.trim()}</span>
+                                <span className="text-red-500 dark:text-red-400 text-xs font-sans">(Hủy mã)</span>
+                              </div>
+                            );
+                          }
+                          return <span className="break-all">{code}</span>;
+                        })()}
                       </td>
-                      <td className="px-4 py-3 align-middle min-w-[220px]">
+                      <td className="px-3 py-3 align-middle">
                         <div className="flex flex-col gap-0.5">
                           <div className="flex items-center gap-1.5 group flex-wrap">
                             <div
@@ -342,7 +366,7 @@ export default function SaleDesignSearch() {
                           </div>
                           {design.notes && (
                             <div
-                              className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-normal break-words max-w-[400px] mt-0.5"
+                              className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-normal break-words mt-0.5"
                               title={design.notes}
                             >
                               Ghi chú: {design.notes}
@@ -350,42 +374,57 @@ export default function SaleDesignSearch() {
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-3 align-middle">
+                      <td className="px-3 py-3 align-middle whitespace-nowrap">
                         {design.designType?.name || "—"}
                       </td>
-                      <td className="px-4 py-3 align-middle font-mono text-slate-700 dark:text-slate-300">
+                      <td className="px-3 py-3 align-middle font-mono text-slate-700 dark:text-slate-300 whitespace-nowrap">
                         {design.dimensions ||
                           `${design.length || ""} x ${design.width || ""} x ${design.height || ""}`}
                       </td>
-                      <td className="px-4 py-3 align-middle max-w-[130px] truncate text-[13px]" title={(() => {
-                        const typeName = design.designType?.name || "";
-                        const matName = design.materialType?.name || design.materialTypeName || "";
-                        const isDecalDesign = typeName.toLowerCase().includes("decal");
-                        const isPaperMaterial = matName.toLowerCase().includes("giấy") || matName.toLowerCase().includes("giay");
-                        const isDecalPaper = isDecalDesign && isPaperMaterial;
-                        const weightStr = design.basisWeight && !isDecalPaper ? ` (${design.basisWeight} gsm)` : "";
-                        return `${matName || "—"}${weightStr}`;
-                      })()}>
-                        <span>
-                          {design.materialType?.name || design.materialTypeName || "—"}
-                          {(() => {
-                            const typeName = design.designType?.name || "";
-                            const matName = design.materialType?.name || design.materialTypeName || "";
-                            const isDecalDesign = typeName.toLowerCase().includes("decal");
-                            const isPaperMaterial = matName.toLowerCase().includes("giấy") || matName.toLowerCase().includes("giay");
-                            const isDecalPaper = isDecalDesign && isPaperMaterial;
-                            return design.basisWeight && !isDecalPaper ? ` (${design.basisWeight} gsm)` : "";
-                          })()}
-                        </span>
+                      <td className="px-3 py-3 align-middle text-[13px] whitespace-nowrap">
+                        {(() => {
+                          const typeName = design.designType?.name || "";
+                          const matName = design.materialType?.name || design.materialTypeName || "—";
+                          const isDecalDesign = typeName.toLowerCase().includes("decal");
+                          const isPaperMaterial = matName.toLowerCase().includes("giấy") || matName.toLowerCase().includes("giay");
+                          const isDecalPaper = isDecalDesign && isPaperMaterial;
+                          const weightStr = design.basisWeight && !isDecalPaper ? `(${design.basisWeight} gsm)` : null;
+                          return (
+                            <div className="flex flex-col leading-tight">
+                              <span>{matName}</span>
+                              {weightStr && (
+                                <span className="text-xs text-slate-500 dark:text-slate-400 font-normal">
+                                  {weightStr}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
-                      <td className="px-4 py-3 align-middle text-slate-500 text-[13px] w-24 max-w-[90px] truncate">
+                      <td className="px-3 py-3 align-middle font-mono font-medium text-slate-800 dark:text-slate-200 text-right whitespace-nowrap">
+                        {(() => {
+                          const qty = design.requestedQuantity ?? design.quantity;
+                          if (qty == null) return "—";
+                          const typeName = design.designType?.name || "";
+                          const matName = design.materialType?.name || design.materialTypeName || "";
+                          const isDecal = typeName.toLowerCase().includes("decal") || matName.toLowerCase().includes("decal");
+                          const isBo = isDecal && (
+                            design.sidesClassification === "two_side" ||
+                            design.sidesClassificationOption === "two_side" ||
+                            (design as any).sidesClassification === "two_side" ||
+                            design.unitName?.toLowerCase()?.includes("bộ")
+                          );
+                          return `${Number(qty).toLocaleString("vi-VN")}${isBo ? " bộ" : ""}`;
+                        })()}
+                      </td>
+                      <td className="px-3 py-3 align-middle text-slate-500 text-[13px] text-center whitespace-nowrap">
                         {design.createdAt
                           ? new Date(design.createdAt).toLocaleDateString(
                             "vi-VN",
                           )
                           : "—"}
                       </td>
-                      <td className="px-4 py-3 align-middle font-bold text-primary text-[15px]">
+                      <td className="px-3 py-3 align-middle font-bold text-primary text-[15px] text-right whitespace-nowrap">
                         {design.latestUnitPrice
                           ? formatCurrency(design.latestUnitPrice)
                           : "—"}
