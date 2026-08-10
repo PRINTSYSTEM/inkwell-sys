@@ -1,7 +1,9 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useDebounce } from "use-debounce";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, ChevronLeft, ChevronRight, Copy, Check, Image as ImageIcon } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, Copy, Check, Image as ImageIcon, Pencil } from "lucide-react";
 import { useDesignsSale } from "@/hooks/use-design";
 import { toast } from "sonner";
 import { formatCurrency } from "@/lib/status-utils";
@@ -16,20 +18,199 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
+import { EditDesignNotesDialog } from "@/components/design/EditDesignNotesDialog";
 
 export default function SaleDesignSearch() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [customerName, setCustomerName] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const getInitialValue = useCallback((key: string, defaultValue: string) => {
+    const urlVal = new URLSearchParams(window.location.search).get(key);
+    if (urlVal !== null) return urlVal;
+    const savedVal = sessionStorage.getItem(`sale_design_search_${key}`);
+    if (savedVal !== null) return savedVal;
+    return defaultValue;
+  }, []);
+
+  const [searchTerm, setSearchTerm] = useState(() => getInitialValue("search", ""));
+  const [debouncedSearch] = useDebounce(searchTerm, 400);
+
+  const [customerName, setCustomerName] = useState(() => getInitialValue("customer", ""));
+  const [selectedTypeName, setSelectedTypeName] = useState<string | null>(() => {
+    const val = getInitialValue("type", "");
+    return val && val !== "all" ? val : null;
+  });
+  const [selectedMaterialName, setSelectedMaterialName] = useState<string | null>(() => {
+    const val = getInitialValue("material", "");
+    return val && val !== "all" ? val : null;
+  });
+  const [dimensionsFilter, setDimensionsFilter] = useState(() => getInitialValue("dimensions", ""));
+
+  const currentPage = useMemo(() => {
+    const urlVal = searchParams.get("page");
+    if (urlVal !== null) {
+      const num = parseInt(urlVal, 10);
+      if (!isNaN(num) && num >= 1) return num;
+    }
+    const savedVal = sessionStorage.getItem("sale_design_search_page");
+    if (savedVal !== null) {
+      const num = parseInt(savedVal, 10);
+      if (!isNaN(num) && num >= 1) return num;
+    }
+    return 1;
+  }, [searchParams]);
+
+  const setCurrentPage = useCallback(
+    (pageOrUpdater: number | ((prev: number) => number)) => {
+      const newPage =
+        typeof pageOrUpdater === "function"
+          ? pageOrUpdater(currentPage)
+          : pageOrUpdater;
+      const validPage = Math.max(1, newPage);
+      sessionStorage.setItem("sale_design_search_page", String(validPage));
+      setSearchParams(
+        (prev) => {
+          const params = new URLSearchParams(prev);
+          if (validPage > 1) {
+            params.set("page", String(validPage));
+          } else {
+            params.delete("page");
+          }
+          return params;
+        },
+        { replace: true }
+      );
+    },
+    [currentPage, setSearchParams]
+  );
+
   const pageSize = 10;
-  const [selectedTypeName, setSelectedTypeName] = useState<string | null>(null);
-  const [selectedMaterialName, setSelectedMaterialName] = useState<
-    string | null
-  >(null);
-  const [dimensionsFilter, setDimensionsFilter] = useState("");
   const [viewingImage, setViewingImage] = useState<{ url: string; title?: string } | null>(null);
   const [copiedDesignId, setCopiedDesignId] = useState<number | null>(null);
+  const [selectedDesignForNotes, setSelectedDesignForNotes] = useState<any | null>(null);
+
+  // Initial sync from sessionStorage to URL params on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    let changed = false;
+
+    const savedPage = sessionStorage.getItem("sale_design_search_page");
+    if (savedPage && savedPage !== "1" && !params.has("page")) {
+      params.set("page", savedPage);
+      changed = true;
+    }
+    const savedSearch = sessionStorage.getItem("sale_design_search_search");
+    if (savedSearch && !params.has("search")) {
+      params.set("search", savedSearch);
+      changed = true;
+    }
+    const savedCustomer = sessionStorage.getItem("sale_design_search_customer");
+    if (savedCustomer && !params.has("customer")) {
+      params.set("customer", savedCustomer);
+      changed = true;
+    }
+    const savedType = sessionStorage.getItem("sale_design_search_type");
+    if (savedType && !params.has("type")) {
+      params.set("type", savedType);
+      changed = true;
+    }
+    const savedMaterial = sessionStorage.getItem("sale_design_search_material");
+    if (savedMaterial && !params.has("material")) {
+      params.set("material", savedMaterial);
+      changed = true;
+    }
+    const savedDimensions = sessionStorage.getItem("sale_design_search_dimensions");
+    if (savedDimensions && !params.has("dimensions")) {
+      params.set("dimensions", savedDimensions);
+      changed = true;
+    }
+
+    if (changed) {
+      setSearchParams(params, { replace: true });
+    }
+  }, [setSearchParams]);
+
+  // Persist filter changes to sessionStorage and URL
+  useEffect(() => {
+    if (searchTerm.trim()) sessionStorage.setItem("sale_design_search_search", searchTerm.trim());
+    else sessionStorage.removeItem("sale_design_search_search");
+
+    if (customerName.trim()) sessionStorage.setItem("sale_design_search_customer", customerName.trim());
+    else sessionStorage.removeItem("sale_design_search_customer");
+
+    if (selectedTypeName) sessionStorage.setItem("sale_design_search_type", selectedTypeName);
+    else sessionStorage.removeItem("sale_design_search_type");
+
+    if (selectedMaterialName) sessionStorage.setItem("sale_design_search_material", selectedMaterialName);
+    else sessionStorage.removeItem("sale_design_search_material");
+
+    if (dimensionsFilter.trim()) sessionStorage.setItem("sale_design_search_dimensions", dimensionsFilter.trim());
+    else sessionStorage.removeItem("sale_design_search_dimensions");
+
+    // Sync non-page filters to URL params
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (searchTerm.trim()) params.set("search", searchTerm.trim());
+        else params.delete("search");
+
+        if (customerName.trim()) params.set("customer", customerName.trim());
+        else params.delete("customer");
+
+        if (selectedTypeName) params.set("type", selectedTypeName);
+        else params.delete("type");
+
+        if (selectedMaterialName) params.set("material", selectedMaterialName);
+        else params.delete("material");
+
+        if (dimensionsFilter.trim()) params.set("dimensions", dimensionsFilter.trim());
+        else params.delete("dimensions");
+
+        return params;
+      },
+      { replace: true }
+    );
+  }, [searchTerm, customerName, selectedTypeName, selectedMaterialName, dimensionsFilter, setSearchParams]);
+
+  // Reset to page 1 ONLY when user genuinely changes any filter value (ignore initial mount)
+  const prevFilterValues = useRef<{
+    search: string;
+    customer: string;
+    type: string | null;
+    material: string | null;
+    dimensions: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (prevFilterValues.current === null) {
+      prevFilterValues.current = {
+        search: debouncedSearch,
+        customer: customerName,
+        type: selectedTypeName,
+        material: selectedMaterialName,
+        dimensions: dimensionsFilter,
+      };
+      return;
+    }
+
+    const prev = prevFilterValues.current;
+    const isChanged =
+      prev.search !== debouncedSearch ||
+      prev.customer !== customerName ||
+      prev.type !== selectedTypeName ||
+      prev.material !== selectedMaterialName ||
+      prev.dimensions !== dimensionsFilter;
+
+    if (isChanged) {
+      prevFilterValues.current = {
+        search: debouncedSearch,
+        customer: customerName,
+        type: selectedTypeName,
+        material: selectedMaterialName,
+        dimensions: dimensionsFilter,
+      };
+      setCurrentPage(1);
+    }
+  }, [debouncedSearch, customerName, selectedTypeName, selectedMaterialName, dimensionsFilter, setCurrentPage]);
 
   const handleCopyDesignName = async (name: string, id: number) => {
     try {
@@ -43,15 +224,6 @@ export default function SaleDesignSearch() {
       toast.error("Không thể sao chép");
     }
   };
-
-  // Debounce search term
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchTerm);
-      setCurrentPage(1);
-    }, 500);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
 
   // Load design types
   const { data: designTypes = [] } = useQuery({
@@ -237,7 +409,7 @@ export default function SaleDesignSearch() {
 
       {/* Main Content Area (Table) */}
       <div className="flex-1 overflow-auto px-6 py-2.5">
-        {isLoading ? (
+        {isLoading && !data ? (
           <div className="space-y-4">
             <Skeleton className="h-5 w-1/4" />
             <Skeleton className="h-40 w-full" />
@@ -364,14 +536,23 @@ export default function SaleDesignSearch() {
                               </button>
                             )}
                           </div>
-                          {design.notes && (
+                          <div className="flex items-start gap-1.5 mt-1">
                             <div
-                              className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-normal break-words mt-0.5"
-                              title={design.notes}
+                              className="text-[11px] text-slate-500 dark:text-slate-400 whitespace-pre-wrap break-words flex-1 bg-slate-50/80 dark:bg-slate-800/60 rounded px-1.5 py-0.5 border border-slate-200/60 dark:border-slate-700/60 font-mono"
+                              title={design.notes || undefined}
                             >
-                              Ghi chú: {design.notes}
+                              <span className="font-semibold text-slate-600 dark:text-slate-300 font-sans">Ghi chú: </span>
+                              {design.notes ? design.notes : <span className="italic text-muted-foreground font-sans">Chưa có</span>}
                             </div>
-                          )}
+                            <button
+                              type="button"
+                              onClick={() => setSelectedDesignForNotes(design)}
+                              className="inline-flex items-center justify-center p-1 rounded text-amber-600 hover:text-amber-700 hover:bg-amber-100/70 dark:hover:bg-amber-950/50 transition-colors h-5 w-5 shrink-0 opacity-80 hover:opacity-100"
+                              title={design.notes ? "Sửa/thêm ghi chú thiết kế" : "Thêm ghi chú thiết kế"}
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </button>
+                          </div>
                         </div>
                       </td>
                       <td className="px-3 py-3 align-middle whitespace-nowrap">
@@ -470,6 +651,22 @@ export default function SaleDesignSearch() {
             </Button>
           </div>
         </div>
+      )}
+
+      {selectedDesignForNotes && (
+        <EditDesignNotesDialog
+          open={!!selectedDesignForNotes}
+          onOpenChange={(open) => {
+            if (!open) setSelectedDesignForNotes(null);
+          }}
+          designId={selectedDesignForNotes.id}
+          designCode={selectedDesignForNotes.code}
+          designName={selectedDesignForNotes.designName}
+          currentNotes={selectedDesignForNotes.notes}
+          onSuccess={() => {
+            // Queries are automatically invalidated by hook
+          }}
+        />
       )}
     </div>
   );

@@ -5,6 +5,7 @@ import {
   useMutation,
   useQueryClient,
   QueryClient,
+  keepPreviousData,
 } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { crudApi } from "@/lib/http";
@@ -169,6 +170,7 @@ export function createCrudHooks<
       queryKey: keys.list(params ?? ({} as TListParams)),
       queryFn: () => api.list(params),
       staleTime: 5 * 60 * 1000, // 5 phút
+      placeholderData: keepPreviousData,
     });
   };
 
