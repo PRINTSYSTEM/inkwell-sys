@@ -42,6 +42,7 @@ import { useProductionOrders } from "@/hooks/use-production";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import {
   Select,
   SelectContent,
@@ -2464,30 +2465,28 @@ function DeliveryNotesView({
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <span className="text-[10px] text-stone-500 mb-0.5 block">Từ ngày</span>
-                      <Input
-                        type="date"
+                      <DatePicker
                         value={customStartDate || ""}
-                        onChange={(e) => {
-                          setCustomStartDate?.(e.target.value);
+                        onChange={(val) => {
+                          setCustomStartDate?.(val);
                           if (deliveryNoteDateFilter !== "custom") {
                             setDeliveryNoteDateFilter("custom");
                           }
                         }}
-                        className="h-7 text-xs bg-stone-50 dark:bg-stone-900 border-stone-200 dark:border-stone-800 px-2"
+                        className="h-7 text-xs bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-md"
                       />
                     </div>
                     <div>
                       <span className="text-[10px] text-stone-500 mb-0.5 block">Đến ngày</span>
-                      <Input
-                        type="date"
+                      <DatePicker
                         value={customEndDate || ""}
-                        onChange={(e) => {
-                          setCustomEndDate?.(e.target.value);
+                        onChange={(val) => {
+                          setCustomEndDate?.(val);
                           if (deliveryNoteDateFilter !== "custom") {
                             setDeliveryNoteDateFilter("custom");
                           }
                         }}
-                        className="h-7 text-xs bg-stone-50 dark:bg-stone-900 border-stone-200 dark:border-stone-800 px-2"
+                        className="h-7 text-xs bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-md"
                       />
                     </div>
                   </div>
