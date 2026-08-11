@@ -1,5 +1,4 @@
-// src/hooks/use-delivery-note.ts
-import { useQuery, useMutation, useQueryClient, UseMutationOptions } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, UseMutationOptions, keepPreviousData } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/http";
 import { buildFilename, formatDateForFilename } from "@/utils/file-name";
 import { API_SUFFIX } from "@/apis";
@@ -18,6 +17,8 @@ import type {
   DeliveryNoteLineResponse,
   UpdateDeliveryLineResultRequest,
   DeliveryNoteStatsResponse,
+  AddDeliveryNoteLinesRequest,
+  UpdateDeliveryLineQuantityRequest,
 } from "@/Schema/delivery-note.schema";
 import type {
   DeliveryNoteListParams,
@@ -40,6 +41,7 @@ export const useDeliveryNotes = (params?: DeliveryNoteListParams) => {
       );
       return res.data;
     },
+    placeholderData: keepPreviousData,
   });
 };
 
@@ -352,6 +354,140 @@ export const useDeleteDeliveryNote = (
       const message = error.response?.data?.message || error.message || "Xóa phiếu giao hàng thất bại";
       toast.error("Xóa phiếu giao hàng thất bại", { description: message });
       if (options?.onError) options.onError(error, variables, context);
+    },
+  });
+};
+
+// ================== GET AVAILABLE ORDER DETAILS FOR DELIVERY NOTE ==================
+// GET /delivery-notes/available-order-details?forDeliveryNoteId={id}
+export const useAvailableOrderDetailsForDeliveryNote = (
+  forDeliveryNoteId?: number,
+  options?: { enabled?: boolean }
+) => {
+  return useQuery({
+    queryKey: ["availableOrderDetailsForDeliveryNote", forDeliveryNoteId],
+    enabled: (options?.enabled ?? true) && !!forDeliveryNoteId,
+    queryFn: async () => {
+      const res = await apiRequest.get<OrderDetailForDeliveryResponse[]>(
+        API_SUFFIX.DELIVERY_NOTE_AVAILABLE_ORDER_DETAILS,
+        { params: { forDeliveryNoteId } }
+      );
+      return res.data;
+    },
+  });
+};
+
+// ================== ADD DELIVERY NOTE LINES ==================
+// POST /delivery-notes/{id}/lines
+export const useAddDeliveryNoteLines = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      deliveryNoteId,
+      data,
+    }: {
+      deliveryNoteId: number;
+      data: AddDeliveryNoteLinesRequest;
+    }) => {
+      const res = await apiRequest.post<DeliveryNoteResponse>(
+        API_SUFFIX.DELIVERY_NOTE_ADD_LINES(deliveryNoteId),
+        data
+      );
+      return res.data;
+    },
+    onSuccess: (data) => {
+      if (data?.id) {
+        queryClient.setQueryData(["deliveryNotes", data.id], data);
+        queryClient.setQueryData(["deliveryNote", data.id], data);
+      }
+      queryClient.invalidateQueries({ queryKey: ["deliveryNotes"] });
+      queryClient.invalidateQueries({ queryKey: ["deliveryNote"] });
+      queryClient.invalidateQueries({ queryKey: ["availableOrderDetailsForDeliveryNote"] });
+      queryClient.invalidateQueries({ queryKey: ["availableOrdersForDelivery"] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      toast.success("Thêm hàng vào phiếu giao hàng thành công");
+    },
+    onError: (error: any) => {
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Thêm hàng vào phiếu giao hàng thất bại";
+      toast.error(message);
+    },
+  });
+};
+
+// ================== UPDATE DELIVERY LINE QUANTITY ==================
+// PUT /delivery-notes/lines/{lineId}/quantity
+export const useUpdateDeliveryLineQuantity = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      lineId,
+      data,
+    }: {
+      lineId: number;
+      data: UpdateDeliveryLineQuantityRequest;
+    }) => {
+      const res = await apiRequest.put<DeliveryNoteResponse>(
+        API_SUFFIX.DELIVERY_NOTE_LINE_QUANTITY(lineId),
+        data
+      );
+      return res.data;
+    },
+    onSuccess: (data) => {
+      if (data?.id) {
+        queryClient.setQueryData(["deliveryNotes", data.id], data);
+        queryClient.setQueryData(["deliveryNote", data.id], data);
+      }
+      queryClient.invalidateQueries({ queryKey: ["deliveryNotes"] });
+      queryClient.invalidateQueries({ queryKey: ["deliveryNote"] });
+      queryClient.invalidateQueries({ queryKey: ["availableOrderDetailsForDeliveryNote"] });
+      queryClient.invalidateQueries({ queryKey: ["availableOrdersForDelivery"] });
+      toast.success("Cập nhật số lượng giao thành công");
+    },
+    onError: (error: any) => {
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Cập nhật số lượng giao thất bại";
+      toast.error(message);
+    },
+  });
+};
+
+// ================== DELETE DELIVERY NOTE LINE ==================
+// DELETE /delivery-notes/lines/{lineId}
+export const useDeleteDeliveryNoteLine = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (lineId: number) => {
+      const res = await apiRequest.delete<DeliveryNoteResponse>(
+        API_SUFFIX.DELIVERY_NOTE_LINE(lineId)
+      );
+      return res.data;
+    },
+    onSuccess: (data) => {
+      if (data?.id) {
+        queryClient.setQueryData(["deliveryNotes", data.id], data);
+        queryClient.setQueryData(["deliveryNote", data.id], data);
+      }
+      queryClient.invalidateQueries({ queryKey: ["deliveryNotes"] });
+      queryClient.invalidateQueries({ queryKey: ["deliveryNote"] });
+      queryClient.invalidateQueries({ queryKey: ["availableOrderDetailsForDeliveryNote"] });
+      queryClient.invalidateQueries({ queryKey: ["availableOrdersForDelivery"] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      toast.success("Xóa dòng khỏi phiếu giao hàng thành công");
+    },
+    onError: (error: any) => {
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Xóa dòng thất bại";
+      toast.error(message);
     },
   });
 };

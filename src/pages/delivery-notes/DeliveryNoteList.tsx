@@ -614,30 +614,67 @@ const getRecentMonths = () => {
   return months;
 };
 
-const getDateRangeForMonthValue = (value: string) => {
+const getDateRangeForFilterValue = (
+  value: string,
+  customStart?: string,
+  customEnd?: string
+) => {
   if (value === "all") {
     return { startDate: undefined, endDate: undefined };
   }
+  const now = new Date();
+  if (value === "today") {
+    const todayStr = format(now, "yyyy-MM-dd");
+    return {
+      startDate: todayStr,
+      endDate: todayStr,
+    };
+  }
+  if (value === "yesterday") {
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayStr = format(yesterday, "yyyy-MM-dd");
+    return {
+      startDate: yesterdayStr,
+      endDate: yesterdayStr,
+    };
+  }
+  if (value === "7-days") {
+    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    return {
+      startDate: format(sevenDaysAgo, "yyyy-MM-dd"),
+      endDate: format(now, "yyyy-MM-dd"),
+    };
+  }
   if (value === "30-days") {
-    const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     return {
       startDate: format(thirtyDaysAgo, "yyyy-MM-dd"),
       endDate: format(now, "yyyy-MM-dd"),
     };
   }
+  if (value === "custom") {
+    return {
+      startDate: customStart || undefined,
+      endDate: customEnd || undefined,
+    };
+  }
 
   const parts = value.split("-");
-  const year = parseInt(parts[0], 10);
-  const month = parseInt(parts[1], 10) - 1;
+  if (parts.length === 2) {
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    if (!isNaN(year) && !isNaN(month)) {
+      const startOfMonth = new Date(year, month, 1);
+      const endOfMonth = new Date(year, month + 1, 0);
 
-  const startOfMonth = new Date(year, month, 1);
-  const endOfMonth = new Date(year, month + 1, 0);
+      return {
+        startDate: format(startOfMonth, "yyyy-MM-dd"),
+        endDate: format(endOfMonth, "yyyy-MM-dd"),
+      };
+    }
+  }
 
-  return {
-    startDate: format(startOfMonth, "yyyy-MM-dd"),
-    endDate: format(endOfMonth, "yyyy-MM-dd"),
-  };
+  return { startDate: undefined, endDate: undefined };
 };
 
 // ============================================================================
@@ -706,6 +743,8 @@ export default function DeliveryNoteListPage() {
   const currentMonthValue = useMemo(() => format(new Date(), "yyyy-MM"), []);
   const recentMonths = useMemo(() => getRecentMonths(), []);
   const [deliveryNoteDateFilter, setDeliveryNoteDateFilter] = useState<string>(currentMonthValue);
+  const [customStartDate, setCustomStartDate] = useState<string>("");
+  const [customEndDate, setCustomEndDate] = useState<string>("");
   const [debouncedDeliveryNoteSearchQuery] = useDebounce(deliveryNoteSearchQuery, 300);
   const [deliveryNotePage, setDeliveryNotePage] = useState<number>(() => {
     const pageParam = new URLSearchParams(window.location.search).get("page");
@@ -728,31 +767,17 @@ export default function DeliveryNoteListPage() {
     sessionStorage.setItem("delivery_note_view_mode", viewMode);
     setSearchParams(
       (prev) => {
-        prev.set("tab", viewMode);
+        const next = new URLSearchParams(prev);
         if (viewMode === "delivery-notes") {
-          prev.set("page", String(deliveryNotePage));
-          prev.delete("ordersPage");
-        } else if (viewMode === "orders") {
-          prev.set("ordersPage", String(currentPage));
-          prev.delete("page");
+          next.delete("tab");
         } else {
-          prev.delete("page");
-          prev.delete("ordersPage");
+          next.set("tab", viewMode);
         }
-        return prev;
+        return next;
       },
       { replace: true }
     );
-  }, [viewMode, deliveryNotePage, currentPage, setSearchParams]);
-
-  useEffect(() => {
-    const tabParam = searchParams.get("tab");
-    if (tabParam && ["orders", "delivery-notes", "pending-qc", "completed-qc"].includes(tabParam)) {
-      if (tabParam !== viewMode) {
-        setViewMode(tabParam as any);
-      }
-    }
-  }, [searchParams, viewMode]);
+  }, [viewMode, setSearchParams]);
 
   useEffect(() => {
     sessionStorage.setItem("delivery_note_page", String(deliveryNotePage));
@@ -770,9 +795,12 @@ export default function DeliveryNoteListPage() {
       return;
     }
     setDeliveryNotePage(1);
-  }, [debouncedDeliveryNoteSearchQuery, deliveryNoteStatusFilter, deliveryNoteDateFilter]);
+  }, [debouncedDeliveryNoteSearchQuery, deliveryNoteStatusFilter, deliveryNoteDateFilter, customStartDate, customEndDate]);
 
-  const { startDate, endDate } = useMemo(() => getDateRangeForMonthValue(deliveryNoteDateFilter), [deliveryNoteDateFilter]);
+  const { startDate, endDate } = useMemo(
+    () => getDateRangeForFilterValue(deliveryNoteDateFilter, customStartDate, customEndDate),
+    [deliveryNoteDateFilter, customStartDate, customEndDate]
+  );
 
   // Query paginated delivery notes from backend
   const {
@@ -1610,6 +1638,10 @@ export default function DeliveryNoteListPage() {
             setDeliveryNoteSearchQuery={setDeliveryNoteSearchQuery}
             deliveryNoteDateFilter={deliveryNoteDateFilter}
             setDeliveryNoteDateFilter={setDeliveryNoteDateFilter}
+            customStartDate={customStartDate}
+            setCustomStartDate={setCustomStartDate}
+            customEndDate={customEndDate}
+            setCustomEndDate={setCustomEndDate}
             deliveryNotesData={deliveryNotesData}
             deliveryNotesLoading={deliveryNotesLoading}
             deliveryNotesError={deliveryNotesError}
@@ -2137,6 +2169,10 @@ interface DeliveryNotesViewProps {
   setDeliveryNoteSearchQuery: (query: string) => void;
   deliveryNoteDateFilter: string;
   setDeliveryNoteDateFilter: (filter: string) => void;
+  customStartDate?: string;
+  setCustomStartDate?: (val: string) => void;
+  customEndDate?: string;
+  setCustomEndDate?: (val: string) => void;
   deliveryNotesData: unknown;
   deliveryNotesLoading: boolean;
   deliveryNotesError: boolean;
@@ -2165,6 +2201,10 @@ function DeliveryNotesView({
   setDeliveryNoteSearchQuery,
   deliveryNoteDateFilter,
   setDeliveryNoteDateFilter,
+  customStartDate,
+  setCustomStartDate,
+  customEndDate,
+  setCustomEndDate,
   deliveryNotesLoading,
   deliveryNotesError,
   deliveryNotesErrorObj,
@@ -2256,24 +2296,64 @@ function DeliveryNotesView({
     });
   };
 
-  const toggleNote = (noteId: number) => {
-    const next = new Set(expandedNoteIds);
-    if (next.has(noteId)) {
-      next.delete(noteId);
-    } else {
-      next.add(noteId);
+  const [isDatePopoverOpen, setIsDatePopoverOpen] = useState(false);
+
+  const dateFilterLabel = useMemo(() => {
+    if (deliveryNoteDateFilter === "today") return "Hôm nay";
+    if (deliveryNoteDateFilter === "yesterday") return "Hôm qua";
+    if (deliveryNoteDateFilter === "7-days") return "7 ngày qua";
+    if (deliveryNoteDateFilter === "30-days") return "30 ngày qua";
+    if (deliveryNoteDateFilter === "all") return "Tất cả thời gian";
+    if (deliveryNoteDateFilter === "custom") {
+      if (customStartDate && customEndDate) {
+        if (customStartDate === customEndDate) {
+          try {
+            return format(new Date(customStartDate), "dd/MM/yyyy");
+          } catch {
+            return customStartDate;
+          }
+        }
+        try {
+          return `${format(new Date(customStartDate), "dd/MM")} - ${format(new Date(customEndDate), "dd/MM/yy")}`;
+        } catch {
+          return `${customStartDate} - ${customEndDate}`;
+        }
+      }
+      if (customStartDate) {
+        try {
+          return `Từ ${format(new Date(customStartDate), "dd/MM/yy")}`;
+        } catch {
+          return `Từ ${customStartDate}`;
+        }
+      }
+      if (customEndDate) {
+        try {
+          return `Đến ${format(new Date(customEndDate), "dd/MM/yy")}`;
+        } catch {
+          return `Đến ${customEndDate}`;
+        }
+      }
+      return "Tùy chọn ngày";
     }
-    setExpandedNoteIds(next);
-  };
 
-
+    // Month format YYYY-MM
+    const parts = deliveryNoteDateFilter.split("-");
+    if (parts.length === 2) {
+      const m = parseInt(parts[1], 10);
+      const y = parts[0];
+      if (!isNaN(m)) {
+        return `Tháng ${m}/${y}`;
+      }
+    }
+    return "Thời gian";
+  }, [deliveryNoteDateFilter, customStartDate, customEndDate]);
 
   return (
-    <div className="space-y-6">
-      {/* Toolbar */}
-      <div className="flex flex-col md:flex-row gap-3 items-center justify-between p-4 bg-white dark:bg-stone-900 rounded-xl border border-stone-200/80 dark:border-stone-850 shadow-sm">
-        <div className="flex-1 w-full flex flex-col md:flex-row gap-3 items-stretch md:items-center">
-          <div className="relative flex-1">
+    <div className="space-y-4">
+      {/* Top Filter & Action Bar */}
+      <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-3 shadow-xs">
+        <div className="flex flex-col md:flex-row gap-2.5 items-stretch md:items-center justify-between">
+          <div className="relative flex-1 min-w-[220px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
             <Input
               placeholder="Nhập mã phiếu để xem nhanh, hoặc tìm khách hàng..."
@@ -2282,13 +2362,14 @@ function DeliveryNotesView({
               className="pl-9 h-10 text-sm border-stone-200 dark:border-stone-800 bg-transparent rounded-lg focus-visible:ring-primary focus-visible:border-primary w-full"
             />
           </div>
-          <div className="flex items-center gap-3">
+          
+          <div className="flex items-center gap-2.5 shrink-0 flex-wrap sm:flex-nowrap">
             <Select
               value={deliveryNoteStatusFilter}
               onValueChange={setDeliveryNoteStatusFilter}
             >
-              <SelectTrigger className="w-full md:w-[180px] h-10 border-stone-200 dark:border-stone-800 rounded-lg">
-                <Filter className="h-4 w-4 mr-2 text-stone-400" />
+              <SelectTrigger className="w-full sm:w-[160px] h-10 border-stone-200 dark:border-stone-800 rounded-lg text-xs font-medium">
+                <Filter className="h-3.5 w-3.5 mr-1.5 text-stone-400 shrink-0" />
                 <SelectValue placeholder="Trạng thái" />
               </SelectTrigger>
               <SelectContent>
@@ -2299,21 +2380,149 @@ function DeliveryNotesView({
               </SelectContent>
             </Select>
 
-            <Select value={deliveryNoteDateFilter} onValueChange={setDeliveryNoteDateFilter}>
-              <SelectTrigger className="w-full md:w-[180px] h-10 border-stone-200 dark:border-stone-800 rounded-lg">
-                <Calendar className="h-4 w-4 mr-2 text-stone-400" />
-                <SelectValue placeholder="Thời gian" />
-              </SelectTrigger>
-              <SelectContent>
-                {recentMonths.map((m, idx) => (
-                  <SelectItem key={m.value} value={m.value}>
-                    {idx === 0 ? "Tháng hiện tại" : m.label}
-                  </SelectItem>
-                ))}
-                <SelectItem value="30-days">30 ngày gần nhất</SelectItem>
-                <SelectItem value="all">Tất cả thời gian</SelectItem>
-              </SelectContent>
-            </Select>
+            <Popover open={isDatePopoverOpen} onOpenChange={setIsDatePopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={`h-10 border-stone-200 dark:border-stone-800 rounded-lg px-3 gap-2 text-xs justify-between min-w-[155px] max-w-[210px] bg-background hover:bg-stone-50 dark:hover:bg-stone-850 ${
+                    deliveryNoteDateFilter !== "all" ? "text-stone-800 dark:text-stone-100 font-semibold" : "text-stone-600 dark:text-stone-400 font-normal"
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 truncate">
+                    <Calendar className="h-3.5 w-3.5 text-stone-500 shrink-0" />
+                    <span className="truncate">{dateFilterLabel}</span>
+                  </div>
+                  <ChevronDown className="h-3.5 w-3.5 text-stone-400 shrink-0 opacity-70" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-[330px] p-3.5 space-y-3 rounded-xl shadow-lg border-stone-200 dark:border-stone-800">
+                <div>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+                    Mốc thời gian nhanh
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {[
+                      { label: "Hôm nay", value: "today" },
+                      { label: "Hôm qua", value: "yesterday" },
+                      { label: "7 ngày qua", value: "7-days" },
+                      { label: "30 ngày qua", value: "30-days" },
+                      { label: "Tháng này", value: recentMonths[0]?.value || "current" },
+                      { label: "Tất cả", value: "all" },
+                    ].map((preset) => {
+                      const isSelected = deliveryNoteDateFilter === preset.value;
+                      return (
+                        <Button
+                          key={preset.value}
+                          type="button"
+                          size="sm"
+                          variant={isSelected ? "default" : "outline"}
+                          onClick={() => {
+                            setDeliveryNoteDateFilter(preset.value);
+                            setIsDatePopoverOpen(false);
+                          }}
+                          className={`h-7 text-xs ${isSelected ? "font-bold shadow-xs" : "font-normal text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800"}`}
+                        >
+                          {preset.label}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {recentMonths.length > 1 && (
+                  <div className="border-t border-stone-100 dark:border-stone-800 pt-2.5">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">
+                      Các tháng trước
+                    </div>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {recentMonths.slice(1, 4).map((m) => {
+                        const isSelected = deliveryNoteDateFilter === m.value;
+                        return (
+                          <Button
+                            key={m.value}
+                            type="button"
+                            size="sm"
+                            variant={isSelected ? "default" : "outline"}
+                            onClick={() => {
+                              setDeliveryNoteDateFilter(m.value);
+                              setIsDatePopoverOpen(false);
+                            }}
+                            className={`h-7 text-xs ${isSelected ? "font-bold shadow-xs" : "font-normal text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800"}`}
+                          >
+                            {m.label}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <div className="border-t border-stone-100 dark:border-stone-800 pt-2.5 space-y-2">
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Khoảng ngày tùy chọn
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <span className="text-[10px] text-stone-500 mb-0.5 block">Từ ngày</span>
+                      <Input
+                        type="date"
+                        value={customStartDate || ""}
+                        onChange={(e) => {
+                          setCustomStartDate?.(e.target.value);
+                          if (deliveryNoteDateFilter !== "custom") {
+                            setDeliveryNoteDateFilter("custom");
+                          }
+                        }}
+                        className="h-7 text-xs bg-stone-50 dark:bg-stone-900 border-stone-200 dark:border-stone-800 px-2"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-stone-500 mb-0.5 block">Đến ngày</span>
+                      <Input
+                        type="date"
+                        value={customEndDate || ""}
+                        onChange={(e) => {
+                          setCustomEndDate?.(e.target.value);
+                          if (deliveryNoteDateFilter !== "custom") {
+                            setDeliveryNoteDateFilter("custom");
+                          }
+                        }}
+                        className="h-7 text-xs bg-stone-50 dark:bg-stone-900 border-stone-200 dark:border-stone-800 px-2"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between pt-1">
+                    {(customStartDate || customEndDate || deliveryNoteDateFilter === "custom") ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setCustomStartDate?.("");
+                          setCustomEndDate?.("");
+                          setDeliveryNoteDateFilter("today");
+                        }}
+                        className="h-7 px-2 text-xs text-stone-500 hover:text-stone-800 dark:hover:text-stone-200"
+                      >
+                        Đặt lại
+                      </Button>
+                    ) : <div />}
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        if (customStartDate || customEndDate) {
+                          setDeliveryNoteDateFilter("custom");
+                        }
+                        setIsDatePopoverOpen(false);
+                      }}
+                      className="h-7 px-3 text-xs font-semibold"
+                    >
+                      Đóng
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
 
             <Button
               variant="outline"
@@ -2323,25 +2532,18 @@ function DeliveryNotesView({
                 refetchStats();
               }}
               disabled={deliveryNotesLoading}
-              className="h-10 w-10 border-stone-200 dark:border-stone-800 rounded-lg animate-none"
+              className="h-10 w-10 border-stone-200 dark:border-stone-800 rounded-lg animate-none shrink-0"
+              title="Tải lại dữ liệu"
             >
               <RefreshCw
                 className={`h-4 w-4 ${deliveryNotesLoading ? "animate-spin" : ""}`}
               />
             </Button>
-            
-            <Button
-              variant="outline"
-              className="h-10 border-stone-200 dark:border-stone-800 rounded-lg gap-2 text-sm font-semibold hidden md:flex text-stone-700 hover:text-stone-900"
-            >
-              <FileText className="h-4 w-4 text-stone-550" />
-              Xuất Excel
-            </Button>
           </div>
         </div>
 
         {selectedNoteIds.size > 0 && (
-          <div className="flex items-center gap-3 w-full md:w-auto border-t md:border-t-0 pt-3 md:pt-0 border-stone-150">
+          <div className="flex items-center gap-3 w-full border-t pt-2.5 mt-2.5 border-stone-150 dark:border-stone-800">
             <span className="text-xs text-stone-500 font-medium">
               Đã chọn <strong className="text-primary">{selectedNoteIds.size}</strong> phiếu
             </span>
@@ -2349,7 +2551,7 @@ function DeliveryNotesView({
               variant="ghost"
               size="sm"
               onClick={() => handleClearSelection()}
-              className="text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 font-bold text-xs h-9 px-3 hover:bg-transparent"
+              className="text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 font-bold text-xs h-8 px-2 hover:bg-transparent"
             >
               Bỏ chọn
             </Button>

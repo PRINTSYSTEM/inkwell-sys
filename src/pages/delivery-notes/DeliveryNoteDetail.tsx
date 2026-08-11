@@ -173,6 +173,15 @@ export default function DeliveryNoteDetailPage() {
     user?.role === ROLE.ACCOUNTING ||
     user?.role === ROLE.ACCOUNTING_LEAD;
 
+  const canEditLines = [
+    ROLE.ADMIN,
+    ROLE.PRODUCTION,
+    ROLE.PRODUCTION_LEAD,
+    ROLE.KCS,
+    ROLE.ACCOUNTING,
+    ROLE.ACCOUNTING_LEAD,
+  ].includes(user?.role as any);
+
   const handleDeleteDeliveryNote = () => {
     if (!deliveryNoteId) return;
     deleteMutation.mutate(deliveryNoteId, {
@@ -874,6 +883,9 @@ export default function DeliveryNoteDetailPage() {
           isDelivered={isDelivered}
           returnableLinesMap={returnableLinesMap}
           openReturnDialog={openReturnDialog}
+          deliveryNoteId={deliveryNote.id}
+          deliveryNoteCode={deliveryNote.code || String(deliveryNote.id)}
+          canEditLines={canEditLines}
         />
 
         {/* Notes */}

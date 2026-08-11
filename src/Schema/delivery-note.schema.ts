@@ -113,12 +113,29 @@ export const DeliveryLineRequestSchema =
   }).passthrough();
 export type DeliveryLineRequest = z.infer<typeof DeliveryLineRequestSchema>;
 
+// ===== AddDeliveryNoteLinesRequest =====
+export const AddDeliveryNoteLinesRequestSchema = z.object({
+  lines: z.array(DeliveryLineRequestSchema),
+}).passthrough();
+export type AddDeliveryNoteLinesRequest = z.infer<
+  typeof AddDeliveryNoteLinesRequestSchema
+>;
+
+// ===== UpdateDeliveryLineQuantityRequest =====
+export const UpdateDeliveryLineQuantityRequestSchema = z.object({
+  deliveryQty: z.number(),
+  note: z.string().nullish(),
+}).passthrough();
+export type UpdateDeliveryLineQuantityRequest = z.infer<
+  typeof UpdateDeliveryLineQuantityRequestSchema
+>;
+
 // ===== CustomerAddress =====
 // Reused from customer.schema.ts
 
 // ===== DeliveryNoteLineResponse =====
 // Extended with new fields from backend_new_update.md §4:
-// orderCode, customerAddressId, customerAddress (object)
+// orderCode, customerAddressId, customerAddress (object), maxEditableQty
 export const DeliveryNoteLineResponseSchema =
   GenDeliveryNoteLineResponseSchema.extend({
     orderCode: z.string().nullable().optional(),
@@ -128,6 +145,7 @@ export const DeliveryNoteLineResponseSchema =
     designImageUrl: z.string().nullable().optional(),
     designThumbnailUrl: z.string().nullable().optional(),
     proofingOrderCodes: z.array(z.string()).nullable().optional(),
+    maxEditableQty: z.number().nullable().optional(),
   }).passthrough();
 export type DeliveryNoteLineResponse = z.infer<
   typeof DeliveryNoteLineResponseSchema

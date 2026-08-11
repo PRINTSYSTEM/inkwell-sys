@@ -13,6 +13,22 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -22,8 +38,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronRight, XCircle, Loader2, Image as ImageIcon, RotateCcw, FileEdit, Check, X, ExternalLink } from "lucide-react";
-import { useUpdateDeliveryLineResult, useFailureReasons } from "@/hooks/use-delivery-note";
+import {
+  ChevronRight,
+  XCircle,
+  Loader2,
+  Image as ImageIcon,
+  RotateCcw,
+  FileEdit,
+  Check,
+  X,
+  ExternalLink,
+  Trash2,
+  AlertTriangle,
+} from "lucide-react";
+import {
+  useUpdateDeliveryLineResult,
+  useFailureReasons,
+  useUpdateDeliveryLineQuantity,
+  useDeleteDeliveryNoteLine,
+} from "@/hooks/use-delivery-note";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
@@ -167,10 +200,14 @@ const NEXT_STATUS: Record<string, string> = {
 export default function DeliveryLineRow({
   line,
   noteStatus,
+  totalLines = 1,
+  canEditLines = false,
   onReturn,
 }: {
   line: DeliveryNoteLineResponse;
   noteStatus?: string | null;
+  totalLines?: number;
+  canEditLines?: boolean;
   onReturn?: (line: DeliveryNoteLineResponse) => void;
 }) {
   const [localStatus, setLocalStatus] = useState<string | null | undefined>(
@@ -180,26 +217,44 @@ export default function DeliveryLineRow({
   React.useEffect(() => {
     setLocalStatus(line.status);
   }, [line.status]);
+
   const [failDialogOpen, setFailDialogOpen] = useState(false);
   const [failureReasonId, setFailureReasonId] = useState<number | null>(null);
   const [failureNotes, setFailureNotes] = useState("");
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
+  // Mutations
   const updateLineResultMutation = useUpdateDeliveryLineResult();
+  const updateLineQuantityMutation = useUpdateDeliveryLineQuantity();
+  const deleteLineMutation = useDeleteDeliveryNoteLine();
+
+  // Note editing state
   const [isEditingNote, setIsEditingNote] = useState(false);
   const [tempNote, setTempNote] = useState(line.note || "");
+
+  // Quantity editing state
+  const [isEditingQty, setIsEditingQty] = useState(false);
+  const [tempQty, setTempQty] = useState<number>(line.deliveryQty || 1);
+
+  // Delete line dialog state
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
 
   React.useEffect(() => {
     setTempNote(line.note || "");
   }, [line.note]);
 
+  React.useEffect(() => {
+    setTempQty(line.deliveryQty || 1);
+  }, [line.deliveryQty]);
+
+  // Fix: Save note using updateLineQuantity endpoint so it works for all line statuses
   const handleSaveNote = async () => {
     if (!line?.id) return;
     try {
-      await updateLineResultMutation.mutateAsync({
+      await updateLineQuantityMutation.mutateAsync({
         lineId: Number(line.id),
         data: {
-          status: line.status || "pending",
+          deliveryQty: line.deliveryQty || 1,
           note: tempNote,
         },
       });
@@ -208,6 +263,35 @@ export default function DeliveryLineRow({
       // handled by hook
     }
   };
+
+  const handleSaveQty = async () => {
+    if (!line?.id) return;
+    const max = line.maxEditableQty ?? 9999999;
+    const validQty = Math.max(1, Math.min(tempQty, max));
+    try {
+      await updateLineQuantityMutation.mutateAsync({
+        lineId: Number(line.id),
+        data: {
+          deliveryQty: validQty,
+          note: line.note || undefined,
+        },
+      });
+      setIsEditingQty(false);
+    } catch {
+      // handled by hook
+    }
+  };
+
+  const handleDeleteLine = async () => {
+    if (!line?.id) return;
+    try {
+      await deleteLineMutation.mutateAsync(Number(line.id));
+      setIsDeleteConfirmOpen(false);
+    } catch {
+      // handled by hook
+    }
+  };
+
   const { data: failureReasonsApi } = useFailureReasons();
   const reasonsList = failureReasonsApi || FAILURE_REASONS;
 
@@ -247,15 +331,44 @@ export default function DeliveryLineRow({
   const nextStatus = NEXT_STATUS[currentStatus];
   const nextStatusLabel = deliveryLineStatusLabels[nextStatus] || nextStatus;
 
-  // Line đã kết thúc hoặc chờ giao lại thì ẩn nút
+  // Line đã kết thúc hoặc chờ giao lại thì ẩn nút kết quả
   const isSettled =
     currentStatus === "delivered" ||
     currentStatus === "cancelled" ||
     currentStatus === "returned" ||
     currentStatus === "failed_reschedule";
 
-  // Chỉ hiện nút khi line chưa kết thúc VÀ phiếu đang trong quá trình giao
-  const showButtons = !isSettled && noteIsShipping;
+  // Chỉ hiện nút kết quả khi line chưa kết thúc VÀ phiếu đang trong quá trình giao
+  const showResultButtons = !isSettled && noteIsShipping;
+
+  // Cho phép sửa số lượng / xóa dòng khi phiếu và dòng ở trạng thái pending hoặc in_transit
+  const isNoteEditableState = [
+    "pending",
+    "draft",
+    "confirmed",
+    "ready_to_ship",
+    "in_transit",
+    "delivering",
+  ].includes(noteStatusLower);
+
+  const isLineEditableState = [
+    "pending",
+    "in_transit",
+    "draft",
+    "confirmed",
+    "ready_to_ship",
+  ].includes(currentStatus) && !isSettled;
+
+  const canEditQuantity =
+    canEditLines &&
+    isNoteEditableState &&
+    isLineEditableState &&
+    (line.maxEditableQty == null || line.maxEditableQty > 0);
+
+  const canDeleteLine =
+    canEditLines &&
+    isNoteEditableState &&
+    isLineEditableState;
 
   // ── Handlers ──
 
@@ -311,6 +424,8 @@ export default function DeliveryLineRow({
     }
   };
 
+  const isTransit = noteStatusLower === "in_transit" || noteStatusLower === "delivering";
+
   return (
     <>
       <TableRow className="hover:bg-muted/30 transition-colors">
@@ -330,31 +445,28 @@ export default function DeliveryLineRow({
                   }}
                 />
               ) : (
-                <ImageIcon className="h-5 w-5 text-muted-foreground/40" />
+                <ImageIcon className="h-5 w-5 text-muted-foreground/50" />
               )}
             </div>
-            <div className="space-y-0.5 min-w-0">
-              <div className="font-mono font-semibold text-sm truncate">
+            <div>
+              <div className="font-mono font-bold text-foreground">
                 {line.designCode || "—"}
               </div>
-              {line.orderCode && (
-                <div className="text-xs text-muted-foreground font-mono truncate">
-                  {line.orderCode}
-                </div>
-              )}
+              <div className="text-xs text-muted-foreground font-mono">
+                {line.orderCode || "—"}
+              </div>
             </div>
           </div>
         </TableCell>
 
-        {/* Tên sản phẩm */}
+        {/* Sản phẩm */}
         <TableCell>
-          <div className="text-sm font-medium line-clamp-2">
+          <div className="font-medium text-foreground max-w-[200px] truncate" title={line.designName || ""}>
             {line.designName || "—"}
           </div>
-          {(line as any).designNotes && (
-            <div className="mt-1 text-xs text-amber-800 dark:text-amber-300 font-mono bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200/50 dark:border-amber-900/40 rounded px-1.5 py-0.5 whitespace-pre-wrap max-w-[280px]">
-              <span className="font-bold font-sans text-amber-700 dark:text-amber-400">Note thiết kế: </span>
-              {(line as any).designNotes}
+          {(line.orderDetail as any)?.itemType && (
+            <div className="text-xs text-muted-foreground">
+              {(line.orderDetail as any).itemType}
             </div>
           )}
         </TableCell>
@@ -363,19 +475,19 @@ export default function DeliveryLineRow({
         <TableCell>
           {line.proofingOrderCodes && line.proofingOrderCodes.length > 0 ? (
             <div className="flex flex-wrap gap-1">
-              {line.proofingOrderCodes.map((code: string) => (
+              {line.proofingOrderCodes.map((code) => (
                 <ProofingCodeWithProductions key={code} code={code} />
               ))}
             </div>
           ) : (
-            <span className="text-muted-foreground">—</span>
+            <span className="text-muted-foreground text-xs">—</span>
           )}
         </TableCell>
 
         {/* Ghi chú */}
         <TableCell className="max-w-[200px]">
           {isEditingNote ? (
-            <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
               <Input
                 value={tempNote}
                 onChange={(e) => setTempNote(e.target.value)}
@@ -395,8 +507,13 @@ export default function DeliveryLineRow({
                 variant="ghost"
                 className="h-8 w-8 shrink-0 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
                 onClick={handleSaveNote}
+                disabled={updateLineQuantityMutation.isPending}
               >
-                <Check className="w-4 h-4" />
+                {updateLineQuantityMutation.isPending ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Check className="w-4 h-4" />
+                )}
               </Button>
               <Button
                 size="icon"
@@ -433,13 +550,86 @@ export default function DeliveryLineRow({
           </span>
         </TableCell>
 
-        {/* SL giao */}
+        {/* SL giao (Có hỗ trợ sửa trực tiếp) */}
         <TableCell className="text-right">
-          <span className="text-sm font-medium text-blue-600">
-            {typeof line.deliveryQty === "number"
-              ? line.deliveryQty.toLocaleString("vi-VN")
-              : "—"}
-          </span>
+          {isEditingQty ? (
+            <div
+              className="flex items-center justify-end gap-1"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex flex-col items-end">
+                <Input
+                  type="number"
+                  min={1}
+                  max={line.maxEditableQty ?? 999999}
+                  value={tempQty}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    setTempQty(isNaN(val) ? 1 : val);
+                  }}
+                  className="h-7 w-20 text-xs font-bold text-right px-1.5"
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleSaveQty();
+                    if (e.key === "Escape") {
+                      setTempQty(line.deliveryQty || 1);
+                      setIsEditingQty(false);
+                    }
+                  }}
+                />
+                {line.maxEditableQty != null && (
+                  <span className="text-[10px] text-muted-foreground mt-0.5">
+                    Tối đa: {line.maxEditableQty.toLocaleString("vi-VN")}
+                  </span>
+                )}
+              </div>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 text-emerald-600 hover:bg-emerald-50 shrink-0"
+                onClick={handleSaveQty}
+                disabled={updateLineQuantityMutation.isPending}
+                title="Lưu số lượng"
+              >
+                {updateLineQuantityMutation.isPending ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Check className="w-3.5 h-3.5" />
+                )}
+              </Button>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 text-red-500 hover:bg-red-50 shrink-0"
+                onClick={() => {
+                  setTempQty(line.deliveryQty || 1);
+                  setIsEditingQty(false);
+                }}
+                title="Hủy"
+              >
+                <X className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-end gap-1 group">
+              <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                {typeof line.deliveryQty === "number"
+                  ? line.deliveryQty.toLocaleString("vi-VN")
+                  : "—"}
+              </span>
+              {canEditQuantity && (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-6 w-6 opacity-0 group-hover:opacity-100 hover:bg-blue-50 dark:hover:bg-blue-950/40 text-blue-600 rounded-full transition-opacity"
+                  onClick={() => setIsEditingQty(true)}
+                  title={`Sửa SL giao (Tối đa: ${(line.maxEditableQty ?? line.deliveryQty ?? 0).toLocaleString("vi-VN")})`}
+                >
+                  <FileEdit className="w-3.5 h-3.5" />
+                </Button>
+              )}
+            </div>
+          )}
         </TableCell>
 
         {/* Phụ hao */}
@@ -463,84 +653,152 @@ export default function DeliveryLineRow({
         </TableCell>
 
         {/* SL thực tính */}
-        <TableCell className="text-right">
-          <div className="flex flex-col items-end">
-            <span className="font-bold text-sm text-primary">
-              {typeof line.netQtyTotal === "number"
-                ? line.netQtyTotal.toLocaleString("vi-VN")
-                : "—"}
-            </span>
-          </div>
+        <TableCell className="text-right font-medium">
+          {typeof line.netQtyTotal === "number"
+            ? line.netQtyTotal.toLocaleString("vi-VN")
+            : "—"}
         </TableCell>
 
         {/* Thành tiền */}
-        <TableCell className="text-right">
-          <div className="font-medium text-sm">
-            {line.lineAmount != null ? formatCurrency(line.lineAmount) : "—"}
-          </div>
+        <TableCell className="text-right font-medium">
+          {typeof line.totalPrice === "number"
+            ? formatCurrency(line.totalPrice)
+            : "—"}
         </TableCell>
 
-        {/* Cột Trạng thái */}
+        {/* Trạng thái */}
         <TableCell>
-          <div className="flex flex-col gap-1 items-start">
-            <LineStatusBadge status={localStatus} />
-            {((localStatus === "failed_reschedule" || localStatus === "returned") && 
-              (line.failureNotes || line.failureReasonName)) && (
-              <div className="text-[11px] font-medium text-destructive bg-destructive/10 px-1.5 py-0.5 rounded border border-destructive/20 max-w-[150px] break-words mt-1">
-                {line.failureReasonName || "Thất bại"}
-                {line.failureNotes && `: ${line.failureNotes}`}
-              </div>
+          <LineStatusBadge status={localStatus} />
+        </TableCell>
+
+        {/* Thao tác */}
+        <TableCell>
+          <div className="flex flex-col gap-1.5 w-fit">
+            {showResultButtons && (
+              <>
+                {nextStatus && (
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="h-7 text-[10px] gap-1 px-2 whitespace-nowrap w-full justify-center"
+                    onClick={handleNext}
+                    disabled={updateLineResultMutation.isPending}
+                  >
+                    {updateLineResultMutation.isPending ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <ChevronRight className="h-3 w-3" />
+                    )}
+                    {nextStatusLabel}
+                  </Button>
+                )}
+
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="h-7 text-[10px] gap-1 px-2 whitespace-nowrap w-full justify-center"
+                  onClick={() => setFailDialogOpen(true)}
+                  disabled={updateLineResultMutation.isPending}
+                >
+                  <XCircle className="h-3 w-3" />
+                  Thất bại
+                </Button>
+              </>
+            )}
+
+            {/* Delete Line Button */}
+            {canDeleteLine && (
+              totalLines <= 1 ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span tabIndex={0}>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-[10px] gap-1 px-2 text-muted-foreground opacity-50 cursor-not-allowed w-full justify-center"
+                          disabled
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          Xóa dòng
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs text-xs">
+                      Phiếu phải có ít nhất 2 dòng để xóa dòng. Hãy dùng tính năng Hủy phiếu nếu muốn xóa toàn bộ.
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-[10px] gap-1 px-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 w-full justify-center"
+                  onClick={() => setIsDeleteConfirmOpen(true)}
+                  disabled={deleteLineMutation.isPending}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Xóa dòng
+                </Button>
+              )
+            )}
+
+            {currentStatus === "delivered" && onReturn && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-[10px] gap-1 px-2 border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800"
+                onClick={() => onReturn(line)}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                Trả hàng
+              </Button>
             )}
           </div>
         </TableCell>
-
-        {/* Cột Thao tác */}
-        <TableCell>
-          {!isSettled && noteIsShipping && (
-            <div className="flex flex-col gap-1.5 w-fit">
-              {nextStatus && (
-                <Button
-                  size="sm"
-                  variant="default"
-                  className="h-7 text-[10px] gap-1 px-2 whitespace-nowrap w-full justify-center"
-                  onClick={handleNext}
-                  disabled={updateLineResultMutation.isPending}
-                >
-                  {updateLineResultMutation.isPending ? (
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                  ) : (
-                    <ChevronRight className="h-3 w-3" />
-                  )}
-                  {nextStatusLabel}
-                </Button>
-              )}
-
-              <Button
-                size="sm"
-                variant="destructive"
-                className="h-7 text-[10px] gap-1 px-2 whitespace-nowrap w-full justify-center"
-                onClick={() => setFailDialogOpen(true)}
-                disabled={updateLineResultMutation.isPending}
-              >
-                <XCircle className="h-3 w-3" />
-                Thất bại
-              </Button>
-            </div>
-          )}
-
-          {currentStatus === "delivered" && onReturn && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-7 text-[10px] gap-1 px-2 border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800"
-              onClick={() => onReturn(line)}
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              Trả hàng
-            </Button>
-          )}
-        </TableCell>
       </TableRow>
+
+      {/* ── Dialog xác nhận xóa dòng ─────────────────────────────────── */}
+      <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Xác nhận xóa dòng khỏi phiếu giao hàng
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2 text-sm text-stone-700 dark:text-stone-300">
+              <p>
+                Bạn có chắc chắn muốn xóa mặt hàng{" "}
+                <strong className="font-mono font-bold">{line.designCode}</strong> (
+                {line.designName || "—"}) khỏi phiếu giao hàng?
+              </p>
+              {isTransit && (
+                <p className="bg-amber-50 dark:bg-amber-950/40 p-2.5 rounded-lg border border-amber-200 dark:border-amber-900/50 text-amber-900 dark:text-amber-200 text-xs">
+                  <AlertTriangle className="h-4 w-4 inline mr-1 text-amber-600" />
+                  Phiếu đang ở trạng thái <strong>Đang giao</strong>. Hệ thống sẽ{" "}
+                  <strong>tự động hoàn kho toàn bộ số lượng ({line.deliveryQty?.toLocaleString("vi-VN")})</strong> của mặt hàng này
+                  và cập nhật lại trạng thái đơn hàng.
+                </p>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteLineMutation.isPending}>
+              Hủy
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteLine}
+              disabled={deleteLineMutation.isPending}
+              className="bg-destructive hover:bg-destructive/90 font-bold"
+            >
+              {deleteLineMutation.isPending && (
+                <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+              )}
+              Xác nhận xóa dòng
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* ── Dialog thất bại ─────────────────────────────────────────────── */}
       <Dialog open={failDialogOpen} onOpenChange={setFailDialogOpen}>
