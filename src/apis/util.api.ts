@@ -355,8 +355,13 @@ export const API_SUFFIX = {
   DELIVERY_NOTE_AVAILABLE_ORDERS: "/delivery-notes/available-orders",
   DELIVERY_NOTE_AVAILABLE_ORDER_DETAILS: "/delivery-notes/available-order-details",
   DELIVERY_NOTE_FAILURE_REASONS: "/delivery-notes/failure-reasons",
-  DELIVERY_NOTE_LINE_RESULT: (lineId: number) =>
+  DELIVERY_NOTE_LINE_RESULT: (lineId: number | string) =>
     `/delivery-notes/lines/${lineId}/result`,
+  DELIVERY_NOTE_ADD_LINES: (id: number | string) => `/delivery-notes/${id}/lines`,
+  DELIVERY_NOTE_LINE_QUANTITY: (lineId: number | string) =>
+    `/delivery-notes/lines/${lineId}/quantity`,
+  DELIVERY_NOTE_LINE: (lineId: number | string) =>
+    `/delivery-notes/lines/${lineId}`,
   DELIVERY_NOTE_RETURNABLE_LINES: (id: number) => `/delivery-notes/${id}/returnable-lines`,
 
   // ========== RETURN NOTES ==========
