@@ -1,17 +1,28 @@
 import React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { User, Phone, MapPin, Calendar, Building2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { User, Phone, MapPin, Calendar, Building2, Package, FileEdit } from "lucide-react";
 import type { DeliveryNoteResponse } from "@/Schema/delivery-note.schema";
 
 export default function DeliveryInfoSidebar({
   deliveryNote,
   uniqueAddresses,
   formatDateTime,
+  totalDeliveryQty,
+  totalPendingLines,
+  totalDeliveredLines,
+  totalFailedLines,
+  onOpenEditAddress,
 }: {
   deliveryNote: DeliveryNoteResponse;
   uniqueAddresses: Array<any>;
   formatDateTime: (d?: string | null) => string;
+  totalDeliveryQty?: number;
+  totalPendingLines?: number;
+  totalDeliveredLines?: number;
+  totalFailedLines?: number;
+  onOpenEditAddress?: () => void;
 }) {
   return (
     <Card className="w-full bg-card shadow-sm border border-stone-200 dark:border-stone-800">
@@ -57,17 +68,30 @@ export default function DeliveryInfoSidebar({
           )}
 
           {/* Address */}
-          {deliveryNote.deliveryAddress && (
-            <div className="md:col-span-4 space-y-3">
-              <div>
+          <div className="md:col-span-4 space-y-3">
+            <div>
+              <div className="flex items-center justify-between">
                 <Label className="text-muted-foreground text-[11px] font-bold uppercase tracking-wider">Địa chỉ giao hàng</Label>
-                <div className="flex items-start gap-2 mt-1.5">
-                  <MapPin className="w-4 h-4 text-stone-400 shrink-0 mt-0.5" />
-                  <span className="text-stone-800 dark:text-stone-250 leading-snug break-words">{deliveryNote.deliveryAddress}</span>
-                </div>
+                {onOpenEditAddress && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 text-stone-500 hover:text-emerald-600 hover:bg-emerald-50 rounded dark:hover:bg-emerald-950/40"
+                    onClick={onOpenEditAddress}
+                    title="Sửa địa chỉ giao hàng"
+                  >
+                    <FileEdit className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+              </div>
+              <div className="flex items-start gap-2 mt-1.5">
+                <MapPin className="w-4 h-4 text-stone-400 shrink-0 mt-0.5" />
+                <span className="text-stone-800 dark:text-stone-250 leading-snug break-words">
+                  {deliveryNote.deliveryAddress || "Chưa chọn địa chỉ giao hàng"}
+                </span>
               </div>
             </div>
-          )}
+          </div>
 
           {/* Line-level addresses */}
           {uniqueAddresses.length > 0 && (
@@ -87,12 +111,12 @@ export default function DeliveryInfoSidebar({
             </div>
           )}
 
-          {/* Key Dates in one clean horizontal list */}
+          {/* Key Dates (Milestones) */}
           {(deliveryNote.confirmedAt || deliveryNote.handedOverAt || deliveryNote.deliveredAt || deliveryNote.cancelledAt) && (
             <div className="col-span-12 grid grid-cols-2 sm:grid-cols-4 gap-4 mt-2 pt-3 border-t border-stone-100 dark:border-stone-800/60 text-xs">
               {deliveryNote.confirmedAt && (
                 <div className="flex items-center gap-1.5 text-stone-600 dark:text-stone-400">
-                  <Calendar className="w-3.5 h-3.5 text-stone-400" />
+                  <Calendar className="w-3.5 h-3.5 text-stone-400 shrink-0" />
                   <div>
                     <span className="font-medium text-stone-400">Xác nhận:</span>{" "}
                     <span className="font-semibold">{formatDateTime(deliveryNote.confirmedAt)}</span>
@@ -101,7 +125,7 @@ export default function DeliveryInfoSidebar({
               )}
               {deliveryNote.handedOverAt && (
                 <div className="flex items-center gap-1.5 text-stone-600 dark:text-stone-400">
-                  <Calendar className="w-3.5 h-3.5 text-stone-400" />
+                  <Calendar className="w-3.5 h-3.5 text-stone-400 shrink-0" />
                   <div>
                     <span className="font-medium text-stone-400">Bàn giao:</span>{" "}
                     <span className="font-semibold">{formatDateTime(deliveryNote.handedOverAt)}</span>
@@ -110,16 +134,16 @@ export default function DeliveryInfoSidebar({
               )}
               {deliveryNote.deliveredAt && (
                 <div className="flex items-center gap-1.5 text-stone-600 dark:text-stone-400">
-                  <Calendar className="w-3.5 h-3.5 text-stone-400" />
+                  <Calendar className="w-3.5 h-3.5 text-stone-400 shrink-0" />
                   <div>
-                    <span className="font-medium text-stone-400">Giao hàng:</span>{" "}
+                    <span className="font-medium text-stone-400">Giao thực tế:</span>{" "}
                     <span className="font-semibold">{formatDateTime(deliveryNote.deliveredAt)}</span>
                   </div>
                 </div>
               )}
               {deliveryNote.cancelledAt && (
                 <div className="flex items-center gap-1.5 text-stone-600 dark:text-stone-400">
-                  <Calendar className="w-3.5 h-3.5 text-stone-400" />
+                  <Calendar className="w-3.5 h-3.5 text-stone-400 shrink-0" />
                   <div>
                     <span className="font-medium text-stone-400">Hủy:</span>{" "}
                     <span className="font-semibold">{formatDateTime(deliveryNote.cancelledAt)}</span>
@@ -128,6 +152,7 @@ export default function DeliveryInfoSidebar({
               )}
             </div>
           )}
+
         </div>
       </CardContent>
     </Card>

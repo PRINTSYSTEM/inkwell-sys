@@ -23,6 +23,10 @@ interface DeliveryLinesCardProps {
   deliveryNoteId?: number;
   deliveryNoteCode?: string;
   canEditLines?: boolean;
+  totalDeliveryQty?: number;
+  totalPendingLines?: number;
+  totalDeliveredLines?: number;
+  totalFailedLines?: number;
 }
 
 export default function DeliveryLinesCard({
@@ -34,6 +38,10 @@ export default function DeliveryLinesCard({
   deliveryNoteId,
   deliveryNoteCode,
   canEditLines = false,
+  totalDeliveryQty,
+  totalPendingLines,
+  totalDeliveredLines,
+  totalFailedLines,
 }: DeliveryLinesCardProps) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const hasLines = lines && lines.length > 0;
@@ -58,16 +66,43 @@ export default function DeliveryLinesCard({
     <>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5" />
-              Chi tiết phiếu giao hàng
-              {hasLines && (
-                <Badge variant="secondary" className="ml-2">
-                  {lines.length} đơn
-                </Badge>
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              <CardTitle className="flex items-center gap-2 text-lg font-bold">
+                <FileText className="w-5 h-5 text-stone-600 dark:text-stone-400" />
+                Chi tiết phiếu giao hàng
+                {hasLines && (
+                  <Badge variant="secondary" className="ml-1 text-xs">
+                    {lines.length} đơn
+                  </Badge>
+                )}
+              </CardTitle>
+
+              {/* Integrated Summary Stats Badges on title row */}
+              {typeof totalDeliveryQty === "number" && (
+                <div className="flex items-center gap-2 flex-wrap text-xs">
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800">
+                    <Package className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    <span>Tổng SL:</span>
+                    <span className="font-bold">{totalDeliveryQty.toLocaleString("vi-VN")}</span>
+                  </div>
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 font-semibold border border-blue-200 dark:border-blue-800">
+                    <span>Chờ giao:</span>
+                    <span className="font-bold">{totalPendingLines ?? 0}</span>
+                  </div>
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-green-50 dark:bg-green-950/40 text-green-700 dark:text-green-300 font-semibold border border-green-200 dark:border-green-800">
+                    <span>Đã giao:</span>
+                    <span className="font-bold">{totalDeliveredLines ?? 0}</span>
+                  </div>
+                  {totalFailedLines != null && totalFailedLines > 0 && (
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 font-semibold border border-red-200 dark:border-red-800">
+                      <span>Thất bại:</span>
+                      <span className="font-bold">{totalFailedLines}</span>
+                    </div>
+                  )}
+                </div>
               )}
-            </CardTitle>
+            </div>
 
             {canAddLines && (
               <Button

@@ -31,6 +31,7 @@ import {
   Loader2,
   ExternalLink,
   History,
+  CheckSquare,
 } from "lucide-react";
 
 import {
@@ -172,11 +173,38 @@ const getRemainingQty = (detail: any) => {
   return Math.max(0, detail.remainingToDeliver ?? 0);
 };
 
-interface ProofingCodeProps {
-  code: string;
+function HighlightText({ text, query }: { text: string | null | undefined; query: string }) {
+  if (!text) return null;
+  const trimmedQuery = query?.trim() || "";
+  if (!trimmedQuery) return <>{text}</>;
+
+  const escapedQuery = trimmedQuery.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const parts = text.split(new RegExp(`(${escapedQuery})`, "gi"));
+
+  return (
+    <>
+      {parts.map((part, idx) =>
+        part.toLowerCase() === trimmedQuery.toLowerCase() ? (
+          <mark
+            key={idx}
+            className="bg-amber-200 dark:bg-amber-900/80 text-amber-950 dark:text-amber-100 rounded px-0.5 py-0 font-extrabold inline-block"
+          >
+            {part}
+          </mark>
+        ) : (
+          part
+        )
+      )}
+    </>
+  );
 }
 
-function ProofingCodeWithProductions({ code }: ProofingCodeProps) {
+interface ProofingCodeProps {
+  code: string;
+  query?: string;
+}
+
+function ProofingCodeWithProductions({ code, query }: ProofingCodeProps) {
   const match = code.match(/\d+/);
   const proofingOrderId = match ? parseInt(match[0], 10) : null;
 
@@ -193,8 +221,10 @@ function ProofingCodeWithProductions({ code }: ProofingCodeProps) {
     return [];
   }, [productionsResp]);
 
+  const content = <HighlightText text={code} query={query || ""} />;
+
   if (!proofingOrderId) {
-    return <span className="font-extrabold text-amber-600 dark:text-amber-400 font-mono">{code}</span>;
+    return <span className="font-black text-red-600 dark:text-red-400 font-mono text-sm">{content}</span>;
   }
 
   return (
@@ -202,10 +232,10 @@ function ProofingCodeWithProductions({ code }: ProofingCodeProps) {
       <HoverCardTrigger asChild>
         <Link
           to={`/delivery-notes?tab=completed-qc&search=${code}`}
-          className="font-extrabold text-amber-600 dark:text-amber-400 font-mono hover:underline inline-flex items-center gap-0.5 cursor-pointer"
+          className="font-black text-red-600 dark:text-red-400 font-mono text-sm hover:underline inline-flex items-center gap-0.5 cursor-pointer"
           onClick={(e) => e.stopPropagation()}
         >
-          {code}
+          {content}
           <ExternalLink className="h-3.5 w-3.5 inline opacity-70" />
         </Link>
       </HoverCardTrigger>
@@ -428,6 +458,7 @@ interface DeliveryNoteCardProps {
     recipientPhone?: string | null;
     status?: string | null;
     createdAt?: string | null;
+    expectedDeliveryDate?: string | null;
   };
   onClick: () => void;
 }
@@ -520,10 +551,12 @@ function DeliveryNoteCard({ deliveryNote, onClick }: DeliveryNoteCardProps) {
                 </div>
               )}
 
-              {deliveryNote.createdAt && (
+              {(deliveryNote.expectedDeliveryDate || deliveryNote.createdAt) && (
                 <div className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
-                  {formatDate(deliveryNote.createdAt)}
+                  <span className="font-medium text-stone-600 dark:text-stone-300">
+                    Giao: {formatDate(deliveryNote.expectedDeliveryDate ?? deliveryNote.createdAt)}
+                  </span>
                 </div>
               )}
             </div>
@@ -733,6 +766,7 @@ export default function DeliveryNoteListPage() {
   });
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [notes, setNotes] = useState("");
+  const [createExpectedDeliveryDate, setCreateExpectedDeliveryDate] = useState<string>(format(new Date(), "yyyy-MM-dd"));
   // Per-line selected address id map: orderDetailId -> customerAddressId
   const [selectedAddressIds, setSelectedAddressIds] = useState<Record<number, number | null>>({});
   // Single address selection for Create dialog (backend expects one address per delivery note)
@@ -1404,9 +1438,16 @@ export default function DeliveryNoteListPage() {
     }
 
     try {
+      let expectedDeliveryDateIso: string | undefined = undefined;
+      if (createExpectedDeliveryDate) {
+        const [year, month, day] = createExpectedDeliveryDate.split("-").map(Number);
+        expectedDeliveryDateIso = new Date(year, month - 1, day, 12, 0, 0).toISOString();
+      }
+
       const payload = {
         customerAddressId: selectedAddressId,
         notes: notes || undefined,
+        expectedDeliveryDate: expectedDeliveryDateIso,
         lines,
       };
 
@@ -1454,6 +1495,7 @@ export default function DeliveryNoteListPage() {
       setSelectedAddressIds({});
       setSelectedAddressId(null);
       setNotes("");
+      setCreateExpectedDeliveryDate(format(new Date(), "yyyy-MM-dd"));
       setIsCreateDialogOpen(false);
       refetchOrders();
       refetchDeliveryNotes();
@@ -1484,9 +1526,9 @@ export default function DeliveryNoteListPage() {
     }
   };
   return (
-    <div className="space-y-6">
+    <div className="space-y-2.5">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground">
             Phiếu giao hàng
@@ -1495,7 +1537,7 @@ export default function DeliveryNoteListPage() {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
         {/* Total Notes */}
         <Card className="border-0 shadow-sm bg-white dark:bg-stone-900">
           <CardContent className="p-2.5 flex items-center gap-2.5">
@@ -1612,38 +1654,24 @@ export default function DeliveryNoteListPage() {
         value={viewMode}
         onValueChange={(value) => setViewMode(value as any)}
       >
-        <TabsList className="flex bg-stone-100/80 dark:bg-stone-900/80 p-1 rounded-full w-fit mb-6">
+        <TabsList className="flex gap-2.5 bg-transparent p-0 w-fit mb-2.5">
           <TabsTrigger
             value="delivery-notes"
-            className="rounded-full px-6 py-2 text-sm font-semibold transition-all data-[state=active]:bg-white data-[state=active]:text-stone-900 data-[state=active]:shadow-sm text-stone-500 hover:text-stone-900 dark:data-[state=active]:bg-stone-800 dark:data-[state=active]:text-stone-50"
+            className="rounded-full px-5 py-2 text-xs sm:text-sm font-bold transition-all border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-850 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:border-emerald-600 shadow-xs"
           >
-            <FileText className="h-4 w-4 mr-2" />
+            <FileText className="h-4 w-4 mr-1.5" />
             Phiếu đã tạo
           </TabsTrigger>
           <TabsTrigger
             value="orders"
-            className="rounded-full px-6 py-2 text-sm font-semibold transition-all data-[state=active]:bg-white data-[state=active]:text-stone-900 data-[state=active]:shadow-sm text-stone-500 hover:text-stone-900 dark:data-[state=active]:bg-stone-800 dark:data-[state=active]:text-stone-50"
+            className="rounded-full px-5 py-2 text-xs sm:text-sm font-bold transition-all border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-850 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:border-emerald-600 shadow-xs"
           >
-            <Plus className="h-4 w-4 mr-2" />
+            <Plus className="h-4 w-4 mr-1.5" />
             Tạo phiếu
-          </TabsTrigger>
-          <TabsTrigger
-            value="pending-qc"
-            className="rounded-full px-6 py-2 text-sm font-semibold transition-all data-[state=active]:bg-white data-[state=active]:text-stone-900 data-[state=active]:shadow-sm text-stone-500 hover:text-stone-900 dark:data-[state=active]:bg-stone-800 dark:data-[state=active]:text-stone-50"
-          >
-            <Check className="h-4 w-4 mr-2" />
-            Bài chờ kiểm hàng
-          </TabsTrigger>
-          <TabsTrigger
-            value="completed-qc"
-            className="rounded-full px-6 py-2 text-sm font-semibold transition-all data-[state=active]:bg-white data-[state=active]:text-stone-900 data-[state=active]:shadow-sm text-stone-500 hover:text-stone-900 dark:data-[state=active]:bg-stone-800 dark:data-[state=active]:text-stone-50"
-          >
-            <Check className="h-4 w-4 mr-2" />
-            Bài hoàn thành
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="orders" className="mt-6">
+        <TabsContent value="orders" className="mt-2.5">
           <OrdersView
             searchQuery={searchQuery}
             setSearchQuery={setSearchQuery}
@@ -1665,7 +1693,7 @@ export default function DeliveryNoteListPage() {
           />
         </TabsContent>
 
-        <TabsContent value="delivery-notes" className="mt-6">
+        <TabsContent value="delivery-notes" className="mt-2.5">
           <DeliveryNotesView
             deliveryNoteStatusFilter={deliveryNoteStatusFilter}
             setDeliveryNoteStatusFilter={setDeliveryNoteStatusFilter}
@@ -1725,6 +1753,8 @@ export default function DeliveryNoteListPage() {
         customerId={selectedOrders[0]?.customerId ?? selectedCustomerId}
         notes={notes}
         setNotes={setNotes}
+        expectedDeliveryDate={createExpectedDeliveryDate}
+        setExpectedDeliveryDate={setCreateExpectedDeliveryDate}
         onCreate={handleConfirmCreate}
         isPending={createDeliveryNoteMutation.isPending}
         onImageClick={handleImageClick}
@@ -1807,6 +1837,21 @@ function OrdersView({
   selectedCustomerId,
 }: OrdersViewProps) {
   const [expandedPrepressOrders, setExpandedPrepressOrders] = useState<Set<string>>(new Set());
+  const [orderInputPage, setOrderInputPage] = useState<string>(String(currentPage));
+
+  useEffect(() => {
+    setOrderInputPage(String(currentPage));
+  }, [currentPage]);
+
+  const handleOrderPageInputSubmit = () => {
+    let p = parseInt(orderInputPage, 10);
+    if (isNaN(p) || p < 1) p = 1;
+    if (p > totalPages) p = totalPages;
+    setOrderInputPage(String(p));
+    if (p !== currentPage) {
+      setCurrentPage(p);
+    }
+  };
 
   // Auto-expand all prepress orders when the list loads or changes
   useEffect(() => {
@@ -1829,7 +1874,7 @@ function OrdersView({
   }, [selectedOrders]);
 
   return (
-    <div className="space-y-4 pb-24">
+    <div className="space-y-2 pb-24">
       {/* Toolbar */}
       <div className="flex flex-col md:flex-row gap-3 items-center justify-between p-4 bg-white dark:bg-stone-900 rounded-xl border border-stone-200/80 dark:border-stone-850 shadow-sm">
         <div className="relative flex-1 w-full max-w-md">
@@ -1906,16 +1951,16 @@ function OrdersView({
             return (
               <div
                 key={group.proofingOrderCode}
-                className={`bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl overflow-hidden shadow-sm transition-all duration-200 ${
+                className={`bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-lg overflow-hidden shadow-xs transition-all duration-200 mb-3 ${
                   isHeaderCheckboxDisabled ? "opacity-60" : ""
                 }`}
               >
                 {/* Card Header */}
                 <div
                   onClick={() => toggleOrder(group.proofingOrderCode)}
-                  className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-stone-50/40 dark:hover:bg-stone-900/60"
+                  className="py-1.5 px-3 bg-white dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 flex items-center justify-between gap-3 cursor-pointer hover:bg-stone-50 dark:hover:bg-stone-850"
                 >
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="flex items-center gap-2.5 flex-1 min-w-0">
                     <div onClick={(e) => e.stopPropagation()} className="flex items-center">
                       <Checkbox
                         checked={isAllSelected}
@@ -1924,26 +1969,36 @@ function OrdersView({
                         className="rounded"
                       />
                     </div>
-                    <div className="text-stone-400 hover:text-stone-600">
+                    <div className="text-black dark:text-white hover:text-stone-700">
                       {isExpanded ? (
-                        <ChevronDown className="h-4.5 w-4.5" />
+                        <ChevronDown className="h-4 w-4" />
                       ) : (
-                        <ChevronRight className="h-4.5 w-4.5" />
+                        <ChevronRight className="h-4 w-4" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-stone-900 dark:text-stone-50 font-mono text-sm">
-                          {group.displayName}
-                        </span>
-                        <Badge variant="secondary" className="h-5 text-[10px] font-bold px-2">
+                        {(() => {
+                          const nameStr = group.displayName || "";
+                          const isBai = nameStr.toLowerCase().startsWith("bài");
+                          const numPart = isBai ? nameStr.slice(4).trim() : nameStr;
+                          return (
+                            <span className="font-extrabold font-mono text-xs text-black dark:text-white flex items-center">
+                              {isBai && <span>Bài&nbsp;</span>}
+                              <span className="text-sm font-black text-red-600 dark:text-red-400">
+                                <HighlightText text={numPart} query={searchQuery} />
+                              </span>
+                            </span>
+                          );
+                        })()}
+                        <Badge variant="outline" className="h-4 text-[9px] font-bold px-1.5 py-0 border-stone-400 text-black dark:text-white">
                           {group.details.length} thiết kế
                         </Badge>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4 shrink-0">
+                  <div className="flex items-center gap-3 shrink-0">
                     <div onClick={(e) => e.stopPropagation()}>
                       <Button
                         size="sm"
@@ -1953,7 +2008,7 @@ function OrdersView({
                           handleToggleOrderDetail(targetCustomerDetailIds);
                         }}
                         disabled={isHeaderCheckboxDisabled}
-                        className="text-xs font-semibold h-8 border-stone-200 dark:border-stone-850 hover:bg-stone-50 text-stone-700 dark:text-stone-300"
+                        className="text-xs font-bold h-7 px-2.5 border-stone-400 dark:border-stone-600 hover:bg-stone-100 text-black dark:text-white"
                       >
                         Chọn sản phẩm trong bài
                       </Button>
@@ -1963,19 +2018,20 @@ function OrdersView({
 
                 {/* Card Collapsible Content */}
                 {isExpanded && group.details && group.details.length > 0 && (
-                  <div className="border-t border-stone-100 dark:border-stone-850 bg-stone-50/10 dark:bg-stone-900/30 overflow-auto">
-                    <Table>
-                      <TableHeader className="bg-stone-50/30 dark:bg-stone-900/50 border-b border-stone-200 dark:border-stone-800">
-                        <TableRow className="hover:bg-transparent border-stone-200 dark:border-stone-800">
+                  <div className="bg-white dark:bg-stone-900 overflow-auto">
+                    <Table className="[&_td]:py-2 [&_td]:px-3 [&_th]:py-2 [&_th]:px-3">
+                      <TableHeader className="bg-white dark:bg-stone-900 border-b border-stone-300 dark:border-stone-700">
+                        <TableRow className="hover:bg-transparent border-stone-300 dark:border-stone-700">
                           <TableHead className="w-12 pl-4"></TableHead>
-                          <TableHead className="w-12">Hình</TableHead>
-                          <TableHead className="w-[120px] font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Mã thiết kế</TableHead>
-                          <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Tên sản phẩm</TableHead>
-                          <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Khách hàng</TableHead>
-                          <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Địa chỉ giao</TableHead>
-                          <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-32">Đơn hàng</TableHead>
-                          <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-24">Số lượng</TableHead>
-                          <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider pr-4 w-32">Thành tiền</TableHead>
+                          <TableHead className="w-12 text-black dark:text-white font-extrabold">Hình</TableHead>
+                          <TableHead className="w-[120px] font-extrabold text-black dark:text-white text-xs uppercase tracking-wider">Mã thiết kế</TableHead>
+                          <TableHead className="font-extrabold text-black dark:text-white text-xs uppercase tracking-wider">Tên sản phẩm</TableHead>
+                          <TableHead className="font-extrabold text-black dark:text-white text-xs uppercase tracking-wider">Khách hàng</TableHead>
+                          <TableHead className="font-extrabold text-black dark:text-white text-xs uppercase tracking-wider min-w-[180px]">Địa chỉ giao</TableHead>
+                          <TableHead className="text-right font-extrabold text-black dark:text-white text-xs uppercase tracking-wider w-28">Đơn hàng</TableHead>
+                          <TableHead className="text-right font-extrabold text-black dark:text-white text-xs uppercase tracking-wider w-24">Số lượng</TableHead>
+                          <TableHead className="font-extrabold text-black dark:text-white text-xs uppercase tracking-wider min-w-[140px]">Lịch sử giao</TableHead>
+                          <TableHead className="font-extrabold text-black dark:text-white text-xs uppercase tracking-wider min-w-[130px] pr-4">Ghi chú</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1993,7 +2049,7 @@ function OrdersView({
                                 }
                                 handleToggleOrderDetail(detail.orderDetailId!);
                               }}
-                              className={`cursor-pointer border-stone-100 dark:border-stone-850 transition-colors ${
+                              className={`cursor-pointer border-b border-stone-200/70 dark:border-stone-800/80 last:border-b-0 transition-colors ${
                                 isDetailDifferentCustomer ? "cursor-not-allowed" : ""
                               } ${
                                 isChecked
@@ -2027,93 +2083,95 @@ function OrdersView({
                                   )}
                                 </div>
                               </TableCell>
-                              <TableCell className="w-[120px] font-mono font-black text-[11px] uppercase text-stone-800 dark:text-stone-200">
-                                {detail.designCode}
+                              <TableCell className="w-[120px] font-mono font-extrabold text-[11px] uppercase text-black dark:text-white">
+                                <HighlightText text={detail.designCode} query={searchQuery} />
                               </TableCell>
-                              <TableCell className="text-[11px] text-stone-500 font-medium text-left" title={detail.designName}>
-                                <div className="truncate max-w-[150px] md:max-w-[200px]">{detail.designName}</div>
-                                {detail.designNotes && (
-                                  <div className="text-[10px] text-amber-800 dark:text-amber-300 font-mono bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200/50 dark:border-amber-900/40 rounded px-1.5 py-0.5 mt-1 whitespace-pre-wrap max-w-[240px]">
-                                    <span className="font-bold font-sans text-amber-700 dark:text-amber-400">Note: </span>
-                                    {detail.designNotes}
-                                  </div>
-                                )}
-                                {detail.deliveryHistory && detail.deliveryHistory.length > 0 && (
-                                  <div className="mt-2 flex flex-wrap gap-2 items-center bg-stone-50/70 dark:bg-stone-900/60 border border-stone-150 dark:border-stone-850/80 rounded-lg px-2.5 py-1.5 w-fit" onClick={(e) => e.stopPropagation()}>
-                                    <div className="flex items-center gap-1 text-[9px] text-stone-500 dark:text-stone-400 font-bold uppercase tracking-wider">
-                                      <History className="h-3.5 w-3.5 text-stone-450 dark:text-stone-500" />
-                                      <span>Lịch sử giao:</span>
-                                    </div>
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {detail.deliveryHistory.map((hist: any) => {
-                                        const isDelivered = hist.status === "completed" || hist.status === "delivered";
-                                        const isTransit = hist.status === "in_transit" || hist.status === "shipping";
-                                        const statusColor = isDelivered
-                                          ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/50 hover:bg-emerald-100/50"
-                                          : isTransit
-                                            ? "bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/20 dark:text-sky-400 dark:border-sky-900/50 hover:bg-sky-100/50"
-                                            : "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900 hover:bg-amber-100/50";
-                                        return (
-                                          <HoverCard key={hist.deliveryNoteId}>
-                                            <HoverCardTrigger asChild>
-                                              <Link
-                                                to={`/delivery-notes/${hist.deliveryNoteId}`}
-                                                onClick={(e) => e.stopPropagation()}
-                                                className="inline-flex items-center"
-                                              >
-                                                <Badge
-                                                  variant="outline"
-                                                  className={`text-[10px] px-2 py-0.5 font-mono font-bold cursor-pointer transition-all duration-150 hover:scale-105 border ${statusColor}`}
-                                                >
-                                                  {isTransit && <span className="mr-1 h-1.5 w-1.5 rounded-full bg-sky-500 animate-pulse inline-block" />}
-                                                  Phiếu #{hist.displayCode || hist.deliveryNoteCode} ({new Intl.NumberFormat("vi-VN").format(hist.deliveryQty)} cái)
-                                                </Badge>
-                                              </Link>
-                                            </HoverCardTrigger>
-                                            <HoverCardContent className="w-80 p-3 text-xs" onClick={(e) => e.stopPropagation()}>
-                                              <div className="space-y-2">
-                                                <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center justify-between">
-                                                  <span>Phiếu giao: {hist.deliveryNoteCode}</span>
-                                                  <Badge className={isDelivered ? "bg-emerald-500 hover:bg-emerald-600" : isTransit ? "bg-sky-500 hover:bg-sky-600" : "bg-amber-500 hover:bg-amber-600"}>
-                                                    {hist.statusName}
-                                                  </Badge>
-                                                </div>
-                                                <div className="grid grid-cols-2 gap-y-1.5 text-stone-600 dark:text-stone-400">
-                                                  <div>Số lượng giao:</div>
-                                                  <div className="font-semibold text-right text-stone-900 dark:text-stone-100">{new Intl.NumberFormat("vi-VN").format(hist.deliveryQty)} cái</div>
-                                                  <div>Thực tế đã nhận:</div>
-                                                  <div className="font-semibold text-right text-stone-900 dark:text-stone-100">{hist.actualDeliveredQty != null ? `${new Intl.NumberFormat("vi-VN").format(hist.actualDeliveredQty)} cái` : "—"}</div>
-                                                  <div>Ngày tạo phiếu:</div>
-                                                  <div className="text-right">{format(new Date(hist.createdAt), "dd/MM/yyyy HH:mm")}</div>
-                                                </div>
-                                                {hist.note && (
-                                                  <div className="border-t border-stone-100 dark:border-stone-800 pt-2 mt-2 text-stone-500 italic">
-                                                    Ghi chú: {hist.note}
-                                                  </div>
-                                                )}
-                                              </div>
-                                            </HoverCardContent>
-                                          </HoverCard>
-                                        );
-                                      })}
-                                    </div>
-                                  </div>
-                                )}
+                              <TableCell className="text-xs font-bold text-black dark:text-white text-left">
+                                <div className="whitespace-normal break-words">
+                                  <HighlightText text={detail.designName} query={searchQuery} />
+                                </div>
                               </TableCell>
-                              <TableCell className="text-[11px] text-stone-500 font-semibold text-left truncate max-w-[120px] md:max-w-[150px]" title={detail.customerName || ""}>
-                                {detail.customerName || "—"}
+                              <TableCell className="text-xs text-black dark:text-white font-bold text-left whitespace-normal break-words min-w-[140px] max-w-[220px]">
+                                <HighlightText text={detail.customerName} query={searchQuery} />
                               </TableCell>
-                              <TableCell className="text-[11px] text-stone-500 font-medium whitespace-normal break-words min-w-[180px] max-w-[320px]" title={detail.deliveryAddress || ""}>
-                                {detail.deliveryAddress || "—"}
+                              <TableCell className="text-xs text-black dark:text-white font-medium whitespace-normal break-words min-w-[180px] max-w-[280px]">
+                                <HighlightText text={detail.deliveryAddress} query={searchQuery} />
                               </TableCell>
-                              <TableCell className="text-right text-xs font-semibold text-stone-600 dark:text-stone-400 w-32">
-                                <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{detail.orderCode}</span>
+                              <TableCell className="text-right text-xs font-bold text-black dark:text-white w-28">
+                                <span className="font-mono font-bold text-black dark:text-white">
+                                  <HighlightText text={detail.orderCode} query={searchQuery} />
+                                </span>
                               </TableCell>
-                              <TableCell className="text-right text-xs font-bold text-stone-800 dark:text-stone-200 tabular-nums w-24">
+                              <TableCell className="text-right text-xs font-black text-red-600 dark:text-red-400 tabular-nums w-24">
                                 {new Intl.NumberFormat('vi-VN').format(getRemainingQty(detail) ?? 0)}
                               </TableCell>
-                              <TableCell className="text-right font-extrabold text-stone-800 dark:text-stone-200 text-xs pr-4 w-32 tabular-nums">
-                                {formatCurrency(detail.unitPrice ? (detail.orderedQty ?? 0) * detail.unitPrice : 0)}
+                              <TableCell className="text-xs text-left min-w-[140px] max-w-[240px]">
+                                {detail.deliveryHistory && detail.deliveryHistory.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1 items-center" onClick={(e) => e.stopPropagation()}>
+                                    {detail.deliveryHistory.map((hist: any) => {
+                                      const isDelivered = hist.status === "completed" || hist.status === "delivered";
+                                      const isTransit = hist.status === "in_transit" || hist.status === "shipping";
+                                      const statusColor = isDelivered
+                                        ? "bg-white text-emerald-700 border-emerald-500 dark:bg-stone-900 dark:text-emerald-400"
+                                        : isTransit
+                                          ? "bg-white text-sky-700 border-sky-500 dark:bg-stone-900 dark:text-sky-400"
+                                          : "bg-white text-amber-700 border-amber-500 dark:bg-stone-900 dark:text-amber-400";
+                                      return (
+                                        <HoverCard key={hist.deliveryNoteId}>
+                                          <HoverCardTrigger asChild>
+                                            <Link
+                                              to={`/delivery-notes/${hist.deliveryNoteId}`}
+                                              onClick={(e) => e.stopPropagation()}
+                                              className="inline-flex items-center"
+                                            >
+                                              <Badge
+                                                variant="outline"
+                                                className={`text-[10px] px-1.5 py-0.5 font-mono font-bold cursor-pointer border ${statusColor}`}
+                                              >
+                                                {isTransit && <span className="mr-1 h-1.5 w-1.5 rounded-full bg-sky-500 animate-pulse inline-block" />}
+                                                {hist.deliveryNoteCode || hist.displayCode || `#${hist.deliveryNoteId}`} (<span className="text-red-600 dark:text-red-400 font-black">{new Intl.NumberFormat("vi-VN").format(hist.deliveryQty)}</span>)
+                                              </Badge>
+                                            </Link>
+                                          </HoverCardTrigger>
+                                          <HoverCardContent className="w-80 p-3 text-xs" onClick={(e) => e.stopPropagation()}>
+                                            <div className="space-y-2">
+                                              <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center justify-between">
+                                                <span>Phiếu giao: {hist.deliveryNoteCode}</span>
+                                                <Badge className={isDelivered ? "bg-emerald-500 hover:bg-emerald-600" : isTransit ? "bg-sky-500 hover:bg-sky-600" : "bg-amber-500 hover:bg-amber-600"}>
+                                                  {hist.statusName}
+                                                </Badge>
+                                              </div>
+                                              <div className="grid grid-cols-2 gap-y-1.5 text-stone-600 dark:text-stone-400">
+                                                <div>Số lượng giao:</div>
+                                                <div className="font-semibold text-right text-red-600 dark:text-red-400 font-black">{new Intl.NumberFormat("vi-VN").format(hist.deliveryQty)} cái</div>
+                                                <div>Thực tế đã nhận:</div>
+                                                <div className="font-semibold text-right text-stone-900 dark:text-stone-100">{hist.actualDeliveredQty != null ? `${new Intl.NumberFormat("vi-VN").format(hist.actualDeliveredQty)} cái` : "—"}</div>
+                                                <div>Ngày giao:</div>
+                                                <div className="text-right font-medium">{formatDate(hist.expectedDeliveryDate || hist.deliveryDate || hist.expectedDate || hist.createdAt)}</div>
+                                              </div>
+                                              {hist.note && (
+                                                <div className="border-t border-stone-100 dark:border-stone-800 pt-2 mt-2 text-stone-500 italic">
+                                                  Ghi chú: {hist.note}
+                                                </div>
+                                              )}
+                                            </div>
+                                          </HoverCardContent>
+                                        </HoverCard>
+                                      );
+                                    })}
+                                  </div>
+                                ) : (
+                                  <span className="text-stone-400 text-xs">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-xs text-left min-w-[130px] max-w-[200px] pr-4">
+                                {detail.designNotes ? (
+                                  <div className="text-[10px] text-stone-900 dark:text-stone-100 font-mono bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 rounded px-1.5 py-0.5 whitespace-pre-wrap">
+                                    <HighlightText text={detail.designNotes} query={searchQuery} />
+                                  </div>
+                                ) : (
+                                  <span className="text-stone-400 text-xs">—</span>
+                                )}
                               </TableCell>
                             </TableRow>
                           );
@@ -2128,11 +2186,11 @@ function OrdersView({
         )}
       </div>
 
-      {/* Pagination */}
+      {/* Sticky Bottom Pagination */}
       {totalPages > 1 && (
-        <div className="px-4 py-3 border border-stone-200 dark:border-stone-800 rounded-xl bg-white dark:bg-stone-900 flex items-center justify-between flex-wrap gap-4 shadow-xs">
-          <div className="text-xs text-stone-500 font-medium">
-             Trang {currentPage} / {totalPages}
+        <div className="sticky bottom-0 z-30 mt-4 bg-white/95 dark:bg-stone-900/95 backdrop-blur border border-stone-200 dark:border-stone-800 rounded-xl p-3 flex items-center justify-between flex-wrap gap-4 shadow-lg">
+          <div className="text-xs text-stone-600 dark:text-stone-400 font-medium">
+            Trang <span className="font-bold text-stone-900 dark:text-stone-100">{currentPage}</span> / {totalPages}
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -2141,18 +2199,37 @@ function OrdersView({
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1}
               className="h-8 w-8 p-0 border-stone-200"
+              title="Trang trước"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <div className="text-xs font-semibold bg-stone-50 border px-3 py-1.5 rounded-md min-w-[80px] text-center">
-              Trang {currentPage} / {totalPages}
+
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-stone-100 dark:bg-stone-800 rounded-lg border border-stone-200 dark:border-stone-700">
+              <input
+                type="number"
+                min={1}
+                max={totalPages}
+                value={orderInputPage}
+                onChange={(e) => setOrderInputPage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleOrderPageInputSubmit();
+                }}
+                onBlur={handleOrderPageInputSubmit}
+                className="w-10 h-6 text-center font-bold text-xs bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-600 rounded text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                title="Nhập số trang và nhấn Enter để chuyển nhanh"
+              />
+              <span className="text-xs font-bold text-stone-500 dark:text-stone-400">
+                / {totalPages}
+              </span>
             </div>
+
             <Button
               variant="outline"
               size="sm"
               onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
               disabled={currentPage === totalPages}
               className="h-8 w-8 p-0 border-stone-200"
+              title="Trang tiếp theo"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -2264,6 +2341,22 @@ function DeliveryNotesView({
   allNotesForStats,
 }: DeliveryNotesViewProps) {
   const [expandedNoteIds, setExpandedNoteIds] = useState<Set<number>>(new Set());
+  const [noteInputPage, setNoteInputPage] = useState<string>(String(deliveryNotePage));
+
+  useEffect(() => {
+    setNoteInputPage(String(deliveryNotePage));
+  }, [deliveryNotePage]);
+
+  const handleNotePageInputSubmit = () => {
+    const totalPages = deliveryNotesDataTyped?.totalPages || 1;
+    let p = parseInt(noteInputPage, 10);
+    if (isNaN(p) || p < 1) p = 1;
+    if (p > totalPages) p = totalPages;
+    setNoteInputPage(String(p));
+    if (p !== deliveryNotePage) {
+      setDeliveryNotePage(p);
+    }
+  };
   const recentMonths = useMemo(() => getRecentMonths(), []);
   const itemsPerPage = 10;
   const deliveryNotesDataTyped = deliveryNotesData as
@@ -2282,6 +2375,7 @@ function DeliveryNotesView({
           recipientPhone?: string | null;
           status?: string | null;
           createdAt?: string | null;
+          expectedDeliveryDate?: string | null;
         }>;
         totalPages?: number;
         total?: number;
@@ -2295,12 +2389,14 @@ function DeliveryNotesView({
     };
   }, [deliveryNotesDataTyped]);
 
-  // Sort delivery notes: purely chronologically by createdAt (newer first), falling back to id desc
+  // Sort delivery notes: purely chronologically by expectedDeliveryDate ?? createdAt (newer first), falling back to id desc
   const sortedDeliveryNotes = useMemo(() => {
     const items = searchedNotes.slice();
     items.sort((a: any, b: any) => {
-      const da = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
-      const db = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
+      const dateA = a?.expectedDeliveryDate ?? a?.createdAt;
+      const dateB = b?.expectedDeliveryDate ?? b?.createdAt;
+      const da = dateA ? new Date(dateA).getTime() : 0;
+      const db = dateB ? new Date(dateB).getTime() : 0;
       if (da !== db) return db - da; // newer first
 
       const idA = a?.id ?? 0;
@@ -2387,7 +2483,7 @@ function DeliveryNotesView({
   }, [deliveryNoteDateFilter, customStartDate, customEndDate]);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {/* Top Filter & Action Bar */}
       <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl p-3 shadow-xs">
         <div className="flex flex-col md:flex-row gap-2.5 items-stretch md:items-center justify-between">
@@ -2615,18 +2711,29 @@ function DeliveryNotesView({
 
       {/* Info label below Toolbar */}
       <div className="flex items-center justify-between text-xs text-stone-500 font-medium px-1">
-        <div>
-          Hiển thị{" "}
-          <span className="font-bold text-stone-850 dark:text-stone-200">
-            {isLocalSearch ? (
-              searchedNotes.length > 0 ? `1–${searchedNotes.length}` : "0"
-            ) : (
-              deliveryNotesDataTyped?.items && deliveryNotesDataTyped.items.length > 0 
-                ? `${(deliveryNotePage - 1) * itemsPerPage + 1}–${Math.min(deliveryNotePage * itemsPerPage, deliveryNotesDataTyped.total || 0)}` 
-                : "0"
-            )}
-          </span>{" "}
-          / <span className="font-bold text-stone-850 dark:text-stone-200">{isLocalSearch ? searchedNotes.length : (deliveryNotesDataTyped?.total || 0)}</span> phiếu
+        <div className="flex items-center gap-3">
+          <div>
+            Hiển thị{" "}
+            <span className="font-bold text-stone-850 dark:text-stone-200">
+              {isLocalSearch ? (
+                searchedNotes.length > 0 ? `1–${searchedNotes.length}` : "0"
+              ) : (
+                deliveryNotesDataTyped?.items && deliveryNotesDataTyped.items.length > 0 
+                  ? `${(deliveryNotePage - 1) * itemsPerPage + 1}–${Math.min(deliveryNotePage * itemsPerPage, deliveryNotesDataTyped.total || 0)}` 
+                  : "0"
+              )}
+            </span>{" "}
+            / <span className="font-bold text-stone-850 dark:text-stone-200">{isLocalSearch ? searchedNotes.length : (deliveryNotesDataTyped?.total || 0)}</span> phiếu
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSelectAllVisible}
+            className="h-7 text-xs px-2.5 font-medium border-stone-200 dark:border-stone-800 text-stone-600 dark:text-stone-300 hover:text-stone-900"
+          >
+            <CheckSquare className="h-3.5 w-3.5 mr-1.5 text-stone-500" />
+            Chọn tất cả phiếu trên trang
+          </Button>
         </div>
         <div className="flex items-center gap-1">
           <span>Sắp xếp:</span>
@@ -2653,10 +2760,29 @@ function DeliveryNotesView({
       {/* Delivery Notes Table */}
       <Card className="border-stone-200 dark:border-stone-800 shadow-sm rounded-xl overflow-hidden bg-white dark:bg-stone-900">
         <div className="overflow-auto">
-          <Table>
+          <Table className="[&_td]:py-2.5 [&_td]:px-3 [&_th]:py-2.5 [&_th]:px-3">
             <TableHeader className="sticky top-0 bg-stone-50/75 dark:bg-stone-900/95 backdrop-blur-sm z-10 border-b border-stone-200 dark:border-stone-800">
               <TableRow className="hover:bg-transparent border-stone-200 dark:border-stone-800">
-                <TableHead className="w-12 pl-6"></TableHead>
+                <TableHead className="w-12 pl-6">
+                  {sortedDeliveryNotes.some((n) => {
+                    const status = getDisplayStatus(n);
+                    return status !== "completed" && status !== "failed" && status !== "failed_reschedule" && status !== "cancelled";
+                  }) && (
+                    <Checkbox
+                      checked={
+                        sortedDeliveryNotes
+                          .filter((n) => {
+                            const status = getDisplayStatus(n);
+                            return status !== "completed" && status !== "failed" && status !== "failed_reschedule" && status !== "cancelled";
+                          })
+                          .every((n) => n.id != null && selectedNoteIds.has(n.id))
+                      }
+                      onCheckedChange={() => handleSelectAllVisible()}
+                      title="Chọn tất cả phiếu trên trang"
+                      aria-label="Chọn tất cả"
+                    />
+                  )}
+                </TableHead>
                 <TableHead className="w-[150px] font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">
                   Mã phiếu
                 </TableHead>
@@ -2670,7 +2796,7 @@ function DeliveryNotesView({
                   Trạng thái
                 </TableHead>
                 <TableHead className="text-center font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">
-                  Ngày tạo
+                  Ngày giao hàng
                 </TableHead>
                 <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider pr-6 w-[120px]">
                   Thao tác
@@ -2713,7 +2839,7 @@ function DeliveryNotesView({
                 sortedDeliveryNotes.map((deliveryNote) => {
                   if (deliveryNote.id == null) return null;
                   const status = getDisplayStatus(deliveryNote);
-                  const isSelectable = ["pending", "ready_to_ship", "confirmed", "handed_over"].includes(status || "");
+                  const isSelectable = status !== "completed" && status !== "failed" && status !== "failed_reschedule" && status !== "cancelled";
                   const isSelected = selectedNoteIds.has(deliveryNote.id as number);
 
                   const customers =
@@ -2736,36 +2862,30 @@ function DeliveryNotesView({
                           }
                         }}
                       >
-                        <TableCell className="pl-6 w-12" onClick={(e) => {
-                          if (isSelectable) {
-                            e.stopPropagation();
-                            handleToggleSelectNote(deliveryNote.id);
-                          }
-                        }}>
+                        <TableCell
+                          className="pl-6 w-12"
+                          onClick={(e) => {
+                            if (isSelectable && deliveryNote.id) {
+                              e.stopPropagation();
+                              handleToggleSelectNote(deliveryNote.id);
+                            }
+                          }}
+                        >
                           <div className="flex items-center justify-center w-6 h-6">
                             {isSelectable ? (
-                              <div className="relative group/check">
-                                <div className={isSelected ? "block" : "hidden group-hover/check:block"}>
-                                  <Checkbox
-                                    checked={isSelected}
-                                    onCheckedChange={() => handleToggleSelectNote(deliveryNote.id)}
-                                    onClick={(e) => e.stopPropagation()}
-                                  />
-                                </div>
-                                <div className={isSelected ? "hidden" : "block group-hover/check:hidden"}>
-                                  <div className="w-5 h-5 rounded-full bg-green-50 border border-green-200 dark:bg-green-950/20 dark:border-green-900/50 flex items-center justify-center">
-                                    <Check className="h-3 w-3 text-green-600 dark:text-green-400" />
-                                  </div>
-                                </div>
-                              </div>
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => handleToggleSelectNote(deliveryNote.id)}
+                                onClick={(e) => e.stopPropagation()}
+                              />
                             ) : (
                               ["failed", "failed_reschedule", "cancelled", "returned"].includes(status || "") ? (
                                 <div className="w-5 h-5 rounded-full bg-red-50 border border-red-200 dark:bg-red-950/20 dark:border-red-900/50 flex items-center justify-center">
                                   <X className="h-3 w-3 text-red-600 dark:text-red-400" />
                                 </div>
                               ) : (
-                                <div className="w-5 h-5 rounded-full bg-green-50 border border-green-200 dark:bg-green-950/20 dark:border-green-900/50 flex items-center justify-center">
-                                  <Check className="h-3 w-3 text-green-600 dark:text-green-400" />
+                                <div className="w-5 h-5 rounded-full bg-stone-100 border border-stone-200 dark:bg-stone-800 dark:border-stone-700 flex items-center justify-center opacity-60">
+                                  <Check className="h-3 w-3 text-stone-500 dark:text-stone-400" />
                                 </div>
                               )
                             )}
@@ -2781,7 +2901,7 @@ function DeliveryNotesView({
                               )}
                             </div>
                             <div className="font-bold font-mono text-sm text-stone-900 dark:text-stone-50">
-                              {deliveryNote.code || `#${deliveryNote.id}`}
+                              <HighlightText text={deliveryNote.code || `#${deliveryNote.id}`} query={deliveryNoteSearchQuery} />
                             </div>
                           </div>
                         </TableCell>
@@ -2794,7 +2914,7 @@ function DeliveryNotesView({
                         <TableCell>
                           <span className="flex items-center gap-1.5 text-sm text-stone-700 dark:text-stone-300 font-medium">
                             <User className="h-4 w-4 text-stone-400" />
-                            {uniqueCustomers[0] || "—"}
+                            <HighlightText text={uniqueCustomers[0]} query={deliveryNoteSearchQuery} />
                             {uniqueCustomers.length > 1 && (
                               <span className="text-xs text-stone-400 font-normal">
                                 (+{uniqueCustomers.length - 1} khách khác)
@@ -2815,7 +2935,7 @@ function DeliveryNotesView({
                         <TableCell className="text-center">
                           <span className="inline-flex items-center gap-1.5 text-sm text-stone-600 dark:text-stone-300">
                             <Calendar className="h-3.5 w-3.5 text-stone-400" />
-                            {formatDate(deliveryNote.createdAt)}
+                            {formatDate((deliveryNote as any).expectedDeliveryDate ?? deliveryNote.createdAt)}
                           </span>
                         </TableCell>
                         <TableCell className="text-right pr-6 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
@@ -2832,11 +2952,11 @@ function DeliveryNotesView({
                               </Button>
                             )}
                             <Button
-                              variant="link"
-                              className="text-xs font-bold text-primary p-0 hover:no-underline"
+                              size="sm"
+                              className="h-7 px-3 text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs rounded-lg transition-all flex items-center gap-1"
                               onClick={() => handleViewDeliveryNote(deliveryNote.id)}
                             >
-                              Chi tiết &gt;
+                              Chi tiết <ChevronRight className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         </TableCell>
@@ -2844,19 +2964,19 @@ function DeliveryNotesView({
                       {isExpanded && (
                         <TableRow className="bg-stone-50/10 dark:bg-stone-900/30 border-t-0 hover:bg-transparent">
                           <TableCell colSpan={7} className="p-0">
-                            <div className="px-6 py-4 border-t border-b border-stone-150 dark:border-stone-800 bg-stone-50/20 dark:bg-stone-900/40 overflow-auto">
-                              <Table>
-                                <TableHeader className="bg-stone-100/30 dark:bg-stone-850/30 border-b border-stone-200 dark:border-stone-800">
-                                  <TableRow className="hover:bg-transparent border-stone-200 dark:border-stone-800">
-                                    <TableHead className="w-12 pl-4">Hình</TableHead>
-                                    <TableHead className="w-[120px] font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Mã thiết kế</TableHead>
-                                    <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Tên sản phẩm</TableHead>
-                                    <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Khách hàng</TableHead>
-                                    <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider text-center">Trạng thái</TableHead>
-                                    <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">Mã bài</TableHead>
-                                    <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-32">Đơn hàng</TableHead>
-                                    <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider w-24">SL giao</TableHead>
-                                    <TableHead className="text-right font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider pr-4 w-32">Thành tiền</TableHead>
+                            <div className="px-3 py-1.5 border-t border-b border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 overflow-auto">
+                              <Table className="[&_td]:py-1 [&_td]:px-2.5 [&_th]:py-1 [&_th]:px-2.5">
+                                <TableHeader className="bg-white dark:bg-stone-900 border-b border-stone-300 dark:border-stone-700">
+                                  <TableRow className="hover:bg-transparent border-stone-300 dark:border-stone-700">
+                                    <TableHead className="w-12 pl-4 text-black dark:text-white font-extrabold">Hình</TableHead>
+                                    <TableHead className="w-[120px] font-extrabold text-black dark:text-white text-xs uppercase tracking-wider">Mã thiết kế</TableHead>
+                                    <TableHead className="font-extrabold text-black dark:text-white text-xs uppercase tracking-wider">Tên sản phẩm</TableHead>
+                                    <TableHead className="font-extrabold text-black dark:text-white text-xs uppercase tracking-wider">Khách hàng</TableHead>
+                                    <TableHead className="font-extrabold text-black dark:text-white text-xs uppercase tracking-wider text-center">Trạng thái</TableHead>
+                                    <TableHead className="font-extrabold text-black dark:text-white text-xs uppercase tracking-wider">Mã bài</TableHead>
+                                    <TableHead className="text-right font-extrabold text-black dark:text-white text-xs uppercase tracking-wider w-28">Đơn hàng</TableHead>
+                                    <TableHead className="text-right font-extrabold text-black dark:text-white text-xs uppercase tracking-wider w-24">SL giao</TableHead>
+                                    <TableHead className="font-extrabold text-black dark:text-white text-xs uppercase tracking-wider min-w-[130px] pr-4">Ghi chú</TableHead>
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -2866,7 +2986,7 @@ function DeliveryNotesView({
                                       return (
                                         <TableRow
                                           key={line.id || idx}
-                                          className="border-stone-100 dark:border-stone-850 hover:bg-stone-50/30 dark:hover:bg-stone-950/20"
+                                          className="border-b border-stone-200/70 dark:border-stone-800/80 last:border-b-0 hover:bg-stone-50/50 dark:hover:bg-stone-950/20"
                                         >
                                           <TableCell className="pl-4 w-12" onClick={(e) => e.stopPropagation()}>
                                             <div className="h-8 w-8 rounded-lg bg-stone-100 dark:bg-stone-800 border flex items-center justify-center overflow-hidden relative">
@@ -2883,20 +3003,16 @@ function DeliveryNotesView({
                                               )}
                                             </div>
                                           </TableCell>
-                                          <TableCell className="w-[120px] font-mono font-black text-[11px] uppercase text-stone-800 dark:text-stone-200">
-                                            {line.designCode}
+                                          <TableCell className="w-[120px] font-mono font-extrabold text-[11px] uppercase text-black dark:text-white">
+                                            <HighlightText text={line.designCode} query={deliveryNoteSearchQuery} />
                                           </TableCell>
-                                          <TableCell className="text-[11px] text-stone-500 font-medium max-w-[150px] md:max-w-[200px]" title={line.designName}>
-                                            <div className="truncate">{line.designName}</div>
-                                            {(line as any).designNotes && (
-                                              <div className="text-[10px] text-amber-800 dark:text-amber-300 font-mono bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200/50 dark:border-amber-900/40 rounded px-1.5 py-0.5 mt-1 whitespace-pre-wrap max-w-[240px]">
-                                                <span className="font-bold font-sans text-amber-700 dark:text-amber-400">Note: </span>
-                                                {(line as any).designNotes}
-                                              </div>
-                                            )}
+                                          <TableCell className="text-xs font-bold text-black dark:text-white text-left">
+                                            <div className="whitespace-normal break-words">
+                                              <HighlightText text={line.designName} query={deliveryNoteSearchQuery} />
+                                            </div>
                                           </TableCell>
-                                          <TableCell className="text-[11px] text-stone-500 font-semibold truncate max-w-[120px] md:max-w-[150px]" title={lineCustomerName}>
-                                            {lineCustomerName}
+                                          <TableCell className="text-xs text-black dark:text-white font-bold text-left whitespace-normal break-words min-w-[140px] max-w-[220px]">
+                                            <HighlightText text={lineCustomerName} query={deliveryNoteSearchQuery} />
                                           </TableCell>
                                           <TableCell className="text-center">
                                             {line.status ? (
@@ -2908,25 +3024,33 @@ function DeliveryNotesView({
                                               <span className="text-muted-foreground text-[11px]">—</span>
                                             )}
                                           </TableCell>
-                                          <TableCell className="text-[11px] font-medium text-stone-700 dark:text-stone-300">
+                                          <TableCell className="text-xs font-bold text-black dark:text-white">
                                             {line.proofingOrderCodes && line.proofingOrderCodes.length > 0 ? (
                                               <div className="flex flex-wrap gap-1">
                                                 {line.proofingOrderCodes.map((code: string) => (
-                                                  <ProofingCodeWithProductions key={code} code={code} />
+                                                  <ProofingCodeWithProductions key={code} code={code} query={deliveryNoteSearchQuery} />
                                                 ))}
                                               </div>
                                             ) : (
-                                              <span className="text-muted-foreground">—</span>
+                                              <span className="text-stone-400">—</span>
                                             )}
                                           </TableCell>
-                                          <TableCell className="text-right text-xs font-semibold text-stone-650 dark:text-stone-400 w-32">
-                                            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{line.orderCode}</span>
+                                          <TableCell className="text-right text-xs font-bold text-black dark:text-white w-28">
+                                            <span className="font-mono font-bold text-black dark:text-white">
+                                              <HighlightText text={line.orderCode} query={deliveryNoteSearchQuery} />
+                                            </span>
                                           </TableCell>
-                                          <TableCell className="text-right text-xs font-bold text-stone-850 dark:text-stone-200 tabular-nums w-24">
+                                          <TableCell className="text-right text-xs font-black text-red-600 dark:text-red-400 tabular-nums w-24">
                                             {new Intl.NumberFormat('vi-VN').format(line.deliveryQty ?? 0)}
                                           </TableCell>
-                                          <TableCell className="text-right font-extrabold text-stone-800 dark:text-stone-200 text-xs pr-4 w-32 tabular-nums">
-                                            {formatCurrency(line.lineAmount ?? 0)}
+                                          <TableCell className="text-xs text-left min-w-[130px] max-w-[200px] pr-4">
+                                            {(line as any).designNotes ? (
+                                              <div className="text-[10px] text-stone-900 dark:text-stone-100 font-mono bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 rounded px-1.5 py-0.5 whitespace-pre-wrap">
+                                                <HighlightText text={(line as any).designNotes} query={deliveryNoteSearchQuery} />
+                                              </div>
+                                            ) : (
+                                              <span className="text-stone-400 text-xs">—</span>
+                                            )}
                                           </TableCell>
                                         </TableRow>
                                       );
@@ -2959,64 +3083,76 @@ function DeliveryNotesView({
         deliveryNotesDataTyped?.items &&
         deliveryNotesDataTyped.items.length > 0 && (
           <>
-            {/* Pagination */}
+            {/* Sticky Bottom Pagination */}
             {deliveryNotesDataTyped.totalPages &&
               deliveryNotesDataTyped.totalPages > 0 && (
-                <Card className="border-slate-200 dark:border-slate-800 shadow-sm">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between flex-wrap gap-4">
-                      <p className="text-sm font-semibold text-slate-600 dark:text-slate-400">
-                        Trang {deliveryNotePage} /{" "}
-                        {deliveryNotesDataTyped.totalPages} •{" "}
-                        <span className="text-slate-900 dark:text-slate-50">
-                          {deliveryNotesDataTyped.total}
-                        </span>{" "}
-                        phiếu giao hàng
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const newPage = Math.max(1, deliveryNotePage - 1);
-                            setDeliveryNotePage(newPage);
-                          }}
-                          disabled={
-                            deliveryNotePage === 1 || deliveryNotesLoading
-                          }
-                          className="h-9"
-                        >
-                          <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <div className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-md">
-                          <span className="text-sm font-semibold text-slate-900 dark:text-slate-50">
-                            {deliveryNotePage} /{" "}
-                            {deliveryNotesDataTyped.totalPages}
-                          </span>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const newPage = Math.min(
-                              deliveryNotesDataTyped.totalPages || 1,
-                              deliveryNotePage + 1,
-                            );
-                            setDeliveryNotePage(newPage);
-                          }}
-                          disabled={
-                            deliveryNotePage ===
-                              (deliveryNotesDataTyped.totalPages || 1) ||
-                            deliveryNotesLoading
-                          }
-                          className="h-9"
-                        >
-                          <ChevronRight className="h-4 w-4" />
-                        </Button>
-                      </div>
+                <div className="sticky bottom-0 z-30 mt-4 bg-white/95 dark:bg-stone-900/95 backdrop-blur border border-stone-200 dark:border-stone-800 rounded-xl p-3 flex items-center justify-between flex-wrap gap-4 shadow-lg">
+                  <p className="text-xs sm:text-sm font-medium text-stone-600 dark:text-stone-400">
+                    Trang <span className="font-bold text-stone-900 dark:text-stone-100">{deliveryNotePage}</span> /{" "}
+                    {deliveryNotesDataTyped.totalPages} • Hiển thị{" "}
+                    <span className="font-bold text-stone-900 dark:text-stone-100">
+                      {deliveryNotesDataTyped.total}
+                    </span>{" "}
+                    phiếu giao hàng
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const newPage = Math.max(1, deliveryNotePage - 1);
+                        setDeliveryNotePage(newPage);
+                      }}
+                      disabled={
+                        deliveryNotePage === 1 || deliveryNotesLoading
+                      }
+                      className="h-8 w-8 p-0"
+                      title="Trang trước"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+
+                    <div className="flex items-center gap-1.5 px-2.5 py-1 bg-stone-100 dark:bg-stone-800 rounded-lg border border-stone-200 dark:border-stone-700">
+                      <input
+                        type="number"
+                        min={1}
+                        max={deliveryNotesDataTyped.totalPages || 1}
+                        value={noteInputPage}
+                        onChange={(e) => setNoteInputPage(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleNotePageInputSubmit();
+                        }}
+                        onBlur={handleNotePageInputSubmit}
+                        className="w-10 h-6 text-center font-bold text-xs bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-600 rounded text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        title="Nhập số trang và nhấn Enter để chuyển nhanh"
+                      />
+                      <span className="text-xs font-bold text-stone-500 dark:text-stone-400">
+                        / {deliveryNotesDataTyped.totalPages}
+                      </span>
                     </div>
-                  </CardContent>
-                </Card>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const newPage = Math.min(
+                          deliveryNotesDataTyped.totalPages || 1,
+                          deliveryNotePage + 1,
+                        );
+                        setDeliveryNotePage(newPage);
+                      }}
+                      disabled={
+                        deliveryNotePage ===
+                          (deliveryNotesDataTyped.totalPages || 1) ||
+                        deliveryNotesLoading
+                      }
+                      className="h-8 w-8 p-0"
+                      title="Trang tiếp theo"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
               )}
           </>
         )}
@@ -3035,7 +3171,7 @@ interface AddressBookManagerProps {
   compact?: boolean;
 }
 
-function AddressBookManager({
+export function AddressBookManager({
   customerId,
   onSelect,
   selectedId,
@@ -3627,8 +3763,8 @@ export function SelectedOrderCard({
                                 <div className="font-semibold text-right text-stone-900 dark:text-stone-100">{new Intl.NumberFormat("vi-VN").format(hist.deliveryQty)} cái</div>
                                 <div>Thực tế đã nhận:</div>
                                 <div className="font-semibold text-right text-stone-900 dark:text-stone-100">{hist.actualDeliveredQty != null ? `${new Intl.NumberFormat("vi-VN").format(hist.actualDeliveredQty)} cái` : "—"}</div>
-                                <div>Ngày tạo phiếu:</div>
-                                <div className="text-right">{format(new Date(hist.createdAt), "dd/MM/yyyy HH:mm")}</div>
+                                <div>Ngày giao:</div>
+                                <div className="text-right font-medium">{formatDate(hist.expectedDeliveryDate || hist.deliveryDate || hist.expectedDate || hist.createdAt)}</div>
                               </div>
                               {hist.note && (
                                 <div className="border-t border-stone-100 dark:border-stone-800 pt-2 mt-2 text-stone-500 italic">
@@ -3705,6 +3841,8 @@ interface CreateDeliveryNoteDialogProps {
   customerId: number | null;
   notes: string;
   setNotes: (notes: string) => void;
+  expectedDeliveryDate?: string;
+  setExpectedDeliveryDate?: (date: string) => void;
   onCreate: () => void;
   isPending: boolean;
   onImageClick: (url: string, e: React.MouseEvent) => void;
@@ -3725,6 +3863,8 @@ export function CreateDeliveryNoteDialog({
   customerId,
   notes,
   setNotes,
+  expectedDeliveryDate,
+  setExpectedDeliveryDate,
   onCreate,
   isPending,
   onImageClick,
@@ -3793,6 +3933,17 @@ export function CreateDeliveryNoteDialog({
               <div className="text-sm font-semibold text-slate-900 dark:text-slate-50 bg-slate-50 dark:bg-slate-800/50 rounded-md px-3 py-2 border border-slate-200 dark:border-slate-800">
                 {selectedOrders[0]?.customerName || "—"}
               </div>
+            </div>
+
+            <div className="space-y-1 flex-shrink-0">
+              <div className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                Ngày giao hàng dự kiến :
+              </div>
+              <DatePicker
+                value={expectedDeliveryDate || ""}
+                onChange={(val) => setExpectedDeliveryDate?.(val)}
+                className="w-full h-10 border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 rounded-lg"
+              />
             </div>
 
             <div className="space-y-1.5 flex-1 flex flex-col min-h-0">

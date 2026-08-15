@@ -30,7 +30,11 @@ export default function PrintPreviewDialog({
   const lines = deliveryNote.lines || [];
   const today = new Date();
   const dateFormatted = format(today, "'Ngày' dd 'Tháng' MM 'Năm' yyyy", { locale: vi });
-  const dateObj = (deliveryNote as any).deliveryDate ? new Date((deliveryNote as any).deliveryDate) : new Date();
+  const dateObj = deliveryNote.expectedDeliveryDate
+    ? new Date(deliveryNote.expectedDeliveryDate)
+    : deliveryNote.createdAt
+    ? new Date(deliveryNote.createdAt)
+    : new Date();
   const deliveryDateFormatted = format(dateObj, "dd/MM/yyyy");
 
   const totalDeliveryQty = lines.reduce((sum, l) => sum + (l.deliveryQty || 0), 0);

@@ -46,6 +46,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { useInvoices, useExportInvoice } from "@/hooks/use-invoice";
 import { formatCurrency } from "@/lib/status-utils";
 import { CreateInvoiceFromLinesDialog } from "@/components/accounting";
+import { InvoiceDetailDialog } from "@/components/invoices/InvoiceDetailDialog";
 import { Plus } from "lucide-react";
 import { SortControls, type SortOrder } from "@/components/ui/sort-controls";
 
@@ -78,6 +79,8 @@ export default function InvoiceListPage() {
   } = useListState();
   const [isCreateFromLinesDialogOpen, setIsCreateFromLinesDialogOpen] =
     useState(false);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const itemsPerPage = 10;
 
   const {
@@ -115,10 +118,9 @@ export default function InvoiceListPage() {
     });
   }, [invoicesData?.items, debouncedSearchTerm]);
 
-  const handleViewDetails = (invoiceId: number | undefined) => {
-    if (invoiceId) {
-      navigate(`/invoices/${invoiceId}`);
-    }
+  const handleViewDetails = (invoiceId: number) => {
+    setSelectedInvoiceId(invoiceId);
+    setIsDetailDialogOpen(true);
   };
 
   const handleExportPDF = async (invoiceId: number | undefined) => {
@@ -262,8 +264,9 @@ export default function InvoiceListPage() {
               filteredInvoices.map((invoice) => (
                 <TableRow
                   key={invoice.id}
-                  className={`group ${!invoice.buyerTaxCode ? "bg-rose-50" : ""}`}
+                  className={`group cursor-pointer hover:bg-muted/50 ${!invoice.buyerTaxCode ? "bg-rose-50" : ""}`}
                   title={!invoice.buyerTaxCode ? "Thiếu MST (không thể xuất hóa đơn VAT)" : undefined}
+                  onClick={() => handleViewDetails(invoice.id)}
                 >
                   <TableCell className="font-medium font-mono text-sm">
                     {invoice.invoiceNumber || `#${invoice.id}`}
@@ -379,10 +382,20 @@ export default function InvoiceListPage() {
         </div>
       )}
 
-      {/* Create Invoice From Lines Dialog */}
       <CreateInvoiceFromLinesDialog
         open={isCreateFromLinesDialogOpen}
         onOpenChange={setIsCreateFromLinesDialogOpen}
+        onInvoiceCreated={(id) => {
+          setSelectedInvoiceId(id);
+          setIsDetailDialogOpen(true);
+        }}
+      />
+
+      <InvoiceDetailDialog
+        invoiceId={selectedInvoiceId}
+        open={isDetailDialogOpen}
+        onOpenChange={setIsDetailDialogOpen}
+        onInvoiceDeleted={refetch}
       />
     </div>
   );

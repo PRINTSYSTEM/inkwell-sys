@@ -25,6 +25,7 @@ import {
   ClipboardCheck,
   FileEdit,
   ChevronRight,
+  ChevronDown,
   MoreHorizontal,
   RotateCcw,
   History,
@@ -33,6 +34,12 @@ import {
 } from "lucide-react";
 
 import PrintPreviewDialog from "./PrintPreviewDialog";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import { AddressBookManager } from "./DeliveryNoteList";
+import { toast } from "sonner";
+import { useOrder } from "@/hooks/use-order";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -182,6 +189,34 @@ export default function DeliveryNoteDetailPage() {
     ROLE.ACCOUNTING_LEAD,
   ].includes(user?.role as any);
 
+  const canEditDeliveryDate = [
+    ROLE.ADMIN,
+    ROLE.ACCOUNTING,
+    ROLE.ACCOUNTING_LEAD,
+    ROLE.KCS,
+  ].includes(user?.role as any);
+
+  const [isEditDatePopoverOpen, setIsEditDatePopoverOpen] = useState(false);
+  const [isEditAddressDialogOpen, setIsEditAddressDialogOpen] = useState(false);
+  const [selectedCustomerAddressId, setSelectedCustomerAddressId] = useState<number | null>(null);
+  const updateDeliveryNoteMutation = useUpdateDeliveryNote();
+
+  const handleSaveCustomerAddress = async () => {
+    if (!deliveryNoteId || !selectedCustomerAddressId) return;
+    try {
+      await updateDeliveryNoteMutation.mutateAsync({
+        id: deliveryNoteId,
+        data: {
+          customerAddressId: selectedCustomerAddressId,
+        },
+      });
+      setIsEditAddressDialogOpen(false);
+      toast.success("Cập nhật địa chỉ giao hàng thành công!");
+    } catch (err) {
+      // handled in mutation onError
+    }
+  };
+
   const handleDeleteDeliveryNote = () => {
     if (!deliveryNoteId) return;
     deleteMutation.mutate(deliveryNoteId, {
@@ -199,6 +234,21 @@ export default function DeliveryNoteDetailPage() {
     error,
   } = useDeliveryNote(deliveryNoteId || null, !!deliveryNoteId);
 
+  const firstOrderId = deliveryNote?.orders?.[0]?.orderId || null;
+  const directCustomerId =
+    (deliveryNote as any)?.customerAddress?.customerId ??
+    (deliveryNote as any)?.customerId ??
+    (deliveryNote?.orders?.[0] as any)?.customerId ??
+    null;
+
+  const { data: orderDetailForCustomer } = useOrder(
+    firstOrderId,
+    !directCustomerId && !!firstOrderId
+  );
+
+  const effectiveCustomerId =
+    directCustomerId ?? (orderDetailForCustomer as any)?.customerId ?? null;
+
   const lines = (deliveryNote as any)?.lines as
     | DeliveryNoteLineResponse[]
     | null;
@@ -207,7 +257,6 @@ export default function DeliveryNoteDetailPage() {
   const exportPDFMutation = useExportDeliveryNotePDF();
   const recreateMutation = useRecreateDeliveryNote();
   const updateLineResultMutation = useUpdateDeliveryLineResult();
-  const updateDeliveryNoteMutation = useUpdateDeliveryNote();
 
   const [isEditingCode, setIsEditingCode] = useState(false);
   const [editCodeValue, setEditCodeValue] = useState("");
@@ -663,6 +712,83 @@ export default function DeliveryNoteDetailPage() {
                 <span className="text-muted-foreground mr-1">Trạng thái:</span>
                 {getStatusBadge(currentStatus)}
               </div>
+
+              {/* Ngày giao dự kiến Badge với Direct Popover */}
+              {canEditDeliveryDate ? (
+                <Popover open={isEditDatePopoverOpen} onOpenChange={setIsEditDatePopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex items-center gap-2 rounded-full bg-emerald-50/80 dark:bg-emerald-950/40 px-3 py-1.5 text-xs shadow-sm border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-all cursor-pointer group"
+                      title="Bấm để chọn & lưu ngày giao ngay"
+                    >
+                      <Calendar className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span className="text-emerald-800 dark:text-emerald-300 font-medium">Ngày giao:</span>
+                      <span className="font-bold text-emerald-950 dark:text-emerald-50">
+                        {formatDate(deliveryNote.expectedDeliveryDate ?? deliveryNote.createdAt)}
+                      </span>
+                      <FileEdit className="w-3 h-3 text-emerald-700 dark:text-emerald-400 group-hover:scale-110 transition-transform ml-0.5" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="start"
+                    side="bottom"
+                    sideOffset={6}
+                    className="w-auto p-3 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xl rounded-xl z-[100]"
+                  >
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between pb-2 border-b border-stone-100 dark:border-stone-800">
+                        <div className="flex items-center gap-1.5 text-xs font-bold text-stone-800 dark:text-stone-200">
+                          <Calendar className="w-4 h-4 text-emerald-600" />
+                          <span>Chọn ngày giao dự kiến mới</span>
+                        </div>
+                      </div>
+
+                      <div className="text-[11px] text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 p-2 rounded border border-amber-200/80 dark:border-amber-800/60 leading-tight">
+                        ⚠️ Chọn ngày sẽ tự động lưu & cập nhật công nợ phiếu.
+                      </div>
+
+                      <CalendarPicker
+                        mode="single"
+                        selected={
+                          deliveryNote?.expectedDeliveryDate
+                            ? new Date(deliveryNote.expectedDeliveryDate)
+                            : deliveryNote?.createdAt
+                            ? new Date(deliveryNote.createdAt)
+                            : new Date()
+                        }
+                        onSelect={async (selectedDate) => {
+                          if (!selectedDate || !deliveryNoteId) return;
+                          try {
+                            const year = selectedDate.getFullYear();
+                            const month = selectedDate.getMonth();
+                            const day = selectedDate.getDate();
+                            const dateObj = new Date(year, month, day, 12, 0, 0);
+                            await updateDeliveryNoteMutation.mutateAsync({
+                              id: deliveryNoteId,
+                              data: {
+                                expectedDeliveryDate: dateObj.toISOString(),
+                              },
+                            });
+                            setIsEditDatePopoverOpen(false);
+                          } catch (err) {
+                            // handled in mutation
+                          }
+                        }}
+                        className="rounded-md border border-stone-100 dark:border-stone-800"
+                      />
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              ) : (
+                <div className="flex items-center gap-2 rounded-full bg-emerald-50/80 dark:bg-emerald-950/40 px-3 py-1.5 text-xs shadow-sm border border-emerald-200 dark:border-emerald-800">
+                  <Calendar className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span className="text-emerald-800 dark:text-emerald-300 font-medium">Ngày giao:</span>
+                  <span className="font-bold text-emerald-950 dark:text-emerald-50">
+                    {formatDate(deliveryNote.expectedDeliveryDate ?? deliveryNote.createdAt)}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-4 flex-wrap">
@@ -726,39 +852,50 @@ export default function DeliveryNoteDetailPage() {
               <Printer className="w-4 h-4" />
               In Phiếu (Có Tiền)
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleExportPDF("A4")}
-              disabled={exportPDFMutation.isPending}
-              className="gap-2"
-            >
-              <Download className="w-4 h-4" />
-              {exportPDFMutation.isPending
-                ? "Đang xử lý..."
-                : "Xuất Phiếu PDF (A4)"}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => handleExportPDF("A5")}
-              disabled={exportPDFMutation.isPending}
-              className="gap-2"
-            >
-              <Download className="w-4 h-4" />
-              {exportPDFMutation.isPending
-                ? "Đang xử lý..."
-                : "Xuất Phiếu PDF (A5)"}
-            </Button>
+
+            {/* Ẩn tính năng xuất PDF theo yêu cầu
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={exportPDFMutation.isPending}
+                  className="gap-2 border-stone-200 dark:border-stone-800 shadow-sm font-medium"
+                >
+                  <Download className="w-4 h-4 text-stone-600 dark:text-stone-400" />
+                  {exportPDFMutation.isPending ? "Đang xử lý..." : "Xuất PDF"}
+                  <ChevronDown className="w-3.5 h-3.5 opacity-80" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem
+                  onClick={() => handleExportPDF("A4")}
+                  disabled={exportPDFMutation.isPending}
+                  className="gap-2 cursor-pointer font-medium"
+                >
+                  <FileText className="w-4 h-4 text-rose-500" />
+                  Xuất PDF Khổ A4
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => handleExportPDF("A5")}
+                  disabled={exportPDFMutation.isPending}
+                  className="gap-2 cursor-pointer font-medium"
+                >
+                  <FileText className="w-4 h-4 text-blue-500" />
+                  Xuất PDF Khổ A5
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            */}
 
             {canRecreate && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setIsRecreateDialogOpen(true)}
-                className="gap-2"
+                className="gap-2 border-stone-200 dark:border-stone-800 font-medium"
               >
-                <RefreshCw className="w-4 h-4" />
+                <RefreshCw className="w-4 h-4 text-blue-600" />
                 Tạo lại phiếu
               </Button>
             )}
@@ -835,48 +972,19 @@ export default function DeliveryNoteDetailPage() {
         </Alert>
       )}
 
-      {/* Summary Stats */}
-      {hasLines && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <Card className="p-2 py-2.5 px-3">
-            <div className="text-[11px] text-muted-foreground mb-0.5 flex items-center gap-1">
-              <Package className="h-3 w-3" />
-              Tổng SL giao
-            </div>
-            <div className="text-base font-bold text-primary">
-              {totalDeliveryQty.toLocaleString("vi-VN")}
-            </div>
-          </Card>
-          <Card className="p-2 py-2.5 px-3">
-            <div className="text-[11px] text-muted-foreground mb-0.5">Chờ giao</div>
-            <div className="text-base font-bold text-blue-500">
-              {totalPendingLines ?? "—"}
-            </div>
-          </Card>
-          <Card className="p-2 py-2.5 px-3">
-            <div className="text-[11px] text-muted-foreground mb-0.5">Đã giao</div>
-            <div className="text-base font-bold text-green-500">
-              {totalDeliveredLines ?? "—"}
-            </div>
-          </Card>
-          <Card className="p-2 py-2.5 px-3">
-            <div className="text-[11px] text-muted-foreground mb-0.5">Thất bại</div>
-            <div className="text-base font-bold text-red-500">
-              {totalFailedLines ?? "—"}
-            </div>
-          </Card>
-        </div>
-      )}
-
       <div className="space-y-6">
         {/* Horizontal Delivery Info Panel */}
         <DeliveryInfoSidebar
           deliveryNote={deliveryNote}
           uniqueAddresses={uniqueAddresses}
           formatDateTime={formatDateTime}
+          onOpenEditAddress={() => {
+            setSelectedCustomerAddressId(deliveryNote.customerAddressId ?? null);
+            setIsEditAddressDialogOpen(true);
+          }}
         />
 
-        {/* Lines Table */}
+        {/* Lines Table with Integrated Stats */}
         <DeliveryLinesCard
           lines={lines}
           currentStatus={currentStatus}
@@ -886,6 +994,10 @@ export default function DeliveryNoteDetailPage() {
           deliveryNoteId={deliveryNote.id}
           deliveryNoteCode={deliveryNote.code || String(deliveryNote.id)}
           canEditLines={canEditLines}
+          totalDeliveryQty={totalDeliveryQty}
+          totalPendingLines={totalPendingLines}
+          totalDeliveredLines={totalDeliveredLines}
+          totalFailedLines={totalFailedLines}
         />
 
         {/* Notes */}
@@ -1250,17 +1362,66 @@ export default function DeliveryNoteDetailPage() {
               variant="outline"
               onClick={() => setIsDeleteConfirmOpen(false)}
               disabled={deleteMutation.isPending}
-              className="h-9"
             >
               Hủy
             </Button>
             <Button
               type="button"
+              variant="destructive"
               onClick={handleDeleteDeliveryNote}
               disabled={deleteMutation.isPending}
-              className="h-9 bg-red-600 hover:bg-red-700 text-white font-semibold"
             >
               {deleteMutation.isPending ? "Đang xóa..." : "Xác nhận xóa"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Sửa Địa Chỉ Giao Hàng */}
+      <Dialog open={isEditAddressDialogOpen} onOpenChange={setIsEditAddressDialogOpen}>
+        <DialogContent className="max-w-xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-xl rounded-xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-stone-900 dark:text-stone-100 flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-emerald-600 shrink-0" />
+              Sửa địa chỉ giao hàng
+            </DialogTitle>
+            <DialogDescription className="text-xs text-stone-500">
+              Chọn địa chỉ từ sổ địa chỉ của khách hàng để cập nhật cho phiếu giao hàng này.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-2">
+            {effectiveCustomerId ? (
+              <AddressBookManager
+                customerId={effectiveCustomerId}
+                selectedId={selectedCustomerAddressId ?? deliveryNote?.customerAddressId ?? null}
+                onSelect={(id) => setSelectedCustomerAddressId(id)}
+                compact
+              />
+            ) : (
+              <div className="text-xs text-stone-500 py-6 text-center flex flex-col items-center justify-center gap-2">
+                <Loader2 className="w-5 h-5 text-emerald-600 animate-spin" />
+                <span>Đang tải thông tin khách hàng...</span>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 pt-2 border-t border-stone-100 dark:border-stone-800">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsEditAddressDialogOpen(false)}
+              disabled={updateDeliveryNoteMutation.isPending}
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              onClick={handleSaveCustomerAddress}
+              disabled={!selectedCustomerAddressId || updateDeliveryNoteMutation.isPending}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+            >
+              {updateDeliveryNoteMutation.isPending ? "Đang lưu..." : "Xác nhận lưu địa chỉ"}
             </Button>
           </DialogFooter>
         </DialogContent>
