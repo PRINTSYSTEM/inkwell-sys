@@ -23,6 +23,8 @@ export const ProductionOrderResponseSchema = GenProductionOrderResponseSchema.ex
   proofingOrder: z.object({
     id: z.number(),
     code: z.string().nullable().optional(),
+    totalQuantity: z.number().nullable().optional(),
+    totalProcessedQty: z.number().nullable().optional(),
     isUrgent: z.boolean().nullish(),
     imageUrl: z.string().nullable().optional(),
     thumbnailUrl: z.string().nullable().optional(),
@@ -108,7 +110,7 @@ export const ProductionOrderResponseSchema = GenProductionOrderResponseSchema.ex
         notes: z.string().nullable().optional(),
       }).nullable().optional(),
     })).nullable().optional(),
-  }).nullable().optional(),
+  }).passthrough().nullable().optional(),
 }).passthrough();
 export type ProductionOrderResponse = z.infer<
   typeof ProductionOrderResponseSchema

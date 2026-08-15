@@ -226,3 +226,37 @@ export const DeliveryNoteStatsResponseSchema =
 export type DeliveryNoteStatsResponse = z.infer<
   typeof DeliveryNoteStatsResponseSchema
 >;
+
+// ===== BulkCompleteDeliveryNotesRequest =====
+export const BulkCompleteDeliveryNotesRequestSchema = z.object({
+  deliveryNoteIds: z
+    .array(z.number().int())
+    .min(1, "Cần chọn ít nhất 1 phiếu giao hàng"),
+});
+export type BulkCompleteDeliveryNotesRequest = z.infer<
+  typeof BulkCompleteDeliveryNotesRequestSchema
+>;
+
+// ===== BulkCompleteResultItem =====
+export const BulkCompleteResultItemSchema = z.object({
+  deliveryNoteId: z.number().int(),
+  code: z.string().nullable().optional(),
+  status: z.string(),
+  deliveredLineCount: z.number().int().optional(),
+  reason: z.string().nullable().optional(),
+});
+export type BulkCompleteResultItem = z.infer<
+  typeof BulkCompleteResultItemSchema
+>;
+
+// ===== BulkCompleteDeliveryNotesResponse =====
+export const BulkCompleteDeliveryNotesResponseSchema = z.object({
+  total: z.number().int(),
+  completedCount: z.number().int(),
+  skippedCount: z.number().int(),
+  results: z.array(BulkCompleteResultItemSchema),
+});
+export type BulkCompleteDeliveryNotesResponse = z.infer<
+  typeof BulkCompleteDeliveryNotesResponseSchema
+>;
+

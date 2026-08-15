@@ -42,16 +42,17 @@ export default function DeliveryLinesCard({
   const canAddLines =
     canEditLines &&
     !!deliveryNoteId &&
-    [
-      "pending",
-      "draft",
-      "confirmed",
-      "ready_to_ship",
-      "in_transit",
-      "delivering",
+    ![
+      "cancelled",
+      "failed_reschedule",
+      "failed",
     ].includes(statusLower);
 
   const isTransit = statusLower === "in_transit" || statusLower === "delivering";
+  const isCompleted =
+    statusLower === "completed" ||
+    statusLower === "delivered" ||
+    statusLower === "partially_completed";
 
   return (
     <>
@@ -136,6 +137,7 @@ export default function DeliveryLinesCard({
           deliveryNoteId={deliveryNoteId}
           deliveryNoteCode={deliveryNoteCode}
           isTransit={isTransit}
+          isCompleted={isCompleted}
         />
       )}
     </>

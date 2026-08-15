@@ -85,6 +85,7 @@ import {
   useUpdateDeliveryNoteStatus,
   useDeliveryNote,
   useDeliveryNoteStats,
+  useBulkCompleteDeliveryNotes,
 } from "@/hooks/use-delivery-note";
 import { useCreateStockOutForDelivery } from "@/hooks/use-stock";
 import { useDesign } from "@/hooks/use-design";
@@ -788,6 +789,16 @@ export default function DeliveryNoteListPage() {
     sessionStorage.setItem("delivery_note_orders_page", String(currentPage));
   }, [currentPage]);
 
+  // Reset orders page when orders search query changes to avoid page offset issues
+  const isFirstOrdersSearchRender = useRef(true);
+  useEffect(() => {
+    if (isFirstOrdersSearchRender.current) {
+      isFirstOrdersSearchRender.current = false;
+      return;
+    }
+    setCurrentPage(1);
+  }, [searchQuery]);
+
   // Reset page when search or status filters change to avoid page offset issues
   const isFirstRender = useRef(true);
   useEffect(() => {
@@ -1102,6 +1113,29 @@ export default function DeliveryNoteListPage() {
       setUpdatingIds(new Set());
     }
   };
+
+  const bulkCompleteMutation = useBulkCompleteDeliveryNotes();
+
+  const handleBulkComplete = async () => {
+    const ids = Array.from(selectedNoteIds);
+    if (ids.length === 0) return;
+    setBulkLoading(true);
+    setUpdatingIds(new Set(ids));
+    try {
+      await bulkCompleteMutation.mutateAsync({
+        deliveryNoteIds: ids.map(Number),
+      });
+      setSelectedNoteIds(new Set());
+      refetchDeliveryNotes();
+      refetchStats();
+    } catch (err: unknown) {
+      // Handled in mutation onError
+    } finally {
+      setBulkLoading(false);
+      setUpdatingIds(new Set());
+    }
+  };
+
 
   const createDeliveryNoteMutation = useCreateDeliveryNote();
   const { mutateAsync: createStockOutForDelivery } = useCreateStockOutForDelivery();
@@ -1659,6 +1693,7 @@ export default function DeliveryNoteListPage() {
             handleClearSelection={() => setSelectedNoteIds(new Set())}
             bulkLoading={bulkLoading}
             handleBulkStartShipping={handleBulkStartShipping}
+            handleBulkComplete={handleBulkComplete}
             updatingIds={updatingIds}
             onImageClick={handleImageClick}
             allNotesForStats={allNotesData}
@@ -2190,6 +2225,7 @@ interface DeliveryNotesViewProps {
   handleClearSelection: () => void;
   bulkLoading: boolean;
   handleBulkStartShipping: () => void;
+  handleBulkComplete: () => void;
   updatingIds: Set<number>;
   onImageClick: (url: string, e: React.MouseEvent) => void;
   allNotesForStats: unknown;
@@ -2222,6 +2258,7 @@ function DeliveryNotesView({
   handleClearSelection,
   bulkLoading,
   handleBulkStartShipping,
+  handleBulkComplete,
   updatingIds,
   onImageClick,
   allNotesForStats,
@@ -2562,6 +2599,15 @@ function DeliveryNotesView({
             >
               {bulkLoading && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
               Bắt đầu giao
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleBulkComplete}
+              disabled={bulkLoading}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg px-4 h-9 shadow-sm"
+            >
+              {bulkLoading && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
+              Giao thành công
             </Button>
           </div>
         )}

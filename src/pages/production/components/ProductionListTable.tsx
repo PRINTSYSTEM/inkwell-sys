@@ -859,8 +859,8 @@ const ProductionTableRow = React.memo(
     const isPackagingEnabled = !isDraft;
 
     const defaultPrintQty =
-      (proofingOrder as any)?.totalProcessedQty ||
-      (proofingOrder as any)?.totalQuantity ||
+      proofingOrder?.totalProcessedQty ||
+      proofingOrder?.totalQuantity ||
       0;
 
     const displayDesignType = React.useMemo(() => {
@@ -1216,11 +1216,7 @@ const ProductionTableRow = React.memo(
                       <div className="border-t border-dashed border-muted/50 pt-1 mt-0.5">
                         <span className="text-muted-foreground font-medium">Số lượng in: </span>
                         <span className="font-bold text-blue-600">
-                          {String(
-                            proofingOrder?.totalProcessedQty ||
-                            proofingOrder?.totalQuantity ||
-                            "0",
-                          )} tờ
+                          {defaultPrintQty.toLocaleString("vi-VN")} tờ
                         </span>
                       </div>
 

@@ -582,6 +582,11 @@ export default function DeliveryLineRow({
                     Tối đa: {line.maxEditableQty.toLocaleString("vi-VN")}
                   </span>
                 )}
+                {isTransit && (
+                  <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium mt-0.5">
+                    Giảm số lượng sẽ tự hoàn kho
+                  </span>
+                )}
               </div>
               <Button
                 size="icon"

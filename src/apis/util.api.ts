@@ -363,6 +363,7 @@ export const API_SUFFIX = {
   DELIVERY_NOTE_LINE: (lineId: number | string) =>
     `/delivery-notes/lines/${lineId}`,
   DELIVERY_NOTE_RETURNABLE_LINES: (id: number) => `/delivery-notes/${id}/returnable-lines`,
+  DELIVERY_NOTE_BULK_COMPLETE: "/delivery-notes/bulk-complete",
 
   // ========== RETURN NOTES ==========
   RETURN_NOTES: "/return-notes",
