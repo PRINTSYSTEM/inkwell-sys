@@ -52,6 +52,7 @@ interface AddItemsToDeliveryNoteDialogProps {
   deliveryNoteId: number;
   deliveryNoteCode?: string;
   isTransit?: boolean;
+  isCompleted?: boolean;
   onSuccess?: () => void;
 }
 
@@ -67,6 +68,7 @@ export default function AddItemsToDeliveryNoteDialog({
   deliveryNoteId,
   deliveryNoteCode,
   isTransit = false,
+  isCompleted = false,
   onSuccess,
 }: AddItemsToDeliveryNoteDialogProps) {
   const {
@@ -188,7 +190,7 @@ export default function AddItemsToDeliveryNoteDialog({
       return;
     }
 
-    if (isTransit) {
+    if (isTransit || isCompleted) {
       setConfirmTransitOpen(true);
     } else {
       executeSubmit();
@@ -242,7 +244,15 @@ export default function AddItemsToDeliveryNoteDialog({
                   Chọn các mặt hàng khả dụng của khách hàng để bổ sung vào phiếu giao hàng hiện tại.
                 </DialogDescription>
               </div>
-              {isTransit && (
+              {isCompleted ? (
+                <Badge
+                  variant="outline"
+                  className="bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 text-xs font-semibold px-2.5 py-1"
+                >
+                  <AlertTriangle className="h-3.5 w-3.5 mr-1 text-emerald-600" />
+                  Phiếu đã kết thúc (Xuất kho & Mở lại)
+                </Badge>
+              ) : isTransit ? (
                 <Badge
                   variant="outline"
                   className="bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 text-xs font-semibold px-2.5 py-1"
@@ -250,7 +260,7 @@ export default function AddItemsToDeliveryNoteDialog({
                   <AlertTriangle className="h-3.5 w-3.5 mr-1 text-amber-600" />
                   Phiếu đang giao (Xuất kho ngay)
                 </Badge>
-              )}
+              ) : null}
             </div>
 
             {/* Search Filter */}
@@ -492,24 +502,29 @@ export default function AddItemsToDeliveryNoteDialog({
         </DialogContent>
       </Dialog>
 
-      {/* Transit Confirmation Dialog */}
+      {/* Transit/Completion Confirmation Dialog */}
       <AlertDialog open={confirmTransitOpen} onOpenChange={setConfirmTransitOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
               <AlertTriangle className="h-5 w-5" />
-              Xác nhận thêm hàng vào phiếu đang giao
+              Xác nhận thêm hàng vào phiếu giao hàng
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2 text-sm text-stone-700 dark:text-stone-300">
               <p>
                 Phiếu giao hàng{" "}
                 <strong className="font-mono">#{deliveryNoteCode}</strong> đang ở trạng
-                thái <strong>Đang giao (in_transit)</strong>.
+                thái <strong>{isCompleted ? "Kết thúc (completed)" : "Đang giao (in_transit)"}</strong>.
               </p>
-              <p className="bg-amber-50 dark:bg-amber-950/40 p-2.5 rounded-lg border border-amber-200 dark:border-amber-900/50 text-amber-900 dark:text-amber-200 text-xs">
-                ⚠️ Các mặt hàng vừa chọn sẽ được <strong>tự động xuất kho ngay lập tức</strong> và
-                cập nhật trạng thái đơn hàng tương ứng.
-              </p>
+              {isCompleted ? (
+                <p className="bg-amber-50 dark:bg-amber-950/40 p-2.5 rounded-lg border border-amber-200 dark:border-amber-900/50 text-amber-900 dark:text-amber-200 text-xs leading-relaxed">
+                  ⚠️ Hàng vừa thêm sẽ được xuất kho ngay theo phiếu và phiếu sẽ được mở lại sang trạng thái <strong>"Đang giao"</strong>.
+                </p>
+              ) : (
+                <p className="bg-amber-50 dark:bg-amber-950/40 p-2.5 rounded-lg border border-amber-200 dark:border-amber-900/50 text-amber-900 dark:text-amber-200 text-xs leading-relaxed">
+                  ⚠️ Hàng vừa thêm sẽ được <strong>xuất kho ngay theo phiếu</strong> và cập nhật trạng thái đơn hàng tương ứng.
+                </p>
+              )}
               <p>Bạn có chắc chắn muốn thực hiện?</p>
             </AlertDialogDescription>
           </AlertDialogHeader>

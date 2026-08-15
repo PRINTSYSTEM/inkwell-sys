@@ -19,6 +19,8 @@ import type {
   DeliveryNoteStatsResponse,
   AddDeliveryNoteLinesRequest,
   UpdateDeliveryLineQuantityRequest,
+  BulkCompleteDeliveryNotesRequest,
+  BulkCompleteDeliveryNotesResponse,
 } from "@/Schema/delivery-note.schema";
 import type {
   DeliveryNoteListParams,
@@ -491,3 +493,45 @@ export const useDeleteDeliveryNoteLine = () => {
     },
   });
 };
+
+// ================== BULK COMPLETE DELIVERY NOTES ==================
+// POST /delivery-notes/bulk-complete
+export const useBulkCompleteDeliveryNotes = (
+  options?: UseMutationOptions<
+    BulkCompleteDeliveryNotesResponse,
+    Error,
+    BulkCompleteDeliveryNotesRequest
+  >
+) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: BulkCompleteDeliveryNotesRequest) => {
+      const res = await apiRequest.post<BulkCompleteDeliveryNotesResponse>(
+        API_SUFFIX.DELIVERY_NOTE_BULK_COMPLETE,
+        data
+      );
+      return res.data;
+    },
+    onSuccess: (data, variables, context) => {
+      queryClient.invalidateQueries({ queryKey: ["deliveryNotes"] });
+      queryClient.invalidateQueries({ queryKey: ["deliveryNoteStats"] });
+      toast.success(
+        `Hoàn thành ${data.completedCount}/${data.total} phiếu giao hàng`
+      );
+      if (data.skippedCount > 0) {
+        toast.warning(`${data.skippedCount} phiếu không thể hoàn thành`);
+      }
+      options?.onSuccess?.(data, variables, context);
+    },
+    onError: (error: any, variables, context) => {
+      const message =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Hoàn thành hàng loạt thất bại";
+      toast.error(message);
+      options?.onError?.(error, variables, context);
+    },
+    ...options,
+  });
+};
+
