@@ -59,12 +59,14 @@ interface CreateInvoiceFromLinesDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   customerId?: number;
+  onInvoiceCreated?: (invoiceId: number) => void;
 }
 
 export function CreateInvoiceFromLinesDialog({
   open,
   onOpenChange,
   customerId,
+  onInvoiceCreated,
 }: CreateInvoiceFromLinesDialogProps) {
   const navigate = useNavigate();
   // Load customer data
@@ -474,7 +476,9 @@ export function CreateInvoiceFromLinesDialog({
       const result = await createInvoiceMutation.mutateAsync(requestData);
       handleOpenChange(false);
       if (result && result.id) {
-        navigate(`/accounting/invoice/${result.id}`);
+        if (onInvoiceCreated) {
+          onInvoiceCreated(result.id);
+        }
       }
     } catch (error) {
       // Error is handled by the hook

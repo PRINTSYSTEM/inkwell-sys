@@ -349,15 +349,6 @@ if (isError || !invoice) {
                 Phát hành
               </Button>
             )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsUpdateEInvoiceDialogOpen(true)}
-              className="gap-2"
-            >
-              <Edit className="w-4 h-4" />
-              Cập nhật E-Invoice
-            </Button>
             {invoice.status !== "void" && invoice.status !== "cancelled" && (
               <Button
                 variant="outline"

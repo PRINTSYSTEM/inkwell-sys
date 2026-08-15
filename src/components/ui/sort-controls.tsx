@@ -21,6 +21,8 @@ type SortControlsProps = {
   options: SortOption[];
   placeholder?: string;
   className?: string;
+  columnSelectWidth?: string;
+  orderSelectWidth?: string;
 };
 
 export function SortControls({
@@ -30,8 +32,10 @@ export function SortControls({
   onSortOrderChange,
   onClear,
   options,
-  placeholder = "Sort column (vd: createdAt, name...)",
+  placeholder = "Sắp xếp theo",
   className,
+  columnSelectWidth = "sm:w-[130px]",
+  orderSelectWidth = "sm:w-[95px]",
 }: SortControlsProps) {
   const normalizedSortColumn = sortColumn.trim();
   const canClear = !!onClear && normalizedSortColumn.length > 0;
@@ -40,14 +44,14 @@ export function SortControls({
 
   return (
     <div
-      className={`flex flex-col sm:flex-row sm:items-center gap-2 w-full min-w-0 ${className ?? ""}`}
+      className={`flex items-center gap-1.5 w-auto flex-nowrap ${className ?? ""}`}
     >
       <Select
         value={columnSelectValue}
         onValueChange={(v) => onSortColumnChange(v === "__none__" ? "" : v)}
       >
-        <SelectTrigger className="h-10 sm:h-9 w-full sm:w-[260px] min-w-0 text-sm">
-          <ArrowUpDown className="h-4 w-4 mr-2 text-muted-foreground" />
+        <SelectTrigger className={`h-9 w-full ${columnSelectWidth} shrink-0 text-sm`}>
+          <ArrowUpDown className="h-3.5 w-3.5 mr-1 text-muted-foreground shrink-0" />
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
@@ -65,8 +69,8 @@ export function SortControls({
         onValueChange={(v) => onSortOrderChange(v as SortOrder)}
         disabled={orderDisabled}
       >
-        <SelectTrigger className="h-10 sm:h-9 w-full sm:w-[140px] min-w-0 text-sm">
-          <SelectValue placeholder="Order" />
+        <SelectTrigger className={`h-9 w-full ${orderSelectWidth} shrink-0 text-sm`}>
+          <SelectValue placeholder="Thứ tự" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="asc">Tăng dần</SelectItem>
@@ -79,7 +83,7 @@ export function SortControls({
           type="button"
           variant="ghost"
           size="icon"
-          className="h-10 sm:h-9 w-full sm:w-9 sm:px-0 min-h-[44px] sm:min-h-0"
+          className="h-9 w-9 px-0 shrink-0"
           onClick={onClear}
           title="Xóa sắp xếp"
         >

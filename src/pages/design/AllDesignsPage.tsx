@@ -107,30 +107,30 @@ export default function AllDesignsPage() {
         : {}),
       ...(dateRange?.from
         ? {
-            startDate: (() => {
-              const d = new Date(dateRange.from);
-              d.setHours(0, 0, 0, 0);
-              return d.toISOString();
-            })(),
-            endDate: (() => {
-              const d = new Date(dateRange.to || dateRange.from);
-              d.setHours(23, 59, 59, 999);
-              return d.toISOString();
-            })(),
-          }
+          startDate: (() => {
+            const d = new Date(dateRange.from);
+            d.setHours(0, 0, 0, 0);
+            return d.toISOString();
+          })(),
+          endDate: (() => {
+            const d = new Date(dateRange.to || dateRange.from);
+            d.setHours(23, 59, 59, 999);
+            return d.toISOString();
+          })(),
+        }
         : {
-            ...(selectedMonth ? { month: selectedMonth } : {}),
-            ...(selectedYear ? { year: selectedYear } : {}),
-          }),
+          ...(selectedMonth ? { month: selectedMonth } : {}),
+          ...(selectedYear ? { year: selectedYear } : {}),
+        }),
       ...(filterState.sortBy
         ? {
-            sortColumn: filterState.sortBy,
-            sortOrder: filterState.sortOrder,
-          }
+          sortColumn: filterState.sortBy,
+          sortOrder: filterState.sortOrder,
+        }
         : {
-            sortColumn: "createdAt",
-            sortOrder: "desc",
-          }),
+          sortColumn: "createdAt",
+          sortOrder: "desc",
+        }),
       ...(debouncedSearchQuery.trim()
         ? { search: debouncedSearchQuery.trim() }
         : {}),
@@ -224,8 +224,8 @@ export default function AllDesignsPage() {
   const handleReprintSubmit = async () => {
     if (!reprintTargetId || !reprintQuantity || reprintQuantity <= 0) return;
     try {
-      await reprintDesignMutation.mutate({ 
-        id: reprintTargetId, 
+      await reprintDesignMutation.mutate({
+        id: reprintTargetId,
         quantity: reprintQuantity,
         notes: reprintNotes.trim() || undefined
       });
@@ -450,12 +450,12 @@ export default function AllDesignsPage() {
       {/* Filters */}
       <Card className="p-3 mb-3 shrink-0">
         <CardContent className="p-0">
-          <div className="grid gap-3 md:grid-cols-7">
-            {/* Search */}
-            <div className="relative">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Search - Compact fixed width */}
+            <div className="relative w-[250px] shrink-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
-                placeholder="Tìm kiếm theo mã hoặc thiết kế viên..."
+                placeholder="Tìm kiếm..."
                 value={filterState.searchQuery}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-9 h-9 text-sm"
@@ -467,8 +467,8 @@ export default function AllDesignsPage() {
               value={statusFilterValue}
               onValueChange={handleStatusChange}
             >
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Lọc theo trạng thái" />
+              <SelectTrigger className="h-9 text-sm w-[160px] shrink-0">
+                <SelectValue placeholder="Trạng thái" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả trạng thái</SelectItem>
@@ -482,8 +482,8 @@ export default function AllDesignsPage() {
 
             {/* Type filter */}
             <Select value={typeFilterValue} onValueChange={handleTypeChange}>
-              <SelectTrigger className="h-9 text-sm">
-                <SelectValue placeholder="Lọc theo loại" />
+              <SelectTrigger className="h-9 text-sm w-[105px] shrink-0">
+                <SelectValue placeholder="Loại" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả loại</SelectItem>
@@ -495,7 +495,7 @@ export default function AllDesignsPage() {
               </SelectContent>
             </Select>
 
-            {/* Date filter */}
+            {/* Date filter - Expanded space so full range displays */}
             <DateRangePicker
               value={dateRange}
               onValueChange={(range) => {
@@ -504,33 +504,29 @@ export default function AllDesignsPage() {
               }}
               placeholder="Chọn khoảng ngày"
               showClear
-              className="h-9 text-sm flex-1 bg-card"
+              className="h-9 text-sm flex-1 min-w-[200px] bg-card"
             />
 
-
-            {/* Month filter */}
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
-              <Select
-                value={selectedMonth?.toString() || "all"}
-                onValueChange={(v) => {
-                  setSelectedMonth(v === "all" ? null : parseInt(v, 10));
-                  setCurrentPage(1);
-                }}
-              >
-                <SelectTrigger className="h-9 text-sm flex-1">
-                  <SelectValue placeholder="Tháng" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả</SelectItem>
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
-                    <SelectItem key={month} value={month.toString()}>
-                      Tháng {month}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Month filter - Full text display without truncation */}
+            <Select
+              value={selectedMonth?.toString() || "all"}
+              onValueChange={(v) => {
+                setSelectedMonth(v === "all" ? null : parseInt(v, 10));
+                setCurrentPage(1);
+              }}
+            >
+              <SelectTrigger className="h-9 text-sm w-[100px] shrink-0">
+                <SelectValue placeholder="Tháng" />
+              </SelectTrigger>
+              <SelectContent className="max-h-[460px]">
+                <SelectItem value="all">Tất cả tháng</SelectItem>
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
+                  <SelectItem key={month} value={month.toString()}>
+                    Tháng {month}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
             {/* Year filter */}
             <Select
@@ -540,12 +536,12 @@ export default function AllDesignsPage() {
                 setCurrentPage(1);
               }}
             >
-              <SelectTrigger className="h-9 text-sm">
+              <SelectTrigger className="h-9 text-sm w-[75px] shrink-0">
                 <SelectValue placeholder="Năm" />
               </SelectTrigger>
               <SelectContent>
-                {Array.from({ length: 3 }, (_, i) => {
-                  const year = new Date().getFullYear() - 2 + i;
+                {Array.from({ length: 5 }, (_, i) => {
+                  const year = new Date().getFullYear() - 3 + i;
                   return (
                     <SelectItem key={year} value={year.toString()}>
                       {year}
@@ -556,23 +552,27 @@ export default function AllDesignsPage() {
             </Select>
 
             {/* Sort (server-side) */}
-            <SortControls
-              sortColumn={filterState.sortBy ?? ""}
-              sortOrder={filterState.sortOrder}
-              onSortColumnChange={handleSortColumnChange}
-              onSortOrderChange={handleSortOrderChange}
-              onClear={() => {
-                filterActions.clearSort();
-                setCurrentPage(1);
-              }}
-              options={[
-                { value: "createdAt", label: "Ngày tạo" },
-                { value: "code", label: "Mã thiết kế" },
-                { value: "status", label: "Trạng thái" },
-                { value: "designTypeId", label: "Loại thiết kế" },
-              ]}
-              placeholder="Sắp xếp theo"
-            />
+            <div className="shrink-0">
+              <SortControls
+                sortColumn={filterState.sortBy ?? ""}
+                sortOrder={filterState.sortOrder}
+                onSortColumnChange={handleSortColumnChange}
+                onSortOrderChange={handleSortOrderChange}
+                onClear={() => {
+                  filterActions.clearSort();
+                  setCurrentPage(1);
+                }}
+                options={[
+                  { value: "createdAt", label: "Ngày tạo" },
+                  { value: "code", label: "Mã thiết kế" },
+                  { value: "status", label: "Trạng thái" },
+                  { value: "designTypeId", label: "Loại thiết kế" },
+                ]}
+                placeholder="Sắp xếp theo"
+                columnSelectWidth="w-[150px]"
+                orderSelectWidth="w-[120px]"
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -626,10 +626,10 @@ export default function AllDesignsPage() {
                     <TableRow
                       key={design.id}
                       className={`cursor-pointer hover:bg-muted/50 h-14 ${design.status === "returned" && `bg-red-50`}`}
-                        onClick={() => navigate(`/design/detail/${design.id}`)}
+                      onClick={() => navigate(`/design/detail/${design.id}`)}
                     >
                       <TableCell className="py-2">
-                        <div 
+                        <div
                           className="w-10 h-10 rounded-md overflow-hidden bg-muted/20 flex items-center justify-center group relative cursor-pointer"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -641,12 +641,12 @@ export default function AllDesignsPage() {
                             }
                           }}
                         >
-                          <img 
-                            src={design.designImageUrl || design.designFileUrl || "/placeholder.svg"} 
-                            alt={design.designName || "image"} 
+                          <img
+                            src={design.designImageUrl || design.designFileUrl || "/placeholder.svg"}
+                            alt={design.designName || "image"}
                             loading="lazy"
                             decoding="async"
-                            className="w-full h-full object-cover" 
+                            className="w-full h-full object-cover"
                           />
                           <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
                             <Eye className="w-4 h-4 text-white" />
@@ -715,8 +715,8 @@ export default function AllDesignsPage() {
                                 design.assignedDesignerId != null
                                   ? design.assignedDesignerId.toString()
                                   : design.designer?.id != null
-                                  ? design.designer.id.toString()
-                                  : "__none__"
+                                    ? design.designer.id.toString()
+                                    : "__none__"
                               }
                               onValueChange={(val) => {
                                 const assignedId = val === "__none__" ? null : Number(val);
@@ -795,7 +795,7 @@ export default function AllDesignsPage() {
           {viewingImage && (
             <ImageViewerDialog
               open={!!viewingImage}
-              onOpenChange={(open) => { if(!open) setViewingImage(null); }}
+              onOpenChange={(open) => { if (!open) setViewingImage(null); }}
               imageUrl={viewingImage.url}
               title={viewingImage.title}
             />

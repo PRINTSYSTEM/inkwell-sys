@@ -48,6 +48,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { useInvoices, useExportInvoice, useInvoiceSummaryStats } from "@/hooks/use-invoice";
 import { formatCurrency } from "@/lib/status-utils";
 import { CreateInvoiceFromLinesDialog } from "@/components/accounting";
+import { InvoiceDetailDialog } from "@/components/invoices/InvoiceDetailDialog";
 import { ROUTE_PATHS } from "@/constants";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -59,6 +60,8 @@ const formatDate = (dateStr: string | null | undefined) => {
 // Component for "Hóa đơn đã tạo" tab
 function CreatedInvoicesTab() {
   const navigate = useNavigate();
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -152,7 +155,8 @@ function CreatedInvoicesTab() {
 
   const handleViewDetails = (invoiceId: number | undefined) => {
     if (invoiceId) {
-      navigate(`${ROUTE_PATHS.ACCOUNTING.INVOICE}/${invoiceId}`);
+      setSelectedInvoiceId(invoiceId);
+      setIsDetailDialogOpen(true);
     }
   };
 
@@ -449,10 +453,20 @@ function CreatedInvoicesTab() {
         </div>
       )}
 
-      {/* Create Invoice From Lines Dialog */}
       <CreateInvoiceFromLinesDialog
         open={isCreateFromLinesDialogOpen}
         onOpenChange={setIsCreateFromLinesDialogOpen}
+        onInvoiceCreated={(id) => {
+          setSelectedInvoiceId(id);
+          setIsDetailDialogOpen(true);
+        }}
+      />
+
+      <InvoiceDetailDialog
+        invoiceId={selectedInvoiceId}
+        open={isDetailDialogOpen}
+        onOpenChange={setIsDetailDialogOpen}
+        onInvoiceDeleted={refetch}
       />
     </div>
   );

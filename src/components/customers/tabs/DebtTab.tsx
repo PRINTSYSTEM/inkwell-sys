@@ -62,6 +62,19 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
     (item) => item.customerId === customerId
   );
 
+  const prevMonth = selectedMonth === 1 ? 12 : selectedMonth - 1;
+  const prevYear = selectedMonth === 1 ? selectedYear - 1 : selectedYear;
+
+  const { data: prevMonthlyData, isLoading: isLoadingPrevMonthly } =
+    useCustomerDebtStatement(
+      customerId,
+      {
+        month: prevMonth,
+        year: prevYear,
+      },
+      isActive && viewMode === "monthly"
+    );
+
   const { data: monthlyData, isLoading: isLoadingMonthly } = useCustomerDebtStatement(
     customerId,
     {
@@ -81,7 +94,10 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
   );
 
   const statementData = viewMode === "monthly" ? monthlyData : rangeData;
-  const isLoading = viewMode === "monthly" ? isLoadingMonthly : isLoadingRange;
+  const isLoading =
+    viewMode === "monthly"
+      ? isLoadingMonthly || isLoadingPrevMonthly
+      : isLoadingRange;
 
   const { mutate: exportDebtComparison, loading: exporting } =
     useExportDebtComparison();
@@ -104,14 +120,22 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
     return new Date(dateString).toLocaleDateString("vi-VN");
   };
 
-  const beginningBalance = statementData?.beginningBalance ?? 0;
+  const beginningBalance =
+    viewMode === "monthly" && prevMonthlyData?.endingBalance !== undefined
+      ? prevMonthlyData.endingBalance
+      : statementData?.beginningBalance ?? 0;
   const totalIncrease = statementData?.totalIncrease ?? 0;
   const totalDecrease = statementData?.totalDecrease ?? 0;
-  const endingBalance = statementData?.endingBalance ?? 0;
+  const endingBalance = beginningBalance + totalIncrease - totalDecrease;
   const items = statementData?.items || [];
 
   const handleExport = () => {
-    exportDebtComparison(customerId, { month: selectedMonth, year: selectedYear });
+    if (viewMode === "monthly") {
+      exportDebtComparison(customerId, { month: selectedMonth, year: selectedYear });
+    } else {
+      const fromD = fromDate ? new Date(fromDate) : new Date();
+      exportDebtComparison(customerId, { month: fromD.getMonth() + 1, year: fromD.getFullYear() });
+    }
   };
 
   return (
@@ -140,32 +164,32 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
             {viewMode === "monthly" && (
               <>
                 <Select
-                  value={selectedYear.toString()}
-                  onValueChange={(val) => setSelectedYear(parseInt(val))}
+                  value={selectedMonth.toString()}
+                  onValueChange={(val) => setSelectedMonth(parseInt(val))}
                 >
-                  <SelectTrigger className="h-8 w-[95px] text-xs">
-                    <SelectValue placeholder="Năm" />
+                  <SelectTrigger className="h-8 w-[100px] text-xs font-semibold">
+                    <SelectValue placeholder="Tháng" />
                   </SelectTrigger>
-                  <SelectContent>
-                    {[2024, 2025, 2026, 2027].map((y) => (
-                      <SelectItem key={y} value={y.toString()}>
-                        Năm {y}
+                  <SelectContent className="max-h-[460px]">
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                      <SelectItem key={m} value={m.toString()}>
+                        Tháng {m}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
 
                 <Select
-                  value={selectedMonth.toString()}
-                  onValueChange={(val) => setSelectedMonth(parseInt(val))}
+                  value={selectedYear.toString()}
+                  onValueChange={(val) => setSelectedYear(parseInt(val))}
                 >
-                  <SelectTrigger className="h-8 w-[95px] text-xs">
-                    <SelectValue placeholder="Tháng" />
+                  <SelectTrigger className="h-8 w-[110px] text-xs font-semibold">
+                    <SelectValue placeholder="Năm" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                      <SelectItem key={m} value={m.toString()}>
-                        Tháng {m}
+                    {[2024, 2025, 2026, 2027].map((y) => (
+                      <SelectItem key={y} value={y.toString()}>
+                        Năm {y}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -179,14 +203,14 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
                   type="date"
                   value={fromDate}
                   onChange={(e) => setFromDate(e.target.value)}
-                  className="h-8 w-[130px] text-xs bg-background"
+                  className="h-8 w-[150px] text-xs bg-background"
                 />
                 <span className="text-xs text-muted-foreground font-medium">đến</span>
                 <Input
                   type="date"
                   value={toDate}
                   onChange={(e) => setToDate(e.target.value)}
-                  className="h-8 w-[130px] text-xs bg-background"
+                  className="h-8 w-[150px] text-xs bg-background"
                 />
               </div>
             )}
@@ -201,22 +225,7 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
               Thiết lập số dư đầu kỳ
             </Button>
 
-            {viewMode === "monthly" && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 text-xs font-medium border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 text-emerald-600 dark:border-emerald-900 dark:hover:bg-emerald-950/20"
-                onClick={handleExport}
-                disabled={exporting}
-              >
-                {exporting ? (
-                  <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-                ) : (
-                  <FileSpreadsheet className="h-3.5 w-3.5 mr-1" />
-                )}
-                Xuất Excel
-              </Button>
-            )}
+
           </div>
         </div>
       </div>
@@ -382,79 +391,85 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
                       </TableRow>
 
                       {/* List items */}
-                      {items.map((item, idx) => {
-                        const stt = idx + 1;
-                        const dateStr = item.date ? formatDate(item.date) : "—";
-                        const invoiceDateStr = item.invoiceDate
-                          ? formatDate(item.invoiceDate)
-                          : "—";
-
-                        const qtyStr =
-                          item.quantity != null
-                            ? formatRawNumber(item.quantity)
-                            : "—";
-                        const priceStr =
-                          item.unitPrice != null
-                            ? formatRawNumber(item.unitPrice)
+                      {(() => {
+                        let runningAcc = beginningBalance;
+                        return items.map((item, idx) => {
+                          const stt = idx + 1;
+                          const dateStr = item.date ? formatDate(item.date) : "—";
+                          const invoiceDateStr = item.invoiceDate
+                            ? formatDate(item.invoiceDate)
                             : "—";
 
-                        const increaseAmtStr =
-                          item.increaseAmount && item.increaseAmount > 0
-                            ? formatRawNumber(item.increaseAmount)
-                            : "—";
-                        const decreaseAmtStr =
-                          item.decreaseAmount && item.decreaseAmount > 0
-                            ? formatRawNumber(item.decreaseAmount)
-                            : "—";
-                        const runningBalStr =
-                          item.runningBalance != null
-                            ? formatRawNumber(item.runningBalance)
-                            : "—";
+                          const qtyStr =
+                            item.quantity != null
+                              ? formatRawNumber(item.quantity)
+                              : "—";
+                          const priceStr =
+                            item.unitPrice != null
+                              ? formatRawNumber(item.unitPrice)
+                              : "—";
 
-                        return (
-                          <TableRow
-                            key={item.id || idx}
-                            className="hover:bg-slate-50/50 dark:hover:bg-stone-850/30 border-b border-slate-100 dark:border-stone-850"
-                          >
-                            <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs font-mono text-slate-500">
-                              {stt}
-                            </TableCell>
-                            <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-700 dark:text-stone-300">
-                              {dateStr}
-                            </TableCell>
-                            <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs font-mono text-slate-700 dark:text-stone-300">
-                              {item.deliveryNoteCode || "—"}
-                            </TableCell>
-                            <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-700 dark:text-stone-300">
-                              {invoiceDateStr}
-                            </TableCell>
-                            <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs font-mono text-slate-700 dark:text-stone-300">
-                              {item.invoiceCode || "—"}
-                            </TableCell>
-                            <TableCell className="border border-slate-200 dark:border-stone-800 py-2.5 text-xs text-slate-800 dark:text-stone-200">
-                              {item.description || "—"}
-                            </TableCell>
-                            <TableCell className="border border-slate-200 dark:border-stone-800 text-right py-2.5 text-xs font-mono text-slate-750 dark:text-stone-350">
-                              {qtyStr}
-                            </TableCell>
-                            <TableCell className="border border-slate-200 dark:border-stone-800 text-right py-2.5 text-xs font-mono text-slate-750 dark:text-stone-350">
-                              {priceStr}
-                            </TableCell>
-                            <TableCell className="border border-slate-200 dark:border-stone-800 text-right py-2.5 text-xs font-mono text-emerald-600 font-medium">
-                              {increaseAmtStr}
-                            </TableCell>
-                            <TableCell className="border border-slate-200 dark:border-stone-800 text-right py-2.5 text-xs font-mono text-red-600 font-medium">
-                              {decreaseAmtStr}
-                            </TableCell>
-                            <TableCell className="border border-slate-200 dark:border-stone-800 text-right py-2.5 text-xs font-mono text-slate-900 dark:text-stone-100 font-medium">
-                              {runningBalStr}
-                            </TableCell>
-                            <TableCell className="border border-slate-200 dark:border-stone-800 py-2.5 text-xs text-slate-500 dark:text-stone-400 max-w-[200px] truncate">
-                              {item.notes || "—"}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
+                          const inc =
+                            item.increaseAmount && item.increaseAmount > 0
+                              ? item.increaseAmount
+                              : 0;
+                          const dec =
+                            item.decreaseAmount && item.decreaseAmount > 0
+                              ? item.decreaseAmount
+                              : 0;
+                          runningAcc = runningAcc + inc - dec;
+
+                          const increaseAmtStr =
+                            inc > 0 ? formatRawNumber(inc) : "—";
+                          const decreaseAmtStr =
+                            dec > 0 ? formatRawNumber(dec) : "—";
+                          const runningBalStr = formatRawNumber(runningAcc);
+
+                          return (
+                            <TableRow
+                              key={item.id || idx}
+                              className="hover:bg-slate-50/50 dark:hover:bg-stone-850/30 border-b border-slate-100 dark:border-stone-850"
+                            >
+                              <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs font-mono text-slate-500">
+                                {stt}
+                              </TableCell>
+                              <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-700 dark:text-stone-300">
+                                {dateStr}
+                              </TableCell>
+                              <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs font-mono text-slate-700 dark:text-stone-300">
+                                {item.deliveryNoteCode || "—"}
+                              </TableCell>
+                              <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs text-slate-700 dark:text-stone-300">
+                                {invoiceDateStr}
+                              </TableCell>
+                              <TableCell className="border border-slate-200 dark:border-stone-800 text-center py-2.5 text-xs font-mono text-slate-700 dark:text-stone-300">
+                                {item.invoiceCode || "—"}
+                              </TableCell>
+                              <TableCell className="border border-slate-200 dark:border-stone-800 py-2.5 text-xs text-slate-800 dark:text-stone-200">
+                                {item.description || "—"}
+                              </TableCell>
+                              <TableCell className="border border-slate-200 dark:border-stone-800 text-right py-2.5 text-xs font-mono text-slate-750 dark:text-stone-350">
+                                {qtyStr}
+                              </TableCell>
+                              <TableCell className="border border-slate-200 dark:border-stone-800 text-right py-2.5 text-xs font-mono text-slate-750 dark:text-stone-350">
+                                {priceStr}
+                              </TableCell>
+                              <TableCell className="border border-slate-200 dark:border-stone-800 text-right py-2.5 text-xs font-mono text-emerald-600 font-medium">
+                                {increaseAmtStr}
+                              </TableCell>
+                              <TableCell className="border border-slate-200 dark:border-stone-800 text-right py-2.5 text-xs font-mono text-red-600 font-medium">
+                                {decreaseAmtStr}
+                              </TableCell>
+                              <TableCell className="border border-slate-200 dark:border-stone-800 text-right py-2.5 text-xs font-mono text-slate-900 dark:text-stone-100 font-medium">
+                                {runningBalStr}
+                              </TableCell>
+                              <TableCell className="border border-slate-200 dark:border-stone-800 py-2.5 text-xs text-slate-500 dark:text-stone-400 max-w-[200px] truncate">
+                                {item.notes || "—"}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        });
+                      })()}
 
                       {/* Empty state */}
                       {!items.length && (

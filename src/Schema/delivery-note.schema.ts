@@ -22,14 +22,19 @@ import {
 
 // ===== DeliveryNoteOrderResponse =====
 export const DeliveryNoteOrderResponseSchema =
-  GenDeliveryNoteOrderResponseSchema.passthrough();
+  GenDeliveryNoteOrderResponseSchema.extend({
+    customerId: z.number().int().nullable().optional(),
+  }).passthrough();
 export type DeliveryNoteOrderResponse = z.infer<
   typeof DeliveryNoteOrderResponseSchema
 >;
 
 // ===== DeliveryNoteResponse =====
 export const DeliveryNoteResponseSchema =
-  GenDeliveryNoteResponseSchema.passthrough();
+  GenDeliveryNoteResponseSchema.extend({
+    expectedDeliveryDate: z.string().nullable().optional(),
+    customerId: z.number().int().nullable().optional(),
+  }).passthrough();
 export type DeliveryNoteResponse = z.infer<typeof DeliveryNoteResponseSchema>;
 
 // ===== DeliveryNoteResponsePaginate =====
@@ -54,6 +59,7 @@ export const CreateDeliveryNoteRequestSchema =
   GenCreateDeliveryNoteRequestSchema.extend({
     customerAddressId: z.number().int().nullish(),
     notes: z.string().nullish(),
+    expectedDeliveryDate: z.string().nullable().optional(),
     lines: z
       .array(
         z.object({
@@ -81,6 +87,18 @@ export const UpdateDeliveryStatusRequestSchema =
   GenUpdateDeliveryStatusRequestSchema.passthrough();
 export type UpdateDeliveryStatusRequest = z.infer<
   typeof UpdateDeliveryStatusRequestSchema
+>;
+
+// ===== UpdateDeliveryNoteRequest =====
+export const UpdateDeliveryNoteRequestSchema = z
+  .object({
+    expectedDeliveryDate: z.string().nullable().optional(),
+    code: z.string().nullable().optional(),
+    customerAddressId: z.number().int().nullable().optional(),
+  })
+  .passthrough();
+export type UpdateDeliveryNoteRequest = z.infer<
+  typeof UpdateDeliveryNoteRequestSchema
 >;
 
 // ===== RecreateDeliveryNoteRequest =====
@@ -159,7 +177,10 @@ export type FailureReasonResponse = z.infer<typeof FailureReasonResponseSchema>;
 // ===== DeliveryNoteHistoryItemResponse =====
 // Một phiếu giao hàng trong lịch sử của mã hàng (đối chiếu khi tạo PGH)
 export const DeliveryNoteHistoryItemResponseSchema =
-  GenDeliveryNoteHistoryItemResponseSchema.passthrough();
+  GenDeliveryNoteHistoryItemResponseSchema.extend({
+    expectedDeliveryDate: z.string().nullable().optional(),
+    deliveryDate: z.string().nullable().optional(),
+  }).passthrough();
 export type DeliveryNoteHistoryItemResponse = z.infer<
   typeof DeliveryNoteHistoryItemResponseSchema
 >;

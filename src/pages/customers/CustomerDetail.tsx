@@ -131,19 +131,34 @@ export default function CustomerDetail() {
             >
               {/* Tab Triggers */}
               <TabsList className="w-fit mb-2 flex-shrink-0">
-                <TabsTrigger value="overview" className="text-sm">
+                <TabsTrigger
+                  value="overview"
+                  className="text-sm data-[state=active]:bg-emerald-600 data-[state=active]:text-white transition-colors"
+                >
                   Tổng quan
                 </TabsTrigger>
-                <TabsTrigger value="debt" className="text-sm">
+                <TabsTrigger
+                  value="debt"
+                  className="text-sm data-[state=active]:bg-emerald-600 data-[state=active]:text-white transition-colors"
+                >
                   Công nợ
                 </TabsTrigger>
-                <TabsTrigger value="invoices" className="text-sm">
+                <TabsTrigger
+                  value="invoices"
+                  className="text-sm data-[state=active]:bg-emerald-600 data-[state=active]:text-white transition-colors"
+                >
                   Hóa đơn
                 </TabsTrigger>
-                <TabsTrigger value="orders" className="text-sm">
+                <TabsTrigger
+                  value="orders"
+                  className="text-sm data-[state=active]:bg-emerald-600 data-[state=active]:text-white transition-colors"
+                >
                   Đơn hàng
                 </TabsTrigger>
-                <TabsTrigger value="favorites" className="text-sm">
+                <TabsTrigger
+                  value="favorites"
+                  className="text-sm data-[state=active]:bg-emerald-600 data-[state=active]:text-white transition-colors"
+                >
                   Ưa thích
                 </TabsTrigger>
               </TabsList>

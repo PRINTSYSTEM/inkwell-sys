@@ -1,11 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, ExternalLink, ChevronDown, ChevronRight, Package } from "lucide-react";
+import { Search, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
+import { OrderDetailDialog } from "@/components/orders/OrderDetailDialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -21,24 +20,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-import { useCustomerOrders, useCustomerStatistics } from "@/hooks/use-customer";
-import { Card, CardContent } from "@/components/ui/card";
-import { ShoppingCart, TrendingUp, Calendar } from "lucide-react";
+import { useCustomerOrders } from "@/hooks/use-customer";
 import { StatusBadge } from "@/components/ui/status-badge";
 import {
   orderStatusLabels,
   formatCurrency,
   formatDate,
 } from "@/lib/status-utils";
-import { cn } from "@/lib/utils";
 
 interface OrdersTabProps {
   customerId: number;
@@ -65,19 +53,18 @@ export function OrdersTab({ customerId, isActive = true }: OrdersTabProps) {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [page, setPage] = useState(1);
-  const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set());
+  const [inputPage, setInputPage] = useState(String(page));
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const [isOrderDialogOpen, setIsOrderDialogOpen] = useState(false);
   const pageSize = 10;
 
-  const toggleExpand = (orderId: number) => {
-    setExpandedOrders((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(orderId)) {
-        newSet.delete(orderId);
-      } else {
-        newSet.add(orderId);
-      }
-      return newSet;
-    });
+  useEffect(() => {
+    setInputPage(String(page));
+  }, [page]);
+
+  const handleOpenOrder = (orderId: number) => {
+    setSelectedOrderId(orderId);
+    setIsOrderDialogOpen(true);
   };
 
   const { data, isLoading } = useCustomerOrders({
@@ -89,69 +76,19 @@ export function OrdersTab({ customerId, isActive = true }: OrdersTabProps) {
     enabled: isActive,
   });
 
-  const { data: stats } = useCustomerStatistics(customerId, isActive);
-
-  const formatVND = (amount: number) => {
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-      maximumFractionDigits: 0,
-    }).format(amount);
+  const handlePageInputSubmit = () => {
+    const p = parseInt(inputPage, 10);
+    if (!isNaN(p) && data) {
+      const validPage = Math.max(1, Math.min(data.totalPages, p));
+      setPage(validPage);
+      setInputPage(String(validPage));
+    } else {
+      setInputPage(String(page));
+    }
   };
-
-  const lastOrder = data?.items?.[0];
-  const lastOrderDateStr = lastOrder?.createdAt
-    ? ((lastOrder.createdAt as any) instanceof Date
-      ? (lastOrder.createdAt as any).toLocaleDateString("vi-VN")
-      : new Date(lastOrder.createdAt as any).toLocaleDateString("vi-VN"))
-    : "Chưa có";
 
   return (
     <div className="space-y-4">
-      {/* Stats Cards */}
-      {stats && (
-        <div className="grid grid-cols-3 gap-3">
-          <Card className="border bg-background shadow-none">
-            <CardContent className="p-3 flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                <ShoppingCart className="h-4 w-4" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[11px] text-muted-foreground">Tổng đơn hàng</p>
-                <h4 className="text-base font-bold truncate">
-                  {stats.totalOrders || 0}
-                </h4>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border bg-background shadow-none">
-            <CardContent className="p-3 flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-50 text-green-600 dark:bg-green-950/50">
-                <TrendingUp className="h-4 w-4" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[11px] text-muted-foreground">Doanh thu</p>
-                <h4 className="text-base font-bold text-green-600 truncate">
-                  {formatVND(stats.totalOrderAmount || 0)}
-                </h4>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="border bg-background shadow-none">
-            <CardContent className="p-3 flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-orange-50 text-orange-600 dark:bg-orange-950/50">
-                <Calendar className="h-4 w-4" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[11px] text-muted-foreground">Đơn gần nhất</p>
-                <h4 className="text-base font-bold truncate">
-                  {lastOrderDateStr}
-                </h4>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
       {/* Filters */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1 max-w-xs">
@@ -178,8 +115,8 @@ export function OrdersTab({ customerId, isActive = true }: OrdersTabProps) {
       </div>
 
       {/* Table */}
-      <div className="border rounded-lg">
-        <div className="max-h-[400px] overflow-auto">
+      <div className="border rounded-lg overflow-hidden">
+        <div className="max-h-[500px] overflow-auto">
           {isLoading ? (
             <div className="p-4 space-y-2">
               {[...Array(5)].map((_, i) => (
@@ -187,150 +124,72 @@ export function OrdersTab({ customerId, isActive = true }: OrdersTabProps) {
               ))}
             </div>
           ) : (
-            <Table>
+            <Table className="[&_td]:py-2 [&_td]:px-3 [&_th]:py-2 [&_th]:px-3">
               <TableHeader className="sticky top-0 bg-background z-10">
                 <TableRow>
-                  <TableHead className="text-xs w-[32px]"></TableHead>
-                  <TableHead className="text-xs">Số HĐ</TableHead>
                   <TableHead className="text-xs">Mã đơn</TableHead>
                   <TableHead className="text-xs">Trạng thái</TableHead>
-                  <TableHead className="text-xs text-right">Tiền hàng</TableHead>
                   <TableHead className="text-xs text-right">Thanh toán</TableHead>
-                  <TableHead className="text-xs text-right">Tổng nợ</TableHead>
-                  <TableHead className="text-xs">Hạn thanh toán</TableHead>
+                  <TableHead className="text-xs text-right">Tổng cộng trước VAT</TableHead>
+                  <TableHead className="text-xs text-right">Tổng cộng sau VAT</TableHead>
                   <TableHead className="text-xs w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {data?.items.map((order) => {
                   const orderId = order.orderId || 0;
-                  const remainingAmount = order.remainingAmount ?? 0;
-                  const paymentDueDate = order.paymentDueDate;
-                  const isOverdue = order.isPaymentOverdue;
-                  const isExpanded = expandedOrders.has(orderId);
-                  const hasDetails = order.details && order.details.length > 0;
+                  const totalBeforeVat = order.totalAmount ?? 0;
+                  const totalAfterVat = Math.round(totalBeforeVat * 1.08);
 
                   return (
-                    <>
-                      <TableRow
-                        key={orderId}
-                        className="hover:bg-muted/50"
-                      >
-                        <TableCell className="p-1">
-                          {hasDetails ? (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                toggleExpand(orderId);
-                              }}
-                            >
-                              {isExpanded ? (
-                                <ChevronDown className="h-4 w-4" />
-                              ) : (
-                                <ChevronRight className="h-4 w-4" />
-                              )}
-                            </Button>
-                          ) : null}
-                        </TableCell>
-                        <TableCell 
-                          className="text-xs font-mono cursor-pointer"
-                          onClick={() => navigate(`/orders/${orderId}`)}
+                    <TableRow
+                      key={orderId}
+                      className="hover:bg-muted/50 cursor-pointer text-xs"
+                      onClick={() => handleOpenOrder(orderId)}
+                    >
+                      <TableCell className="font-mono font-bold text-slate-900 dark:text-stone-100">
+                        {order.orderCode || "-"}
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge
+                          status={order.status || ""}
+                          label={
+                            orderStatusLabels[order.status || ""] ||
+                            order.statusName ||
+                            order.status ||
+                            "N/A"
+                          }
+                        />
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums text-green-600 font-medium">
+                        {formatCurrency(order.paidAmount || order.depositAmount || 0)}
+                      </TableCell>
+                      <TableCell className="text-right font-medium tabular-nums text-slate-700 dark:text-stone-300">
+                        {totalBeforeVat > 0 ? formatCurrency(totalBeforeVat) : "—"}
+                      </TableCell>
+                      <TableCell className="text-right font-bold tabular-nums text-slate-900 dark:text-stone-100">
+                        {totalBeforeVat > 0 ? formatCurrency(totalAfterVat) : "—"}
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenOrder(orderId);
+                          }}
                         >
-                          {order.invoiceNumber || "-"}
-                        </TableCell>
-                        <TableCell 
-                          className="text-xs font-mono font-medium cursor-pointer"
-                          onClick={() => navigate(`/orders/${orderId}`)}
-                        >
-                          {order.orderCode || "-"}
-                        </TableCell>
-                        <TableCell 
-                          className="text-xs cursor-pointer"
-                          onClick={() => navigate(`/orders/${orderId}`)}
-                        >
-                          <StatusBadge
-                            status={order.status || ""}
-                            label={
-                              orderStatusLabels[order.status || ""] ||
-                              order.statusName ||
-                              order.status ||
-                              "N/A"
-                            }
-                          />
-                        </TableCell>
-                        <TableCell 
-                          className="text-xs text-right font-medium tabular-nums cursor-pointer"
-                          onClick={() => navigate(`/orders/${orderId}`)}
-                        >
-                          {(() => {
-                            const billableTotal = order.details?.reduce((sum, d) => {
-                              const qty = d.netQtyTotal ?? d.quantity ?? 0;
-                              return sum + (qty * (d.unitPrice ?? 0));
-                            }, 0);
-                            return formatCurrency(billableTotal ?? order.totalAmount ?? 0);
-                          })()}
-                        </TableCell>
-                        <TableCell 
-                          className="text-xs text-right tabular-nums text-green-600 cursor-pointer"
-                          onClick={() => navigate(`/orders/${orderId}`)}
-                        >
-                          {formatCurrency(order.paidAmount || order.depositAmount || 0)}
-                        </TableCell>
-                        <TableCell
-                          className={`text-xs text-right font-medium tabular-nums cursor-pointer ${
-                            remainingAmount > 0
-                              ? isOverdue
-                                ? "text-destructive font-semibold"
-                                : "text-amber-600"
-                              : "text-muted-foreground"
-                          }`}
-                          onClick={() => navigate(`/orders/${orderId}`)}
-                        >
-                          {remainingAmount > 0
-                            ? formatCurrency(remainingAmount)
-                            : "—"}
-                        </TableCell>
-                        <TableCell
-                          className={`text-xs cursor-pointer ${
-                            isOverdue ? "text-destructive font-semibold" : ""
-                          }`}
-                          onClick={() => navigate(`/orders/${orderId}`)}
-                        >
-                          {paymentDueDate
-                            ? formatDate(paymentDueDate)
-                            : "-"}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/orders/${orderId}`);
-                            }}
-                          >
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                      {isExpanded && hasDetails && (
-                        <TableRow>
-                          <TableCell colSpan={9} className="p-0 bg-muted/20">
-                            <OrderDetailsSection orderDetails={order.details || []} />
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </>
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
                   );
                 })}
                 {!data?.items?.length && (
                   <TableRow>
                     <TableCell
-                      colSpan={9}
+                      colSpan={6}
                       className="text-center text-muted-foreground py-12"
                     >
                       Chưa có đơn hàng nào
@@ -343,164 +202,65 @@ export function OrdersTab({ customerId, isActive = true }: OrdersTabProps) {
         </div>
       </div>
 
-      {/* Pagination */}
-      {data && data.totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-muted-foreground">
-            Hiển thị {(page - 1) * pageSize + 1} -{" "}
-            {Math.min(page * pageSize, data.total)} / {data.total}
-          </p>
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className={
-                    page === 1
-                      ? "pointer-events-none opacity-50"
-                      : "cursor-pointer"
-                  }
-                />
-              </PaginationItem>
-              {[...Array(Math.min(5, data.totalPages))].map((_, i) => {
-                const pageNum = i + 1;
-                return (
-                  <PaginationItem key={pageNum}>
-                    <PaginationLink
-                      isActive={page === pageNum}
-                      onClick={() => setPage(pageNum)}
-                      className="cursor-pointer"
-                    >
-                      {pageNum}
-                    </PaginationLink>
-                  </PaginationItem>
-                );
-              })}
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() =>
-                    setPage((p) => Math.min(data.totalPages, p + 1))
-                  }
-                  className={
-                    page === data.totalPages
-                      ? "pointer-events-none opacity-50"
-                      : "cursor-pointer"
-                  }
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+      {/* Pagination - Input page box style */}
+      {data && (data.totalPages > 1 || data.total > 0) && (
+        <div className="flex items-center justify-between pt-2">
+          <div className="text-xs text-stone-600 dark:text-stone-400 font-medium">
+            Trang <span className="font-bold text-stone-900 dark:text-stone-100">{page}</span> /{" "}
+            {data.totalPages || 1} • Hiển thị{" "}
+            <span className="font-bold text-stone-900 dark:text-stone-100">{data.total}</span> đơn hàng
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="h-8 w-8 p-0 border-stone-200"
+              title="Trang trước"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-stone-100 dark:bg-stone-800 rounded-lg border border-stone-200 dark:border-stone-700">
+              <input
+                type="number"
+                min={1}
+                max={data.totalPages || 1}
+                value={inputPage}
+                onChange={(e) => setInputPage(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handlePageInputSubmit();
+                }}
+                onBlur={handlePageInputSubmit}
+                className="w-10 h-6 text-center font-bold text-xs bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-600 rounded text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                title="Nhập số trang và nhấn Enter để chuyển nhanh"
+              />
+              <span className="text-xs font-bold text-stone-500 dark:text-stone-400">
+                / {data.totalPages || 1}
+              </span>
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(data.totalPages, p + 1))}
+              disabled={page >= (data.totalPages || 1)}
+              className="h-8 w-8 p-0 border-stone-200"
+              title="Trang tiếp theo"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       )}
-    </div>
-  );
-}
 
-// Component to display order design details
-function OrderDetailsSection({
-  orderDetails,
-}: {
-  orderDetails: Array<{
-    id?: number;
-    designCode?: string | null;
-    designName?: string | null;
-    quantity?: number;
-    netQtyTotal?: number;
-    unitPrice?: number;
-    totalPrice?: number;
-    status?: string | null;
-  }>;
-}) {
-  if (!orderDetails || orderDetails.length === 0) {
-    return (
-      <div className="p-3 text-center text-xs text-muted-foreground">
-        Chưa có chi tiết sản phẩm
-      </div>
-    );
-  }
-
-  return (
-    <div className="p-3 space-y-3">
-      <div className="flex items-center gap-2 mb-2">
-        <Separator className="flex-1" />
-        <div className="flex items-center gap-2">
-          <Package className="h-3.5 w-3.5 text-muted-foreground" />
-          <span className="text-xs font-medium text-muted-foreground">
-            Chi tiết sản phẩm ({orderDetails.length})
-          </span>
-        </div>
-        <Separator className="flex-1" />
-      </div>
-      <div className="space-y-2">
-        {orderDetails.map((detail, index) => {
-          const actualQty = detail.netQtyTotal ?? detail.quantity ?? 0;
-          const billableAmount = actualQty * (detail.unitPrice ?? 0);
-
-          return (
-            <div
-              key={detail.id || index}
-              className="rounded-lg border bg-background hover:bg-muted/50 transition-colors p-3"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs text-muted-foreground">
-                      #{index + 1}
-                    </span>
-                    {detail.designCode && (
-                      <Badge
-                        variant="outline"
-                        className="text-[10px] px-1.5 py-0 font-mono"
-                      >
-                        {detail.designCode}
-                      </Badge>
-                    )}
-                    {detail.status && (
-                      <StatusBadge
-                        status={detail.status}
-                        label={orderStatusLabels[detail.status] || detail.status}
-                        className="text-[10px] px-1.5 py-0"
-                      />
-                    )}
-                  </div>
-                  {detail.designName && (
-                    <p className="text-sm font-medium">{detail.designName}</p>
-                  )}
-                </div>
-                <div className="flex items-center gap-4 text-xs">
-                  <div className="text-right">
-                    <p className="text-muted-foreground">SL đặt</p>
-                    <p className="font-semibold">
-                      {detail.quantity?.toLocaleString() || 0}
-                    </p>
-                  </div>
-                  <Separator orientation="vertical" className="h-8" />
-                  <div className="text-right">
-                    <p className="text-muted-foreground">SL thực</p>
-                    <p className={cn("font-semibold", detail.netQtyTotal !== undefined && "text-primary")}>
-                      {actualQty.toLocaleString()}
-                    </p>
-                  </div>
-                  <Separator orientation="vertical" className="h-8" />
-                  <div className="text-right">
-                    <p className="text-muted-foreground">Đơn giá</p>
-                    <p className="font-semibold">
-                      {formatCurrency(detail.unitPrice || 0)}
-                    </p>
-                  </div>
-                  <Separator orientation="vertical" className="h-8" />
-                  <div className="text-right">
-                    <p className="text-muted-foreground">Thành tiền</p>
-                    <p className="font-semibold text-primary">
-                      {formatCurrency(billableAmount)}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      <OrderDetailDialog
+        orderId={selectedOrderId}
+        open={isOrderDialogOpen}
+        onOpenChange={setIsOrderDialogOpen}
+      />
     </div>
   );
 }

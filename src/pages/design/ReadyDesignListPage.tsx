@@ -814,7 +814,7 @@ export default function ReadyDesignListPage() {
                   <TableHead className="h-9 text-sm font-bold w-[80px] leading-tight">Chất liệu</TableHead>
                   <TableHead className="h-9 text-sm font-bold min-w-[220px]">Ghi chú</TableHead>
                   <TableHead className="h-9 text-sm font-bold text-right pr-4 w-[95px] leading-tight">Ngày cập nhật</TableHead>
-                  <TableHead className="h-9 text-sm font-bold text-center pr-2 w-[65px]">Thao tác</TableHead>
+                  <TableHead className="h-9 text-sm font-bold text-center px-1 w-[80px]">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1021,14 +1021,14 @@ export default function ReadyDesignListPage() {
                             </Tooltip>
                           </TooltipProvider>
                         </TableCell>
-                        <TableCell className="py-2 text-center pr-2" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center gap-1 justify-center flex-wrap">
+                        <TableCell className="py-2 text-center px-1 w-[80px]" onClick={(e) => e.stopPropagation()}>
+                          <div className="grid grid-cols-2 gap-0.5 place-items-center w-fit mx-auto">
                             <Button
                               variant="ghost"
                               size="icon"
                               disabled={updatingUrgentId === design.id}
                               className={cn(
-                                "h-8 w-8 rounded-lg transition-all",
+                                "h-7 w-7 rounded-lg transition-all",
                                 design.isUrgent
                                   ? "text-red-600 bg-red-100/90 hover:bg-red-200 dark:bg-red-950/60 dark:text-red-400"
                                   : "text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/30 dark:hover:text-red-400"
@@ -1037,15 +1037,15 @@ export default function ReadyDesignListPage() {
                               title={design.isUrgent ? "Hủy giao gấp" : "Đánh dấu giao gấp"}
                             >
                               {updatingUrgentId === design.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
                               ) : (
-                                <Flame className={cn("h-4 w-4", design.isUrgent ? "fill-red-600 text-red-600 animate-pulse" : "")} />
+                                <Flame className={cn("h-3.5 w-3.5", design.isUrgent ? "fill-red-600 text-red-600 animate-pulse" : "")} />
                               )}
                             </Button>
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-amber-600 hover:bg-amber-50 hover:text-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/30 rounded-lg"
+                              className="h-7 w-7 text-amber-600 hover:bg-amber-50 hover:text-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/30 rounded-lg"
                               onClick={() => setSelectedDesignForNotes({
                                 id: design.designId || design.id,
                                 code: design.designCode || (design as any).code,
@@ -1054,14 +1054,14 @@ export default function ReadyDesignListPage() {
                               })}
                               title="Sửa / thêm ghi chú thiết kế"
                             >
-                              <Pencil className="h-4 w-4" />
+                              <Pencil className="h-3.5 w-3.5" />
                             </Button>
                             {isPendingUpdate && (
                               <Button
                                 variant="outline"
                                 size="sm"
                                 disabled={resettingId === design.id}
-                                className="h-7 px-2 text-[11px] font-bold border-amber-400 bg-amber-50 text-amber-800 hover:bg-amber-100 shadow-sm shrink-0"
+                                className="col-span-2 h-6 px-1.5 text-[10px] font-bold border-amber-400 bg-amber-50 text-amber-800 hover:bg-amber-100 shadow-sm shrink-0 my-0.5"
                                 onClick={() => handleResetQuantity(design.id!)}
                                 title="Đồng bộ số lượng khả dụng và hoàn tất cập nhật đơn hàng"
                               >
@@ -1077,21 +1077,21 @@ export default function ReadyDesignListPage() {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-8 w-8 text-amber-650 hover:bg-amber-50 hover:text-amber-700 dark:text-amber-550 dark:hover:bg-amber-950/30 rounded-lg"
+                                className="h-7 w-7 text-amber-650 hover:bg-amber-50 hover:text-amber-700 dark:text-amber-550 dark:hover:bg-amber-950/30 rounded-lg"
                                 onClick={() => setDesignToCancelFromPool(design)}
                                 title="Hủy thiết kế và xóa khỏi kho"
                               >
-                                <XCircle className="h-4 w-4" />
+                                <XCircle className="h-3.5 w-3.5" />
                               </Button>
                             )}
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive rounded-lg"
+                              className="h-7 w-7 text-destructive hover:bg-destructive/10 hover:text-destructive rounded-lg"
                               onClick={() => setDesignToDelete(design)}
                               title="Xóa thiết kế khỏi kho"
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         </TableCell>
