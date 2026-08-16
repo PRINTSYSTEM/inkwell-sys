@@ -360,8 +360,21 @@ export default function StockSummary() {
             <div className="flex gap-2 flex-wrap">
               <Button
                 onClick={() => {
+                  const url = selectedVendorId !== "all"
+                    ? `/stock/stock-ins/create?vendorId=${selectedVendorId}`
+                    : `/stock/stock-ins/create`;
+                  navigate(url);
+                }}
+                size="sm"
+                className="cursor-pointer text-xs h-9 rounded-lg bg-[#93631F] hover:bg-[#7a521a] text-white font-semibold shadow-sm"
+              >
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                Tạo phiếu nhập kho
+              </Button>
+              <Button
+                onClick={() => {
                   if (selectedVendorId === "all") {
-                    toast.error("Vui lòng chọn một Nhà cung cấp ở bộ lọc trước khi nhập vật tư mới!");
+                    toast.error("Vui lòng chọn một Nhà cung cấp ở bộ lọc trước khi tạo nhanh!");
                     return;
                   }
                   setIsCreateOpen(true);
@@ -370,8 +383,7 @@ export default function StockSummary() {
                 size="sm"
                 className="cursor-pointer border-slate-200 text-xs h-9 rounded-lg hover:bg-slate-50 text-foreground"
               >
-                <Plus className="h-3.5 w-3.5 mr-1.5" />
-                Nhập vật tư mới
+                Tạo nhanh vật tư lẻ
               </Button>
               <Button
                 onClick={() => {

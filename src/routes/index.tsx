@@ -73,6 +73,8 @@ const ProofingOutput = lazy(() => import("@/pages/prepress/PrepressOutput"));
 // Production
 const Production = lazy(() => import("@/pages/production/ProductionList"));
 const ProductionDispatch = lazy(() => import("@/pages/production/ProductionDispatch"));
+const PrintOrdersPage = lazy(() => import("@/pages/production/PrintOrdersPage"));
+const PostPrintProductionPage = lazy(() => import("@/pages/production/PostPrintProductionPage"));
 const KCSPage = lazy(() => import("@/pages/production/KCSPage"));
 const DefectRecordListPage = lazy(
   () => import("@/pages/production/DefectRecordListPage")
@@ -586,6 +588,22 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            path: "print-orders",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <PrintOrdersPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "post-print",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <PostPrintProductionPage />
+              </Suspense>
+            ),
+          },
+          {
             path: "kcs",
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
@@ -602,6 +620,22 @@ export const router = createBrowserRouter([
             ),
           },
         ],
+      },
+      {
+        path: "production/print-orders",
+        element: (
+          <Suspense fallback={<PageLoadingFallback />}>
+            <PrintOrdersPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "production/post-print",
+        element: (
+          <Suspense fallback={<PageLoadingFallback />}>
+            <PostPrintProductionPage />
+          </Suspense>
+        ),
       },
       {
         path: "production/defect-records",

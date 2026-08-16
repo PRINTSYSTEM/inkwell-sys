@@ -125,11 +125,7 @@ export function PaymentList({ listFilterType }: PaymentListProps) {
 
     const allFiltered = data.items.filter((order) => {
       const paymentStatus = derivePaymentStatus(order.totalAmount, order.depositAmount);
-      const matchesPaymentStatus = paymentStatusFilter === "all" || paymentStatus === paymentStatusFilter;
-      return (
-        matchesPaymentStatus &&
-        (order as { isDebtApproved?: boolean }).isDebtApproved !== true
-      );
+      return paymentStatusFilter === "all" || paymentStatus === paymentStatusFilter;
     });
 
     if (clientSideMode) {

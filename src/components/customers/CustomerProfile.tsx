@@ -82,7 +82,6 @@ export function CustomerProfile({
           address: formData.address,
           type: customer.type,
           scrapRate: formData.scrapRate,
-          currentDebt: formData.currentDebt,
           maxDebt: formData.maxDebt,
         },
       });
@@ -515,29 +514,14 @@ export function CustomerProfile({
                       >
                         Công nợ hiện tại
                       </p>
-                      {isEditing ? (
-                        <Input
-                          type="number"
-                          value={formData.currentDebt}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              currentDebt: Number(e.target.value),
-                            })
-                          }
-                          className="h-8 mt-1"
-                          placeholder="Nhập công nợ hiện tại"
-                        />
-                      ) : (
-                        <p
-                          className={cn(
-                            "font-semibold text-foreground",
-                            isDesignRole ? "text-xl font-bold" : "text-sm",
-                          )}
-                        >
-                          {(customer.currentDebt ?? 0).toLocaleString("vi-VN")} ₫
-                        </p>
-                      )}
+                      <p
+                        className={cn(
+                          "font-semibold text-foreground mt-1",
+                          isDesignRole ? "text-xl font-bold" : "text-sm",
+                        )}
+                      >
+                        {(customer.currentDebt ?? 0).toLocaleString("vi-VN")} ₫
+                      </p>
                     </div>
                   </div>
                 )}

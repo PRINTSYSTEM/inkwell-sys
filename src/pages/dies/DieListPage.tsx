@@ -59,9 +59,8 @@ export default function DieListPage() {
   const [dieName, setDieName] = useState("");
   const [location, setLocation] = useState("");
   const [sizeFilter, setSizeFilter] = useState("");
-  const [usableFilter, setUsableFilter] = useState<
-    "all" | "usable" | "unusable"
-  >("all");
+  const [usableFilter, setUsableFilter] = useState<"all" | "usable" | "unusable">("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedDie, setSelectedDie] = useState<DieResponse | null>(null);
   const [copiedProofingOrderCode, setCopiedProofingOrderCode] = useState<
@@ -75,6 +74,7 @@ export default function DieListPage() {
     pageSize,
     q: searchTerm || "",
     location: location || "",
+    category: categoryFilter === "all" ? undefined : categoryFilter,
     isUsable:
       usableFilter === "all" ? null : usableFilter === "usable" ? true : false,
   });
@@ -125,6 +125,7 @@ export default function DieListPage() {
     setLocation("");
     setSizeFilter("");
     setUsableFilter("all");
+    setCategoryFilter("all");
     setPage(1);
   };
 
@@ -237,6 +238,23 @@ export default function DieListPage() {
               />
             </div>
             <Select
+              value={categoryFilter}
+              onValueChange={(v) => {
+                setCategoryFilter(v);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="w-[160px] h-9 text-sm bg-muted/50 border-0">
+                <Filter className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                <SelectValue placeholder="Phân loại" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả phân loại</SelectItem>
+                <SelectItem value="box">Hộp (Box)</SelectItem>
+                <SelectItem value="decal">Decal</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select
               value={usableFilter}
               onValueChange={(v: "all" | "usable" | "unusable") => {
                 setUsableFilter(v);
@@ -296,6 +314,7 @@ export default function DieListPage() {
                     <TableRow className="bg-muted/50 hover:bg-muted/50">
                       <TableHead className="w-[80px] h-9 px-3 text-xs font-semibold text-slate-700">Hình ảnh</TableHead>
                       <TableHead className="h-9 px-3 text-xs font-semibold text-slate-700">Mã khuôn</TableHead>
+                      <TableHead className="h-9 px-3 text-xs font-semibold text-slate-700">Loại khuôn</TableHead>
                       <TableHead className="h-9 px-3 text-xs font-semibold text-slate-700">Kích thước</TableHead>
                       <TableHead className="h-9 px-3 text-xs font-semibold text-slate-700">Nhà cung cấp</TableHead>
                       <TableHead className="h-9 px-3 text-center text-xs font-semibold text-slate-700">Lần dùng</TableHead>
@@ -308,7 +327,9 @@ export default function DieListPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {dies.map((die) => (
+                    {dies.map((die) => {
+                      const isBox = die.category === "box" || !die.category;
+                      return (
                       <TableRow key={die.id} className="hover:bg-muted/30 transition-colors border-b border-slate-100">
                         <TableCell className="py-1 px-3">
                           {die.imageUrl ? (
@@ -329,6 +350,17 @@ export default function DieListPage() {
                         </TableCell>
                         <TableCell className="py-1 px-3 font-medium text-xs">
                           {die.code || "—"}
+                        </TableCell>
+                        <TableCell className="py-1 px-3 text-xs">
+                          {isBox ? (
+                            <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-200 text-[10px]">
+                              Hộp
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 text-[10px] font-bold">
+                              Decal
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell className="py-1 px-3 text-xs text-slate-600">{die.size || "—"}</TableCell>
                         <TableCell className="py-1 px-3 text-xs text-slate-600">{die.vendorName || "—"}</TableCell>
@@ -421,7 +453,8 @@ export default function DieListPage() {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    );
+                  })}
                   </TableBody>
                 </Table>
               </div>

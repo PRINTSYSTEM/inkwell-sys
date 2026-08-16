@@ -539,11 +539,22 @@ export default function OrderList() {
                                   <Table className="mb-0">
                                     <TableBody>
                                       {orderDetails.map((orderDetail) => {
-                                        // Can be OrderDetailListResponse or OrderDetailResponseForDesigner
                                         const detail = orderDetail as any;
 
                                         const designId = detail.design?.id ?? detail.designId;
-                                        const designImageUrl = detail.design?.designImageUrl ?? detail.designImageUrl;
+                                        const designThumbnailUrl =
+                                          detail.design?.designThumbnailUrl ||
+                                          detail.designThumbnailUrl ||
+                                          detail.design?.thumbnailUrl ||
+                                          detail.thumbnailUrl ||
+                                          detail.design?.designImageUrl ||
+                                          detail.designImageUrl;
+                                        const fullImageUrl =
+                                          detail.design?.designImageUrl ||
+                                          detail.designImageUrl ||
+                                          detail.design?.imageUrl ||
+                                          detail.imageUrl ||
+                                          designThumbnailUrl;
                                         const designCode = detail.design?.code ?? detail.designCode;
                                         const designName = detail.design?.designName ?? detail.designName;
                                         const status = detail.design?.status ?? detail.status;
@@ -560,9 +571,9 @@ export default function OrderList() {
                                             {/* Ảnh */}
                                             <TableCell className="w-[50px] py-1 align-middle">
                                               <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded bg-muted/60 flex items-center justify-center">
-                                                {designImageUrl ? (
+                                                {designThumbnailUrl ? (
                                                   <img
-                                                    src={designImageUrl}
+                                                    src={designThumbnailUrl}
                                                     alt={
                                                       designCode || "Thiết kế"
                                                     }
@@ -571,7 +582,7 @@ export default function OrderList() {
                                                     className="h-full w-full object-cover cursor-zoom-in"
                                                     onClick={(e) =>
                                                       handleImageClick(
-                                                        designImageUrl!,
+                                                        fullImageUrl || designThumbnailUrl,
                                                         e,
                                                       )
                                                     }

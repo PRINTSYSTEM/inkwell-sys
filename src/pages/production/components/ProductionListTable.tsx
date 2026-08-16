@@ -162,6 +162,7 @@ function getStatusColorClass(status: string) {
     case "in_progress":
       return "text-amber-700 bg-amber-100 hover:bg-amber-200 dark:text-amber-300 dark:bg-amber-900/40";
     case "done":
+    case "completed":
       return "text-emerald-700 bg-emerald-100 hover:bg-emerald-200 dark:text-emerald-300 dark:bg-emerald-900/40";
     case "blocked":
     case "cancelled":
@@ -206,7 +207,7 @@ function InlineStepStatus({
     >
       <Select
         value={
-          step.status || "pending"
+          step.status === "completed" ? "done" : (step.status || "pending")
         }
         onValueChange={handleStatusChange}
         disabled={!isEnabled}
@@ -446,7 +447,7 @@ function StepItem({
         <>
           <Select
             value={
-              step.status || "pending"
+              step.status === "completed" ? "done" : (step.status || "pending")
             }
             onValueChange={(val: any) => handleUpdate({ status: val })}
             disabled={!isEnabled}

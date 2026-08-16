@@ -129,9 +129,8 @@ export default function CreateCustomer() {
       type: form.type || undefined,
       // Ensure scrapRate is sent to API. Default to 0.005 when not provided.
       scrapRate: form.scrapRate ?? 0.005,
-      // Only send debt fields if user has permission
+      // Only send maxDebt if user has permission
       ...(canEditDebt && {
-        currentDebt: form.currentDebt,
         maxDebt: Number(form.maxDebt) || 0,
       }),
     };

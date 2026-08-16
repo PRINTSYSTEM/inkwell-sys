@@ -9,9 +9,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -45,7 +47,9 @@ import {
   Hash,
   User,
   Ruler,
+  Package,
 } from "lucide-react";
+import { DieListDialog } from "@/components/dies/DieListDialog";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -146,6 +150,9 @@ export function DieExportDialog({
   const [dieHeight, setDieHeight] = useState<number | undefined>(undefined);
   const [dieImage, setDieImage] = useState<File | null>(null);
   const [dieImagePreview, setDieImagePreview] = useState<string | null>(null);
+  const [dieCategory, setDieCategory] = useState<string>("box");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [selectedDecalDieSizes, setSelectedDecalDieSizes] = useState<string[]>([]);
   const [isReusable, setIsReusable] = useState<boolean>(true);
 
   const queryClient = useQueryClient();
@@ -171,6 +178,7 @@ export function DieExportDialog({
       size: debouncedSize.trim() || "",
       customerName: debouncedCustomerName.trim() || "",
       proofingOrderCode: debouncedProofingOrderCode.trim() || "",
+      category: categoryFilter === "all" ? undefined : categoryFilter,
       isUsable: true,
       pageSize: 100,
       pageNumber: 1,
@@ -178,6 +186,7 @@ export function DieExportDialog({
   }, [
     open,
     dieAction,
+    categoryFilter,
     debouncedDesignCode,
     debouncedSize,
     debouncedCustomerName,
@@ -267,6 +276,29 @@ export function DieExportDialog({
         ),
       }));
   }, [proofingOrderDesigns, formatDimensions]);
+
+  // Candidate size options for Decal dies (dieSizes)
+  const candidateDecalSizes = useMemo(() => {
+    const list: { label: string; value: string }[] = [];
+    allDesignDimensions.forEach((d) => {
+      const parts = [d.length, d.width, d.height].filter((n) => n != null && n > 0);
+      if (parts.length > 0) {
+        const val = parts.join("×");
+        if (!list.some((item) => item.value === val)) {
+          list.push({ label: `Bài ${d.code || "mẫu"}`, value: val });
+        }
+      }
+    });
+
+    const typedParts = [dieLength, dieWidth, dieHeight].filter((n) => n != null && n > 0);
+    if (typedParts.length > 0) {
+      const customVal = typedParts.join("×");
+      if (!list.some((item) => item.value === customVal)) {
+        list.push({ label: "Kích thước vừa nhập", value: customVal });
+      }
+    }
+    return list;
+  }, [allDesignDimensions, dieLength, dieWidth, dieHeight]);
 
   // Helper function to check if die matches design type
   const matchesDesignType = useCallback(
@@ -437,8 +469,12 @@ export function DieExportDialog({
       setDieLength(undefined);
       setDieWidth(undefined);
       setDieHeight(undefined);
-      setDieImage(null);
-      setDieImagePreview(null);
+      const itemTypeStr = (proofingOrder?.itemType || (proofingOrder as any)?.items?.[0]?.designTypeName || "").toLowerCase();
+      const isDecalOrder = itemTypeStr.includes("decal") || itemTypeStr.includes("de cal") || itemTypeStr.includes("nhãn") || itemTypeStr.includes("sticker");
+      const defaultCategory = isDecalOrder ? "decal" : "box";
+      setDieCategory(defaultCategory);
+      setCategoryFilter(defaultCategory);
+      setSelectedDecalDieSizes([]);
       setIsReusable(true);
     }
   }, [open, initialSelectedDieIds, initialSize]);
@@ -680,6 +716,11 @@ export function DieExportDialog({
           ? convertLocalDateTimeToISO(receivedAtManual)
           : formatLocalDateTimeWithOffset(new Date(Date.now() + 24 * 60 * 60 * 1000));
 
+        const calculatedDieSize =
+          dieCategory === "decal" && selectedDecalDieSizes.length > 0
+            ? selectedDecalDieSizes.join(", ")
+            : dieSize || undefined;
+
         const newDie = await createDie({
           vendorId: finalVendorId || undefined,
           estimatedReceiveAt: estimatedReceiveAt,
@@ -689,7 +730,8 @@ export function DieExportDialog({
           name: dieName || undefined,
           code: dieCode || undefined,
           type: dieType || undefined,
-          size: dieSize || undefined,
+          size: calculatedDieSize,
+          category: dieCategory || "box",
           length: dieLength,
           width: dieWidth,
           height: dieHeight,
@@ -794,982 +836,702 @@ export function DieExportDialog({
           </DialogTitle>
         </DialogHeader>
 
-        {/* MAIN SPLIT LAYOUT */}
-        <div className="flex-1 gap-4 overflow-hidden grid grid-cols-[7fr,5fr]">
-          {/* LEFT: EXISTING DIE SELECTION + OVERVIEW */}
-          <div className="flex-1 flex flex-col overflow-hidden border rounded-lg bg-background">
-            <div className="border-b px-4 py-3 flex items-center justify-between gap-3">
-              <div className="space-y-1">
-                <p className="text-sm font-medium">Chọn khuôn bế</p>
-                <p className="text-xs text-muted-foreground">
-                  {mode === "replace" ? "Chọn một khuôn bế mới để thay thế." : mode === "add" ? "Chọn một khuôn bế để thêm vào." : "Chọn đúng số lượng khuôn cần xuất theo mã bài."}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs text-muted-foreground bg-muted/20">
-                  <span>Đã chọn</span>
-                  <span className="font-semibold text-foreground">
-                    {selectedDieIds.length}
-                  </span>
-                  <span>khuôn</span>
+        {/* MAIN LAYOUT */}
+        {dieAction === "create" ? (
+          /* CREATE NEW DIE MODE: Full-width 2-column layout without empty left void */
+          <div className="flex-1 min-h-0 overflow-y-auto p-4 border rounded-xl bg-white shadow-sm">
+            <div className="flex items-center justify-between pb-3 mb-4 border-b">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs font-medium cursor-pointer"
+                    onClick={() => {
+                      setDieAction("select");
+                      setSelectedDieIds([]);
+                    }}
+                  >
+                    Chọn khuôn cũ
+                  </Button>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="h-7 text-xs font-semibold cursor-pointer shadow-none"
+                    onClick={() => setDieAction("create")}
+                  >
+                    Đặt khuôn mới
+                  </Button>
                 </div>
+                <span className="text-xs text-slate-500">
+                  Điền đầy đủ thông tin bên dưới để tạo & xuất khuôn mới
+                </span>
               </div>
             </div>
 
-            {/* toggle select/create and actions - compact, always visible */}
-            <div className="px-4 pt-3 pb-2 flex items-center justify-between gap-3 border-b bg-muted/40">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Button
-                  variant={dieAction === "select" ? "default" : "outline"}
-                  size="sm"
-                  className="rounded-full font-medium"
-                  onClick={() => {
-                    setDieAction("select");
-                    setSelectedDieIds([]);
-                  }}
-                >
-                  Chọn khuôn cũ
-                </Button>
-                <Button
-                  variant={dieAction === "create" ? "default" : "outline"}
-                  size="sm"
-                  className="rounded-full font-medium"
-                  onClick={() => {
-                    setDieAction("create");
-                    setSelectedDieIds([]);
-                  }}
-                >
-                  Đặt khuôn mới
-                </Button>
-              </div>
-              
-              {dieAction === "select" && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => setIsBrowsingDie(true)}
-                  className="h-8 text-xs rounded-full font-semibold bg-primary/10 text-primary hover:bg-primary/20"
-                >
-                  <Search className="h-3.5 w-3.5 mr-1.5" />
-                  Duyệt kho khuôn
-                </Button>
-              )}
-            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* LEFT COLUMN: Phân loại, Tham chiếu kích thước & Ảnh */}
+              <div className="space-y-5">
+                {/* Phân loại khuôn bế */}
+                <div className="space-y-1.5 p-3 rounded-lg border border-slate-200 bg-slate-50/50">
+                  <Label htmlFor="create-die-category" className="text-xs font-bold text-slate-800">
+                    Phân loại khuôn bế <span className="text-destructive">*</span>
+                  </Label>
+                  <Select value={dieCategory} onValueChange={setDieCategory}>
+                    <SelectTrigger id="create-die-category" className="h-9 text-xs font-medium bg-white border-slate-200">
+                      <SelectValue placeholder="Chọn phân loại khuôn..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="box" className="text-xs">Hộp (Khuôn Hộp)</SelectItem>
+                      <SelectItem value="decal" className="text-xs">Decal (Khuôn Decal)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            {/* CONTENT AREA LEFT: either die grid or compact hint when creating */}
-            <div className="flex-1 flex flex-col overflow-hidden px-4 py-3 gap-3">
-              {dieAction === "select" ? (
-                <>
-                  {/* Search Section */}
-                  <div className="shrink-0 space-y-3 pb-3 border-b">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {/* Design Code Search */}
-                      <div className="space-y-1">
-                        <Label
-                          htmlFor="design-code-search"
-                          className="text-xs font-medium"
-                        >
-                          Mã hàng
-                        </Label>
-                        <div className="relative">
-                          <Hash className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                          <Input
-                            id="design-code-search"
-                            placeholder="Nhập mã hàng..."
-                            value={designCode}
-                            onChange={(e) => setDesignCode(e.target.value)}
-                            className="pl-8 h-8 text-xs transition-all duration-200"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Proofing Order Code Search */}
-                      <div className="space-y-1">
-                        <Label
-                          htmlFor="proofing-order-code-search"
-                          className="text-xs font-medium"
-                        >
-                          Mã bình bài
-                        </Label>
-                        <div className="relative">
-                          <Hash className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                          <Input
-                            id="proofing-order-code-search"
-                            placeholder="Nhập mã bình bài..."
-                            value={proofingOrderCode}
-                            onChange={(e) => setProofingOrderCode(e.target.value)}
-                            className="pl-8 h-8 text-xs transition-all duration-200"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Size Search */}
-                      <div className="space-y-1">
-                        <Label htmlFor="size-search" className="text-xs font-medium">
-                          Kích thước
-                        </Label>
-                        <div className="relative">
-                          <Ruler className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                          <Input
-                            id="size-search"
-                            placeholder="Nhập kích thước..."
-                            value={size}
-                            onChange={(e) => setSize(e.target.value)}
-                            className="pl-8 h-8 text-xs transition-all duration-200"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Customer Name Search */}
-                      <div className="space-y-1">
-                        <Label
-                          htmlFor="customer-name-search"
-                          className="text-xs font-medium"
-                        >
-                          Tên khách hàng
-                        </Label>
-                        <div className="relative">
-                          <User className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                          <Input
-                            id="customer-name-search"
-                            placeholder="Nhập tên khách hàng..."
-                            value={customerName}
-                            onChange={(e) => setCustomerName(e.target.value)}
-                            className="pl-8 h-8 text-xs transition-all duration-200"
-                          />
-                        </div>
-                      </div>
+                {/* Selection of Decal Die Sizes (when category === 'decal') */}
+                {dieCategory === "decal" && (
+                  <div className="space-y-2 p-3 rounded-lg border border-amber-200 bg-amber-50/50">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                        <span>Đánh dấu kích thước Decal lưu vào khuôn</span>
+                        <Badge className="bg-amber-600 text-white text-[10px]">Lưu API dieSizes</Badge>
+                      </Label>
                     </div>
-
-                    {/* Search Actions */}
-                    {(designCode.trim() || customerName.trim() || size.trim() || proofingOrderCode.trim()) && (
-                      <div className="flex items-center justify-between pt-1">
-                        <p className="text-[11px] text-muted-foreground">
-                          {isLoadingDies ? (
-                            <span className="flex items-center gap-1.5">
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                              Đang tìm kiếm...
-                            </span>
-                          ) : searchError ? (
-                            <span className="text-destructive">
-                              Đã xảy ra lỗi khi tìm kiếm
-                            </span>
-                          ) : availableDies.length > 0 ? (
-                            <>
-                              Tìm thấy{" "}
-                              <span className="font-semibold text-foreground">
-                                {availableDies.length}
-                              </span>{" "}
-                              khuôn bế phù hợp
-                            </>
-                          ) : (
-                            "Không tìm thấy khuôn bế nào"
-                          )}
-                        </p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setDesignCode("");
-                            setCustomerName("");
-                            setSize("");
-                            setProofingOrderCode("");
-                          }}
-                          className="h-6 px-2 text-[10px] hover:bg-muted"
-                        >
-                          Xóa bộ lọc
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Die table */}
-                  <div className="flex-1 overflow-hidden">
-                    {isLoadingDies ? (
-                      <div className="flex h-full items-center justify-center">
-                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                      </div>
-                    ) : availableDies.length === 0 ? (
-                      <div className="flex h-full items-center justify-center">
-                        <div className="text-center text-sm text-muted-foreground border rounded-lg px-4 py-6 max-w-xs">
-                          {(designCode.trim() || customerName.trim() || size.trim() || proofingOrderCode.trim())
-                            ? "Không tìm thấy khuôn bế phù hợp. Thử từ khóa khác hoặc tạo khuôn mới."
-                            : "Không có khuôn bế có sẵn. Vui lòng tạo khuôn mới."}
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="h-full overflow-y-auto">
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 p-1">
-                          {availableDies.map((die) => {
-                            const isSelected = die.id
-                              ? selectedDieIds.includes(die.id)
-                              : false;
-                            const canSelect = !isSelected;
-                            const selectionIndex = isSelected
-                              ? selectedDieIds.indexOf(die.id!) + 1
-                              : null;
-
-                            // Check if die matches design dimensions for highlighting
-                            const matchesDim =
-                              designDimensions.length > 0
-                                ? matchesDimensions(die.size, designDimensions)
-                                : false;
-                            const isRecommended = matchesDim;
-
-                            return (
-                              <div
-                                key={die.id}
-                                className={cn(
-                                  "group relative flex items-center gap-2.5 p-2 rounded-lg border transition-all cursor-pointer",
-                                  isSelected
-                                    ? "border-primary bg-primary/5 shadow-sm"
-                                    : canSelect
-                                      ? "border-border bg-background hover:border-primary/50 hover:bg-muted/30 hover:shadow-sm"
-                                      : "border-border bg-muted/20 opacity-50 cursor-not-allowed",
-                                  isRecommended &&
-                                    !isSelected &&
-                                    canSelect &&
-                                    "border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/30",
-                                )}
-                                onClick={() => {
-                                  if (die.id && (canSelect || isSelected)) {
-                                    toggleDieSelection(die.id);
+                    <p className="text-[11px] text-amber-700">
+                      Tích chọn những kích thước bài decal cần lưu vào thông tin khuôn bế này:
+                    </p>
+                    {candidateDecalSizes.length > 0 ? (
+                      <div className="space-y-1.5 pt-1">
+                        {candidateDecalSizes.map((opt, idx) => {
+                          const isChecked = selectedDecalDieSizes.includes(opt.value);
+                          return (
+                            <label
+                              key={idx}
+                              className={cn(
+                                "flex items-center gap-2 text-xs p-2 rounded-lg border cursor-pointer transition-all",
+                                isChecked
+                                  ? "bg-amber-100/80 border-amber-400 font-semibold text-amber-950 shadow-xs"
+                                  : "bg-white border-amber-200/70 text-slate-700 hover:bg-amber-50/50"
+                              )}
+                            >
+                              <Checkbox
+                                checked={isChecked}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedDecalDieSizes((prev) => [...prev, opt.value]);
+                                  } else {
+                                    setSelectedDecalDieSizes((prev) => prev.filter((s) => s !== opt.value));
                                   }
                                 }}
-                              >
-                                {/* Selection indicator */}
-                                {selectionIndex && (
-                                  <div className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg z-10">
-                                    {selectionIndex}
-                                  </div>
-                                )}
-
-                                {/* Recommended badge */}
-                                {isRecommended && !isSelected && (
-                                  <div className="absolute top-2 right-2 px-2 py-0.5 bg-blue-500 text-white text-[10px] font-medium rounded-full">
-                                    Gợi ý
-                                  </div>
-                                )}
-
-                                {/* Image */}
-                                <div className="relative flex-shrink-0 w-16 h-16 bg-muted/50 rounded-md overflow-hidden border">
-                                  {die.imageUrl ? (
-                                    <img
-                                      src={die.imageUrl}
-                                      alt={die.code || "Khuôn bế"}
-                                      className="w-full h-full object-contain cursor-zoom-in"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setPreviewImageUrl(
-                                          die.imageUrl || null,
-                                        );
-                                      }}
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center">
-                                      <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Info */}
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-start justify-between gap-2 mb-1">
-                                    <div className="flex-1 min-w-0">
-                                      <h4 className="font-semibold text-sm truncate">
-                                        {die.code || "—"}
-                                      </h4>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                                    <div className="flex items-center gap-1">
-                                      <span className="font-medium">
-                                        Kích thước:
-                                      </span>
-                                      <span className="text-foreground">
-                                        {formatDieSize(die) || "—"}
-                                      </span>
-                                    </div>
-                                  </div>
-
-                                  {die.vendorName && (
-                                    <div className="mt-1.5 text-xs text-muted-foreground truncate">
-                                      <span className="font-medium">NCC:</span>{" "}
-                                      <span className="text-foreground">
-                                        {die.vendorName}
-                                      </span>
-                                    </div>
-                                  )}
-
-                                  {die.firstProofingOrderCode && (
-                                    <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                                      <span className="font-medium">
-                                        Được sử dụng trong mã bài:
-                                      </span>{" "}
-                                      <span className="text-foreground font-semibold">
-                                        {die.firstProofingOrderCode}
-                                      </span>
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-5 w-5 p-0 hover:bg-primary/10"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleCopyProofingOrderCode(
-                                            die.firstProofingOrderCode || "",
-                                          );
-                                        }}
-                                        title="Sao chép mã bài"
-                                      >
-                                        {copiedProofingOrderCode ===
-                                        die.firstProofingOrderCode ? (
-                                          <Check className="h-3 w-3 text-green-600" />
-                                        ) : (
-                                          <Copy className="h-3 w-3 text-muted-foreground" />
-                                        )}
-                                      </Button>
-                                    </div>
-                                  )}
-                                </div>
-
-                                {/* Selection checkbox */}
-                                <div className="flex-shrink-0">
-                                  <div
-                                    className={cn(
-                                      "w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
-                                      isSelected
-                                        ? "bg-primary border-primary"
-                                        : canSelect
-                                          ? "border-muted-foreground/30 group-hover:border-primary/50"
-                                          : "border-muted-foreground/20",
-                                    )}
-                                  >
-                                    {isSelected && (
-                                      <Check className="h-3 w-3 text-primary-foreground" />
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Selected summary */}
-                  {selectedDieIds.length > 0 && (
-                    <div className="mt-2 rounded-md bg-muted/40 px-3 py-2">
-                      <p className="mb-1 text-xs font-medium">
-                        Đã chọn {selectedDieIds.length} khuôn:
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {selectedDieIds.map((dieId) => {
-                          const die = availableDies.find((d) => d.id === dieId);
-                          return (
-                            <span
-                              key={dieId}
-                              className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-[11px]"
-                            >
-                              <span>{die?.code || `Khuôn #${dieId}`}</span>
-                              <button
-                                type="button"
-                                className="inline-flex h-3 w-3 items-center justify-center rounded-full bg-muted text-muted-foreground"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleDieSelection(dieId);
-                                }}
-                              >
-                                <X className="h-2 w-2" />
-                              </button>
-                            </span>
+                              />
+                              <span className="font-bold tabular-nums">{opt.value}</span>
+                              <span className="text-[11px] text-slate-500 font-normal">({opt.label})</span>
+                            </label>
                           );
                         })}
                       </div>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="flex h-full flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground">
-                  <p className="max-w-xs">
-                    Bạn đang ở chế độ{" "}
-                    <span className="font-medium text-foreground">
-                      Tạo khuôn mới
-                    </span>
-                    . Điền thông tin khuôn bế ở panel bên phải. Sau khi lưu,
-                    khuôn mới sẽ tự động nằm trong danh sách khuôn.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* RIGHT: CREATE DIE + VENDOR + META or NOTES (SCROLLABLE COLUMN) */}
-          <div className="flex flex-col overflow-hidden border rounded-lg bg-background">
-            <div className="border-b px-4 py-3">
-              <p className="text-sm font-medium">
-                {dieAction === "create" ? "Thông tin khuôn & đơn vị làm khuôn" : "Ghi chú xuất khuôn"}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {dieAction === "create" ? "Thiết kế form gọn, chia nhóm để tránh scroll quá dài." : "Thêm ghi chú cho từng khuôn bế đã chọn."}
-              </p>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-5">
-              {dieAction === "create" ? (
-                <>
-                  {/* Die Dimensions - Reference table + editable inputs */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 pb-1 border-b">
-                      <h4 className="text-sm font-semibold">
-                        Kích thước mã hàng (tham chiếu)
-                      </h4>
-                    </div>
-
-                    {/* Reference table: all designs' dimensions */}
-                    {allDesignDimensions.length > 0 ? (
-                      <div className="rounded-md border bg-muted/30 overflow-hidden">
-                        <table className="w-full text-xs">
-                          <thead>
-                            <tr className="border-b bg-muted/50">
-                              <th className="text-left px-2 py-1.5 font-semibold text-[13px] text-muted-foreground">
-                                Mã hàng
-                              </th>
-                              <th className="text-left px-2 py-1.5 font-semibold text-[13px] text-muted-foreground">
-                                Loại
-                              </th>
-                              <th className="text-center px-2 py-1.5 font-semibold text-[13px] text-muted-foreground">
-                                D × R × C (mm)
-                              </th>
-                              <th className="px-1 py-1.5"></th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {allDesignDimensions.map((d, idx) => (
-                              <tr
-                                key={idx}
-                                className="border-b last:border-0 hover:bg-muted/40 transition-colors"
-                              >
-                                <td className="px-2 py-1.5">
-                                  <span className="font-mono font-bold text-[13px]">
-                                    {d.code || "—"}
-                                  </span>
-                                </td>
-                                <td className="px-2 py-1.5">
-                                  <span className="text-[13px] text-muted-foreground">
-                                    {d.designTypeName || "—"}
-                                  </span>
-                                </td>
-                                <td className="px-2 py-1.5 text-center">
-                                  <span className="font-medium text-[13px] tabular-nums">
-                                    {d.length ?? "?"} × {d.width ?? "—"} ×{" "}
-                                    {d.height ?? "?"}
-                                  </span>
-                                </td>
-                                <td className="px-1 py-1 text-right">
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
                     ) : (
-                      <p className="text-[11px] text-muted-foreground italic">
-                        Không có thông tin kích thước từ mã hàng
+                      <p className="text-[11px] text-amber-600 italic">
+                        Hãy nhập kích thước Dài / Rộng ở phần dưới để tạo tùy chọn kích thước khuôn Decal.
                       </p>
                     )}
+                  </div>
+                )}
 
-                    {/* Editable die dimension inputs */}
-                    <div className="space-y-1.5">
-                      <Label className="text-[11px] text-muted-foreground">
-                        Kích thước khuôn (có thể chỉnh)
-                      </Label>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="space-y-1">
-                          <Label className="text-[10px] text-muted-foreground/70">
-                            Dài (mm)
-                          </Label>
-                          <Input
-                            type="number"
-                            placeholder="Dài"
-                            value={dieLength || ""}
-                            onChange={(e) =>
-                              setDieLength(
-                                e.target.value
-                                  ? Number(e.target.value)
-                                  : undefined,
-                              )
-                            }
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[10px] text-muted-foreground/70">
-                            Rộng (mm)
-                          </Label>
-                          <Input
-                            type="number"
-                            placeholder="Rộng"
-                            value={dieWidth || ""}
-                            onChange={(e) =>
-                              setDieWidth(
-                                e.target.value
-                                  ? Number(e.target.value)
-                                  : undefined,
-                              )
-                            }
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[10px] text-muted-foreground/70">
-                            Cao (mm)
-                          </Label>
-                          <Input
-                            type="number"
-                            placeholder="Cao"
-                            value={dieHeight || ""}
-                            onChange={(e) =>
-                              setDieHeight(
-                                e.target.value
-                                  ? Number(e.target.value)
-                                  : undefined,
-                              )
-                            }
-                            className="h-8 text-sm"
-                          />
-                        </div>
-                      </div>
+                {/* Reference table: design dimensions */}
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-slate-800 flex items-center justify-between">
+                    <span>Kích thước mã hàng (tham chiếu)</span>
+                    <span className="text-[11px] font-normal text-slate-500">
+                      {allDesignDimensions.length} mã hàng
+                    </span>
+                  </h4>
+
+                  {allDesignDimensions.length > 0 ? (
+                    <div className="rounded-lg border border-slate-200 bg-slate-50/30 overflow-hidden">
+                      <table className="w-full text-xs">
+                        <thead>
+                          <tr className="border-b bg-slate-100/70 text-slate-700">
+                            <th className="text-left px-3 py-1.5 font-bold">Mã hàng</th>
+                            <th className="text-left px-3 py-1.5 font-bold">Loại</th>
+                            <th className="text-center px-3 py-1.5 font-bold">D × R × C (mm)</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {allDesignDimensions.map((d, idx) => (
+                            <tr key={idx} className="hover:bg-white transition-colors">
+                              <td className="px-3 py-1.5 font-mono font-bold text-slate-800">{d.code || "—"}</td>
+                              <td className="px-3 py-1.5 text-slate-600">{d.designTypeName || "—"}</td>
+                              <td className="px-3 py-1.5 text-center font-semibold text-slate-900 tabular-nums">
+                                {d.length ?? "?"} × {d.width ?? "—"} × {d.height ?? "?"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-400 italic">
+                      Không có thông tin kích thước từ mã hàng
+                    </p>
+                  )}
+                </div>
+
+                {/* Editable die dimensions */}
+                <div className="space-y-2 p-3 rounded-lg border border-slate-200 bg-slate-50/50">
+                  <Label className="text-xs font-bold text-slate-800">
+                    Kích thước khuôn bế (mm)
+                  </Label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-[11px] text-slate-600">Dài (mm)</Label>
+                      <Input
+                        type="number"
+                        placeholder="Dài"
+                        value={dieLength || ""}
+                        onChange={(e) => setDieLength(e.target.value ? Number(e.target.value) : undefined)}
+                        className="h-8 text-xs bg-white border-slate-200"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px] text-slate-600">Rộng (mm)</Label>
+                      <Input
+                        type="number"
+                        placeholder="Rộng"
+                        value={dieWidth || ""}
+                        onChange={(e) => setDieWidth(e.target.value ? Number(e.target.value) : undefined)}
+                        className="h-8 text-xs bg-white border-slate-200"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px] text-slate-600">Cao (mm)</Label>
+                      <Input
+                        type="number"
+                        placeholder="Cao"
+                        value={dieHeight || ""}
+                        onChange={(e) => setDieHeight(e.target.value ? Number(e.target.value) : undefined)}
+                        className="h-8 text-xs bg-white border-slate-200"
+                      />
                     </div>
                   </div>
+                </div>
 
-              {/* Vendor selection / creation */}
-              <div className="space-y-3 pt-4 border-t">
-                    <div className="space-y-1.5">
-                      {!isCreatingVendor ? (
-                        <div className="flex items-center justify-between gap-4">
-                          <Label className="text-sm font-medium whitespace-nowrap">
-                            Đơn vị làm khuôn <span className="text-destructive">*</span>
-                          </Label>
-                          <div className="flex-1 max-w-[240px] flex gap-2">
-                            <Popover
-                              open={vendorSearchOpen}
-                              onOpenChange={setVendorSearchOpen}
-                            >
-                              <PopoverTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  role="combobox"
-                                  className="flex-1 justify-between h-8 text-sm px-2 overflow-hidden"
-                                  disabled={loadingVendors}
-                                >
-                                  <span className="truncate">
-                                    {selectedVendor
-                                      ? selectedVendor.name
-                                      : "Chọn nhà cung cấp..."}
-                                  </span>
-                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-[360px] p-0">
-                                <Command>
-                                  <CommandInput placeholder="Tìm kiếm nhà cung cấp..." />
-                                  <CommandList>
-                                    <CommandEmpty>
-                                      <div className="py-4 text-center text-sm">
-                                        <p className="mb-2">
-                                          Không tìm thấy nhà cung cấp
-                                        </p>
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => {
-                                            setIsCreatingVendor(true);
-                                            setVendorSearchOpen(false);
-                                          }}
-                                          className="gap-2"
-                                        >
-                                          <Plus className="h-4 w-4" />
-                                          Tạo mới
-                                        </Button>
-                                      </div>
-                                    </CommandEmpty>
-                                    <CommandGroup>
-                                      {vendors?.map((vendor) => (
-                                        <CommandItem
-                                          key={vendor.id}
-                                          value={vendor.name || ""}
-                                          onSelect={() => {
-                                            setVendorId(vendor.id);
-                                            setVendorSearchOpen(false);
-                                          }}
-                                        >
-                                          <Check
-                                            className={cn(
-                                              "mr-2 h-4 w-4",
-                                              vendorId === vendor.id
-                                                ? "opacity-100"
-                                                : "opacity-0",
-                                            )}
-                                          />
-                                          <div className="flex flex-col">
-                                            <span className="text-sm font-medium">
-                                              {vendor.name}
-                                            </span>
-                                            {vendor.phone && (
-                                              <span className="text-[10px] text-muted-foreground">
-                                                {vendor.phone}
-                                              </span>
-                                            )}
-                                          </div>
-                                        </CommandItem>
-                                      ))}
-                                      <CommandItem
-                                        onSelect={() => {
-                                          setIsCreatingVendor(true);
-                                          setVendorSearchOpen(false);
-                                        }}
-                                        className="text-primary"
-                                      >
-                                        <Plus className="mr-2 h-4 w-4" />
-                                        Tạo nhà cung cấp mới
-                                      </CommandItem>
-                                    </CommandGroup>
-                                  </CommandList>
-                                </Command>
-                              </PopoverContent>
-                            </Popover>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              onClick={() => setIsCreatingVendor(true)}
-                              className="h-8 w-8 flex-shrink-0"
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-3 rounded-md border bg-muted/40 px-3 py-2">
-                          <div className="flex items-center justify-between gap-2">
-                            <p className="text-xs font-medium">
-                              Tạo nhà cung cấp mới
-                            </p>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => {
-                                setIsCreatingVendor(false);
-                                setVendorName("");
-                                setVendorPhone("");
-                                setVendorEmail("");
-                                setVendorAddress("");
-                                setVendorNote("");
-                              }}
-                              className="h-6 px-2 text-[11px]"
-                            >
-                              Hủy
-                            </Button>
-                          </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            <div className="space-y-1">
-                              <Label
-                                className="text-[11px]"
-                                htmlFor="vendorName"
-                              >
-                                Tên nhà cung cấp *
-                              </Label>
-                              <Input
-                                id="vendorName"
-                                placeholder="VD: Cơ sở khuôn bế A"
-                                value={vendorName}
-                                onChange={(e) => setVendorName(e.target.value)}
-                                className="h-8 text-sm"
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label
-                                className="text-[11px]"
-                                htmlFor="vendorPhone"
-                              >
-                                Số điện thoại
-                              </Label>
-                              <Input
-                                id="vendorPhone"
-                                placeholder="VD: 0909 xxx xxx"
-                                value={vendorPhone}
-                                onChange={(e) => setVendorPhone(e.target.value)}
-                                className="h-8 text-sm"
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label
-                                className="text-[11px]"
-                                htmlFor="vendorEmail"
-                              >
-                                Email
-                              </Label>
-                              <Input
-                                id="vendorEmail"
-                                type="email"
-                                placeholder="email@vendor.com"
-                                value={vendorEmail}
-                                onChange={(e) => setVendorEmail(e.target.value)}
-                                className="h-8 text-sm"
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label
-                                className="text-[11px]"
-                                htmlFor="vendorAddress"
-                              >
-                                Địa chỉ
-                              </Label>
-                              <Input
-                                id="vendorAddress"
-                                placeholder="Địa chỉ kho / xưởng"
-                                value={vendorAddress}
-                                onChange={(e) =>
-                                  setVendorAddress(e.target.value)
-                                }
-                                className="h-8 text-sm"
-                              />
-                            </div>
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-[11px]" htmlFor="vendorNote">
-                              Ghi chú
-                            </Label>
-                            <Textarea
-                              id="vendorNote"
-                              rows={2}
-                              placeholder="Thông tin thêm: người liên hệ, thời gian giao nhận, điều khoản thanh toán..."
-                              value={vendorNote}
-                              onChange={(e) => setVendorNote(e.target.value)}
-                              className="text-sm min-h-[56px]"
-                            />
-                          </div>
-                          <div className="flex justify-end gap-2 pt-1">
-                            <Button
-                              size="sm"
-                              onClick={handleCreateVendor}
-                              disabled={!vendorName.trim() || creatingVendor}
-                              className="h-8 px-3 text-xs"
-                            >
-                              {creatingVendor ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : (
-                                "Lưu nhà cung cấp"
-                              )}
-                            </Button>
-                          </div>
-                          <p className="text-[11px] text-muted-foreground">
-                            Sau khi tạo, nhà cung cấp sẽ xuất hiện trong danh
-                            sách.
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                {/* Image upload */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-slate-800">Ảnh khuôn bế (tùy chọn)</Label>
+                  <div className="flex items-center gap-4">
+                    <label
+                      htmlFor="die-image-upload"
+                      className="flex-1 flex flex-col items-center justify-center p-4 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 hover:bg-slate-100/50 cursor-pointer transition-colors"
+                    >
+                      <Upload className="h-6 w-6 text-slate-400 mb-1" />
+                      <span className="text-xs font-semibold text-slate-700">Tải ảnh khuôn</span>
+                      <span className="text-[10px] text-slate-400 mt-0.5">PNG, JPG, WEBP (Tối đa 5MB)</span>
+                      <input
+                        id="die-image-upload"
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setDieImage(file);
+                            setDieFiles([file]);
+                            const preview = URL.createObjectURL(file);
+                            setDieImagePreview(preview);
+                          }
+                        }}
+                      />
+                    </label>
 
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 pb-1 border-b">
-                      <h4 className="text-sm font-semibold">Ảnh khuôn bế</h4>
-                    </div>
-                    <div className="flex flex-wrap gap-3 items-start">
-
-                      {/* New Image Previews */}
-                      {dieFiles.map((file, index) => (
-                        <div
-                          key={index}
-                          className="relative group border rounded-lg bg-muted/30 overflow-hidden w-24 h-24 flex-shrink-0"
+                    {(dieImagePreview || dieImage) && (
+                      <div className="relative w-20 h-20 rounded-xl border border-slate-200 bg-white p-1 overflow-hidden shrink-0">
+                        <img
+                          src={dieImagePreview || (dieImage ? URL.createObjectURL(dieImage) : "")}
+                          alt="Die preview"
+                          className="w-full h-full object-contain rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDieImage(null);
+                            setDieFiles([]);
+                            setDieImagePreview(null);
+                          }}
+                          className="absolute top-1 right-1 h-5 w-5 rounded-full bg-rose-500 text-white flex items-center justify-center text-xs shadow-md hover:bg-rose-600"
                         >
-                          <img
-                            src={imagePreviews[index]}
-                            alt={`Preview ${file.name}`}
-                            className="w-full h-full object-cover"
-                          />
-                          <Button
-                            variant="destructive"
-                            size="icon"
-                            className="absolute top-1 right-1 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity rounded-full"
-                            onClick={() => handleRemoveFile(index)}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                          <div className="absolute inset-x-0 bottom-0 bg-black/50 px-1 py-0.5 text-[9px] text-white text-center truncate">
-                            {file.name}
-                          </div>
-                        </div>
-                      ))}
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
 
-                      {/* Upload Button Box */}
-                      <div className="flex-shrink-0">
+              {/* RIGHT COLUMN: Vendor, Receiving Date, Options & Note */}
+              <div className="space-y-5 border-t lg:border-t-0 lg:border-l lg:pl-6 border-slate-100 pt-4 lg:pt-0">
+                {/* Vendor selector / creation */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold text-slate-800">
+                    Đơn vị làm khuôn (Nhà cung cấp) <span className="text-destructive">*</span>
+                  </Label>
+                  {!isCreatingVendor ? (
+                    <div className="flex gap-2">
+                      <Popover open={vendorSearchOpen} onOpenChange={setVendorSearchOpen}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            role="combobox"
+                            className="flex-1 justify-between h-9 text-xs bg-white border-slate-200"
+                            disabled={loadingVendors}
+                          >
+                            <span className="truncate">
+                              {selectedVendor ? selectedVendor.name : "Chọn nhà cung cấp..."}
+                            </span>
+                            <ChevronsUpDown className="ml-2 h-3.5 w-3.5 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[360px] p-0">
+                          <Command>
+                            <CommandInput placeholder="Tìm nhà cung cấp..." className="h-9 text-xs" />
+                            <CommandList>
+                              <CommandEmpty>
+                                <div className="py-3 text-center text-xs">
+                                  <p className="mb-2 text-slate-500">Không tìm thấy nhà cung cấp</p>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setIsCreatingVendor(true);
+                                      setVendorSearchOpen(false);
+                                    }}
+                                    className="gap-1 h-7 text-xs"
+                                  >
+                                    <Plus className="h-3.5 w-3.5" />
+                                    Tạo mới NCC
+                                  </Button>
+                                </div>
+                              </CommandEmpty>
+                              <CommandGroup>
+                                {vendors?.map((vendor) => (
+                                  <CommandItem
+                                    key={vendor.id}
+                                    value={vendor.name || ""}
+                                    onSelect={() => {
+                                      setVendorId(vendor.id);
+                                      setVendorSearchOpen(false);
+                                    }}
+                                    className="text-xs"
+                                  >
+                                    <Check
+                                      className={cn(
+                                        "mr-2 h-3.5 w-3.5",
+                                        vendorId === vendor.id ? "opacity-100" : "opacity-0"
+                                      )}
+                                    />
+                                    <span className="font-medium">{vendor.name}</span>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setIsCreatingVendor(true)}
+                        className="h-9 w-9 shrink-0 border-slate-200"
+                        title="Tạo mới nhà cung cấp"
+                      >
+                        <Plus className="h-4 w-4 text-slate-600" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800">Tạo nhà cung cấp mới</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setIsCreatingVendor(false)}
+                          className="h-6 px-2 text-xs text-slate-500"
+                        >
+                          Hủy
+                        </Button>
+                      </div>
+                      <div className="space-y-2">
                         <Input
-                          id="dieFiles"
-                          type="file"
-                          accept="image/*"
-                          multiple
-                          onChange={handleFileChange}
-                          className="hidden"
+                          placeholder="Tên nhà cung cấp *"
+                          value={vendorName}
+                          onChange={(e) => setVendorName(e.target.value)}
+                          className="h-8 text-xs bg-white"
                         />
-                        <label
-                          htmlFor="dieFiles"
-                          className="cursor-pointer border-2 border-dashed border-muted-foreground/20 rounded-lg w-24 h-24 flex flex-col items-center justify-center gap-1 hover:border-primary/50 hover:bg-primary/5 transition-all group"
-                        >
-                          <Plus className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
-                          <span className="text-[10px] text-muted-foreground font-medium group-hover:text-primary transition-colors text-center px-1">
-                            Thêm ảnh
-                          </span>
-                        </label>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Estimated Receive At & Is Reusable */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 pb-1 border-b">
-                      <h4 className="text-sm font-semibold">
-                        Thông tin bổ sung
-                      </h4>
-                    </div>
-                    <div className="grid grid-cols-1 gap-3">
-                      <div className="flex items-center justify-between gap-4 py-1">
-                        <Label htmlFor="estimatedReceiveAt" className="text-sm font-medium whitespace-nowrap">
-                          Dự kiến nhận khuôn
-                        </Label>
-                        <div className="flex-1 max-w-[240px] space-y-1">
-                          <Input
-                            id="estimatedReceiveAt"
-                            type="datetime-local"
-                            value={receivedAtManual}
-                            onChange={(e) => setReceivedAtManual(e.target.value)}
-                            className="h-9 text-sm"
-                          />
-                          {receivedAt && (
-                            <p className="text-[10px] text-muted-foreground text-right">
-                              Dự kiến:{" "}
-                              {new Date(receivedAt).toLocaleString("vi-VN", {
-                                year: "numeric",
-                                month: "2-digit",
-                                day: "2-digit",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="space-y-2 py-2">
-                        <Label className="text-xs font-medium">Tùy chọn Lưu Khuôn</Label>
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            variant={isReusable ? "default" : "outline"}
-                            onClick={() => setIsReusable(true)}
-                            className="flex-1 h-9 text-sm"
-                          >
-                            Lưu Khuôn
-                          </Button>
-                          <Button
-                            type="button"
-                            variant={!isReusable ? "destructive" : "outline"}
-                            onClick={() => setIsReusable(false)}
-                            className="flex-1 h-9 text-sm"
-                          >
-                            Dùng 1 lần
-                          </Button>
-                        </div>
-                        <p className="text-[11px] text-muted-foreground">
-                          {isReusable 
-                            ? "✓ Lưu vào kho để tái sử dụng." 
-                            : "⚠ Khuôn dùng một lần."}
-                        </p>
-                      </div>
-
-                      <div className="space-y-1.5 py-2">
-                        <Label htmlFor="newDieNote" className="text-xs font-medium">Ghi chú xuất khuôn mới</Label>
-                        <Textarea
-                          id="newDieNote"
-                          rows={2}
-                          placeholder="Nhập ghi chú xuất cho khuôn mới này..."
-                          value={newDieNote}
-                          onChange={(e) => setNewDieNote(e.target.value)}
-                          className="text-sm min-h-[56px]"
+                        <Input
+                          placeholder="Số điện thoại"
+                          value={vendorPhone}
+                          onChange={(e) => setVendorPhone(e.target.value)}
+                          className="h-8 text-xs bg-white"
                         />
                       </div>
                     </div>
+                  )}
+                </div>
+
+                {/* Estimated Receiving Date */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="estimatedReceiveAt" className="text-xs font-bold text-slate-800">
+                    Thời gian dự kiến nhận khuôn
+                  </Label>
+                  <Input
+                    id="estimatedReceiveAt"
+                    type="datetime-local"
+                    value={receivedAtManual}
+                    onChange={(e) => setReceivedAtManual(e.target.value)}
+                    className="h-9 text-xs bg-white border-slate-200"
+                  />
+                </div>
+
+                {/* Reusable Toggle */}
+                <div className="space-y-2 p-3 rounded-xl border border-slate-200 bg-slate-50/50">
+                  <Label className="text-xs font-bold text-slate-800">Tùy chọn tái sử dụng khuôn</Label>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant={isReusable ? "default" : "outline"}
+                      onClick={() => setIsReusable(true)}
+                      className="flex-1 h-8 text-xs font-semibold shadow-none"
+                    >
+                      Lưu kho tái sử dụng
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={!isReusable ? "destructive" : "outline"}
+                      onClick={() => setIsReusable(false)}
+                      className="flex-1 h-8 text-xs font-semibold shadow-none"
+                    >
+                      Khuôn dùng 1 lần
+                    </Button>
                   </div>
-                </>
-              ) : (
-                <div className="space-y-4">
-                  {selectedDieIds.length > 0 ? (
-                    selectedDieIds.map((dieId) => {
-                      const die = allDies.find((d) => d.id === dieId);
+                </div>
+
+                {/* Export Notes */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="newDieNote" className="text-xs font-bold text-slate-800">Ghi chú xuất khuôn mới</Label>
+                  <Textarea
+                    id="newDieNote"
+                    rows={3}
+                    placeholder="Nhập ghi chú xuất cho khuôn mới này..."
+                    value={newDieNote}
+                    onChange={(e) => setNewDieNote(e.target.value)}
+                    className="text-xs min-h-[70px] bg-white border-slate-200"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* SELECT EXISTING DIE MODE: Split Left/Right Panels */
+          <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[7fr,5fr] gap-4 overflow-hidden">
+            {/* LEFT PANEL: SELECT DIES */}
+            <div className="flex flex-col border border-slate-200 rounded-xl bg-white overflow-hidden shadow-sm">
+              {/* Left Panel Top Header */}
+              <div className="px-3.5 py-2.5 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 bg-slate-200/70 p-0.5 rounded-lg">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="h-6 text-xs font-semibold cursor-pointer shadow-none"
+                      onClick={() => setDieAction("select")}
+                    >
+                      Chọn khuôn cũ
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs font-medium cursor-pointer"
+                      onClick={() => {
+                        setDieAction("create");
+                        setSelectedDieIds([]);
+                      }}
+                    >
+                      Đặt khuôn mới
+                    </Button>
+                  </div>
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsBrowsingDie(true)}
+                  className="h-7 text-xs font-semibold bg-primary/10 text-primary border-primary/20 hover:bg-primary/20"
+                >
+                  <Search className="h-3.5 w-3.5 mr-1" />
+                  Duyệt kho khuôn bế
+                </Button>
+              </div>
+
+              {/* Inline Search Bar */}
+              <div className="px-3 py-2 border-b border-slate-100 bg-white flex flex-wrap items-center gap-2">
+                <div className="w-[130px] shrink-0">
+                  <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                    <SelectTrigger className="h-7 text-xs font-semibold bg-slate-50 border-slate-200">
+                      <SelectValue placeholder="Phân loại" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all" className="text-xs">Tất cả loại</SelectItem>
+                      <SelectItem value="box" className="text-xs">Khuôn Hộp</SelectItem>
+                      <SelectItem value="decal" className="text-xs">Khuôn Decal</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="relative flex-1 min-w-[130px]">
+                  <Hash className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                  <Input
+                    placeholder="Mã hàng / Mã khuôn..."
+                    value={designCode}
+                    onChange={(e) => setDesignCode(e.target.value)}
+                    className="pl-8 h-7 text-xs bg-slate-50 border-slate-200"
+                  />
+                </div>
+                <div className="relative w-[120px]">
+                  <Hash className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                  <Input
+                    placeholder="Mã bình bài..."
+                    value={proofingOrderCode}
+                    onChange={(e) => setProofingOrderCode(e.target.value)}
+                    className="pl-8 h-7 text-xs bg-slate-50 border-slate-200"
+                  />
+                </div>
+                <div className="relative w-[110px]">
+                  <Ruler className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                  <Input
+                    placeholder="Kích thước..."
+                    value={size}
+                    onChange={(e) => setSize(e.target.value)}
+                    className="pl-8 h-7 text-xs bg-slate-50 border-slate-200"
+                  />
+                </div>
+                <div className="relative w-[120px]">
+                  <User className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                  <Input
+                    placeholder="Tên KH..."
+                    value={customerName}
+                    onChange={(e) => setCustomerName(e.target.value)}
+                    className="pl-8 h-7 text-xs bg-slate-50 border-slate-200"
+                  />
+                </div>
+                {(designCode.trim() || customerName.trim() || size.trim() || proofingOrderCode.trim()) && (
+                  <Button variant="ghost" size="sm" onClick={() => { setDesignCode(""); setCustomerName(""); setSize(""); setProofingOrderCode(""); }} className="h-7 text-xs text-rose-600 px-1.5">
+                    Xóa
+                  </Button>
+                )}
+              </div>
+
+              {/* Die cards list */}
+              <div className="flex-1 min-h-0 overflow-y-auto p-3">
+                {isLoadingDies ? (
+                  <div className="flex h-full items-center justify-center py-12">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+                    <span className="text-xs text-slate-500">Đang tìm kiếm khuôn bế...</span>
+                  </div>
+                ) : availableDies.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+                    <Package className="h-10 w-10 text-slate-300 mb-2" />
+                    <p className="text-xs font-semibold text-slate-700">Không tìm thấy khuôn bế phù hợp</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5 mb-3 max-w-xs">
+                      Thử từ khóa khác hoặc bấm nút dưới để đặt khuôn mới / duyệt kho khuôn
+                    </p>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setIsBrowsingDie(true)}>
+                        <Search className="h-3.5 w-3.5 mr-1" />
+                        Duyệt kho khuôn
+                      </Button>
+                      <Button size="sm" className="h-7 text-xs" onClick={() => setDieAction("create")}>
+                        <Plus className="h-3.5 w-3.5 mr-1" />
+                        Đặt khuôn mới
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                    {availableDies.map((die) => {
+                      const isSelected = die.id ? selectedDieIds.includes(die.id) : false;
+                      const isBox = (die as any).category === "box" || !(die as any).category;
+                      const matchesDim = designDimensions.length > 0 ? matchesDimensions(die.size, designDimensions) : false;
+
                       return (
-                        <div key={dieId} className="flex gap-3 p-3 rounded-md border bg-muted/10 shadow-sm">
+                        <div
+                          key={die.id}
+                          className={cn(
+                            "relative flex items-center gap-2.5 p-2.5 rounded-xl border transition-all cursor-pointer group",
+                            isSelected
+                              ? "border-primary bg-primary/5 shadow-sm"
+                              : matchesDim
+                                ? "border-amber-300 bg-amber-50/50 hover:border-amber-400"
+                                : "border-slate-200 bg-white hover:border-primary/50 hover:bg-slate-50/50"
+                          )}
+                          onClick={() => {
+                            if (die.id) toggleDieSelection(die.id);
+                          }}
+                        >
                           {/* Image */}
-                          <div className="relative flex-shrink-0 w-16 h-16 bg-muted/50 rounded-md overflow-hidden border">
-                            {die?.imageUrl ? (
+                          <div className="relative w-12 h-12 rounded-lg border border-slate-200 bg-slate-50 overflow-hidden shrink-0">
+                            {die.imageUrl ? (
                               <img
                                 src={die.imageUrl}
                                 alt={die.code || "Khuôn bế"}
-                                className="w-full h-full object-contain cursor-zoom-in bg-white"
+                                className="w-full h-full object-contain cursor-zoom-in"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setPreviewImageUrl(die.imageUrl || null);
                                 }}
                               />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center">
-                                <ImageIcon className="h-6 w-6 text-muted-foreground/50" />
+                              <div className="w-full h-full flex items-center justify-center text-slate-300">
+                                <Package className="h-5 w-5" />
                               </div>
                             )}
                           </div>
-                          
-                          {/* Content */}
-                          <div className="flex-1 flex flex-col min-w-0">
-                            <div className="text-sm font-semibold text-primary truncate mb-1" title={die?.code || `Khuôn #${dieId}`}>
-                              {die?.code || `Khuôn #${dieId}`}
+
+                          {/* Info */}
+                          <div className="flex-1 min-w-0 text-xs">
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              <span className="font-mono font-bold text-slate-900 truncate">
+                                {die.code || `Khuôn #${die.id}`}
+                              </span>
+                              {isBox ? (
+                                <Badge variant="outline" className="bg-slate-100 text-slate-700 text-[9px] px-1 py-0 font-medium shrink-0">
+                                  Hộp
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 text-[9px] px-1 py-0 font-bold shrink-0">
+                                  Decal
+                                </Badge>
+                              )}
+                              {matchesDim && (
+                                <Badge className="bg-amber-500 text-white text-[9px] px-1 py-0 shrink-0">
+                                  Gợi ý
+                                </Badge>
+                              )}
                             </div>
-                            <Textarea
-                              value={dieNotes[dieId] || ""}
-                              onChange={(e) =>
-                                setDieNotes((prev) => ({
-                                  ...prev,
-                                  [dieId]: e.target.value,
-                                }))
-                              }
-                              placeholder="Nhập ghi chú xuất khuôn này..."
-                              className="text-xs resize-none"
-                              rows={2}
-                            />
+
+                            <div className="font-semibold text-slate-800 text-[11px] truncate">
+                              Kích thước: {formatDieSize(die) || "—"}
+                            </div>
+                            <div className="text-[10px] text-slate-500 truncate mt-0.5">
+                              {die.vendorName ? `NCC: ${die.vendorName}` : "Nội bộ"}
+                            </div>
+                          </div>
+
+                          {/* Checkbox */}
+                          <div className="shrink-0">
+                            <div
+                              className={cn(
+                                "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors",
+                                isSelected ? "bg-primary border-primary" : "border-slate-300 group-hover:border-primary/50"
+                              )}
+                            >
+                              {isSelected && <Check className="h-3.5 w-3.5 text-white" />}
+                            </div>
                           </div>
                         </div>
                       );
-                    })
-                  ) : (
-                    <div className="flex h-40 flex-col items-center justify-center gap-2 text-center text-sm text-muted-foreground">
-                      <p className="max-w-xs">
-                        Chưa chọn khuôn nào. Hãy chọn ít nhất 1 khuôn bên trái để thêm ghi chú.
-                      </p>
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* RIGHT PANEL: SELECTED DIES & EXPORT NOTES */}
+            <div className="flex flex-col border border-slate-200 rounded-xl bg-slate-50/50 overflow-hidden shadow-sm">
+              <div className="px-3.5 py-2.5 border-b border-slate-200 bg-white flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800">
+                  Ghi chú xuất khuôn ({selectedDieIds.length})
+                </span>
+                <span className="text-[11px] text-slate-500">
+                  {selectedDieIds.length > 0 ? `Đã chọn ${selectedDieIds.length} khuôn` : "Chưa chọn khuôn"}
+                </span>
+              </div>
+
+              <div className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
+                {selectedDieIds.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+                    <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+                      <Search className="h-6 w-6 text-slate-400" />
                     </div>
-                  )}
-                </div>
-              )}
+                    <p className="text-xs font-semibold text-slate-700">Chưa chọn khuôn nào</p>
+                    <p className="text-[11px] text-slate-400 mt-0.5 max-w-xs mb-3">
+                      Hãy chọn ít nhất 1 khuôn bên trái hoặc bấm nút bên dưới để chọn từ kho khuôn bế
+                    </p>
+                    <Button size="sm" variant="outline" className="h-7 text-xs font-semibold" onClick={() => setIsBrowsingDie(true)}>
+                      <Search className="h-3.5 w-3.5 mr-1" />
+                      Duyệt kho khuôn bế
+                    </Button>
+                  </div>
+                ) : (
+                  selectedDieIds.map((dieId) => {
+                    const die = allDies.find((d) => d.id === dieId);
+                    return (
+                      <div key={dieId} className="p-3 rounded-xl border border-slate-200 bg-white shadow-xs space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {die?.imageUrl ? (
+                              <img
+                                src={die.imageUrl}
+                                alt={die.code || "Die"}
+                                className="w-8 h-8 rounded border object-contain shrink-0"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center shrink-0">
+                                <Package className="h-4 w-4 text-slate-400" />
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <div className="font-mono font-bold text-xs text-slate-900 truncate">
+                                {die?.code || `Khuôn #${dieId}`}
+                              </div>
+                              <div className="text-[10px] text-slate-500 truncate">
+                                {formatDieSize(die) || "—"}
+                              </div>
+                            </div>
+                          </div>
+
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-slate-400 hover:text-rose-600"
+                            onClick={() => toggleDieSelection(dieId)}
+                            title="Bỏ chọn khuôn này"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+
+                        <Textarea
+                          value={dieNotes[dieId] || ""}
+                          onChange={(e) => setDieNotes((prev) => ({ ...prev, [dieId]: e.target.value }))}
+                          placeholder="Thêm ghi chú xuất cho khuôn này..."
+                          className="text-xs min-h-[50px] resize-none bg-slate-50/50 border-slate-200"
+                          rows={2}
+                        />
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Footer: always visible */}
-        <DialogFooter className="border-t px-4 py-3 flex items-center justify-between gap-3 bg-muted/20">
-          <Button variant="outline" className="rounded-full px-6 font-medium" onClick={() => onOpenChange(false)}>
+        {/* FOOTER */}
+        <DialogFooter className="border-t border-slate-200 px-4 py-3 flex items-center justify-between gap-3 bg-white shrink-0">
+          <Button variant="outline" className="h-8 text-xs font-semibold px-5 rounded-lg" onClick={() => onOpenChange(false)}>
             Hủy
           </Button>
           <Button
-            className="rounded-full px-6 font-semibold shadow-sm"
+            className="h-8 text-xs font-semibold px-6 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-none"
             onClick={handleSubmit}
             disabled={
               isSubmitting ||
@@ -1780,7 +1542,7 @@ export function DieExportDialog({
           >
             {isSubmitting ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
                 Đang lưu...
               </>
             ) : (

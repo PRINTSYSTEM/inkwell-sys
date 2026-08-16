@@ -14,6 +14,7 @@ import {
 // ===== DieResponse =====
 export const DieResponseSchema = GenDieResponseSchema.extend({
   thumbnailUrl: z.string().nullable().optional(),
+  category: z.string().nullable().optional(),
 }).passthrough();
 export type DieResponse = z.infer<typeof DieResponseSchema>;
 
@@ -26,11 +27,15 @@ export const DieUsageHistoryItemSchema = GenDieUsageHistoryItemSchema.passthroug
 export type DieUsageHistoryItem = z.infer<typeof DieUsageHistoryItemSchema>;
 
 // ===== CreateDieRequest =====
-export const CreateDieRequestSchema = GenCreateDieRequestSchema.passthrough();
+export const CreateDieRequestSchema = GenCreateDieRequestSchema.extend({
+  category: z.string().nullable().optional(),
+}).passthrough();
 export type CreateDieRequest = z.infer<typeof CreateDieRequestSchema>;
 
 // ===== UpdateDieRequest =====
-export const UpdateDieRequestSchema = GenUpdateDieRequestSchema.passthrough();
+export const UpdateDieRequestSchema = GenUpdateDieRequestSchema.extend({
+  category: z.string().nullable().optional(),
+}).passthrough();
 export type UpdateDieRequest = z.infer<typeof UpdateDieRequestSchema>;
 
 // ===== AssignDieToProofingOrderRequest =====

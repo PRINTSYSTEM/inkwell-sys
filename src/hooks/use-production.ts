@@ -120,10 +120,13 @@ export const useUpdateProductionStep = () => {
     try {
       const result = await execute(payload);
 
-      // Invalidate production order queries to refresh step data
-      queryClient.invalidateQueries({
-        queryKey: productionOrderKeys.all,
-      });
+      // Invalidate all production order, print order, and post-print queries so all screens refresh simultaneously
+      invalidateRelatedQueries(queryClient, [
+        "production-orders",
+        "productions",
+        "print-orders",
+        "post-print",
+      ]);
 
       toast.success("Thành công", {
         description: "Đã cập nhật trạng thái bước sản xuất",
@@ -396,6 +399,34 @@ export const useCompleteProduction = () => {
     },
     reset: () => {},
   };
+};
+
+export const usePostPrintProductionOrders = (params?: ProductionListParams) => {
+  return useQuery<ProductionOrderResponsePaginate>({
+    queryKey: [...productionOrderKeys.all, "post-print", params],
+    queryFn: async () => {
+      const res = await apiRequest.get<ProductionOrderResponsePaginate>(
+        API_SUFFIX.PRODUCTION_POST_PRINT,
+        {
+          params: normalizeParams((params ?? {}) as Record<string, unknown>),
+        }
+      );
+      return res.data;
+    },
+  });
+};
+
+export const usePostPrintCounts = () => {
+  return useQuery<{ active: number }>({
+    queryKey: [...productionOrderKeys.all, "post-print-counts"],
+    queryFn: async () => {
+      const res = await apiRequest.get<{ active: number }>(
+        API_SUFFIX.PRODUCTION_POST_PRINT_COUNTS
+      );
+      return res.data;
+    },
+    refetchInterval: 15000,
+  });
 };
 
 export { productionOrderCrudApi, productionOrderKeys };

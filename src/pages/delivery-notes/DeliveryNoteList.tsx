@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { useDebounce } from "use-debounce";
@@ -1836,6 +1837,7 @@ function OrdersView({
   onImageClick,
   selectedCustomerId,
 }: OrdersViewProps) {
+  const queryClient = useQueryClient();
   const [expandedPrepressOrders, setExpandedPrepressOrders] = useState<Set<string>>(new Set());
   const [orderInputPage, setOrderInputPage] = useState<string>(String(currentPage));
 
@@ -1889,7 +1891,10 @@ function OrdersView({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => refetchOrders()}
+          onClick={() => {
+            queryClient.invalidateQueries();
+            refetchOrders();
+          }}
           disabled={ordersLoading}
           className="h-10 border-stone-200 dark:border-stone-800 font-semibold w-full md:w-auto"
         >

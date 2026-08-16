@@ -84,9 +84,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
         });
       }
 
-      // 2. Tự động làm mới dữ liệu (Refetch) dựa trên loại thông báo
       switch (message.type) {
-        case "DebtApproved":
         case "CustomerDebtWarning":
           // Làm mới danh sách thông báo công nợ, thông báo chung và số lượng trên chuông
           queryClient.invalidateQueries({ queryKey: debtNotificationKeys.all });

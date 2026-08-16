@@ -71,6 +71,7 @@ export function DieDialog({
   const [location, setLocation] = useState("");
   const [isUsable, setIsUsable] = useState(true);
   const [notes, setNotes] = useState("");
+  const [category, setCategory] = useState<string>("box");
   const [vendorId, setVendorId] = useState<number | null>(null);
   const [vendorName, setVendorName] = useState("");
   const [isCreatingVendor, setIsCreatingVendor] = useState(false);
@@ -89,7 +90,7 @@ export function DieDialog({
   const { mutate: uploadImage, isPending: uploadingImage } =
     useUploadDieImage();
 
-  // Reset form when dialog opens/closes or die changes
+  // When dialog opens, initialize form state
   useEffect(() => {
     if (open) {
       if (die) {
@@ -99,6 +100,7 @@ export function DieDialog({
         setLocation(die.location || "");
         setIsUsable(die.isUsable ?? true);
         setNotes(die.notes || "");
+        setCategory(die.category || "box");
         setVendorId(die.vendorId ?? null);
         setImagePreview(die.imageUrl || null);
         setImage(null);
@@ -109,6 +111,7 @@ export function DieDialog({
         setLocation("");
         setIsUsable(true);
         setNotes("");
+        setCategory("box");
         setVendorId(null);
         setImagePreview(null);
         setImage(null);
@@ -201,6 +204,7 @@ export function DieDialog({
             location: location.trim() || null,
             isUsable,
             notes: notes.trim() || null,
+            category: category || "box",
             vendorId: vendorId ?? null,
             estimatedReceiveAt: estimatedReceiveAt ? new Date(estimatedReceiveAt).toISOString() : null,
             isReusable,
@@ -227,7 +231,7 @@ export function DieDialog({
         }
       );
     } else {
-      // Create die - chỉ yêu cầu: vendorId, price (optional), estimatedReceiveAt (optional), isReusable (optional), image
+      // Create die
       if (!vendorId) {
         toast.error("Vui lòng chọn nhà cung cấp");
         return;
@@ -244,6 +248,7 @@ export function DieDialog({
           vendorId,
           size: size.trim() || undefined,
           notes: notes.trim() || undefined,
+          category: category || "box",
           estimatedReceiveAt: estimatedReceiveAt ? new Date(estimatedReceiveAt).toISOString() : undefined,
           isReusable: isReusable,
           image: image,
@@ -276,6 +281,22 @@ export function DieDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Phân loại khuôn bế */}
+          <div className="space-y-2">
+            <Label htmlFor="die-category">
+              Phân loại khuôn bế <span className="text-destructive">*</span>
+            </Label>
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger id="die-category">
+                <SelectValue placeholder="Chọn phân loại..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="box">Hộp (Khuôn Hộp)</SelectItem>
+                <SelectItem value="decal">Decal (Khuôn Decal)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           {/* Nhà cung cấp */}
           <div className="space-y-2">
             <Label>

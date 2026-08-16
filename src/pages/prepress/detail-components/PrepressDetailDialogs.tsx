@@ -796,6 +796,7 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
         open={isDieListDialogOpen}
         onOpenChange={setIsDieListDialogOpen}
         initialSize={dieListInitialSize}
+        initialDesignType={order?.items?.[0]?.designTypeName || (order as any)?.itemType || ""}
         onUseDie={(die) => {
           // Preselect the die in the export dialog and open it
           setDieExportInitialSelectedIds(die.id ? [die.id] : undefined);

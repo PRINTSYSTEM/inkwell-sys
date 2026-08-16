@@ -53,7 +53,7 @@ export default function InventorySummaryPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch] = useDebounce(searchQuery, 300);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 50;
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: addDays(new Date(), -30),
     to: new Date(),
@@ -92,7 +92,7 @@ export default function InventorySummaryPage() {
   } = useInventorySummary({
     pageNumber: currentPage,
     pageSize: itemsPerPage,
-    itemCode: debouncedSearch || undefined,
+    search: debouncedSearch || undefined,
     fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
     toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
     itemType: "product",
@@ -101,12 +101,35 @@ export default function InventorySummaryPage() {
     sortOrder: sortOrder || undefined,
   });
 
+  const filteredItems = useMemo(() => {
+    if (!summaryData?.items) return [];
+
+    // Deduplicate items by itemCode / materialTypeCode to prevent backend SQL join duplicates
+    const seenKeys = new Set<string>();
+    const uniqueItems = summaryData.items.filter((item) => {
+      const key = (item.itemCode || item.materialTypeCode || "").trim();
+      if (!key) return true;
+      if (seenKeys.has(key)) return false;
+      seenKeys.add(key);
+      return true;
+    });
+
+    if (!searchQuery.trim()) return uniqueItems;
+
+    const q = searchQuery.toLowerCase().trim();
+    return uniqueItems.filter((item) => {
+      const code = (item.itemCode || item.materialTypeCode || "").toLowerCase();
+      const name = (item.itemName || item.materialTypeName || "").toLowerCase();
+      return code.includes(q) || name.includes(q);
+    });
+  }, [summaryData?.items, searchQuery]);
+
   const exportMutation = useExportInventorySummary();
   const exportPdfMutation = useExportInventorySummaryPDF();
 
   const handleExportExcel = async () => {
     exportMutation.mutate({
-      itemCode: searchQuery || undefined,
+      search: searchQuery || undefined,
       fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
       toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
       itemType: "product",
@@ -458,7 +481,10 @@ export default function InventorySummaryPage() {
             <Input
               placeholder="Tìm kiếm theo mã hàng, tên hàng..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
               className="pl-9 h-10 sm:h-9 text-sm"
             />
           </div>
@@ -517,7 +543,7 @@ export default function InventorySummaryPage() {
                     ))}
                   </TableRow>
                 ))
-              ) : !summaryData?.items || summaryData.items.length === 0 ? (
+              ) : filteredItems.length === 0 ? (
                 <TableRow>
                   <TableCell
                     colSpan={7}
@@ -527,7 +553,7 @@ export default function InventorySummaryPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                summaryData.items.map((item) => {
+                filteredItems.map((item) => {
                   const itemCodeStr = item.itemCode || item.materialTypeCode || "";
                   const isDisabled = isCheckboxDisabled(itemCodeStr);
                   const isChecked = selectedItemCodes.has(itemCodeStr);

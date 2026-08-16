@@ -115,6 +115,8 @@ export const API_SUFFIX = {
   CUSTOMER_DEBT_STATEMENT_BY_RANGE: (id: number) => `/customers/${id}/debt-statement-by-range`,
   CUSTOMER_MONTHLY_DEBT: (id: number) => `/customers/${id}/monthly-debt`,
   CUSTOMER_DEBT_SUMMARY: (id: number) => `/customers/${id}/debt-summary`,
+  CUSTOMER_RECALCULATE_DEBT: (id: number) => `/customers/${id}/recalculate-debt`,
+  CUSTOMER_RECALCULATE_ALL_DEBTS: "/customers/recalculate-all-debts",
   CUSTOMER_STATISTICS: (id: number) => `/customers/${id}/statistics`,
   CUSTOMER_FAVORITE_STATS: (id: number) => `/customers/${id}/favorite-stats`,
   CUSTOMER_ORDERS: (id: number) => `/customers/${id}/order-history`,
@@ -245,6 +247,9 @@ export const API_SUFFIX = {
   VENDOR_SETTLE_DEBT_BATCH: "/vendors/debt/settle-batch",
   VENDOR_DEBT_SETTLEMENTS: (id: number) => `/vendors/${id}/debt/settlements`,
   VENDOR_DELETE_DEBT_SETTLEMENT: (historyId: number) => `/vendors/debt/settlements/${historyId}`,
+  VENDOR_OTHER_COST: (id: number) => `/vendors/${id}/debt/other-cost`,
+  VENDOR_OTHER_COSTS: (id: number) => `/vendors/${id}/debt/other-costs`,
+  VENDOR_DELETE_OTHER_COST: (historyId: number) => `/vendors/debt/other-costs/${historyId}`,
 
   // ========== DIES ==========
   DIES: "/dies",
@@ -331,6 +336,17 @@ export const API_SUFFIX = {
     `/production-orders/steps/${id}/status`,
   PRODUCTION_ORDERS_KCS: "/production-orders/kcs",
   PRODUCTION_ORDERS_KCS_SUMMARY: "/production-orders/kcs/design-type-summary",
+  PRODUCTION_POST_PRINT: "/production-orders/post-print",
+  PRODUCTION_POST_PRINT_COUNTS: "/production-orders/post-print/counts",
+
+  // ========== PRINT ORDERS ==========
+  PRINT_ORDERS: "/print-orders",
+  PRINT_ORDER_DISPATCH_CANDIDATES: "/print-orders/dispatch-candidates",
+  PRINT_ORDER_DISPATCH: "/print-orders/dispatch",
+  PRINT_ORDER_COUNTS: "/print-orders/counts",
+  PRINT_ORDER_START: (id: number) => `/print-orders/${id}/start`,
+  PRINT_ORDER_COMPLETE: (id: number) => `/print-orders/${id}/complete`,
+  PRINT_ORDER_RETURN: (id: number) => `/print-orders/${id}/return`,
 
   // ========== OUTSOURCE ORDERS ==========
   OUTSOURCE_ORDERS: "/outsource-orders",

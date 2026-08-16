@@ -992,7 +992,8 @@ export const useMaterialSuggestions = (productionOrderId?: number, enabled: bool
 };
 
 export interface CreateOpeningBalanceRequest {
-  itemCode: string;
+  materialId?: number;
+  itemCode?: string;
   itemType: string;
   quantity: number;
   effectiveDate: string;
@@ -1012,6 +1013,8 @@ export const useCreateOpeningBalance = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["materials"] });
       queryClient.invalidateQueries({ queryKey: stockInKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["inventory-balance"] });
+      queryClient.invalidateQueries({ queryKey: ["inventory-transactions"] });
       toast.success("Cập nhật số dư đầu kỳ thành công");
     },
     onError: (error: ApiError) => {
@@ -1023,7 +1026,8 @@ export const useCreateOpeningBalance = () => {
 };
 
 export interface DeleteOpeningBalanceRequest {
-  itemCode: string;
+  materialId?: number;
+  itemCode?: string;
   itemType: string;
 }
 

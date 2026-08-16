@@ -539,29 +539,36 @@ export default function MyWorkPage() {
                     >
                       {/* Image thumbnail */}
                       <TableCell className="py-2">
-                        <div
-                          className="w-10 h-10 rounded-md overflow-hidden bg-muted/20 flex items-center justify-center group relative cursor-pointer"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (design.designImageUrl || design.designFileUrl) {
-                              setViewingImage({
-                                url: design.designImageUrl || design.designFileUrl || "",
-                                title: design.designName
-                              });
-                            }
-                          }}
-                        >
-                          <img
-                            src={design.designImageUrl || design.designFileUrl || "/placeholder.svg"}
-                            alt={design.designName || "image"}
-                            loading="lazy"
-                            decoding="async"
-                            className="w-full h-full object-cover"
-                          />
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Eye className="w-4 h-4 text-white" />
-                          </div>
-                        </div>
+                        {(() => {
+                          const thumbUrl = design.designThumbnailUrl || (design as any).thumbnailUrl || design.designImageUrl || design.designFileUrl;
+                          const fullUrl = design.designImageUrl || design.designFileUrl || thumbUrl;
+
+                          return (
+                            <div
+                              className="w-10 h-10 rounded-md overflow-hidden bg-muted/20 flex items-center justify-center group relative cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (fullUrl) {
+                                  setViewingImage({
+                                    url: fullUrl,
+                                    title: design.designName || ""
+                                  });
+                                }
+                              }}
+                            >
+                              <img
+                                src={thumbUrl || "/placeholder.svg"}
+                                alt={design.designName || "image"}
+                                loading="lazy"
+                                decoding="async"
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Eye className="w-4 h-4 text-white" />
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </TableCell>
                       {/* Code */}
                       <TableCell className="py-3">

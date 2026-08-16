@@ -12,6 +12,7 @@ export * from "./material-spec.schema";
 export * from "./order.schema";
 export * from "./proofing-order.schema";
 export * from "./production.schema";
+export * from "./print-order.schema";
 export * from "./customer.schema";
 export * from "./invoice.schema";
 export * from "./accounting.schema";

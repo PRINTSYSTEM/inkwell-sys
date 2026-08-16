@@ -223,5 +223,105 @@ export const useDeleteVendorDebtSettlement = () => {
   });
 };
 
+export interface VendorOtherCostsParams {
+  fromDate?: string;
+  toDate?: string;
+}
+
+// GET /vendors/{id}/debt/other-costs
+export const useVendorOtherCosts = (
+  vendorId: number,
+  params?: VendorOtherCostsParams,
+  enabled: boolean = true
+) => {
+  return useQuery({
+    queryKey: ["vendor-other-costs", vendorId, params],
+    enabled: enabled && !!vendorId,
+    queryFn: async () => {
+      const res = await apiRequest.get<VendorDebtHistoryResponse[]>(
+        API_SUFFIX.VENDOR_OTHER_COSTS(vendorId),
+        { params }
+      );
+      return res.data;
+    },
+  });
+};
+
+export interface CreateVendorOtherCostRequest {
+  amount: number;
+  note: string;
+  recordedAt?: string | null;
+}
+
+// POST /vendors/{id}/debt/other-cost
+export const useCreateVendorOtherCost = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    { message: string; vendorId: number; vendorName: string; currentDebt: number },
+    ApiError,
+    { vendorId: number; data: CreateVendorOtherCostRequest }
+  >({
+    mutationFn: async ({ vendorId, data }) => {
+      const res = await apiRequest.post<{ message: string; vendorId: number; vendorName: string; currentDebt: number }>(
+        API_SUFFIX.VENDOR_OTHER_COST(vendorId),
+        data
+      );
+      return res.data;
+    },
+    onSuccess: (data, { vendorId }) => {
+      queryClient.invalidateQueries({ queryKey: vendorKeys.all });
+      queryClient.invalidateQueries({ queryKey: vendorKeys.detail(vendorId) });
+      queryClient.invalidateQueries({ queryKey: ["vendors"] });
+      queryClient.invalidateQueries({ queryKey: ["vendors", vendorId] });
+      queryClient.invalidateQueries({ queryKey: ["ap-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["ap-detail"] });
+      queryClient.invalidateQueries({ queryKey: ["ap-detail-ledger"] });
+      queryClient.invalidateQueries({ queryKey: ["vendor-other-costs", vendorId] });
+      queryClient.invalidateQueries({ queryKey: ["vendor-settlements", vendorId] });
+      toast.success(data.message || "Ghi nhận chi phí khác vào công nợ thành công");
+    },
+    onError: (error: ApiError) => {
+      toast.error("Ghi nhận chi phí khác thất bại", {
+        description: error.response?.data?.message || error.message,
+      });
+    },
+  });
+};
+
+// DELETE /vendors/debt/other-costs/{historyId}
+export const useDeleteVendorOtherCost = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    void,
+    ApiError,
+    { historyId: number; vendorId: number }
+  >({
+    mutationFn: async ({ historyId }) => {
+      await apiRequest.delete(
+        API_SUFFIX.VENDOR_DELETE_OTHER_COST(historyId)
+      );
+    },
+    onSuccess: (_, { vendorId }) => {
+      queryClient.invalidateQueries({ queryKey: vendorKeys.all });
+      queryClient.invalidateQueries({ queryKey: vendorKeys.detail(vendorId) });
+      queryClient.invalidateQueries({ queryKey: ["vendors"] });
+      queryClient.invalidateQueries({ queryKey: ["vendors", vendorId] });
+      queryClient.invalidateQueries({ queryKey: ["ap-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["ap-detail"] });
+      queryClient.invalidateQueries({ queryKey: ["ap-detail-ledger"] });
+      queryClient.invalidateQueries({ queryKey: ["vendor-other-costs", vendorId] });
+      queryClient.invalidateQueries({ queryKey: ["vendor-settlements", vendorId] });
+      toast.success("Xóa khoản chi phí khác thành công");
+    },
+    onError: (error: ApiError) => {
+      toast.error("Xóa khoản chi phí khác thất bại", {
+        description: error.response?.data?.message || error.message,
+      });
+    },
+  });
+};
+
 // Export for custom usage
 export { vendorCrudApi, vendorKeys };

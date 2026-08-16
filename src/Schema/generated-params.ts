@@ -666,6 +666,7 @@ export const DieListParamsSchema = PagedParamsSchema.extend({
   location: z.string().nullable().optional(),
   designId: z.number().int().nullable().optional(),
   designTypeId: z.number().int().nullable().optional(),
+  category: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });

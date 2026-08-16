@@ -1151,15 +1151,18 @@ export const useRecordDieExportWithFile = () => {
       id,
       dieIds,
       notes,
+      dieSizes,
     }: {
       id: number;
       dieIds: number[];
       notes?: string | null;
+      dieSizes?: Record<string, string[]>;
     }) => {
       // Build request payload according to RecordDieExportRequest schema
       const requestPayload: RecordDieExportRequest = {
         dieIds,
         notes: notes || undefined,
+        dieSizes: dieSizes || undefined,
       };
 
       // Validate request payload against schema

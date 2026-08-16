@@ -93,17 +93,10 @@ export function EditCustomerModal({
   const formSchema = useMemo(() => {
     return addCompanyNameValidation(
       baseFormSchema.extend({
-        currentDebt: z.number().refine(
-          (val) => val >= 0 || val === customer.currentDebt,
-          {
-            message:
-              "Dữ liệu nợ mới không được phép âm. Vui lòng đưa về 0 hoặc số dương.",
-          },
-        ),
         maxDebt: z.number().min(0, "Hạn mức không được âm"),
       }),
     );
-  }, [customer.currentDebt]);
+  }, []);
 
   type FormValues = z.infer<typeof formSchema>;
 
@@ -117,7 +110,6 @@ export function EditCustomerModal({
     address: customer.address ?? "",
     type: "company",
     scrapRate: customer.scrapRate ?? 0,
-    currentDebt: customer.currentDebt ?? 0,
     maxDebt: customer.maxDebt ?? 0,
   };
 
@@ -142,11 +134,6 @@ export function EditCustomerModal({
       email: values.email?.trim() === "" ? null : values.email,
     };
 
-    // TỐI ƯU: Nếu công nợ hoặc hạn mức không thay đổi, KHÔNG gửi lên backend
-    // Điều này giúp tránh lỗi validation 400 của backend đối với các số âm cũ
-    if (values.currentDebt === customer.currentDebt) {
-      delete data.currentDebt;
-    }
     if (values.maxDebt === customer.maxDebt) {
       delete data.maxDebt;
     }
@@ -309,53 +296,7 @@ export function EditCustomerModal({
               )}
             />
 
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="currentDebt"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-xs">
-                      Công nợ hiện tại
-                    </FormLabel>
-                    <FormControl>
-                      <div className="space-y-1">
-                        <Input
-                          type="number"
-                          {...field}
-                          value={field.value ?? ""}
-                          disabled // Khóa không cho phép sửa trực tiếp tại đây
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            field.onChange(val === "" ? "" : Number(val));
-                          }}
-                          className="h-9 bg-muted cursor-not-allowed"
-                        />
-                        <div className="text-[11px] font-medium text-primary/80 italic flex items-center flex-wrap gap-x-2">
-                          <span>
-                            {field.value !== "" ? new Intl.NumberFormat("vi-VN", {
-                              style: "currency",
-                              currency: "VND",
-                            }).format(Number(field.value) || 0) : "0 ₫"}
-                          </span>
-                          {customer.currentDebt !== undefined &&
-                            customer.currentDebt !== Number(field.value) && (
-                              <span className="text-destructive font-bold not-italic">
-                                (Số dư thực tế:{" "}
-                                {new Intl.NumberFormat("vi-VN", {
-                                  style: "currency",
-                                  currency: "VND",
-                                }).format(customer.currentDebt)}
-                                )
-                              </span>
-                            )}
-                        </div>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <div className="grid grid-cols-1 gap-4">
 
               <FormField
                 control={form.control}
