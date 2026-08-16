@@ -26,6 +26,13 @@ import {
   Copy,
   Check,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   HoverCard,
@@ -109,6 +116,7 @@ interface DetailDesignsListCardProps {
   onFindDie?: (design: any, dimensions: string) => void;
   highlightSearchTerm?: string;
   isProofer?: boolean;
+  onUpdateSide?: (designId: number, side: "both" | "front" | "back") => void;
 }
 
 export function DetailDesignsListCard({
@@ -135,6 +143,7 @@ export function DetailDesignsListCard({
   onFindDie,
   highlightSearchTerm = "",
   isProofer = true,
+  onUpdateSide,
 }: DetailDesignsListCardProps) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -513,6 +522,16 @@ export function DetailDesignsListCard({
                                 Gấp
                               </span>
                             )}
+                            {pod.side === "front" && (
+                              <span className="bg-blue-600 text-white text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide shrink-0">
+                                Mặt trước
+                              </span>
+                            )}
+                            {pod.side === "back" && (
+                              <span className="bg-purple-600 text-white text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide shrink-0">
+                                Mặt sau
+                              </span>
+                            )}
                           </div>
                         </TableCell>
 
@@ -592,21 +611,36 @@ export function DetailDesignsListCard({
                           )}
                         </TableCell>
                         <TableCell className="px-2 py-1">
-                          <span className="text-xs">
-                            {pod.design?.sidesClassification
-                              ? pod.design.designType?.name?.toLowerCase().includes("decal")
-                                ? pod.design.sidesClassification === "one_side"
-                                  ? "Decal lẻ"
-                                  : pod.design.sidesClassification === "two_side"
-                                    ? "Decal bộ"
-                                    : sidesClassificationLabels[
-                                    pod.design.sidesClassification
-                                    ] || pod.design.sidesClassification
-                                : sidesClassificationLabels[
-                                pod.design.sidesClassification
-                                ] || pod.design.sidesClassification
-                              : "—"}
-                          </span>
+                          <div className="flex flex-col gap-1 min-w-[95px]">
+                            <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                              {pod.design?.sidesClassification
+                                ? pod.design.designType?.name?.toLowerCase().includes("decal")
+                                  ? pod.design.sidesClassification === "one_side"
+                                    ? "Decal lẻ"
+                                    : pod.design.sidesClassification === "two_side"
+                                      ? "Decal bộ"
+                                      : sidesClassificationLabels[
+                                      pod.design.sidesClassification
+                                      ] || pod.design.sidesClassification
+                                  : sidesClassificationLabels[
+                                  pod.design.sidesClassification
+                                  ] || pod.design.sidesClassification
+                                : "—"}
+                            </span>
+                            <Select
+                              value={pod.side || "both"}
+                              onValueChange={(val) => onUpdateSide?.(pod.id, val as "both" | "front" | "back")}
+                            >
+                              <SelectTrigger className="h-6 text-[11px] font-bold px-1.5 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="both" className="text-[11px] font-medium">Cả 2 mặt</SelectItem>
+                                <SelectItem value="front" className="text-[11px] font-bold text-blue-600">Mặt trước</SelectItem>
+                                <SelectItem value="back" className="text-[11px] font-bold text-purple-600">Mặt sau</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </TableCell>
                         <TableCell className="px-2 py-1">
                           <div className="flex flex-wrap gap-1">

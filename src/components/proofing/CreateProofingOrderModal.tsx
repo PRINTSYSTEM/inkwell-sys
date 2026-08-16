@@ -79,6 +79,9 @@ export function CreateProofingOrderModal({
   const [designQuantities, setDesignQuantities] = useState<
     Record<number, number>
   >({});
+  const [designSides, setDesignSides] = useState<
+    Record<number, "both" | "front" | "back">
+  >({});
   const [paperSizeId, setPaperSizeId] = useState<string>("custom");
   const [customPaperSize, setCustomPaperSize] = useState("");
 
@@ -91,15 +94,19 @@ export function CreateProofingOrderModal({
   useEffect(() => {
     if (open) {
       const initialQuantities: Record<number, number> = {};
+      const initialSides: Record<number, "both" | "front" | "back"> = {};
       selectedDesigns.forEach((design) => {
         initialQuantities[design.id] = 0;
+        initialSides[design.id] = "both";
       });
       setDesignQuantities(initialQuantities);
+      setDesignSides(initialSides);
       setProofingSheetQuantity(1);
     } else {
       setNotes("");
       setProofingSheetQuantity(1);
       setDesignQuantities({});
+      setDesignSides({});
       setPaperSizeId("custom");
       setCustomPaperSize("");
     }
@@ -170,9 +177,11 @@ export function CreateProofingOrderModal({
           if (quantity <= 0) {
             throw new Error("Số lượng phải lớn hơn 0");
           }
+          const designId = parseInt(id, 10);
           return {
-            orderDetailId: parseInt(id, 10),
+            orderDetailId: designId,
             quantity: quantity,
+            side: designSides[designId] || "both",
           };
         });
 
@@ -324,6 +333,7 @@ export function CreateProofingOrderModal({
                 <TableRow>
                   <TableHead className="w-12 text-center">#</TableHead>
                   <TableHead className="min-w-[200px]">Thiết kế</TableHead>
+                  <TableHead className="w-32">Mặt in</TableHead>
                   <TableHead className="w-24 text-right">Đặt hàng</TableHead>
                   <TableHead className="w-24 text-right">Còn lại</TableHead>
                   <TableHead className="w-48">Số lượng lấy</TableHead>
@@ -380,6 +390,26 @@ export function CreateProofingOrderModal({
                             {design.code}
                           </code>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <Select
+                          value={designSides[design.id] || "both"}
+                          onValueChange={(val) =>
+                            setDesignSides((prev) => ({
+                              ...prev,
+                              [design.id]: val as "both" | "front" | "back",
+                            }))
+                          }
+                        >
+                          <SelectTrigger className="h-8 text-xs font-semibold bg-white border-slate-200">
+                            <SelectValue placeholder="Mặt in" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="both" className="text-xs font-medium">Cả 2 mặt</SelectItem>
+                            <SelectItem value="front" className="text-xs font-semibold text-blue-700">Mặt trước</SelectItem>
+                            <SelectItem value="back" className="text-xs font-semibold text-purple-700">Mặt sau</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell className="text-right">
                         <span className="text-sm font-medium">

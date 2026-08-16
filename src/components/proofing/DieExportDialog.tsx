@@ -94,6 +94,7 @@ interface DieExportDialogProps {
   replacingDieId?: number;
   initialSelectedDieIds?: number[];
   initialSize?: string;
+  initialCategory?: "box" | "decal";
 }
 
 export function DieExportDialog({
@@ -106,6 +107,7 @@ export function DieExportDialog({
   replacingDieId,
   initialSelectedDieIds,
   initialSize,
+  initialCategory,
 }: DieExportDialogProps) {
   const [dieCount, setDieCount] = useState<number>(1);
   const [vendorId, setVendorId] = useState<number | null>(null);
@@ -469,15 +471,31 @@ export function DieExportDialog({
       setDieLength(undefined);
       setDieWidth(undefined);
       setDieHeight(undefined);
-      const itemTypeStr = (proofingOrder?.itemType || (proofingOrder as any)?.items?.[0]?.designTypeName || "").toLowerCase();
-      const isDecalOrder = itemTypeStr.includes("decal") || itemTypeStr.includes("de cal") || itemTypeStr.includes("nhãn") || itemTypeStr.includes("sticker");
+      const designTypeName = (
+        (proofingOrder as any)?.designType?.name ||
+        (proofingOrder as any)?.designTypeName ||
+        proofingOrder?.itemType ||
+        proofingOrder?.proofingOrderDesigns?.[0]?.design?.designType?.name ||
+        (proofingOrder?.proofingOrderDesigns?.[0]?.design as any)?.designTypeName ||
+        (proofingOrder as any)?.items?.[0]?.designTypeName ||
+        proofingOrder?.materialType?.name ||
+        ""
+      ).toLowerCase();
+
+      const isDecalOrder =
+        initialCategory === "decal" ||
+        designTypeName.includes("decal") ||
+        designTypeName.includes("de cal") ||
+        designTypeName.includes("nhãn") ||
+        designTypeName.includes("sticker");
+
       const defaultCategory = isDecalOrder ? "decal" : "box";
       setDieCategory(defaultCategory);
       setCategoryFilter(defaultCategory);
       setSelectedDecalDieSizes([]);
       setIsReusable(true);
     }
-  }, [open, initialSelectedDieIds, initialSize]);
+  }, [open, initialSelectedDieIds, initialSize, initialCategory, proofingOrder]);
 
   // Cleanup image preview URLs
   useEffect(() => {

@@ -1924,6 +1924,51 @@ export default function ProofingOrderDetailPage() {
       setUpdatingDesignId(null);
     }
   };
+
+  // Handle update side for a single design item
+  const handleUpdateDesignSide = async (
+    proofingOrderDesignId: number,
+    side: "both" | "front" | "back"
+  ) => {
+    if (!order?.id) return;
+    const originalDesign = order.proofingOrderDesigns?.find(
+      (pod) => pod.id === proofingOrderDesignId,
+    );
+    if (!originalDesign) return;
+
+    setUpdatingDesignId(proofingOrderDesignId);
+    try {
+      await updateProofingOrderAsync({
+        id: order.id,
+        data: {
+          designUpdates: [
+            {
+              proofingOrderDesignId,
+              quantity: originalDesign.quantity || 1,
+              itemsPerSheet:
+                originalDesign.itemsPerSheet != null && originalDesign.itemsPerSheet > 0
+                  ? originalDesign.itemsPerSheet
+                  : 1,
+              side,
+            },
+          ],
+        },
+      });
+      toast.success("Thành công", {
+        description: `Đã cập nhật mặt in: ${
+          side === "front"
+            ? "Mặt trước"
+            : side === "back"
+              ? "Mặt sau"
+              : "Cả 2 mặt"
+        }`,
+      });
+    } catch (error) {
+      // Handled by hook
+    } finally {
+      setUpdatingDesignId(null);
+    }
+  };
   const handleOldStatusChangeClick = () => {
     // Chỉ cho phép khi status là waiting_for_file (logic cũ)
     if (order?.status === "waiting_for_file") {
@@ -2518,6 +2563,7 @@ export default function ProofingOrderDetailPage() {
                   onFindDie={handleFindDie}
                   highlightSearchTerm={highlightSearchTerm}
                   isProofer={isProofer}
+                  onUpdateSide={handleUpdateDesignSide}
                 />
               </div>
 

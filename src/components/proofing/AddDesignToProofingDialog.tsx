@@ -14,6 +14,13 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -45,6 +52,7 @@ interface AddDesignToProofingDialogProps {
       orderDetailId: number | null;
       readyDesignId: number | null;
       quantity: number;
+      side?: "both" | "front" | "back";
     }>
   ) => Promise<void>;
   isSubmitting?: boolean;
@@ -61,6 +69,9 @@ export function AddDesignToProofingDialog({
 }: AddDesignToProofingDialogProps) {
   const [designQuantities, setDesignQuantities] = useState<
     Record<number, number>
+  >({});
+  const [designSides, setDesignSides] = useState<
+    Record<number, "both" | "front" | "back">
   >({});
   const [selectedDesignIds, setSelectedDesignIds] = useState<Set<number>>(
     new Set()
@@ -112,14 +123,18 @@ export function AddDesignToProofingDialog({
   useEffect(() => {
     if (open) {
       const initialQuantities: Record<number, number> = {};
+      const initialSides: Record<number, "both" | "front" | "back"> = {};
       const initialSelected = new Set<number>();
       filteredDesigns.forEach((design) => {
         initialQuantities[design.id] = 0;
+        initialSides[design.id] = "both";
       });
       setDesignQuantities(initialQuantities);
+      setDesignSides(initialSides);
       setSelectedDesignIds(initialSelected);
     } else {
       setDesignQuantities({});
+      setDesignSides({});
       setSelectedDesignIds(new Set());
     }
   }, [open, filteredDesigns]);
@@ -196,12 +211,14 @@ export function AddDesignToProofingDialog({
           if (quantity <= 0) {
             throw new Error("Số lượng phải lớn hơn 0");
           }
-          const design = filteredDesigns.find((d) => d.id === parseInt(id, 10));
+          const designId = parseInt(id, 10);
+          const design = filteredDesigns.find((d) => d.id === designId);
           const isPoolDesign = design?.queueItemId?.startsWith("RD_") || false;
           return {
             orderDetailId: isPoolDesign ? null : (design?.id ?? null),
             readyDesignId: design?.readyDesignId ?? design?.designId ?? null,
             quantity: quantity,
+            side: designSides[designId] || "both",
           };
         });
 
@@ -326,7 +343,7 @@ export function AddDesignToProofingDialog({
                 <TableHead className="w-24 text-right">Đặt hàng</TableHead>
                 <TableHead className="w-24 text-right">Còn lại</TableHead>
                 <TableHead className="w-40">Chất liệu</TableHead>
-                <TableHead className="w-24">Số mặt</TableHead>
+                <TableHead className="w-32">Mặt in</TableHead>
                 <TableHead className="w-48">Số lượng lấy</TableHead>
                 <TableHead className="w-28 text-right">Sau khi lấy</TableHead>
                 <TableHead className="w-40 text-center">Thời gian tạo</TableHead>
@@ -459,13 +476,24 @@ export function AddDesignToProofingDialog({
                         </div>
                       </TableCell>
                       <TableCell>
-                        {design.sidesClassification ? (
-                          <Badge variant="outline" className="text-xs font-normal">
-                            {sidesClassificationLabels[design.sidesClassification] || design.sidesClassification}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">—</span>
-                        )}
+                        <Select
+                          value={designSides[design.id] || "both"}
+                          onValueChange={(val) =>
+                            setDesignSides((prev) => ({
+                              ...prev,
+                              [design.id]: val as "both" | "front" | "back",
+                            }))
+                          }
+                        >
+                          <SelectTrigger className="h-7 text-xs font-semibold bg-white border-slate-200 min-w-[95px]">
+                            <SelectValue placeholder="Mặt in" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="both" className="text-xs font-medium">Cả 2 mặt</SelectItem>
+                            <SelectItem value="front" className="text-xs font-semibold text-blue-600">Mặt trước</SelectItem>
+                            <SelectItem value="back" className="text-xs font-semibold text-purple-600">Mặt sau</SelectItem>
+                          </SelectContent>
+                        </Select>
                       </TableCell>
                       <TableCell className="w-48 min-w-[150px]">
                         <div className="flex items-center gap-1.5 min-w-[140px]">

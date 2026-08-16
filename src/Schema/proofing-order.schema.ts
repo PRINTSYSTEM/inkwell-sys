@@ -91,14 +91,18 @@ export type ProofingOrderResponsePaginate = ProofingOrderListResponsePaginate;
 
 // ===== AddProofingOrderDetailItem =====
 export const AddProofingOrderDetailItemSchema =
-  GenAddProofingOrderDetailItemSchema.passthrough();
+  GenAddProofingOrderDetailItemSchema.extend({
+    side: z.enum(["both", "front", "back"]).optional(),
+  }).passthrough();
 export type AddProofingOrderDetailItem = z.infer<
   typeof AddProofingOrderDetailItemSchema
 >;
 
 // ===== UpdateProofingDesignItem =====
 export const UpdateProofingDesignItemSchema =
-  GenUpdateProofingDesignItemSchema.passthrough();
+  GenUpdateProofingDesignItemSchema.extend({
+    side: z.enum(["both", "front", "back"]).optional(),
+  }).passthrough();
 export type UpdateProofingDesignItem = z.infer<
   typeof UpdateProofingDesignItemSchema
 >;
@@ -107,6 +111,7 @@ export type UpdateProofingDesignItem = z.infer<
 export const UpdateProofingOrderRequestSchema =
   GenUpdateProofingOrderRequestSchema.extend({
     completedAt: z.string().nullable().optional(),
+    designUpdates: z.array(UpdateProofingDesignItemSchema).nullable().optional(),
   }).passthrough();
 export type UpdateProofingOrderRequest = z.infer<
   typeof UpdateProofingOrderRequestSchema

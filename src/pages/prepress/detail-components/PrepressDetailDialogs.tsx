@@ -527,6 +527,15 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
         onSuccess={handleDieExportSuccess}
         initialSelectedDieIds={dieExportInitialSelectedIds}
         initialSize={dieListInitialSize}
+        initialCategory={
+          order?.itemType?.toLowerCase().includes("decal") ||
+          (order as any)?.designTypeName?.toLowerCase().includes("decal") ||
+          (order as any)?.designType?.name?.toLowerCase().includes("decal") ||
+          order?.proofingOrderDesigns?.[0]?.design?.designType?.name?.toLowerCase().includes("decal") ||
+          order?.materialType?.name?.toLowerCase().includes("decal")
+            ? "decal"
+            : "box"
+        }
       />
 
       {/* Die Dialog (for editing die info) */}
@@ -748,6 +757,7 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
             orderDetailId: item.orderDetailId,
             readyDesignId: item.readyDesignId,
             quantity: item.quantity,
+            side: item.side || "both",
           }));
           if (items.length === 0) {
             toast.error("Lỗi", {

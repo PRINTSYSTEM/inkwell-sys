@@ -618,9 +618,26 @@ const KcsItemRow = React.memo(function KcsItemRow({
           </div>
         )}
         <div className="min-w-0 text-xs leading-normal">
-          <p className="text-sm font-black text-slate-900 dark:text-slate-100 truncate" title={item.designName || ""}>
-            {item.designName || "—"}
-          </p>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <p className="text-sm font-black text-slate-900 dark:text-slate-100 truncate" title={item.designName || ""}>
+              {item.designName || "—"}
+            </p>
+            {(item as any).side === "front" && (
+              <span className="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide shrink-0">
+                Mặt trước
+              </span>
+            )}
+            {(item as any).side === "back" && (
+              <span className="bg-purple-600 text-white text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide shrink-0">
+                Mặt sau
+              </span>
+            )}
+            {(item as any).side === "both" && (
+              <span className="bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0">
+                Cả 2 mặt
+              </span>
+            )}
+          </div>
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-slate-500 mt-1">
             <span>Mã: <strong className="text-slate-800 dark:text-slate-200 font-bold">{item.designCode || "—"}</strong></span>
             <span>•</span>
