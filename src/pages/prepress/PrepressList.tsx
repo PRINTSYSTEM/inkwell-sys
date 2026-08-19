@@ -115,6 +115,8 @@ import type { UserRole } from "@/Schema";
 type ProofingOrder =
   import("@/Schema/proofing-order.schema").ProofingOrderResponse;
 
+import { getMaxAvailableQtyForSide } from "@/components/proofing/AddDesignToProofingDialog";
+
 function useHasActiveProofingFilters(args: {
   selectedDesignTypes: number[];
   selectedMaterialTypes: number[];
@@ -134,6 +136,7 @@ export default function PrepressList() {
   const role = user?.role as UserRole | undefined;
   const isProofer = role === ROLE.ADMIN || role === ROLE.MANAGER || role === ROLE.PROOFER;
   const { addToCart, cartItems } = useProofingCart();
+  const [designSides, setDesignSides] = useState<Record<number, "both" | "front" | "back">>({});
 
   // Refresh proofing data when user navigates/mounts page from sidebar
   useEffect(() => {
@@ -484,9 +487,11 @@ export default function PrepressList() {
       ? selectedMaterialTypes[0]
       : null;
 
+  const isSearchingByDesignCode = debouncedDesignCode.trim().length > 0;
+
   const { data: availableDesignsData, isLoading: isLoadingDesigns } =
     useAvailableOrderDetailsForProofing(
-      viewMode === "designs" || isSearchActiveAndEmpty
+      viewMode === "designs" || isSearchActiveAndEmpty || isSearchingByDesignCode
         ? {
           materialTypeId: viewMode === "designs" ? materialTypeIdForApi : null,
           designTypeId: viewMode === "designs" ? selectedDesignTypeId : null,
@@ -788,6 +793,29 @@ export default function PrepressList() {
         });
         return;
       }
+
+      // Validate design quantities according to selected side
+      const invalidDesigns = selectedDesigns.filter((design) => {
+        const qty = designQuantities[design.id] || 0;
+        if (qty <= 0) return false;
+
+        const side = designSides[design.id] || "both";
+        const { maxAvailable } = getMaxAvailableQtyForSide(design, side);
+        return qty > maxAvailable;
+      });
+
+      if (invalidDesigns.length > 0) {
+        const first = invalidDesigns[0];
+        const side = designSides[first.id] || "both";
+        const { label } = getMaxAvailableQtyForSide(first, side);
+        const sideName = side === "front" ? "mặt trước" : side === "back" ? "mặt sau" : "cả 2 mặt";
+
+        toast.error("Vượt quá số lượng khả dụng", {
+          description: `Mã hàng ${first.code}: Số lượng nhập (${(designQuantities[first.id] || 0).toLocaleString("vi-VN")}) vượt quá số còn lại cho ${sideName} (Còn ${label}).`,
+        });
+        return;
+      }
+
       const items = Object.entries(designQuantities)
         .filter(([_, qty]) => qty > 0)
         .map(([id, qty]) => {
@@ -801,10 +829,11 @@ export default function PrepressList() {
             orderDetailId: isPoolDesign ? null : design.id,
             readyDesignId: design.readyDesignId ?? design.designId ?? null,
             quantity: quantity,
+            side: (designSides[design.id] || "both") as "both" | "front" | "back",
           };
         })
         .filter(
-          (item): item is { orderDetailId: number | null; readyDesignId: number | null; quantity: number } =>
+          (item): item is { orderDetailId: number | null; readyDesignId: number | null; quantity: number; side: "both" | "front" | "back" } =>
             item !== null,
         );
 
@@ -826,7 +855,7 @@ export default function PrepressList() {
       // 2. Add designs to the new order
       await addDesignsMutate({
         id: orderId,
-        request: { materialTypeId: currentMaterialTypeId, items },
+        request: { materialTypeId: currentMaterialTypeId, items: items as any },
         suppressToast: true,
       });
 
@@ -858,6 +887,7 @@ export default function PrepressList() {
       });
       setIsConfiguring(false);
       setDesignQuantities({});
+      setDesignSides({});
       setProofingSheetQuantity(0);
       setPaperSizeId("custom");
       setCustomPaperSize("");
@@ -872,6 +902,7 @@ export default function PrepressList() {
   const handleCancelCreateOrder = () => {
     setIsConfiguring(false);
     setDesignQuantities({});
+    setDesignSides({});
     setProofingSheetQuantity(0);
     setPaperSizeId("custom");
     setCustomPaperSize("");
@@ -884,21 +915,13 @@ export default function PrepressList() {
     toggleSelection(design);
 
     if (isSelecting) {
+      const side = designSides[design.id] || "both";
+      const { maxAvailable } = getMaxAvailableQtyForSide(design, side);
       setDesignQuantities((prev) => ({
         ...prev,
-        [design.id]:
-          design.availableQuantity !== undefined
-            ? design.availableQuantity
-            : design.quantity || 0,
+        [design.id]: maxAvailable,
       }));
     }
-
-    // Removed automatic triggering of isConfiguring to only open panel when "Tạo lệnh mới" is clicked
-    /* 
-    if (!isConfiguring) {
-      setIsConfiguring(true);
-    }
-    */
   };
 
   const handleClearFilters = () => {
@@ -1217,6 +1240,8 @@ export default function PrepressList() {
                     materialTypeName={configMaterialTypeName}
                     designQuantities={designQuantities}
                     setDesignQuantities={setDesignQuantities}
+                    designSides={designSides}
+                    setDesignSides={setDesignSides}
                     toggleSelection={handleToggleDesign}
                     proofingSheetQuantity={proofingSheetQuantity}
                     setProofingSheetQuantity={setProofingSheetQuantity}

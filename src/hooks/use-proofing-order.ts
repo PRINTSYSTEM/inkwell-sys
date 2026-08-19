@@ -237,6 +237,10 @@ export const useAvailableOrderDetailsForProofing = (
               (od as any).order?.customer?.companyName ||
               undefined,
             basisWeight: design.basisWeight ?? undefined,
+            unitName: (od as any).unitName ?? (design as any).unitName ?? undefined,
+            isDecalSet: (od as any).isDecalSet ?? (od as any).readyDesign?.isDecalSet ?? (design as any).isDecalSet ?? false,
+            availableFrontQty: (od as any).availableFrontQty ?? (od as any).readyDesign?.availableFrontQty ?? null,
+            availableBackQty: (od as any).availableBackQty ?? (od as any).readyDesign?.availableBackQty ?? null,
             designerName: design.designer?.fullName || design.designer?.username || undefined,
             createdBy: (od as any).createdBy?.fullName || (od as any).createdBy?.username || undefined,
             proofingAllocations: od.proofingAllocations || undefined,

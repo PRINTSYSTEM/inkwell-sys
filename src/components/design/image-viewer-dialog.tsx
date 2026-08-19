@@ -10,6 +10,8 @@ import {
   RefreshCw,
 } from "lucide-react";
 
+import { formatImageUrl } from "@/lib/utils";
+
 interface ImageViewerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -23,6 +25,7 @@ export function ImageViewerDialog({
   imageUrl,
   title,
 }: ImageViewerDialogProps) {
+  const formattedUrl = formatImageUrl(imageUrl) || "/placeholder.svg";
   const [scale, setScale] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -123,7 +126,7 @@ export function ImageViewerDialog({
               className="flex items-center justify-center"
             >
               <img
-                src={imageUrl || "/placeholder.svg"}
+                src={formattedUrl}
                 alt={title || "Image"}
                 className="max-w-[90vw] max-h-[75vh] object-contain pointer-events-none"
               />
@@ -184,7 +187,7 @@ export function ImageViewerDialog({
               asChild
               title="Tải về"
             >
-              <a href={imageUrl} download target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-full h-full">
+              <a href={formattedUrl} download target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-full h-full">
                 <Download className="h-4 w-4" />
               </a>
             </Button>

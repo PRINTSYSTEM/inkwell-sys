@@ -47,7 +47,7 @@ import {
 import { formatDesignDimensions } from "@/utils/format-die-size";
 import { downloadFile } from "@/lib/download-utils";
 import { QuantityCell } from "./QuantityCell";
-import { cn } from "@/lib/utils";
+import { cn, formatImageUrl } from "@/lib/utils";
 import { format } from "date-fns";
 
 function HoverInfoCopy({ value, label }: { value: string; label: string }) {
@@ -236,7 +236,7 @@ export function DetailDesignsListCard({
                 </TableHead>
 
                 <TableHead className="w-36">
-                  Kích thước
+                  Kích thước (mm)
                 </TableHead>
 
                 <TableHead className="w-20 text-center">
@@ -255,9 +255,11 @@ export function DetailDesignsListCard({
                   Quy cách đầy đủ
                 </TableHead>
 
-                <TableHead className="w-36 text-right">
-                  Thao tác
-                </TableHead>
+                {isProofer && (
+                  <TableHead className="w-36 text-right">
+                    Thao tác
+                  </TableHead>
+                )}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -495,22 +497,33 @@ export function DetailDesignsListCard({
                            </p>
                          </TableCell>
                         <TableCell className="px-2 py-1">
-                          {pod.design?.designThumbnailUrl || pod.design?.designImageUrl ? (
-                            <img
-                              src={pod.design.designThumbnailUrl || pod.design.designImageUrl}
-                              alt={pod.design.designName}
-                              className="w-10 h-10 object-cover rounded border cursor-pointer"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setViewingImageUrl(pod.design.designImageUrl);
-                                setImageViewerOpen(true);
-                              }}
-                            />
-                          ) : (
-                            <div className="w-10 h-10 bg-muted rounded border flex items-center justify-center">
-                              <FileImage className="h-4 w-4 text-muted-foreground" />
-                            </div>
-                          )}
+                          {(() => {
+                            const rawDesignImg =
+                              pod.design?.thumbnailUrl ||
+                              pod.design?.imageUrl ||
+                              pod.design?.designThumbnailUrl ||
+                              pod.design?.designImageUrl ||
+                              pod.design?.images?.[0]?.imageUrl ||
+                              pod.design?.images?.[0]?.thumbnailUrl;
+                            const designImg = formatImageUrl(rawDesignImg);
+
+                            return designImg ? (
+                              <img
+                                src={designImg}
+                                alt={pod.design?.code || pod.design?.designName || "Mã hàng"}
+                                className="w-10 h-10 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setViewingImageUrl(designImg);
+                                  setImageViewerOpen(true);
+                                }}
+                              />
+                            ) : (
+                              <div className="w-10 h-10 bg-muted rounded border flex items-center justify-center">
+                                <FileImage className="h-4 w-4 text-muted-foreground" />
+                              </div>
+                            );
+                          })()}
                         </TableCell>
                         <TableCell className="px-2 py-1">
                           <div className="flex items-center gap-1.5 flex-wrap">
@@ -522,12 +535,12 @@ export function DetailDesignsListCard({
                                 Gấp
                               </span>
                             )}
-                            {pod.side === "front" && (
+                            {isBo && pod.side === "front" && (
                               <span className="bg-blue-600 text-white text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide shrink-0">
                                 Mặt trước
                               </span>
                             )}
-                            {pod.side === "back" && (
+                            {isBo && pod.side === "back" && (
                               <span className="bg-purple-600 text-white text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide shrink-0">
                                 Mặt sau
                               </span>
@@ -535,16 +548,13 @@ export function DetailDesignsListCard({
                           </div>
                         </TableCell>
 
-                        <TableCell className="px-2 py-1">
-                          <div className="text-xs">
-                            <p>
-                              {formatDesignDimensions(
-                                pod.design?.length,
-                                pod.design?.width,
-                                pod.design?.height,
-                              )}{" "}
-                              mm
-                            </p>
+                        <TableCell className="px-2 py-1 whitespace-nowrap">
+                          <div className="text-xs font-mono">
+                            {formatDesignDimensions(
+                              pod.design?.length,
+                              pod.design?.width,
+                              pod.design?.height,
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="px-2 py-1">
@@ -565,34 +575,50 @@ export function DetailDesignsListCard({
                           />
                           {allocations && allocations.length > 0 && (
                             <div className="mt-1.5 space-y-1 border-t border-dashed pt-1.5 text-[11px] text-muted-foreground">
-                              {allocations.map((alloc: any, idx: number) => (
-                                <div key={idx} className="flex justify-between gap-2.5 whitespace-nowrap">
-                                  <span
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (alloc.proofingOrderId) {
-                                        navigate(`/proofing/${alloc.proofingOrderId}?highlightDesignId=${pod.design?.id || pod.designId}`);
-                                      }
-                                    }}
-                                    className="font-mono text-blue-600 dark:text-blue-400 font-medium hover:underline cursor-pointer"
-                                  >
-                                    {alloc.proofingOrderCode || `Bài #${alloc.proofingOrderId}`}
-                                  </span>
-                                  <span className={cn(
-                                    "font-semibold text-[11px]",
-                                    isBo ? "text-green-600 dark:text-green-400 font-bold" : "text-foreground"
-                                  )}>
-                                    {(() => {
-                                      const qty = alloc.quantityTaken ?? 0;
-                                      if (isBo) {
-                                        const pieces = qty * 2;
-                                        return `${pieces.toLocaleString("vi-VN")} / ${qty.toLocaleString("vi-VN")} bộ`;
-                                      }
-                                      return qty.toLocaleString("vi-VN");
-                                    })()}
-                                  </span>
-                                </div>
-                              ))}
+                              {allocations.map((alloc: any, idx: number) => {
+                                const side = alloc.side || "both";
+                                const qtyInSheets = alloc.quantityInSheets ?? (alloc.quantityTaken ?? 0);
+                                const qtyTaken = alloc.quantityTaken ?? 0;
+
+                                let allocText = "";
+                                if (side === "front") {
+                                  allocText = `Đã bình ${qtyInSheets.toLocaleString("vi-VN")} mặt trước`;
+                                } else if (side === "back") {
+                                  allocText = `Đã bình ${qtyInSheets.toLocaleString("vi-VN")} mặt sau`;
+                                } else if (isBo) {
+                                  allocText = `Đã bình ${qtyTaken.toLocaleString("vi-VN")} bộ`;
+                                } else {
+                                  allocText = qtyTaken.toLocaleString("vi-VN");
+                                }
+
+                                return (
+                                  <div key={idx} className="flex justify-between gap-2.5 whitespace-nowrap">
+                                    <span
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (alloc.proofingOrderId) {
+                                          navigate(`/proofing/${alloc.proofingOrderId}?highlightDesignId=${pod.design?.id || pod.designId}`);
+                                        }
+                                      }}
+                                      className="font-mono text-blue-600 dark:text-blue-400 font-medium hover:underline cursor-pointer"
+                                    >
+                                      {alloc.proofingOrderCode || `Bài #${alloc.proofingOrderId}`}
+                                    </span>
+                                    <span className={cn(
+                                      "font-semibold text-[11px]",
+                                      side === "front"
+                                        ? "text-blue-600 dark:text-blue-400 font-bold"
+                                        : side === "back"
+                                          ? "text-purple-600 dark:text-purple-400 font-bold"
+                                          : isBo
+                                            ? "text-green-600 dark:text-green-400 font-bold"
+                                            : "text-foreground"
+                                    )}>
+                                      {allocText}
+                                    </span>
+                                  </div>
+                                );
+                              })}
                             </div>
                           )}
                         </TableCell>
@@ -610,8 +636,8 @@ export function DetailDesignsListCard({
                             <span className="text-muted-foreground">—</span>
                           )}
                         </TableCell>
-                        <TableCell className="px-2 py-1">
-                          <div className="flex flex-col gap-1 min-w-[95px]">
+                        <TableCell className="px-2 py-1 text-center">
+                          <div className="flex flex-col items-center justify-center gap-1 min-w-[90px] mx-auto text-center">
                             <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                               {pod.design?.sidesClassification
                                 ? pod.design.designType?.name?.toLowerCase().includes("decal")
@@ -627,19 +653,18 @@ export function DetailDesignsListCard({
                                   ] || pod.design.sidesClassification
                                 : "—"}
                             </span>
-                            <Select
-                              value={pod.side || "both"}
-                              onValueChange={(val) => onUpdateSide?.(pod.id, val as "both" | "front" | "back")}
-                            >
-                              <SelectTrigger className="h-6 text-[11px] font-bold px-1.5 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="both" className="text-[11px] font-medium">Cả 2 mặt</SelectItem>
-                                <SelectItem value="front" className="text-[11px] font-bold text-blue-600">Mặt trước</SelectItem>
-                                <SelectItem value="back" className="text-[11px] font-bold text-purple-600">Mặt sau</SelectItem>
-                              </SelectContent>
-                            </Select>
+                            {isBo && (
+                              <span className={cn(
+                                "text-[11px] font-bold px-1.5 py-0.5 rounded w-fit select-none",
+                                pod.side === "front"
+                                  ? "bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border border-blue-200"
+                                  : pod.side === "back"
+                                    ? "bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300 border border-purple-200"
+                                    : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200"
+                              )}>
+                                {pod.side === "front" ? "Mặt trước" : pod.side === "back" ? "Mặt sau" : "Cả 2 mặt"}
+                              </span>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell className="px-2 py-1">
@@ -705,76 +730,78 @@ export function DetailDesignsListCard({
                             })()}
                           </div>
                         </TableCell>
-                        <TableCell className="px-3 py-2 text-right">
-                          <div className="flex flex-col gap-1 items-stretch w-28 ml-auto py-1">
-                            {hasDieCutDesigns && pod.design?.id && pod.design?.processClassification === "die_cut" && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-7 px-2 justify-start gap-1.5 text-[11px] font-normal"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const dims = formatDesignDimensions(
-                                    pod.design?.length,
-                                    pod.design?.width,
-                                    pod.design?.height,
-                                  );
-                                  onFindDie?.(pod.design, dims);
-                                }}
-                                title="Tìm khuôn liên quan"
-                              >
-                                <Search className="h-3 w-3 text-muted-foreground shrink-0" />
-                                <span className="truncate">Tìm khuôn</span>
-                              </Button>
-                            )}
-                            {order && order.status !== "completed" && pod.id && isProofer && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-7 px-2 justify-start gap-1.5 text-[11px] font-normal"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditingQuantityDesignId(pod.id!);
-                                  setInlineQuantityValue(
-                                    pod.quantity?.toString() || "",
-                                  );
-                                  setInlineItemsPerSheetValue?.(
-                                    (pod.itemsPerSheet != null && pod.itemsPerSheet > 0 ? pod.itemsPerSheet : 1).toString(),
-                                  );
-                                }}
-                                disabled={
-                                  editingQuantityDesignId === pod.id ||
-                                  updatingDesignId === pod.id
-                                }
-                                title="Cập nhật số lượng"
-                              >
-                                <Edit className="h-3 w-3 text-muted-foreground shrink-0" />
-                                <span className="truncate">Sửa SL</span>
-                              </Button>
-                            )}
-                            {order && order.status !== "completed" && pod.id && isProofer && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-7 px-2 justify-start gap-1.5 text-[11px] font-normal text-destructive hover:text-destructive hover:bg-destructive/5 border-destructive/10 hover:border-destructive/20"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setRemoveDesignTarget({
-                                    proofingOrderDesignId: pod.id!,
-                                    designCode: pod.design?.code,
-                                    designName: pod.design?.designName,
-                                  });
-                                  setIsConfirmRemoveDesignDialogOpen(true);
-                                }}
-                                disabled={isRemovingDesign}
-                                title="Xóa mã hàng"
-                              >
-                                <Trash2 className="h-3 w-3 shrink-0" />
-                                <span className="truncate">Xóa Mã</span>
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
+                        {isProofer && (
+                          <TableCell className="px-3 py-2 text-right">
+                            <div className="flex flex-col gap-1 items-stretch w-28 ml-auto py-1">
+                              {hasDieCutDesigns && pod.design?.id && pod.design?.processClassification === "die_cut" && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 px-2 justify-start gap-1.5 text-[11px] font-normal"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const dims = formatDesignDimensions(
+                                      pod.design?.length,
+                                      pod.design?.width,
+                                      pod.design?.height,
+                                    );
+                                    onFindDie?.(pod.design, dims);
+                                  }}
+                                  title="Tìm khuôn liên quan"
+                                >
+                                  <Search className="h-3 w-3 text-muted-foreground shrink-0" />
+                                  <span className="truncate">Tìm khuôn</span>
+                                </Button>
+                              )}
+                              {order && order.status !== "completed" && pod.id && isProofer && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 px-2 justify-start gap-1.5 text-[11px] font-normal"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setEditingQuantityDesignId(pod.id!);
+                                    setInlineQuantityValue(
+                                      pod.quantity?.toString() || "",
+                                    );
+                                    setInlineItemsPerSheetValue?.(
+                                      (pod.itemsPerSheet != null && pod.itemsPerSheet > 0 ? pod.itemsPerSheet : 1).toString(),
+                                    );
+                                  }}
+                                  disabled={
+                                    editingQuantityDesignId === pod.id ||
+                                    updatingDesignId === pod.id
+                                  }
+                                  title="Cập nhật số lượng"
+                                >
+                                  <Edit className="h-3 w-3 text-muted-foreground shrink-0" />
+                                  <span className="truncate">Sửa SL</span>
+                                </Button>
+                              )}
+                              {order && order.status !== "completed" && pod.id && isProofer && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 px-2 justify-start gap-1.5 text-[11px] font-normal text-destructive hover:text-destructive hover:bg-destructive/5 border-destructive/10 hover:border-destructive/20"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setRemoveDesignTarget({
+                                      proofingOrderDesignId: pod.id!,
+                                      designCode: pod.design?.code,
+                                      designName: pod.design?.designName,
+                                    });
+                                    setIsConfirmRemoveDesignDialogOpen(true);
+                                  }}
+                                  disabled={isRemovingDesign}
+                                  title="Xóa mã hàng"
+                                >
+                                  <Trash2 className="h-3 w-3 shrink-0" />
+                                  <span className="truncate">Xóa Mã</span>
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        )}
                       </TableRow>
                     </HoverCardTrigger>
                     <HoverCardContent className="w-[450px] p-4 max-w-md" side="right" align="start">

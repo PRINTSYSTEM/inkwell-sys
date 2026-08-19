@@ -208,6 +208,7 @@ export const OrderDetailForDeliveryResponseSchema = z
     customerId: z.number().int(),
     customerName: z.string().nullable(),
     proofingOrderCodes: z.array(z.string()).nullable().optional(),
+    completedProofingOrderCodes: z.array(z.string()).nullable().optional(),
     // Lịch sử phiếu giao hàng hiệu lực của mã hàng (để đối chiếu khi tạo PGH)
     deliveryHistory: z
       .array(DeliveryNoteHistoryItemResponseSchema)

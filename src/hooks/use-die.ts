@@ -657,6 +657,7 @@ export const useReceiveDie = () => {
       queryClient.invalidateQueries({ queryKey: ["proofing-orders"] });
       queryClient.invalidateQueries({ queryKey: ["production-orders"] });
       queryClient.invalidateQueries({ queryKey: ["productions"] });
+      queryClient.invalidateQueries({ queryKey: ["print-orders"] });
       toast.success("Đã xác nhận nhận khuôn bế thành công");
     },
     onError: (error: ApiError) => {

@@ -29,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
+import { formatImageUrl } from "@/lib/utils";
 import {
   usePostPrintProductionOrders,
   usePostPrintCounts,
@@ -161,14 +162,8 @@ export default function PostPrintProductionPage() {
         <div>
           <div className="flex items-center gap-2">
             <Scissors className="h-6 w-6 text-[#93631F]" />
-            <h1 className="text-xl font-bold text-slate-900">Màn 3: Sản Xuất Sau In</h1>
-            <Badge className="bg-amber-100 text-amber-900 border-amber-300 font-bold">
-              Trưởng phòng SX
-            </Badge>
+            <h1 className="text-xl font-bold text-slate-900">Sản Xuất Sau In</h1>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
-            Bảng Ma trận Sản xuất Sau In: Cập nhật trạng thái từng quy trình (Cán màng, Bồi, Ép kim, Bế, Cắt, Dán) khớp 100% Lệnh Sản Xuất.
-          </p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -195,11 +190,10 @@ export default function PostPrintProductionPage() {
               variant={selectedDesignTypeId === undefined ? "default" : "outline"}
               size="sm"
               onClick={() => setSelectedDesignTypeId(undefined)}
-              className={`h-8 text-xs font-semibold ${
-                selectedDesignTypeId === undefined
+              className={`h-8 text-xs font-semibold ${selectedDesignTypeId === undefined
                   ? "bg-[#93631F] hover:bg-[#7a521a] text-white"
                   : "text-slate-600"
-              }`}
+                }`}
             >
               Tất cả loại ({postPrintList.length})
             </Button>
@@ -209,11 +203,10 @@ export default function PostPrintProductionPage() {
                 variant={selectedDesignTypeId === dt.id ? "default" : "outline"}
                 size="sm"
                 onClick={() => setSelectedDesignTypeId(dt.id)}
-                className={`h-8 text-xs font-semibold ${
-                  selectedDesignTypeId === dt.id
+                className={`h-8 text-xs font-semibold ${selectedDesignTypeId === dt.id
                     ? "bg-[#93631F] hover:bg-[#7a521a] text-white"
                     : "text-slate-600"
-                }`}
+                  }`}
               >
                 {dt.name} ({dt.code})
               </Button>
@@ -282,7 +275,10 @@ export default function PostPrintProductionPage() {
                       {section.items.map((item) => {
                         const proofingCode = item.proofingOrderCode || `PO-${item.id}`;
                         const images = item.proofingOrderImages || [];
-                        const thumbnail = images[0]?.imageUrl || images[0]?.thumbnailUrl;
+                        const rawThumbnail = images[0]?.thumbnailUrl || images[0]?.imageUrl;
+                        const rawFullImage = images[0]?.imageUrl || images[0]?.thumbnailUrl;
+                        const thumbnail = formatImageUrl(rawThumbnail);
+                        const fullImage = formatImageUrl(rawFullImage);
                         const isUrgent = item.isUrgent;
                         const totalQty = item.proofingOrder?.totalQuantity || item.items?.[0]?.inputQty || 0;
                         const steps: ProductionStepResponse[] = item.steps || [];
@@ -294,7 +290,7 @@ export default function PostPrintProductionPage() {
                               <div className="flex items-center gap-2.5">
                                 <div
                                   className="h-10 w-10 bg-slate-100 rounded-lg border border-slate-200 overflow-hidden relative shrink-0 cursor-pointer"
-                                  onClick={() => thumbnail && setViewingImageUrl(thumbnail)}
+                                  onClick={() => fullImage && setViewingImageUrl(fullImage)}
                                 >
                                   {thumbnail ? (
                                     <img
@@ -324,9 +320,16 @@ export default function PostPrintProductionPage() {
                             </TableCell>
 
                             <TableCell className="py-2.5">
-                              <Badge variant="outline" className={`text-[10px] font-bold ${getDesignTypeBadgeStyle(item.designType?.code)}`}>
-                                {item.designType?.name} ({item.designType?.code})
-                              </Badge>
+                              <div className="flex flex-col gap-0.5">
+                                <Badge variant="outline" className={`text-[10px] font-bold w-fit ${getDesignTypeBadgeStyle(item.designType?.code)}`}>
+                                  {item.designType?.name} ({item.designType?.code})
+                                </Badge>
+                                {(item.proofingOrder as any)?.materialType?.name && (
+                                  <span className="text-[10.5px] text-slate-500 font-medium truncate" title={(item.proofingOrder as any).materialType.name}>
+                                    {(item.proofingOrder as any).materialType.name}
+                                  </span>
+                                )}
+                              </div>
                             </TableCell>
 
                             <TableCell className="text-right font-mono font-bold text-xs text-slate-900 py-2.5">

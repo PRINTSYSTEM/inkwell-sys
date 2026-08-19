@@ -177,11 +177,12 @@ export const useDeleteProductionOrder = () => {
       });
     } catch (err: unknown) {
       const error = err as ApiError;
-      toast.error("Lỗi", {
+      const serverMsg = error?.response?.data?.message || error?.message;
+      toast.error("Không thể hủy/xóa lệnh sản xuất", {
         description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Không thể hủy lệnh sản xuất",
+          serverMsg ||
+          "Lệnh sản xuất đã có lịch sử sản xuất hoặc báo lỗi — Vui lòng dùng luồng Trả về bình bài.",
+        duration: 5000,
       });
       throw err;
     }

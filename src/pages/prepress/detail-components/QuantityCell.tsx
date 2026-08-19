@@ -3,8 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useAvailableQuantity } from "@/hooks/use-proofing-order";
 
+import { checkIsDecalSet } from "@/types/proofing";
+
 interface QuantityCellProps {
-  pod: any; // Using any for now to avoid complex schema import if not strictly needed, or I can try to import it
+  pod: any;
   editingQuantityDesignId: number | null;
   inlineQuantityValue: string;
   setInlineQuantityValue: (value: string) => void;
@@ -28,17 +30,20 @@ export function QuantityCell({
 }: QuantityCellProps) {
   const isEditing = editingQuantityDesignId === pod.id;
   const designId = pod.design?.id ?? null;
-  const isDecal = pod.design?.designType?.name?.toLowerCase().includes("decal") ||
-                  pod.design?.materialType?.name?.toLowerCase().includes("decal");
-  const isBo = isDecal && pod.design?.sidesClassification === "two_side";
+  const isDecalSet = checkIsDecalSet(pod.design);
+  const side = pod.side || "both";
+  const isBoBoth = isDecalSet && (side === "both" || !side);
 
   const formatQtyFromPieces = (qty: number | undefined | null) => {
     if (qty == null) return "0";
-    if (isBo) {
-      const sets = Math.floor(qty / 2);
-      return `${qty.toLocaleString()} / ${sets.toLocaleString()} bộ`;
+    if (side === "front" || side === "back") {
+      return qty.toLocaleString("vi-VN");
     }
-    return qty.toLocaleString();
+    if (isBoBoth) {
+      const sets = Math.floor(qty / 2);
+      return `${qty.toLocaleString("vi-VN")} / ${sets.toLocaleString("vi-VN")} bộ`;
+    }
+    return qty.toLocaleString("vi-VN");
   };
 
   // Get available quantity from API when editing this design
@@ -194,7 +199,7 @@ export function QuantityCell({
 
   return (
     <div className="flex flex-col gap-1 py-1 min-w-[70px]">
-      <span className={`text-xs font-black tracking-tight ${isBo ? "text-emerald-700 dark:text-emerald-400 font-extrabold" : "text-slate-900 dark:text-slate-100"}`}>
+      <span className={`text-xs font-black tracking-tight ${isDecalSet ? "text-emerald-700 dark:text-emerald-400 font-extrabold" : "text-slate-900 dark:text-slate-100"}`}>
         {formatQtyFromPieces(pod.quantity)}
       </span>
       <div className="flex items-center">

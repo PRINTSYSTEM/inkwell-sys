@@ -947,6 +947,7 @@ export default function DeliveryNoteListPage() {
       if (!order.details) return;
       order.details.forEach((detail) => {
         const codes = detail.proofingOrderCodes || [];
+
         if (codes.length === 0) {
           const key = "no_proofing_code";
           if (!groupsMap.has(key)) {
@@ -963,7 +964,7 @@ export default function DeliveryNoteListPage() {
             createdAt: order.createdAt,
           });
         } else {
-          codes.forEach((code) => {
+          codes.forEach((code: string) => {
             const key = code.trim().toUpperCase();
             if (!groupsMap.has(key)) {
               groupsMap.set(key, []);

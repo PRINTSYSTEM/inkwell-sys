@@ -55,6 +55,7 @@ export const ProductionOrderResponseSchema = GenProductionOrderResponseSchema.ex
       id: z.number(),
       plateCount: z.number().nullable().optional(),
       productionMethod: z.string().nullable().optional(),
+      plateVendorName: z.string().nullable().optional(),
       printingVendorName: z.string().nullable().optional(),
       printingVendor: z.object({
         id: z.number(),
@@ -106,6 +107,7 @@ export const ProductionOrderResponseSchema = GenProductionOrderResponseSchema.ex
         height: z.number().nullable().optional(),
         size: z.string().nullable().optional(),
         location: z.string().nullable().optional(),
+        vendorName: z.string().nullable().optional(),
         imageUrl: z.string().nullable().optional(),
         notes: z.string().nullable().optional(),
       }).nullable().optional(),

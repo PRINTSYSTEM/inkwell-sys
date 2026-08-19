@@ -19,7 +19,7 @@ import { ChevronLeft, ChevronRight, Search, Copy } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { formatDesignDimensions } from "@/utils/format-die-size";
-import type { DesignItem } from "@/types/proofing";
+import { type DesignItem, checkIsDecalSet } from "@/types/proofing";
 import { toast } from "sonner";
 
 interface PrepressDesignTableProps {
@@ -296,11 +296,26 @@ export function PrepressDesignTable({
                                 </TableCell>
                                 <TableCell className="py-3">
                                   <span className="text-sm font-semibold">
-                                    {design.availableQuantity != null
-                                      ? design.availableQuantity.toLocaleString(
-                                        "vi-VN",
-                                      )
-                                      : design.quantity.toLocaleString("vi-VN")}
+                                    {(() => {
+                                      const isBo = checkIsDecalSet(design);
+                                      if (isBo) {
+                                        const frontAvail = design.availableFrontQty;
+                                        const backAvail = design.availableBackQty;
+                                        if (frontAvail != null || backAvail != null) {
+                                          const f = frontAvail ?? 0;
+                                          const b = backAvail ?? 0;
+                                          if (f === b) {
+                                            return `${(f * 2).toLocaleString("vi-VN")} / ${f.toLocaleString("vi-VN")} bộ`;
+                                          }
+                                          return `${f.toLocaleString("vi-VN")} trước / ${b.toLocaleString("vi-VN")} sau`;
+                                        }
+                                        const piecesVal = design.availableQuantity ?? design.quantity;
+                                        const setsVal = Math.floor(piecesVal / 2);
+                                        return `${piecesVal.toLocaleString("vi-VN")} / ${setsVal.toLocaleString("vi-VN")} bộ`;
+                                      }
+                                      const piecesVal = design.availableQuantity ?? design.quantity;
+                                      return piecesVal.toLocaleString("vi-VN");
+                                    })()}
                                   </span>
                                 </TableCell>
                                 <TableCell className="py-3">

@@ -45,6 +45,9 @@ export const ProofingOrderResponseSchema =
     scheduleStatus: z.string().nullable().optional(),
     completedAt: z.string().nullable().optional(),
     images: z.array(ProofingOrderImageResponseSchema).nullable().optional(),
+    returnType: z.string().nullable().optional(),
+    returnTypeDisplayName: z.string().nullable().optional(),
+    returnReason: z.string().nullable().optional(),
   }).passthrough();
 export type ProofingOrderResponse = z.infer<typeof ProofingOrderResponseSchema>;
 
@@ -54,6 +57,9 @@ export const ProofingOrderListResponseSchema =
     thumbnailUrl: z.string().nullable().optional(),
     scheduleStatus: z.string().nullable().optional(),
     completedAt: z.string().nullable().optional(),
+    returnType: z.string().nullable().optional(),
+    returnTypeDisplayName: z.string().nullable().optional(),
+    returnReason: z.string().nullable().optional(),
   }).passthrough();
 export type ProofingOrderListResponse = z.infer<typeof ProofingOrderListResponseSchema>;
 

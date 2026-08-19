@@ -86,6 +86,7 @@ export const useReceivePlate = () => {
       queryClient.invalidateQueries({ queryKey: ["proofing-orders"] });
       queryClient.invalidateQueries({ queryKey: ["production-orders"] });
       queryClient.invalidateQueries({ queryKey: ["productions"] });
+      queryClient.invalidateQueries({ queryKey: ["print-orders"] });
       toast.success("Đã xác nhận nhận kẽm thành công");
     },
     onError: (error: { response?: { data?: { message?: string } }; message?: string }) => {

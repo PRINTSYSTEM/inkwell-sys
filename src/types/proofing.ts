@@ -40,6 +40,10 @@ export interface DesignItem {
   readyDesignId?: number; // from BE readyDesignId
   availableForProofing?: number; // from BE availableForProofing
   basisWeight?: number; // from design.basisWeight
+  unitName?: string; // from design.unitName (e.g. "Bộ")
+  isDecalSet?: boolean; // from BE isDecalSet (true if decal set)
+  availableFrontQty?: number | null; // Available quantity for front side (mặt trước) in sheets
+  availableBackQty?: number | null; // Available quantity for back side (mặt sau) in sheets
   createdBy?: string;
   proofingAllocations?: ProofingAllocation[];
 }
@@ -47,7 +51,9 @@ export interface DesignItem {
 export interface ProofingAllocation {
   proofingOrderId?: number;
   proofingOrderCode?: string | null;
+  side?: "both" | "front" | "back" | string;
   quantityTaken?: number;
+  quantityInSheets?: number;
   proofingOrderStatus?: string | null;
 }
 
@@ -83,4 +89,19 @@ export interface ProofingOrderPayload {
   materialTypeId: number;
   assignedTo?: string;
   notes?: string;
+}
+
+export function checkIsDecalSet(item: {
+  isDecalSet?: boolean;
+  unitName?: string;
+  designTypeName?: string;
+  materialTypeName?: string;
+  sidesClassification?: string;
+} | null | undefined): boolean {
+  if (!item) return false;
+  if (item.isDecalSet === true) return true;
+  if (item.unitName === "Bộ" || item.unitName === "bo" || item.unitName === "bộ") return true;
+  const isDecal = (item.designTypeName || item.materialTypeName || "").toLowerCase().includes("decal");
+  const isTwoSide = item.sidesClassification === "two_side" || item.sidesClassification === "both";
+  return isDecal && isTwoSide;
 }

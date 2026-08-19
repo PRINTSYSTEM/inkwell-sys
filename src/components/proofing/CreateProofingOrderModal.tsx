@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { SearchableSelect } from "@/components/forms/SearchableSelect";
-import type { DesignItem } from "@/types/proofing";
+import { type DesignItem, checkIsDecalSet } from "@/types/proofing";
+import { getMaxAvailableQtyForSide } from "@/components/proofing/AddDesignToProofingDialog";
 import type { PaperSizeResponse } from "@/Schema/paper-size.schema";
 import type { AddProofingOrderDetailItem } from "@/Schema/proofing-order.schema";
 import {
@@ -147,24 +148,24 @@ export function CreateProofingOrderModal({
         return;
       }
 
-      // Validate design quantities
+      // Validate design quantities according to selected side
       const invalidDesigns = selectedDesigns.filter((design) => {
         const qty = designQuantities[design.id] || 0;
-        if (qty <= 0) return false; // Skip validation for zero quantities
+        if (qty <= 0) return false;
 
-        // Use availableQuantity if exists and valid (>= 0), otherwise use quantity
-        const maxAllowedQty =
-          design.availableQuantity !== undefined &&
-          design.availableQuantity >= 0
-            ? design.availableQuantity
-            : design.quantity;
-
-        return qty > maxAllowedQty;
+        const side = designSides[design.id] || "both";
+        const { maxAvailable } = getMaxAvailableQtyForSide(design, side);
+        return qty > maxAvailable;
       });
 
       if (invalidDesigns.length > 0) {
-        toast.error("Lỗi", {
-          description: `Số lượng lấy vượt quá số lượng còn lại chưa bình bài cho ${invalidDesigns.length} thiết kế. Vui lòng kiểm tra lại.`,
+        const first = invalidDesigns[0];
+        const side = designSides[first.id] || "both";
+        const { label } = getMaxAvailableQtyForSide(first, side);
+        const sideName = side === "front" ? "mặt trước" : side === "back" ? "mặt sau" : "cả 2 mặt";
+
+        toast.error("Vượt quá số lượng khả dụng", {
+          description: `Mã hàng ${first.code}: Số lượng nhập (${(designQuantities[first.id] || 0).toLocaleString("vi-VN")}) vượt quá số còn lại cho ${sideName} (Còn ${label}).`,
         });
         return;
       }
@@ -343,31 +344,15 @@ export function CreateProofingOrderModal({
               </TableHeader>
               <TableBody>
                 {selectedDesigns.map((design, index) => {
+                  const currentSide = designSides[design.id] || "both";
+                  const { maxAvailable: maxQty, label: availLabel } = getMaxAvailableQtyForSide(design, currentSide);
                   const currentQty = designQuantities[design.id] || 0;
 
-                  // Determine the base quantity to use: availableQuantity if exists and valid, otherwise quantity
-                  const baseAvailableQty =
-                    design.availableQuantity !== undefined &&
-                    design.availableQuantity >= 0
-                      ? design.availableQuantity
-                      : design.quantity;
-
-                  // Max quantity that can be taken (same as baseAvailableQty)
-                  const maxQty = baseAvailableQty;
-
-                  // Remaining quantity after taking currentQty
-                  const remainingQty = Math.max(
-                    0,
-                    baseAvailableQty - currentQty
-                  );
+                  const remainingQty = Math.max(0, maxQty - currentQty);
 
                   // Validation states
                   const isValid = currentQty > 0 && currentQty <= maxQty;
                   const isExceeded = currentQty > maxQty;
-
-                  // Check if availableQuantity was provided (even if 0)
-                  const hasAvailableQuantity =
-                    design.availableQuantity !== undefined;
 
                   return (
                     <TableRow
@@ -392,49 +377,57 @@ export function CreateProofingOrderModal({
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Select
-                          value={designSides[design.id] || "both"}
-                          onValueChange={(val) =>
-                            setDesignSides((prev) => ({
-                              ...prev,
-                              [design.id]: val as "both" | "front" | "back",
-                            }))
-                          }
-                        >
-                          <SelectTrigger className="h-8 text-xs font-semibold bg-white border-slate-200">
-                            <SelectValue placeholder="Mặt in" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="both" className="text-xs font-medium">Cả 2 mặt</SelectItem>
-                            <SelectItem value="front" className="text-xs font-semibold text-blue-700">Mặt trước</SelectItem>
-                            <SelectItem value="back" className="text-xs font-semibold text-purple-700">Mặt sau</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        {(() => {
+                          const isDecalBo = checkIsDecalSet(design);
+                          if (!isDecalBo) return <span className="text-xs text-muted-foreground">—</span>;
+
+                          return (
+                            <Select
+                              value={currentSide}
+                              onValueChange={(val: "both" | "front" | "back") => {
+                                setDesignSides((prev) => ({
+                                  ...prev,
+                                  [design.id]: val,
+                                }));
+                                const { maxAvailable: newMax } = getMaxAvailableQtyForSide(design, val);
+                                setDesignQuantities((prev) => ({
+                                  ...prev,
+                                  [design.id]: newMax,
+                                }));
+                              }}
+                            >
+                              <SelectTrigger className="h-8 text-xs font-semibold bg-white border-slate-200">
+                                <SelectValue placeholder="Mặt in" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="both" className="text-xs font-medium">Cả 2 mặt</SelectItem>
+                                <SelectItem value="front" className="text-xs font-semibold text-blue-700">Mặt trước</SelectItem>
+                                <SelectItem value="back" className="text-xs font-semibold text-purple-700">Mặt sau</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="text-right">
                         <span className="text-sm font-medium">
-                          {design.quantity.toLocaleString()}
+                          {design.quantity.toLocaleString("vi-VN")}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
-                        {hasAvailableQuantity ? (
-                          <span
-                            className={cn(
-                              "text-sm font-medium",
-                              design.availableQuantity! > 0
-                                ? "text-green-600"
-                                : design.availableQuantity! === 0
-                                  ? "text-orange-600"
-                                  : "text-red-600"
-                            )}
-                          >
-                            {design.availableQuantity!.toLocaleString()}
-                          </span>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">
-                            -
-                          </span>
-                        )}
+                        <span
+                          className={cn(
+                            "text-sm font-semibold whitespace-nowrap",
+                            maxQty > 0
+                              ? currentSide === "front"
+                                ? "text-blue-600 dark:text-blue-400"
+                                : currentSide === "back"
+                                  ? "text-purple-600 dark:text-purple-400"
+                                  : "text-green-600 dark:text-green-400"
+                              : "text-red-600"
+                          )}
+                        >
+                          {availLabel}
+                        </span>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -452,14 +445,14 @@ export function CreateProofingOrderModal({
                               handleQuantityChange(
                                 design.id,
                                 e.target.value,
-                                design.quantity,
-                                design.availableQuantity
+                                maxQty,
+                                maxQty
                               )
                             }
                             placeholder="0"
                           />
                           <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
-                            /{maxQty.toLocaleString()}
+                            /{maxQty.toLocaleString("vi-VN")}
                           </span>
                         </div>
                       </TableCell>
@@ -474,7 +467,7 @@ export function CreateProofingOrderModal({
                                 : "text-muted-foreground"
                           )}
                         >
-                          {remainingQty.toLocaleString()}
+                          {remainingQty.toLocaleString("vi-VN")}
                         </span>
                       </TableCell>
                       <TableCell className="text-center">

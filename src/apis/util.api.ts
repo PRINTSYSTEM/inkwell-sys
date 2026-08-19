@@ -342,17 +342,26 @@ export const API_SUFFIX = {
   // ========== PRINT ORDERS ==========
   PRINT_ORDERS: "/print-orders",
   PRINT_ORDER_DISPATCH_CANDIDATES: "/print-orders/dispatch-candidates",
+  PRINT_ORDER_DISPATCH_CANDIDATES_SUMMARY: "/print-orders/dispatch-candidates/summary",
   PRINT_ORDER_DISPATCH: "/print-orders/dispatch",
   PRINT_ORDER_COUNTS: "/print-orders/counts",
+  PRINT_ORDER_ENQUEUE: "/print-orders/enqueue",
+  PRINT_ORDER_DEQUEUE: (id: number) => `/print-orders/${id}/dequeue`,
   PRINT_ORDER_START: (id: number) => `/print-orders/${id}/start`,
+  PRINT_ORDER_PAUSE: (id: number) => `/print-orders/${id}/pause`,
   PRINT_ORDER_COMPLETE: (id: number) => `/print-orders/${id}/complete`,
   PRINT_ORDER_RETURN: (id: number) => `/print-orders/${id}/return`,
+  PRINT_ORDER_CONFIRM_PAPER: (id: number) => `/print-orders/dispatch-candidates/${id}/confirm-paper`,
+  PRINT_ORDER_CONFIRM_FLUTE: (id: number) => `/print-orders/dispatch-candidates/${id}/confirm-flute`,
+  PRINT_ORDER_REORDER: "/print-orders/reorder",
+  PRINT_ORDER_RETURN_TO_PROOFING: (id: number) => `/print-orders/dispatch-candidates/${id}/return-to-proofing`,
+  PRINT_ORDER_HISTORY: (id: number) => `/print-orders/${id}/history`,
+  PRODUCTION_ORDER_PRINT_LABEL: (poId: number, itemId: number) =>
+    `/production-orders/${poId}/items/${itemId}/print-label`,
 
   // ========== OUTSOURCE ORDERS ==========
   OUTSOURCE_ORDERS: "/outsource-orders",
   OUTSOURCE_ORDER_BY_ID: (id: number) => `/outsource-orders/${id}`,
-  PRODUCTION_ORDER_PRINT_LABEL: (poId: number, itemId: number) =>
-    `/production-orders/${poId}/items/${itemId}/print-label`,
 
   // ========== DEFECT RECORDS ==========
   DEFECT_RECORDS: "/defect-records",

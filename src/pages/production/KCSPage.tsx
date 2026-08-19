@@ -13,6 +13,7 @@ import { defectRecordKeys } from "@/hooks/use-defect-record";
 import { useAuth } from "@/hooks/use-auth";
 import { useDesignTypeList } from "@/hooks/use-design-type";
 import { useDesign } from "@/hooks/use-design";
+import { checkIsDecalSet } from "@/types/proofing";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -551,18 +552,18 @@ const KcsItemRow = React.memo(function KcsItemRow({
   // Query design detail to get sidesClassification
   const { data: design } = useDesign(item.designId || null, !!item.designId);
 
-  const isDecal =
-    (prod.designTypeName || "").toLowerCase().includes("decal") ||
-    (design?.designType?.name || "").toLowerCase().includes("decal") ||
-    (design?.materialType?.name || "").toLowerCase().includes("decal");
-
-  const isBo = isDecal && design?.sidesClassification === "two_side";
+  const side = (item as any).side || "both";
+  const isDecalSet = checkIsDecalSet(design || (item as any));
+  const isBoBoth = isDecalSet && (side === "both" || !side);
 
   const formatQty = (qty: number | undefined | null) => {
     if (qty == null) return "0";
-    if (isBo) {
+    if (side === "front" || side === "back") {
+      return qty.toLocaleString("vi-VN");
+    }
+    if (isBoBoth) {
       const sets = Math.floor(qty / 2);
-      return `${qty.toLocaleString("vi-VN")} / ${sets.toLocaleString("vi-VN")} bộ`;
+      return `${sets.toLocaleString("vi-VN")} bộ`;
     }
     return qty.toLocaleString("vi-VN");
   };
@@ -622,19 +623,14 @@ const KcsItemRow = React.memo(function KcsItemRow({
             <p className="text-sm font-black text-slate-900 dark:text-slate-100 truncate" title={item.designName || ""}>
               {item.designName || "—"}
             </p>
-            {(item as any).side === "front" && (
+            {isDecalSet && (item as any).side === "front" && (
               <span className="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide shrink-0">
                 Mặt trước
               </span>
             )}
-            {(item as any).side === "back" && (
+            {isDecalSet && (item as any).side === "back" && (
               <span className="bg-purple-600 text-white text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide shrink-0">
                 Mặt sau
-              </span>
-            )}
-            {(item as any).side === "both" && (
-              <span className="bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300 text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0">
-                Cả 2 mặt
               </span>
             )}
           </div>
