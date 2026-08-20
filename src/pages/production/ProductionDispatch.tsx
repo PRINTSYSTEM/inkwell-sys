@@ -189,6 +189,13 @@ export default function ProductionDispatch() {
     designTypeId: selectedDesignTypeId,
   });
 
+  const { data: unfilteredCandidatesData } = useDispatchCandidates({
+    pageNumber: 1,
+    pageSize: 300,
+    search: searchQuery.trim() || undefined,
+    designTypeId: undefined,
+  });
+
   const dispatchMutation = useDispatchPrintOrders();
   const receivePlateMutation = useReceivePlate();
   const receiveDieMutation = useReceiveDie();
@@ -783,7 +790,7 @@ export default function ProductionDispatch() {
               ))
             ) : (
               designTypes.map((dt) => {
-                const count = candidateItems.filter(
+                const count = (unfilteredCandidatesData?.items || candidateItems).filter(
                   (item) => (item.designTypeId || item.productionOrder?.designType?.id) === dt.id
                 ).length;
                 return (

@@ -208,6 +208,17 @@ export default function PrintOrdersPage() {
     toDate: toDateParam,
   });
 
+  // Fetch unfiltered list for current viewTab to maintain stable Design Type counts
+  const { data: unfilteredPrintOrdersData } = usePrintOrders({
+    pageNumber: 1,
+    pageSize: 300,
+    tab: viewTab,
+    designTypeId: undefined,
+    search: searchQuery.trim() || undefined,
+    fromDate: fromDateParam,
+    toDate: toDateParam,
+  });
+
   const startMutation = useStartPrintOrder();
   const pauseMutation = usePausePrintOrder();
   const completeMutation = useCompletePrintOrder();
@@ -217,6 +228,7 @@ export default function PrintOrdersPage() {
   const dequeueMutation = useDequeuePrintOrder();
 
   const printOrdersList = printOrdersData?.items || [];
+  const unfilteredList = unfilteredPrintOrdersData?.items || printOrdersList;
 
   // Group completed items by completion date
   const groupedCompletedByDate = useMemo(() => {
@@ -638,10 +650,10 @@ export default function PrintOrdersPage() {
                   : "text-slate-600 border-slate-200 bg-white hover:bg-slate-50"
               )}
             >
-              Tất cả ({printOrdersList.length})
+              Tất cả ({unfilteredList.length})
             </Button>
             {designTypes.map((dt) => {
-              const count = printOrdersList.filter(
+              const count = unfilteredList.filter(
                 (item) => (item.designTypeId || item.productionOrder?.designType?.id) === dt.id
               ).length;
 

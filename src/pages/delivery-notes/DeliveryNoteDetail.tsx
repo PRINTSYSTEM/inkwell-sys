@@ -40,6 +40,7 @@ import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { AddressBookManager } from "./DeliveryNoteList";
 import { toast } from "sonner";
 import { useOrder } from "@/hooks/use-order";
+import { ReadOnlyProofingDetailModal } from "@/components/proofing/ReadOnlyProofingDetailModal";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -171,6 +172,7 @@ export default function DeliveryNoteDetailPage() {
   const [failureReason, setFailureReason] = useState("");
   const [failureType, setFailureType] = useState<string>("");
   const [affectsDebt, setAffectsDebt] = useState(false);
+  const [viewingProofingOrderId, setViewingProofingOrderId] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
   const [isRecreateDialogOpen, setIsRecreateDialogOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
@@ -1426,6 +1428,12 @@ export default function DeliveryNoteDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ReadOnlyProofingDetailModal
+        proofingOrderId={viewingProofingOrderId}
+        open={!!viewingProofingOrderId}
+        onOpenChange={(open) => !open && setViewingProofingOrderId(null)}
+      />
     </div>
   );
 }

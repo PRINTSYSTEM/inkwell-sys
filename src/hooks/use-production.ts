@@ -158,6 +158,34 @@ export const useUpdateProductionStep = () => {
   };
 };
 
+export interface ProductionDesignTypeSummaryItem {
+  designTypeId: number;
+  code: string;
+  name: string;
+  count: number;
+}
+
+export interface ProductionDesignTypeSummaryResponse {
+  total: number;
+  designTypes: ProductionDesignTypeSummaryItem[];
+}
+
+// GET /api/production-orders/design-type-summary
+export const useProductionDesignTypeSummary = (params?: Record<string, unknown>) => {
+  return useQuery<ProductionDesignTypeSummaryResponse>({
+    queryKey: ["production-orders-design-type-summary", params],
+    queryFn: async () => {
+      const res = await apiRequest.get<ProductionDesignTypeSummaryResponse>(
+        API_SUFFIX.PRODUCTION_ORDERS_DESIGN_TYPE_SUMMARY,
+        {
+          params: normalizeParams((params ?? {}) as Record<string, unknown>),
+        }
+      );
+      return res.data;
+    },
+  });
+};
+
 // GET /api/production-orders/steps/:stepId/history - Fetch production step status transition history
 export const useProductionStepHistory = (stepId: number | null) => {
   return useQuery<ProductionStepHistoryResponse[]>({

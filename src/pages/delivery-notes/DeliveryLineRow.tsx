@@ -50,6 +50,7 @@ import {
   ExternalLink,
   Trash2,
   AlertTriangle,
+  Eye,
 } from "lucide-react";
 import {
   useUpdateDeliveryLineResult,
@@ -66,12 +67,14 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { useProductionOrders } from "@/hooks/use-production";
+import { ReadOnlyProofingDetailModal } from "@/components/proofing/ReadOnlyProofingDetailModal";
 
 interface ProofingCodeProps {
   code: string;
+  onOpenDetail?: (id: number) => void;
 }
 
-function ProofingCodeWithProductions({ code }: ProofingCodeProps) {
+function ProofingCodeWithProductions({ code, onOpenDetail }: ProofingCodeProps) {
   const match = code.match(/\d+/);
   const proofingOrderId = match ? parseInt(match[0], 10) : null;
 
@@ -88,6 +91,13 @@ function ProofingCodeWithProductions({ code }: ProofingCodeProps) {
     return [];
   }, [productionsResp]);
 
+  const handleOpenDetail = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onOpenDetail && proofingOrderId) {
+      onOpenDetail(proofingOrderId);
+    }
+  };
+
   if (!proofingOrderId) {
     return <span className="font-extrabold text-amber-600 dark:text-amber-400 font-mono">{code}</span>;
   }
@@ -95,20 +105,42 @@ function ProofingCodeWithProductions({ code }: ProofingCodeProps) {
   return (
     <HoverCard openDelay={200} closeDelay={150}>
       <HoverCardTrigger asChild>
-        <Link
-          to={`/delivery-notes?tab=completed-qc&search=${code}`}
-          className="font-extrabold text-amber-600 dark:text-amber-400 font-mono hover:underline inline-flex items-center gap-0.5 cursor-pointer"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {code}
-          <ExternalLink className="h-3.5 w-3.5 inline opacity-70" />
-        </Link>
+        {onOpenDetail ? (
+          <button
+            type="button"
+            onClick={handleOpenDetail}
+            className="font-extrabold text-amber-600 dark:text-amber-400 font-mono hover:underline inline-flex items-center gap-0.5 cursor-pointer bg-transparent border-0 p-0"
+            title="Bấm để xem chi tiết bài bình"
+          >
+            {code}
+            <ExternalLink className="h-3.5 w-3.5 inline opacity-70" />
+          </button>
+        ) : (
+          <Link
+            to={`/delivery-notes?tab=completed-qc&search=${code}`}
+            className="font-extrabold text-amber-600 dark:text-amber-400 font-mono hover:underline inline-flex items-center gap-0.5 cursor-pointer"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {code}
+            <ExternalLink className="h-3.5 w-3.5 inline opacity-70" />
+          </Link>
+        )}
       </HoverCardTrigger>
       <HoverCardContent 
         className="w-80 p-3 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-lg rounded-lg text-left"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="space-y-2">
+          {onOpenDetail && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full text-xs h-7 gap-1.5 font-bold text-[#93631F] border-[#93631F]/30 hover:bg-[#93631F]/10 dark:text-[#d4a359] dark:border-[#93631F]/50 mb-1"
+              onClick={handleOpenDetail}
+            >
+              <Eye className="w-3.5 h-3.5" /> Xem chi tiết bài bình #{proofingOrderId}
+            </Button>
+          )}
           <div className="font-bold text-xs text-stone-500 uppercase tracking-wider">
             Lệnh sản xuất liên quan ({code})
           </div>
@@ -222,6 +254,7 @@ export default function DeliveryLineRow({
   const [failureReasonId, setFailureReasonId] = useState<number | null>(null);
   const [failureNotes, setFailureNotes] = useState("");
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  const [viewingProofingOrderId, setViewingProofingOrderId] = useState<number | null>(null);
 
   // Mutations
   const updateLineResultMutation = useUpdateDeliveryLineResult();
@@ -476,7 +509,7 @@ export default function DeliveryLineRow({
           {line.proofingOrderCodes && line.proofingOrderCodes.length > 0 ? (
             <div className="flex flex-wrap gap-1">
               {line.proofingOrderCodes.map((code) => (
-                <ProofingCodeWithProductions key={code} code={code} />
+                <ProofingCodeWithProductions key={code} code={code} onOpenDetail={(id) => setViewingProofingOrderId(id)} />
               ))}
             </div>
           ) : (
@@ -911,6 +944,12 @@ export default function DeliveryLineRow({
           title="Xem ảnh thiết kế"
         />
       )}
+
+      <ReadOnlyProofingDetailModal
+        proofingOrderId={viewingProofingOrderId}
+        open={!!viewingProofingOrderId}
+        onOpenChange={(open) => !open && setViewingProofingOrderId(null)}
+      />
     </>
   );
 }

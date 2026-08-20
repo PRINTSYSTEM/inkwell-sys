@@ -239,28 +239,34 @@ function StepHistoryModal({
       stepHistories.forEach((h: any) => {
         list.push({
           id: `step-${h.id}`,
-          type: "step",
+          type: h.eventType ? "print" : "step",
+          eventType: h.eventType,
+          eventTypeDisplayName: h.eventTypeDisplayName,
           fromStatus: h.fromStatus,
           toStatus: h.toStatus,
           userName: h.userName || h.userFullName || "Hệ thống",
-          note: h.note || h.description || h.reason,
+          note: h.reason || h.note || h.description,
           createdAt: h.createdAt,
         });
       });
     }
     if (printHistories && Array.isArray(printHistories)) {
       printHistories.forEach((p: any) => {
-        list.push({
-          id: `print-${p.id}`,
-          type: "print",
-          eventType: p.eventType || p.action,
-          eventTypeDisplayName: p.eventTypeDisplayName || p.action,
-          fromStatus: p.fromStatus || p.oldStatus,
-          toStatus: p.toStatus || p.newStatus,
-          userName: p.userName || p.userFullName || p.createdByName || "Hệ thống",
-          note: p.reason || p.notes || p.description,
-          createdAt: p.createdAt,
-        });
+        // Prevent duplicate if already returned by BE stepHistories
+        const alreadyExists = list.some((item) => item.createdAt === p.createdAt && item.eventType === (p.eventType || p.action));
+        if (!alreadyExists) {
+          list.push({
+            id: `print-${p.id}`,
+            type: "print",
+            eventType: p.eventType || p.action,
+            eventTypeDisplayName: p.eventTypeDisplayName || p.action,
+            fromStatus: p.fromStatus || p.oldStatus,
+            toStatus: p.toStatus || p.newStatus,
+            userName: p.userName || p.userFullName || p.createdByName || "Hệ thống",
+            note: p.reason || p.notes || p.description,
+            createdAt: p.createdAt,
+          });
+        }
       });
     }
     return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());

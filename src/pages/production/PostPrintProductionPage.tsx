@@ -227,39 +227,48 @@ function StepHistoryModal({
             </div>
           ) : (
             <div className="relative pl-6 space-y-4 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-              {histories.map((h) => (
-                <div key={h.id} className="relative group space-y-1 bg-slate-50 p-2.5 rounded-xl border border-slate-200/80">
-                  <div className="absolute -left-6 top-1 h-5 w-5 rounded-full bg-white border-2 border-slate-300 flex items-center justify-center shadow-2xs">
-                    <Clock className="h-3 w-3 text-slate-500" />
-                  </div>
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <div className="flex items-center gap-1 text-xs font-bold">
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-slate-100">
-                        {getStepStatusLabel(h.fromStatus || "")}
-                      </Badge>
-                      <span className="text-slate-400">→</span>
-                      <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0", getStepButtonClass(h.toStatus || ""))}>
-                        {getStepStatusLabel(h.toStatus || "")}
-                      </Badge>
+              {histories.map((item) => {
+                const h = item as any;
+                return (
+                  <div key={h.id} className="relative group space-y-1 bg-slate-50 p-2.5 rounded-xl border border-slate-200/80">
+                    <div className="absolute -left-6 top-1 h-5 w-5 rounded-full bg-white border-2 border-slate-300 flex items-center justify-center shadow-2xs">
+                      <Clock className="h-3 w-3 text-slate-500" />
                     </div>
-                    <span className="text-[10px] font-mono text-slate-400">
-                      {formatDateTime(h.createdAt)}
-                    </span>
-                  </div>
-
-                  <div className="text-[11px] text-slate-700 font-medium flex items-center gap-1 pt-0.5">
-                    <User className="h-3 w-3 text-slate-400 shrink-0" />
-                    <span>{h.userName || "Hệ thống"}</span>
-                  </div>
-
-                  {h.note && (
-                    <div className="mt-1 text-[11px] text-purple-900 bg-purple-50 border border-purple-200/80 rounded-lg p-2 font-mono">
-                      <span className="font-bold font-sans text-purple-900">Lý do: </span>
-                      {h.note}
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      {h.eventTypeDisplayName || h.eventType ? (
+                        <Badge variant="outline" className="text-[10px] font-bold px-1.5 py-0 bg-[#93631F]/10 text-[#93631F] border-[#93631F]/30">
+                          {h.eventTypeDisplayName || getStepStatusLabel(h.eventType || h.toStatus || "")}
+                        </Badge>
+                      ) : (
+                        <div className="flex items-center gap-1 text-xs font-bold">
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-slate-100">
+                            {getStepStatusLabel(h.fromStatus || "")}
+                          </Badge>
+                          <span className="text-slate-400">→</span>
+                          <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0", getStepButtonClass(h.toStatus || ""))}>
+                            {getStepStatusLabel(h.toStatus || "")}
+                          </Badge>
+                        </div>
+                      )}
+                      <span className="text-[10px] font-mono text-slate-400">
+                        {formatDateTime(h.createdAt)}
+                      </span>
                     </div>
-                  )}
-                </div>
-              ))}
+
+                    <div className="text-[11px] text-slate-700 font-medium flex items-center gap-1 pt-0.5">
+                      <User className="h-3 w-3 text-slate-400 shrink-0" />
+                      <span>{h.userName || "Hệ thống"}</span>
+                    </div>
+
+                    {(h.reason || h.note) && (
+                      <div className="mt-1 text-[11px] text-purple-900 bg-purple-50 border border-purple-200/80 rounded-lg p-2 font-mono">
+                        <span className="font-bold font-sans text-purple-900">Ghi chú / Lý do: </span>
+                        {h.reason || h.note}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

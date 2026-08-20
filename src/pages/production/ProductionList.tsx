@@ -8,6 +8,7 @@ import { normalizeParams } from "@/apis/util.api";
 import {
   useProductionOrders,
   usePendingMaterialProductionOrders,
+  useProductionDesignTypeSummary,
 } from "@/hooks/use-production";
 import { useDesignTypeList } from "@/hooks/use-design-type";
 import {
@@ -228,6 +229,9 @@ export default function ProductionListPage() {
         params.search = debouncedSearch.trim();
       }
     }
+    if (selectedDesignTypeId !== null) {
+      params.designTypeId = selectedDesignTypeId;
+    }
     if (dateParams.fromDate) {
       params.fromDate = dateParams.fromDate;
     }
@@ -235,7 +239,15 @@ export default function ProductionListPage() {
       params.toDate = dateParams.toDate;
     }
     return params;
-  }, [currentPage, itemsPerPage, selectedStatus, sortColumn, sortOrder, viewTab, debouncedSearch, dateParams]);
+  }, [currentPage, itemsPerPage, selectedStatus, selectedDesignTypeId, sortColumn, sortOrder, viewTab, debouncedSearch, dateParams]);
+
+  const { data: designTypeSummaryData } = useProductionDesignTypeSummary({
+    search: debouncedSearch.trim() || undefined,
+    fromDate: dateParams.fromDate,
+    toDate: dateParams.toDate,
+    tab: viewTab !== "all" ? viewTab : undefined,
+    status: selectedStatus !== "all" ? selectedStatus : undefined,
+  });
 
   const {
     data: productionsResp,
@@ -680,36 +692,62 @@ export default function ProductionListPage() {
                 )}
                 onClick={() => setSelectedDesignTypeId(null)}
               >
-                Tất cả ({displayProductions.length})
+                Tất cả ({designTypeSummaryData?.total ?? totalCount})
               </Button>
-              {designTypes.map((type: any) => {
-                const count = designTypeCounts[type.id] || 0;
-                return (
-                  <Button
-                    key={type.id}
-                    variant={selectedDesignTypeId === type.id ? "default" : "ghost"}
-                    size="sm"
-                    type="button"
-                    className={cn(
-                      "h-7 text-xs px-2.5 rounded-sm font-medium transition-all",
-                      selectedDesignTypeId === type.id 
-                        ? "bg-slate-700 text-white shadow-sm" 
-                        : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-muted"
-                    )}
-                    onClick={() => setSelectedDesignTypeId(type.id)}
-                  >
-                    <span>{type.name}</span>
-                    <span className={cn(
-                      "ml-1.5 px-1 py-0.2 rounded-full text-[9px] font-extrabold",
-                      selectedDesignTypeId === type.id
-                        ? "bg-white/20 text-white"
-                        : "bg-slate-100 text-slate-705 dark:bg-slate-800 dark:text-slate-350"
-                    )}>
-                      {count}
-                    </span>
-                  </Button>
-                );
-              })}
+              {designTypeSummaryData?.designTypes && designTypeSummaryData.designTypes.length > 0
+                ? designTypeSummaryData.designTypes.map((dt) => (
+                    <Button
+                      key={dt.designTypeId}
+                      variant={selectedDesignTypeId === dt.designTypeId ? "default" : "ghost"}
+                      size="sm"
+                      type="button"
+                      className={cn(
+                        "h-7 text-xs px-2.5 rounded-sm font-medium transition-all",
+                        selectedDesignTypeId === dt.designTypeId 
+                          ? "bg-slate-700 text-white shadow-sm" 
+                          : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-muted"
+                      )}
+                      onClick={() => setSelectedDesignTypeId(dt.designTypeId)}
+                    >
+                      <span>{dt.name}</span>
+                      <span className={cn(
+                        "ml-1.5 px-1 py-0.2 rounded-full text-[9px] font-extrabold",
+                        selectedDesignTypeId === dt.designTypeId
+                          ? "bg-white/20 text-white"
+                          : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                      )}>
+                        {dt.count}
+                      </span>
+                    </Button>
+                  ))
+                : designTypes.map((type: any) => {
+                    const count = designTypeCounts[type.id] || 0;
+                    return (
+                      <Button
+                        key={type.id}
+                        variant={selectedDesignTypeId === type.id ? "default" : "ghost"}
+                        size="sm"
+                        type="button"
+                        className={cn(
+                          "h-7 text-xs px-2.5 rounded-sm font-medium transition-all",
+                          selectedDesignTypeId === type.id 
+                            ? "bg-slate-700 text-white shadow-sm" 
+                            : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-muted"
+                        )}
+                        onClick={() => setSelectedDesignTypeId(type.id)}
+                      >
+                        <span>{type.name}</span>
+                        <span className={cn(
+                          "ml-1.5 px-1 py-0.2 rounded-full text-[9px] font-extrabold",
+                          selectedDesignTypeId === type.id
+                            ? "bg-white/20 text-white"
+                            : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                        )}>
+                          {count}
+                        </span>
+                      </Button>
+                    );
+                  })}
             </div>
           </div>
 
