@@ -937,7 +937,7 @@ export default function DeliveryNoteListPage() {
     return [] as OrderForDeliveryResponse[];
   }, [allOrders]);
 
-  // Group available orders by prepress code (Mã bài)
+  // Group available orders by completed prepress code (Mã bài đã báo số)
   const groupedPrepressOrders = useMemo(() => {
     if (!Array.isArray(availableOrdersRaw)) return [];
 
@@ -946,10 +946,20 @@ export default function DeliveryNoteListPage() {
     availableOrdersRaw.forEach((order) => {
       if (!order.details) return;
       order.details.forEach((detail) => {
-        const codes = detail.proofingOrderCodes || [];
+        // Chỉ hiện các con hàng đã có bài báo số (completedProofingOrderCodes)
+        const dAny = detail as any;
+        const completedCodes = dAny.completedProofingOrderCodes !== undefined
+          ? (dAny.completedProofingOrderCodes || [])
+          : (detail.proofingOrderCodes || []);
 
-        if (codes.length === 0) {
-          const key = "no_proofing_code";
+        if (completedCodes.length === 0) {
+          // Bỏ qua các con hàng chưa có bài hoàn thành / chưa báo số
+          return;
+        }
+
+        completedCodes.forEach((code: string) => {
+          if (!code) return;
+          const key = code.trim().toUpperCase();
           if (!groupsMap.has(key)) {
             groupsMap.set(key, []);
           }
@@ -963,24 +973,7 @@ export default function DeliveryNoteListPage() {
             recipientAddress: order.recipientAddress,
             createdAt: order.createdAt,
           });
-        } else {
-          codes.forEach((code: string) => {
-            const key = code.trim().toUpperCase();
-            if (!groupsMap.has(key)) {
-              groupsMap.set(key, []);
-            }
-            groupsMap.get(key)!.push({
-              ...detail,
-              orderId: order.orderId,
-              orderCode: order.orderCode,
-              customerId: order.customerId,
-              customerName: order.customerName,
-              deliveryAddress: order.deliveryAddress,
-              recipientAddress: order.recipientAddress,
-              createdAt: order.createdAt,
-            });
-          });
-        }
+        });
       });
     });
 

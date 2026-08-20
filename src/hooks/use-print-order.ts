@@ -365,7 +365,33 @@ export const useReturnToProofing = () => {
   });
 };
 
-// 12. Get Print Order History (Lịch sử sản xuất)
+// 12. Undo Dispatch Print Order (Hủy điều lệnh)
+export const useUndoDispatchPrintOrder = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, ApiError, number>({
+    mutationFn: async (id: number) => {
+      const res = await apiRequest.put(API_SUFFIX.PRINT_ORDER_UNDO_DISPATCH(id), {});
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: printOrderKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["dispatchCandidates"] });
+      queryClient.invalidateQueries({ queryKey: ["dispatchCandidatesSummary"] });
+      queryClient.invalidateQueries({ queryKey: ["production-orders"] });
+      toast.success("Đã hủy điều lệnh thành công, bài đã quay lại danh sách chờ điều lệnh!");
+    },
+    onError: (error: ApiError) => {
+      const errMsg =
+        error.response?.data?.message ||
+        error.message ||
+        "Không thể hủy điều lệnh";
+      toast.error(errMsg);
+    },
+  });
+};
+
+// 13. Get Print Order History (Lịch sử sản xuất)
 export const usePrintOrderHistory = (id?: number | null) => {
   return useQuery<PrintOrderHistoryItem[]>({
     queryKey: printOrderKeys.history(id || 0),

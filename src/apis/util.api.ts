@@ -357,6 +357,7 @@ export const API_SUFFIX = {
   PRINT_ORDER_CONFIRM_FLUTE: (id: number) => `/print-orders/dispatch-candidates/${id}/confirm-flute`,
   PRINT_ORDER_REORDER: "/print-orders/reorder",
   PRINT_ORDER_RETURN_TO_PROOFING: (id: number) => `/print-orders/dispatch-candidates/${id}/return-to-proofing`,
+  PRINT_ORDER_UNDO_DISPATCH: (id: number) => `/print-orders/${id}/undo-dispatch`,
   PRINT_ORDER_HISTORY: (id: number) => `/print-orders/${id}/history`,
   PRODUCTION_ORDER_PRINT_LABEL: (poId: number, itemId: number) =>
     `/production-orders/${poId}/items/${itemId}/print-label`,

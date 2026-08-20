@@ -13,6 +13,7 @@ export interface PrintOrderResponse {
   status: PrintOrderStatus;
   statusDisplayName?: string;
   dispatchedByName?: string;
+  dispatchedByUserName?: string | null;
   dispatchedAt?: string;
   startedAt?: string;
   completedAt?: string;

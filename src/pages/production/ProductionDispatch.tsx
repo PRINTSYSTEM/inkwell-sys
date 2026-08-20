@@ -61,6 +61,8 @@ import {
   useConfirmPaperReady,
   useConfirmFluteReady,
   useReturnToProofing,
+  usePrintOrders,
+  useUndoDispatchPrintOrder,
 } from "@/hooks/use-print-order";
 import { useDesignTypeList } from "@/hooks/use-design-type";
 import { useReceivePlate } from "@/hooks/use-plate-export";
@@ -103,6 +105,17 @@ const formatImpositionDate = (item: PrintOrderResponse) => {
     return format(d, "dd/MM/yyyy", { locale: vi });
   } catch {
     return "Chưa xác định ngày";
+  }
+};
+
+const formatDateTime = (dateStr?: string | null) => {
+  if (!dateStr) return "—";
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return format(d, "HH:mm dd/MM/yyyy", { locale: vi });
+  } catch {
+    return dateStr;
   }
 };
 
@@ -193,6 +206,46 @@ export default function ProductionDispatch() {
   const [historyPrintOrderId, setHistoryPrintOrderId] = useState<number | null>(null);
   const [historyProofingCode, setHistoryProofingCode] = useState<string | undefined>(undefined);
 
+  // Main Tab State: "candidates" (Bài chờ điều lệnh) vs "undo" (Hủy điều lệnh)
+  const [mainTab, setMainTab] = useState<"candidates" | "undo">("candidates");
+
+  // State & Query for Undo Dispatch Tab (Status = waiting)
+  const [undoSearchQuery, setUndoSearchQuery] = useState("");
+  const [undoPage, setUndoPage] = useState(1);
+
+  const {
+    data: waitingPrintOrdersData,
+    isLoading: isLoadingWaiting,
+    refetch: refetchWaiting,
+  } = usePrintOrders({
+    status: "waiting",
+    pageNumber: undoPage,
+    pageSize: 50,
+    search: undoSearchQuery.trim() || undefined,
+    designTypeId: selectedDesignTypeId,
+  });
+
+  const undoDispatchMutation = useUndoDispatchPrintOrder();
+  const [undoTargetItem, setUndoTargetItem] = useState<PrintOrderResponse | null>(null);
+  const [undoDialogOpen, setUndoDialogOpen] = useState(false);
+
+  const handleOpenUndoDialog = (item: PrintOrderResponse) => {
+    setUndoTargetItem(item);
+    setUndoDialogOpen(true);
+  };
+
+  const handleConfirmUndoDispatch = () => {
+    if (!undoTargetItem) return;
+    undoDispatchMutation.mutate(undoTargetItem.id, {
+      onSuccess: () => {
+        setUndoDialogOpen(false);
+        setUndoTargetItem(null);
+        refetchWaiting();
+        refetch();
+      },
+    });
+  };
+
   const candidateItems = candidatesData?.items || [];
 
   const handleOpenReturnToProofing = (item: PrintOrderResponse) => {
@@ -238,11 +291,12 @@ export default function ProductionDispatch() {
     const kemOk = checkedKemMap[item.id] !== undefined ? checkedKemMap[item.id] : kemReceivedBE;
     const kemLabel = plateExport?.plateCount ? `${plateExport.plateCount} kẽm` : `1/1 bộ`;
 
-    // Khuôn condition
+    // Khuôn condition: A die is ready if received (isReceived === true) or if it's an existing die in warehouse (isNewDie === false)
+    const isDieReady = (d: any) => d.isReceived === true || d.isNewDie === false;
     const khuonRequired = dies.length > 0;
-    const khuonReceivedBE = !khuonRequired ? null : (dies.length > 0 && dies.every((d) => d.isReceived === true));
+    const khuonReceivedBE = !khuonRequired ? null : (dies.length > 0 && dies.every(isDieReady));
     const khuonOk = !khuonRequired ? null : (checkedKhuonMap[item.id] !== undefined ? checkedKhuonMap[item.id] : (khuonReceivedBE ?? false));
-    const khuonLabel = !khuonRequired ? "Không yêu cầu" : `${dies.filter((d) => d.isReceived === true).length}/${dies.length} cái`;
+    const khuonLabel = !khuonRequired ? "Không yêu cầu" : `${dies.filter(isDieReady).length}/${dies.length} cái`;
 
     // Giấy condition (operator confirm paper available - reads BE item.isPaperReady or local check)
     const totalQty = item.totalQuantity ?? proofingOrder?.totalQuantity ?? 1000;
@@ -256,12 +310,13 @@ export default function ProductionDispatch() {
     const fluteMaterialName = item.fluteMaterialName || (po as any)?.fluteMaterialName || (proofingOrder as any)?.fluteMaterialName || "Bìa Carton Sóng E";
     const fluteOk = !requiresFlute ? true : (checkedFluteMap[item.id] !== undefined ? checkedFluteMap[item.id] : (item.isFluteReady === true));
 
-    const isEligible = kemOk && (khuonOk === null || khuonOk) && giayOk && (!requiresFlute || fluteOk);
+    // Nới điều kiện điều lệnh: CHỈ cần Kẽm + Giấy (Khuôn & Sóng E không còn chặn điều lệnh)
+    const isEligible = kemOk && giayOk;
 
     let missingReason = "";
     if (!kemOk) missingReason = "missing_kem";
-    else if (khuonOk === false) missingReason = "missing_khuon";
     else if (!giayOk) missingReason = "missing_giay";
+    else if (khuonOk === false) missingReason = "missing_khuon";
     else if (requiresFlute && !fluteOk) missingReason = "missing_flute";
 
     return {
@@ -303,19 +358,19 @@ export default function ProductionDispatch() {
     }
   };
 
-  // Toggle Khuôn Checkbox (Calls API PUT /api/proofing-orders/dies/{id}/receive ONLY for new unreceived dies)
+  // Toggle Khuôn Checkbox (Calls API PUT /api/proofing-orders/dies/{id}/receive for unreceived dies)
   const handleToggleKhuon = async (item: PrintOrderResponse) => {
     const dies = item.productionOrder?.proofingOrder?.proofingOrderDies || [];
     if (dies.length === 0) return;
 
     const currentChecked = getItemReadiness(item).khuonOk;
-    // Only call receive API for NEW unreceived dies (isReceived === false and isNewDie !== false)
-    const unreceivedNewDies = dies.filter((d) => d.isReceived === false && d.isNewDie !== false);
+    // Call receive API for all unreceived dies (isReceived === false)
+    const unreceivedDies = dies.filter((d) => d.isReceived === false);
 
-    if (!currentChecked && unreceivedNewDies.length > 0) {
+    if (!currentChecked && unreceivedDies.length > 0) {
       setReceivingMap((prev) => ({ ...prev, [item.id]: true }));
       try {
-        for (const die of unreceivedNewDies) {
+        for (const die of unreceivedDies) {
           await receiveDieMutation.mutateAsync(die.id);
         }
         setCheckedKhuonMap((prev) => ({ ...prev, [item.id]: true }));
@@ -489,7 +544,7 @@ export default function ProductionDispatch() {
     if (selectedIds.length === 0) return;
 
     if (isAnySelectedUneligible) {
-      toast.warning("Vui lòng tick xác nhận đủ các điều kiện (Khuôn, Kẽm, Giấy, Sóng) cho tất cả bài đã chọn trước khi điều lệnh!");
+      toast.warning("Vui lòng tick xác nhận đủ Kẽm và Giấy cho tất cả bài đã chọn trước khi điều lệnh!");
       return;
     }
 
@@ -509,6 +564,7 @@ export default function ProductionDispatch() {
           });
           setSelectedIds([]);
           refetch();
+          refetchWaiting();
         },
       }
     );
@@ -528,126 +584,166 @@ export default function ProductionDispatch() {
   const missingGiayPct = totalCount > 0 ? ((missingGiayCount / totalCount) * 100).toFixed(1) : "0";
   const missingFlutePct = totalCount > 0 ? ((missingFluteCount / totalCount) * 100).toFixed(1) : "0";
 
+  const waitingCount = waitingPrintOrdersData?.totalCount ?? waitingPrintOrdersData?.items?.length ?? 0;
+
   return (
     <div className="space-y-3 p-4 max-w-[1700px] mx-auto pb-16 font-sans bg-slate-50/50 min-h-screen text-xs">
-      {/* Compact Page Header Bar */}
+      {/* Compact Page Header Bar with Main Tab Switcher */}
       <div className="flex items-center justify-between gap-3 bg-white p-3 px-4 rounded-xl border border-slate-200 shadow-2xs">
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-3">
           <h1 className="text-base font-bold text-slate-900">Điều Lệnh Sản Xuất</h1>
-          <span className="text-[11px] text-slate-500 hidden lg:inline ml-1 border-l border-slate-200 pl-2">
-            Các bài bình đã hoàn tất đang chờ điều lệnh sản xuất.
-          </span>
+
+          {/* Navigation Tabs: Bài chờ điều lệnh vs Hủy điều lệnh */}
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200 ml-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setMainTab("candidates")}
+              className={cn(
+                "h-7 text-xs font-bold px-3 rounded-md transition-all",
+                mainTab === "candidates"
+                  ? "bg-white text-[#93631F] shadow-2xs"
+                  : "text-slate-600 hover:text-slate-900"
+              )}
+            >
+              <Layers className="h-3.5 w-3.5 mr-1.5" />
+              Bài chờ điều lệnh ({totalCount})
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setMainTab("undo")}
+              className={cn(
+                "h-7 text-xs font-bold px-3 rounded-md transition-all flex items-center gap-1.5",
+                mainTab === "undo"
+                  ? "bg-[#93631F] text-white shadow-2xs"
+                  : "text-slate-600 hover:text-slate-900"
+              )}
+            >
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+              Điều lệnh Hoàn thành ({waitingCount})
+            </Button>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => refetch()}
+            onClick={() => {
+              refetch();
+              refetchWaiting();
+            }}
             className="h-8 text-[11px] font-semibold rounded-lg border-slate-200 px-2.5"
           >
             <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Làm mới
           </Button>
 
-          <Button
-            onClick={handleDispatchSelected}
-            disabled={selectedIds.length === 0 || isAnySelectedUneligible || dispatchMutation.isPending}
-            title={
-              isAnySelectedUneligible
-                ? "Tất cả các bài đã chọn phải thỏa mãn đủ các điều kiện (Kẽm, Khuôn, Giấy, Sóng) mới có thể điều lệnh!"
-                : "Bấm để điều lệnh sản xuất"
-            }
-            className={cn(
-              "h-8 text-white font-bold px-4 rounded-lg shadow-2xs transition-all text-xs",
-              selectedIds.length > 0 && !isAnySelectedUneligible
-                ? "bg-[#93631F] hover:bg-[#7a521a] cursor-pointer"
-                : "bg-slate-200 text-slate-400 cursor-not-allowed border-slate-200 shadow-none"
-            )}
-          >
-            {dispatchMutation.isPending ? (
-              <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-            ) : (
-              <Send className="h-3.5 w-3.5 mr-1.5" />
-            )}
-            Điều lệnh ({selectedIds.length} bài)
-          </Button>
+          {mainTab === "candidates" && (
+            <Button
+              onClick={handleDispatchSelected}
+              disabled={selectedIds.length === 0 || isAnySelectedUneligible || dispatchMutation.isPending}
+              title={
+                isAnySelectedUneligible
+                  ? "Tất cả các bài đã chọn phải thỏa mãn đủ Kẽm và Giấy mới có thể điều lệnh!"
+                  : "Bấm để điều lệnh sản xuất"
+              }
+              className={cn(
+                "h-8 text-white font-bold px-4 rounded-lg shadow-2xs transition-all text-xs",
+                selectedIds.length > 0 && !isAnySelectedUneligible
+                  ? "bg-[#93631F] hover:bg-[#7a521a] cursor-pointer"
+                  : "bg-slate-200 text-slate-400 cursor-not-allowed border-slate-200 shadow-none"
+              )}
+            >
+              {dispatchMutation.isPending ? (
+                <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+              ) : (
+                <Send className="h-3.5 w-3.5 mr-1.5" />
+              )}
+              Điều lệnh ({selectedIds.length} bài)
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Top 6 Compact Mini Stat Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
-        <div className="bg-white p-2.5 px-3 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
-            <Layers className="h-4 w-4" />
-          </div>
-          <div>
-            <div className="text-[10px] font-semibold text-slate-500 leading-tight">Tổng bài chờ</div>
-            <div className="text-sm font-black text-slate-900 leading-none mt-0.5">
-              {totalCount} <span className="text-[10px] font-normal text-slate-400">bài</span>
+      {/* Main Content Area: Grouped strictly by Imposition Date & Design Type */}
+      {mainTab === "candidates" && (
+        <div className="space-y-3">
+          {/* Top 6 Compact Mini Stat Cards */}
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-2">
+            <div className="bg-white p-2.5 px-3 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                <Layers className="h-4 w-4" />
+              </div>
+              <div>
+                <div className="text-[10px] font-semibold text-slate-500 leading-tight">Tổng bài chờ</div>
+                <div className="text-sm font-black text-slate-900 leading-none mt-0.5">
+                  {totalCount} <span className="text-[10px] font-normal text-slate-400">bài</span>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        <div className="bg-white p-2.5 px-3 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-            <CheckCircle2 className="h-4 w-4" />
-          </div>
-          <div>
-            <div className="text-[10px] font-semibold text-slate-500 leading-tight">Đủ điều kiện</div>
-            <div className="text-sm font-black text-slate-900 leading-none mt-0.5">
-              {eligibleCount} <span className="text-[10px] font-normal text-slate-400">({eligiblePct}%)</span>
+            <div className="bg-white p-2.5 px-3 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <CheckCircle2 className="h-4 w-4" />
+              </div>
+              <div>
+                <div className="text-[10px] font-semibold text-slate-500 leading-tight">Đủ điều kiện</div>
+                <div className="text-sm font-black text-slate-900 leading-none mt-0.5">
+                  {eligibleCount} <span className="text-[10px] font-normal text-slate-400">({eligiblePct}%)</span>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        <div className="bg-white p-2.5 px-3 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-            <AlertCircle className="h-4 w-4" />
-          </div>
-          <div>
-            <div className="text-[10px] font-semibold text-slate-500 leading-tight">Thiếu kẽm</div>
-            <div className="text-sm font-black text-slate-900 leading-none mt-0.5">
-              {missingKemCount} <span className="text-[10px] font-normal text-slate-400">({missingKemPct}%)</span>
+            <div className="bg-white p-2.5 px-3 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                <AlertCircle className="h-4 w-4" />
+              </div>
+              <div>
+                <div className="text-[10px] font-semibold text-slate-500 leading-tight">Thiếu kẽm</div>
+                <div className="text-sm font-black text-slate-900 leading-none mt-0.5">
+                  {missingKemCount} <span className="text-[10px] font-normal text-slate-400">({missingKemPct}%)</span>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        <div className="bg-white p-2.5 px-3 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
-            <Box className="h-4 w-4" />
-          </div>
-          <div>
-            <div className="text-[10px] font-semibold text-slate-500 leading-tight">Thiếu khuôn</div>
-            <div className="text-sm font-black text-slate-900 leading-none mt-0.5">
-              {missingKhuonCount} <span className="text-[10px] font-normal text-slate-400">({missingKhuonPct}%)</span>
+            <div className="bg-white p-2.5 px-3 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-2.5" title="Thông tin tham khảo: Chưa chuẩn bị xong (dùng cho các khâu sau khi in, không chặn điều lệnh)">
+              <div className="h-8 w-8 rounded-lg bg-orange-50 text-orange-600 flex items-center justify-center shrink-0">
+                <Box className="h-4 w-4" />
+              </div>
+              <div>
+                <div className="text-[10px] font-semibold text-slate-500 leading-tight">Thiếu khuôn (khâu sau)</div>
+                <div className="text-sm font-black text-slate-900 leading-none mt-0.5">
+                  {missingKhuonCount} <span className="text-[10px] font-normal text-slate-400">({missingKhuonPct}%)</span>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        <div className="bg-white p-2.5 px-3 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center shrink-0">
-            <Calendar className="h-4 w-4" />
-          </div>
-          <div>
-            <div className="text-[10px] font-semibold text-slate-500 leading-tight">Thiếu giấy</div>
-            <div className="text-sm font-black text-slate-900 leading-none mt-0.5">
-              {missingGiayCount} <span className="text-[10px] font-normal text-slate-400">({missingGiayPct}%)</span>
+            <div className="bg-white p-2.5 px-3 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-lg bg-red-50 text-red-600 flex items-center justify-center shrink-0">
+                <Calendar className="h-4 w-4" />
+              </div>
+              <div>
+                <div className="text-[10px] font-semibold text-slate-500 leading-tight">Thiếu giấy</div>
+                <div className="text-sm font-black text-slate-900 leading-none mt-0.5">
+                  {missingGiayCount} <span className="text-[10px] font-normal text-slate-400">({missingGiayPct}%)</span>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
 
-        <div className="bg-white p-2.5 px-3 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
-            <Package className="h-4 w-4" />
-          </div>
-          <div>
-            <div className="text-[10px] font-semibold text-slate-500 leading-tight">Thiếu sóng</div>
-            <div className="text-sm font-black text-slate-900 leading-none mt-0.5">
-              {missingFluteCount} <span className="text-[10px] font-normal text-slate-400">({missingFlutePct}%)</span>
+            <div className="bg-white p-2.5 px-3 rounded-xl border border-slate-200 shadow-2xs flex items-center gap-2.5" title="Thông tin tham khảo: Chưa chuẩn bị xong (dùng cho các khâu sau khi in, không chặn điều lệnh)">
+              <div className="h-8 w-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                <Package className="h-4 w-4" />
+              </div>
+              <div>
+                <div className="text-[10px] font-semibold text-slate-500 leading-tight">Thiếu sóng (khâu sau)</div>
+                <div className="text-sm font-black text-slate-900 leading-none mt-0.5">
+                  {missingFluteCount} <span className="text-[10px] font-normal text-slate-400">({missingFlutePct}%)</span>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
       {/* Single-Row Unified Filter Bar */}
       <div className="bg-white p-2 px-3 rounded-xl border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-2.5">
@@ -1133,9 +1229,14 @@ export default function ProductionDispatch() {
                                             <div className="flex-1 space-y-0.5 min-w-0">
                                               <div className="flex items-center justify-between font-mono font-bold text-slate-800">
                                                 <span className="truncate">{d.code || `Khuôn ${di + 1}`}</span>
-                                                <Badge variant="outline" className={d.isReceived ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}>
-                                                  {d.isReceived ? "Đang lưu kho" : "Chưa nhận khuôn"}
-                                                </Badge>
+                                                {(() => {
+                                                  const dieInStock = d.isReceived === true || d.isNewDie === false;
+                                                  return (
+                                                    <Badge variant="outline" className={dieInStock ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}>
+                                                      {dieInStock ? "Đang lưu kho" : "Chưa nhận khuôn"}
+                                                    </Badge>
+                                                  );
+                                                })()}
                                               </div>
                                               <div className="text-slate-500">Kích thước: {d.size || "—"}</div>
                                               {locMapped && (
@@ -1390,6 +1491,111 @@ export default function ProductionDispatch() {
           ))}
         </div>
       )}
+      </div>
+      )}
+
+      {/* Main Tab 2: Điều lệnh Hoàn thành (Bài ĐÃ ĐIỀU, CHƯA IN) */}
+      {mainTab === "undo" && (
+        <div className="space-y-3">
+          {/* Top Toolbar for Undo Tab */}
+          <div className="bg-white p-2.5 px-3.5 rounded-xl border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-slate-600">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              <span className="font-bold text-slate-800">Danh sách bài đã điều lệnh (Chờ in / Chưa in)</span>
+              <span className="text-[11px] text-slate-500 hidden sm:inline border-l border-slate-200 pl-2">
+                Quản lý bài đã điều lệnh. Hủy điều lệnh cho các bài bị điều nhầm nếu cần điều chỉnh lại.
+              </span>
+            </div>
+
+            <div className="relative w-full md:w-64">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <Input
+                placeholder="Tìm mã bài, tên bài, chất liệu..."
+                value={undoSearchQuery}
+                onChange={(e) => setUndoSearchQuery(e.target.value)}
+                className="pl-8 h-7 text-[11px] rounded-lg border-slate-200"
+              />
+            </div>
+          </div>
+
+          {/* Table of Dispatched Print Orders Waiting to Print */}
+          {isLoadingWaiting ? (
+            <div className="bg-white rounded-xl border border-slate-200 py-12 text-center">
+              <Loader2 className="h-6 w-6 text-rose-600 animate-spin mx-auto mb-2" />
+              <p className="text-xs text-slate-500 font-medium">Đang tải danh sách bài đã điều lệnh...</p>
+            </div>
+          ) : (waitingPrintOrdersData?.items || []).length === 0 ? (
+            <div className="bg-white rounded-xl border border-slate-200 py-12 text-center text-slate-500">
+              <CheckCircle2 className="h-10 w-10 text-slate-300 mx-auto mb-2" />
+              <h3 className="font-bold text-slate-800 text-xs mb-1">Không có bài nào đã điều lệnh đang chờ in</h3>
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50 hover:bg-slate-50 border-b border-slate-200 text-[10.5px] font-bold text-slate-600 uppercase">
+                    <TableHead className="w-10 text-center py-2 px-1">#</TableHead>
+                    <TableHead className="w-[110px] py-2 px-2">Mã bài</TableHead>
+                    <TableHead className="w-[85px] py-2 px-2">Loại bài</TableHead>
+                    <TableHead className="w-[220px] py-2 px-2">Chất liệu & Quy cách</TableHead>
+                    <TableHead className="w-[140px] py-2 px-2">Người điều lệnh</TableHead>
+                    <TableHead className="w-[140px] py-2 px-2">Thời gian điều</TableHead>
+                    <TableHead className="w-[110px] py-2 px-2">Trạng thái</TableHead>
+                    <TableHead className="w-[140px] text-center py-2 px-2">Thao tác</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(waitingPrintOrdersData?.items || []).map((item, index) => {
+                    const po = item.productionOrder;
+                    const proofingCode = po?.proofingOrderCode || `PO-${item.productionOrderId}`;
+                    const designTypeName = item.designTypeName || po?.designType?.name || "Hộp";
+                    const designTypeCode = item.designTypeCode || po?.designType?.code || "H";
+                    const materialName = item.materialTypeName || (po?.proofingOrder as any)?.materialType?.name || "—";
+                    const totalQty = item.totalQuantity ?? po?.proofingOrder?.totalQuantity ?? 0;
+                    const dispatchedBy = item.dispatchedByName || item.dispatchedByUserName || "—";
+                    const dispatchedAt = item.dispatchedAt ? formatDateTime(item.dispatchedAt) : "—";
+
+                    return (
+                      <TableRow key={item.id} className="hover:bg-slate-50/70 border-b border-slate-100">
+                        <TableCell className="text-center py-2 px-2 text-slate-400 font-medium">{index + 1}</TableCell>
+                        <TableCell className="py-2 px-2 font-mono text-xs font-bold text-blue-600">{proofingCode}</TableCell>
+                        <TableCell className="py-2 px-2">
+                          <Badge variant="outline" className={cn("text-[10px] font-semibold px-2 py-0 rounded-full border", getDesignTypePillStyle(designTypeCode))}>
+                            {designTypeName}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-2 px-2">
+                          <div className="flex flex-col text-[11px] leading-tight">
+                            <span className="font-bold text-slate-900 truncate">{materialName}</span>
+                            <span className="text-[10px] text-slate-500">Số lượng: <strong className="text-slate-800">{totalQty.toLocaleString("vi-VN")} tờ</strong></span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="py-2 px-2 text-[11px] font-medium text-slate-700">{dispatchedBy}</TableCell>
+                        <TableCell className="py-2 px-2 text-[11px] font-mono text-slate-600">{dispatchedAt}</TableCell>
+                        <TableCell className="py-2 px-2">
+                          <Badge className="bg-amber-50 text-amber-800 border-amber-200 font-bold text-[10px]">
+                            Chưa in / Chờ in
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-center py-2 px-2">
+                          <Button
+                            size="sm"
+                            onClick={() => handleOpenUndoDialog(item)}
+                            className="h-7 text-[10.5px] font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-md px-2.5 flex items-center justify-center gap-1 cursor-pointer mx-auto shadow-2xs"
+                            title="Hủy điều lệnh để đưa bài về màn hình điều lệnh lại"
+                          >
+                            <RotateCcw className="h-3 w-3" /> Hủy điều lệnh
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Read-Only Proofing Detail Modal matching prepress detail view */}
       <ReadOnlyProofingDetailModal
@@ -1459,6 +1665,37 @@ export default function ProductionDispatch() {
         printOrderId={historyPrintOrderId}
         proofingCode={historyProofingCode}
       />
+
+      {/* Dialog Confirm Hủy điều lệnh */}
+      <Dialog open={undoDialogOpen} onOpenChange={setUndoDialogOpen}>
+        <DialogContent className="max-w-md bg-white border-slate-200">
+          <DialogHeader>
+            <DialogTitle className="text-rose-700 flex items-center gap-2">
+              <RotateCcw className="h-5 w-5" /> Xác nhận Hủy điều lệnh
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-600 pt-1">
+              Bạn có chắc chắn muốn HỦY ĐIỀU LỆNH cho bài <strong>{undoTargetItem?.productionOrder?.proofingOrderCode || `PO-${undoTargetItem?.productionOrderId}`}</strong>?
+              <br /><br />
+              Thao tác này sẽ đưa bài về trạng thái <strong>Chưa điều lệnh</strong> và bài sẽ quay lại danh sách bài chờ điều lệnh.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="mt-2">
+            <Button variant="outline" size="sm" onClick={() => setUndoDialogOpen(false)}>
+              Hủy bỏ
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleConfirmUndoDispatch}
+              disabled={undoDispatchMutation.isPending}
+              className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs"
+            >
+              {undoDispatchMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+              Xác nhận Hủy điều lệnh
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
