@@ -14,7 +14,12 @@ export function cn(...inputs: ClassValue[]) {
  */
 export function formatImageUrl(url: string | null | undefined): string | null {
   if (!url) return null;
-  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
+  if (
+    url.startsWith("http://") ||
+    url.startsWith("https://") ||
+    url.startsWith("data:") ||
+    url.startsWith("blob:")
+  ) {
     return url;
   }
   const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "");

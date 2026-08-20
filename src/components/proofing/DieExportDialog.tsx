@@ -152,6 +152,7 @@ export function DieExportDialog({
   const [dieHeight, setDieHeight] = useState<number | undefined>(undefined);
   const [dieImage, setDieImage] = useState<File | null>(null);
   const [dieImagePreview, setDieImagePreview] = useState<string | null>(null);
+  const [isDraggingDieImage, setIsDraggingDieImage] = useState(false);
   const [dieCategory, setDieCategory] = useState<string>("box");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [selectedDecalDieSizes, setSelectedDecalDieSizes] = useState<string[]>([]);
@@ -395,32 +396,33 @@ export function DieExportDialog({
   ]);
 
   // Auto-fill die name, code, type and size when creating new die based on proofing order designs
-  useEffect(() => {      if (proofingOrderDesigns.length > 0) {
-        // Aggregate all types and sizes
-        const allTypes = Array.from(new Set(allDesignDimensions.map(d => d.designTypeName))).filter(Boolean);
-        const allSizes = allDesignDimensions.map(d => d.sizeStr).filter(Boolean);
-        
-        const combinedTypes = allTypes.join(", ");
-        const combinedSizes = allSizes.join(", ");
-        const suggestedName = `${combinedTypes} ${combinedSizes}`.trim();
+  useEffect(() => {
+    if (proofingOrderDesigns.length > 0) {
+      // Aggregate all types and sizes
+      const allTypes = Array.from(new Set(allDesignDimensions.map(d => d.designTypeName))).filter(Boolean);
+      const allSizes = allDesignDimensions.map(d => d.sizeStr).filter(Boolean);
 
-        setDieName(suggestedName);
-        setDieSize(combinedSizes);
-        setDieType(combinedTypes);
-        
-        // Code from first design as prefix or main ref
-        const firstDesign = proofingOrderDesigns[0];
-        if (firstDesign?.code) {
-          setDieCode(firstDesign.code);
-        }
+      const combinedTypes = allTypes.join(", ");
+      const combinedSizes = allSizes.join(", ");
+      const suggestedName = `${combinedTypes} ${combinedSizes}`.trim();
 
-        // Individual numeric dimensions from first design (as a fallback/primary reference)
-        if (firstDesign) {
-          setDieLength(firstDesign.length || undefined);
-          setDieWidth(firstDesign.width || undefined);
-          setDieHeight(firstDesign.height || undefined);
-        }
+      setDieName(suggestedName);
+      setDieSize(combinedSizes);
+      setDieType(combinedTypes);
+
+      // Code from first design as prefix or main ref
+      const firstDesign = proofingOrderDesigns[0];
+      if (firstDesign?.code) {
+        setDieCode(firstDesign.code);
       }
+
+      // Individual numeric dimensions from first design (as a fallback/primary reference)
+      if (firstDesign) {
+        setDieLength(firstDesign.length || undefined);
+        setDieWidth(firstDesign.width || undefined);
+        setDieHeight(firstDesign.height || undefined);
+      }
+    }
   }, [
     open,
     dieAction,
@@ -786,8 +788,8 @@ export function DieExportDialog({
 
           const successMessage =
             mode === "replace" ? "Thay thế khuôn thành công" :
-            mode === "add" ? "Thêm khuôn thành công" :
-            "Đã tạo và xuất khuôn bế thành công";
+              mode === "add" ? "Thêm khuôn thành công" :
+                "Đã tạo và xuất khuôn bế thành công";
 
           toast.success(successMessage);
           onSuccess?.();
@@ -824,11 +826,11 @@ export function DieExportDialog({
         }
       }
 
-      const successMessage = 
-        mode === "replace" ? "Thay thế khuôn thành công" : 
-        mode === "add" ? "Thêm khuôn thành công" : 
-        "Đã ghi nhận xuất khuôn bế thành công";
-        
+      const successMessage =
+        mode === "replace" ? "Thay thế khuôn thành công" :
+          mode === "add" ? "Thêm khuôn thành công" :
+            "Đã ghi nhận xuất khuôn bế thành công";
+
       toast.success(successMessage);
       onSuccess?.();
       onOpenChange(false);
@@ -875,7 +877,7 @@ export function DieExportDialog({
                   <Button
                     variant="default"
                     size="sm"
-                    className="h-7 text-xs font-semibold cursor-pointer shadow-none"
+                    className="h-7 text-xs font-semibold cursor-pointer shadow-none bg-emerald-600 hover:bg-emerald-700 text-white"
                     onClick={() => setDieAction("create")}
                   >
                     Đặt khuôn mới
@@ -887,16 +889,16 @@ export function DieExportDialog({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* LEFT COLUMN: Phân loại, Tham chiếu kích thước & Ảnh */}
-              <div className="space-y-5">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+              {/* LEFT COLUMN: Phân loại, Decal size selection, Tham chiếu & Kích thước bế */}
+              <div className="space-y-3.5">
                 {/* Phân loại khuôn bế */}
-                <div className="space-y-1.5 p-3 rounded-lg border border-slate-200 bg-slate-50/50">
+                <div className="space-y-1 p-2.5 rounded-lg border border-slate-200 bg-slate-50/50">
                   <Label htmlFor="create-die-category" className="text-xs font-bold text-slate-800">
                     Phân loại khuôn bế <span className="text-destructive">*</span>
                   </Label>
                   <Select value={dieCategory} onValueChange={setDieCategory}>
-                    <SelectTrigger id="create-die-category" className="h-9 text-xs font-medium bg-white border-slate-200">
+                    <SelectTrigger id="create-die-category" className="h-8 text-xs font-medium bg-white border-slate-200">
                       <SelectValue placeholder="Chọn phân loại khuôn..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -906,85 +908,72 @@ export function DieExportDialog({
                   </Select>
                 </div>
 
-                {/* Selection of Decal Die Sizes (when category === 'decal') */}
-                {dieCategory === "decal" && (
-                  <div className="space-y-2 p-3 rounded-lg border border-amber-200 bg-amber-50/50">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
-                        <span>Đánh dấu kích thước Decal lưu vào khuôn</span>
-                        <Badge className="bg-amber-600 text-white text-[10px]">Lưu API dieSizes</Badge>
-                      </Label>
-                    </div>
-                    <p className="text-[11px] text-amber-700">
-                      Tích chọn những kích thước bài decal cần lưu vào thông tin khuôn bế này:
-                    </p>
-                    {candidateDecalSizes.length > 0 ? (
-                      <div className="space-y-1.5 pt-1">
-                        {candidateDecalSizes.map((opt, idx) => {
-                          const isChecked = selectedDecalDieSizes.includes(opt.value);
-                          return (
-                            <label
-                              key={idx}
-                              className={cn(
-                                "flex items-center gap-2 text-xs p-2 rounded-lg border cursor-pointer transition-all",
-                                isChecked
-                                  ? "bg-amber-100/80 border-amber-400 font-semibold text-amber-950 shadow-xs"
-                                  : "bg-white border-amber-200/70 text-slate-700 hover:bg-amber-50/50"
-                              )}
-                            >
-                              <Checkbox
-                                checked={isChecked}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    setSelectedDecalDieSizes((prev) => [...prev, opt.value]);
-                                  } else {
-                                    setSelectedDecalDieSizes((prev) => prev.filter((s) => s !== opt.value));
-                                  }
-                                }}
-                              />
-                              <span className="font-bold tabular-nums">{opt.value}</span>
-                              <span className="text-[11px] text-slate-500 font-normal">({opt.label})</span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <p className="text-[11px] text-amber-600 italic">
-                        Hãy nhập kích thước Dài / Rộng ở phần dưới để tạo tùy chọn kích thước khuôn Decal.
-                      </p>
-                    )}
-                  </div>
-                )}
-
-                {/* Reference table: design dimensions */}
-                <div className="space-y-2">
-                  <h4 className="text-xs font-bold text-slate-800 flex items-center justify-between">
-                    <span>Kích thước mã hàng (tham chiếu)</span>
+                {/* Integrated Reference & Selection Table */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <span>Kích thước mã hàng (tham chiếu)</span>
+                      {dieCategory === "decal" && (
+                        <Badge className="bg-emerald-600 text-white text-[9px] px-1.5 py-0">Tích chọn lưu dieSizes</Badge>
+                      )}
+                    </h4>
                     <span className="text-[11px] font-normal text-slate-500">
                       {allDesignDimensions.length} mã hàng
                     </span>
-                  </h4>
+                  </div>
 
                   {allDesignDimensions.length > 0 ? (
-                    <div className="rounded-lg border border-slate-200 bg-slate-50/30 overflow-hidden">
+                    <div className="rounded-lg border border-slate-200 bg-slate-50/30 overflow-hidden shadow-2xs">
                       <table className="w-full text-xs">
                         <thead>
                           <tr className="border-b bg-slate-100/70 text-slate-700">
+                            {dieCategory === "decal" && (
+                              <th className="w-9 px-2 py-1.5 text-center font-bold">Lưu</th>
+                            )}
                             <th className="text-left px-3 py-1.5 font-bold">Mã hàng</th>
                             <th className="text-left px-3 py-1.5 font-bold">Loại</th>
                             <th className="text-center px-3 py-1.5 font-bold">D × R × C (mm)</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                          {allDesignDimensions.map((d, idx) => (
-                            <tr key={idx} className="hover:bg-white transition-colors">
-                              <td className="px-3 py-1.5 font-mono font-bold text-slate-800">{d.code || "—"}</td>
-                              <td className="px-3 py-1.5 text-slate-600">{d.designTypeName || "—"}</td>
-                              <td className="px-3 py-1.5 text-center font-semibold text-slate-900 tabular-nums">
-                                {d.length ?? "?"} × {d.width ?? "—"} × {d.height ?? "?"}
-                              </td>
-                            </tr>
-                          ))}
+                          {allDesignDimensions.map((d, idx) => {
+                            const parts = [d.length, d.width, d.height].filter((n) => n != null && n > 0);
+                            const decalSizeVal = parts.join("×");
+                            const isChecked = selectedDecalDieSizes.includes(decalSizeVal);
+
+                            return (
+                              <tr
+                                key={idx}
+                                className={cn(
+                                  "transition-colors",
+                                  isChecked ? "bg-emerald-50/90 font-semibold text-emerald-950" : "hover:bg-white"
+                                )}
+                              >
+                                {dieCategory === "decal" && (
+                                  <td className="px-2 py-1.5 text-center">
+                                    <Checkbox
+                                      checked={isChecked}
+                                      onCheckedChange={(checked) => {
+                                        if (checked) {
+                                          setSelectedDecalDieSizes((prev) => [...prev, decalSizeVal]);
+                                        } else {
+                                          setSelectedDecalDieSizes((prev) =>
+                                            prev.filter((s) => s !== decalSizeVal)
+                                          );
+                                        }
+                                      }}
+                                      className="h-3.5 w-3.5 cursor-pointer data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
+                                    />
+                                  </td>
+                                )}
+                                <td className="px-3 py-1.5 font-mono font-bold text-slate-800">{d.code || "—"}</td>
+                                <td className="px-3 py-1.5 text-slate-600">{d.designTypeName || "—"}</td>
+                                <td className="px-3 py-1.5 text-center font-bold text-emerald-700 font-mono tabular-nums">
+                                  {d.length ?? "?"} × {d.width ?? "—"} × {d.height ?? "?"}
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
@@ -995,56 +984,52 @@ export function DieExportDialog({
                   )}
                 </div>
 
-                {/* Editable die dimensions */}
-                <div className="space-y-2 p-3 rounded-lg border border-slate-200 bg-slate-50/50">
-                  <Label className="text-xs font-bold text-slate-800">
-                    Kích thước khuôn bế (mm)
-                  </Label>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="space-y-1">
-                      <Label className="text-[11px] text-slate-600">Dài (mm)</Label>
-                      <Input
-                        type="number"
-                        placeholder="Dài"
-                        value={dieLength || ""}
-                        onChange={(e) => setDieLength(e.target.value ? Number(e.target.value) : undefined)}
-                        className="h-8 text-xs bg-white border-slate-200"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[11px] text-slate-600">Rộng (mm)</Label>
-                      <Input
-                        type="number"
-                        placeholder="Rộng"
-                        value={dieWidth || ""}
-                        onChange={(e) => setDieWidth(e.target.value ? Number(e.target.value) : undefined)}
-                        className="h-8 text-xs bg-white border-slate-200"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-[11px] text-slate-600">Cao (mm)</Label>
-                      <Input
-                        type="number"
-                        placeholder="Cao"
-                        value={dieHeight || ""}
-                        onChange={(e) => setDieHeight(e.target.value ? Number(e.target.value) : undefined)}
-                        className="h-8 text-xs bg-white border-slate-200"
-                      />
-                    </div>
-                  </div>
-                </div>
+              </div>
 
-                {/* Image upload */}
-                <div className="space-y-2">
+              {/* RIGHT COLUMN: Ảnh khuôn (1/2 card preview), Vendor, Receiving Date, Options & Note */}
+              <div className="space-y-3.5 border-t lg:border-t-0 lg:border-l lg:pl-5 border-slate-100 pt-3 lg:pt-0">
+
+                {/* Larger Image Upload Card (Takes 1/2 card width when uploaded) */}
+                <div className="space-y-1.5 p-3 rounded-xl border border-slate-200 bg-white shadow-2xs">
                   <Label className="text-xs font-bold text-slate-800">Ảnh khuôn bế (tùy chọn)</Label>
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-stretch gap-3">
                     <label
                       htmlFor="die-image-upload"
-                      className="flex-1 flex flex-col items-center justify-center p-4 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 hover:bg-slate-100/50 cursor-pointer transition-colors"
+                      className={cn(
+                        "flex flex-col items-center justify-center p-3 rounded-xl border-2 border-dashed transition-all cursor-pointer text-center min-h-[90px]",
+                        isDraggingDieImage
+                          ? "border-emerald-500 bg-emerald-50/70 shadow-inner scale-[1.01]"
+                          : "border-slate-200 bg-slate-50/50 hover:bg-slate-100/60 hover:border-slate-300",
+                        dieImagePreview || dieImage ? "w-1/2" : "w-full"
+                      )}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setIsDraggingDieImage(true);
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setIsDraggingDieImage(false);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setIsDraggingDieImage(false);
+                        const file = e.dataTransfer.files?.[0];
+                        if (file && file.type.startsWith("image/")) {
+                          setDieImage(file);
+                          setDieFiles([file]);
+                          const preview = URL.createObjectURL(file);
+                          setDieImagePreview(preview);
+                        }
+                      }}
                     >
-                      <Upload className="h-6 w-6 text-slate-400 mb-1" />
-                      <span className="text-xs font-semibold text-slate-700">Tải ảnh khuôn</span>
-                      <span className="text-[10px] text-slate-400 mt-0.5">PNG, JPG, WEBP (Tối đa 5MB)</span>
+                      <Upload className="h-5 w-5 text-emerald-600 mb-1" />
+                      <span className="text-xs font-bold text-slate-800">
+                        Kéo thả ảnh hoặc <span className="text-emerald-700 underline font-semibold">bấm chọn</span>
+                      </span>
+                      <span className="text-[10px] text-slate-400">PNG, JPG, WEBP (Tối đa 5MB)</span>
                       <input
                         id="die-image-upload"
                         type="file"
@@ -1063,11 +1048,15 @@ export function DieExportDialog({
                     </label>
 
                     {(dieImagePreview || dieImage) && (
-                      <div className="relative w-20 h-20 rounded-xl border border-slate-200 bg-white p-1 overflow-hidden shrink-0">
+                      <div className="relative w-1/2 h-[90px] rounded-xl border border-slate-200 bg-slate-900/5 p-1 overflow-hidden shrink-0 group">
                         <img
                           src={dieImagePreview || (dieImage ? URL.createObjectURL(dieImage) : "")}
                           alt="Die preview"
-                          className="w-full h-full object-contain rounded-lg"
+                          className="w-full h-full object-contain rounded-lg cursor-pointer transition-transform duration-200 group-hover:scale-105"
+                          onClick={() => {
+                            const url = dieImagePreview || (dieImage ? URL.createObjectURL(dieImage) : "");
+                            if (url) setPreviewImageUrl(url);
+                          }}
                         />
                         <button
                           type="button"
@@ -1076,7 +1065,8 @@ export function DieExportDialog({
                             setDieFiles([]);
                             setDieImagePreview(null);
                           }}
-                          className="absolute top-1 right-1 h-5 w-5 rounded-full bg-rose-500 text-white flex items-center justify-center text-xs shadow-md hover:bg-rose-600"
+                          className="absolute top-1 right-1 h-5 w-5 rounded-full bg-rose-500 text-white flex items-center justify-center text-xs shadow-md hover:bg-rose-600 cursor-pointer z-10"
+                          title="Xóa ảnh"
                         >
                           <X className="h-3 w-3" />
                         </button>
@@ -1084,10 +1074,6 @@ export function DieExportDialog({
                     )}
                   </div>
                 </div>
-              </div>
-
-              {/* RIGHT COLUMN: Vendor, Receiving Date, Options & Note */}
-              <div className="space-y-5 border-t lg:border-t-0 lg:border-l lg:pl-6 border-slate-100 pt-4 lg:pt-0">
                 {/* Vendor selector / creation */}
                 <div className="space-y-2">
                   <Label className="text-xs font-bold text-slate-800">
@@ -1218,7 +1204,12 @@ export function DieExportDialog({
                       type="button"
                       variant={isReusable ? "default" : "outline"}
                       onClick={() => setIsReusable(true)}
-                      className="flex-1 h-8 text-xs font-semibold shadow-none"
+                      className={cn(
+                        "flex-1 h-8 text-xs font-semibold shadow-none cursor-pointer",
+                        isReusable
+                          ? "bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-600"
+                          : "bg-white text-slate-700 hover:bg-slate-50 border-slate-200"
+                      )}
                     >
                       Lưu kho tái sử dụng
                     </Button>
@@ -1226,7 +1217,12 @@ export function DieExportDialog({
                       type="button"
                       variant={!isReusable ? "destructive" : "outline"}
                       onClick={() => setIsReusable(false)}
-                      className="flex-1 h-8 text-xs font-semibold shadow-none"
+                      className={cn(
+                        "flex-1 h-8 text-xs font-semibold shadow-none cursor-pointer",
+                        !isReusable
+                          ? "bg-slate-800 hover:bg-slate-900 text-white"
+                          : "bg-white text-slate-700 hover:bg-slate-50 border-slate-200"
+                      )}
                     >
                       Khuôn dùng 1 lần
                     </Button>
@@ -1260,7 +1256,7 @@ export function DieExportDialog({
                     <Button
                       variant="default"
                       size="sm"
-                      className="h-6 text-xs font-semibold cursor-pointer shadow-none"
+                      className="h-6 text-xs font-semibold cursor-pointer shadow-none bg-emerald-600 hover:bg-emerald-700 text-white"
                       onClick={() => setDieAction("select")}
                     >
                       Chọn khuôn cũ

@@ -187,16 +187,14 @@ export function DetailHeader({
               }
             />
 
-            {order.status === "production_returned" && (order.returnTypeDisplayName || order.returnReason) && (
+            {order.status === "production_returned" && (order.returnTypeDisplayName || order.returnType || order.returnReason) && (
               <div className="flex items-center gap-1.5 ml-2 border-l pl-2.5 h-7 border-slate-200">
-                {order.returnTypeDisplayName && (
-                  <Badge variant="outline" className={cn(
-                    "text-xs font-bold py-0.5 px-2 border",
-                    order.returnType === "dispatch" ? "bg-red-100 text-red-800 border-red-300" : "bg-rose-100 text-rose-800 border-rose-300"
-                  )}>
-                    {order.returnTypeDisplayName}
-                  </Badge>
-                )}
+                <Badge variant="outline" className={cn(
+                  "text-xs font-bold py-0.5 px-2 border",
+                  order.returnType === "dispatch" ? "bg-red-100 text-red-800 border-red-300" : "bg-rose-100 text-rose-800 border-rose-300"
+                )}>
+                  {order.returnTypeDisplayName || (order.returnType === "dispatch" ? "Điều lệnh trả về" : "Lệnh in trả về")}
+                </Badge>
                 {order.returnReason && (
                   <span className="text-xs text-rose-800 font-semibold bg-rose-50 border border-rose-200 rounded px-2 py-0.5" title={order.returnReason}>
                     Lý do: {order.returnReason}

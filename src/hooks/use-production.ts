@@ -15,6 +15,7 @@ import type {
   ProductionStepResponse,
   CreateProductionOrderRequest,
   UpdateProductionStepRequest,
+  ProductionStepHistoryResponse,
   ProductionListParams,
   AssignProductionStepRequest,
   ProductionPendingMaterialParams,
@@ -134,12 +135,15 @@ export const useUpdateProductionStep = () => {
 
       return result;
     } catch (err: unknown) {
-      const error = err as ApiError;
-      toast.error("Lỗi", {
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Không thể cập nhật trạng thái bước sản xuất",
+      const errorObj = err as any;
+      const errorMsg =
+        errorObj?.response?.data?.message ||
+        errorObj?.response?.data?.detail ||
+        errorObj?.response?.data?.title ||
+        errorObj?.message ||
+        "Không thể cập nhật trạng thái bước sản xuất";
+      toast.error("Không thể cập nhật", {
+        description: errorMsg,
       });
       throw err;
     }
@@ -152,6 +156,21 @@ export const useUpdateProductionStep = () => {
     mutate,
     reset,
   };
+};
+
+// GET /api/production-orders/steps/:stepId/history - Fetch production step status transition history
+export const useProductionStepHistory = (stepId: number | null) => {
+  return useQuery<ProductionStepHistoryResponse[]>({
+    queryKey: ["production-step-history", stepId],
+    queryFn: async () => {
+      if (!stepId) return [];
+      const res = await apiRequest.get<ProductionStepHistoryResponse[]>(
+        API_SUFFIX.PRODUCTION_STEP_HISTORY(stepId),
+      );
+      return res.data;
+    },
+    enabled: !!stepId,
+  });
 };
 
 // DELETE /api/production-orders/:id - Delete (cancel) a production order

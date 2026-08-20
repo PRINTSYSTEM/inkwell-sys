@@ -252,8 +252,32 @@ export const productionStepTypeLabels: Record<string, string> =
   ENTITY_CONFIG.productionStepTypes.values;
 
 // Trạng thái công đoạn sản xuất (ProductionStepStatus)
-export const productionStepStatusLabels: Record<string, string> =
-  ENTITY_CONFIG.productionStepStatuses.values;
+export const productionStepStatusLabels: Record<string, string> = {
+  pending: "Chờ",
+  ready: "Sẵn sàng",
+  in_progress: "Đang thực hiện",
+  running: "Đang thực hiện",
+  done: "Hoàn thành",
+  completed: "Hoàn thành",
+  blocked: "Tạm dừng",
+  paused: "Tạm dừng",
+  cancelled: "Đã hủy",
+  draft: "Bản nháp",
+  dispatched: "Đã điều lệnh",
+  re_dispatched: "Điều in lại",
+  started: "Bắt đầu in",
+  returned_by_print: "Lệnh in trả về",
+  returned_to_dispatch: "Lệnh in trả về",
+  returned_to_proofing: "Trả về bình bài",
+  reproofed: "Đã bình lại",
+  ...ENTITY_CONFIG.productionStepStatuses.values,
+};
+
+export function getStepStatusLabel(status: string | null | undefined): string {
+  if (!status) return "—";
+  const normalized = status.toLowerCase().trim();
+  return productionStepStatusLabels[normalized] || productionStepStatusLabels[status] || status;
+}
 
 // Nguồn nhập kho (StockInSource)
 export const stockInSourceLabels: Record<string, string> =

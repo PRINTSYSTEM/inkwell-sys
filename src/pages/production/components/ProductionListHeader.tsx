@@ -18,7 +18,7 @@ export function ProductionListHeader({
     <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 shrink-0 border-b pb-2">
       <div>
         <h1 className="text-lg font-bold text-balance whitespace-nowrap text-slate-800 dark:text-slate-100">
-          Quản lý Sản xuất
+          Lệnh sản xuất
         </h1>
       </div>
     </div>

@@ -26,6 +26,7 @@ export const ProofingOrderDesignResponseSchema =
   GenProofingOrderDesignResponseSchema.extend({
     designThumbnailUrl: z.string().nullable().optional(),
     proofingAllocations: z.array(ProofingAllocationResponseSchema).nullable().optional(),
+    outputQty: z.number().nullable().optional(),
   }).passthrough();
 export type ProofingOrderDesignResponse = z.infer<
   typeof ProofingOrderDesignResponseSchema
@@ -48,6 +49,7 @@ export const ProofingOrderResponseSchema =
     returnType: z.string().nullable().optional(),
     returnTypeDisplayName: z.string().nullable().optional(),
     returnReason: z.string().nullable().optional(),
+    producedQty: z.number().nullable().optional(),
   }).passthrough();
 export type ProofingOrderResponse = z.infer<typeof ProofingOrderResponseSchema>;
 

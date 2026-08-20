@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -48,10 +49,9 @@ import { formatDieSize } from "@/utils/format-die-size";
 import type { DieResponse, DieListParams } from "@/Schema";
 import { dieStatusLabels, dieLocationLabels } from "@/lib/status-utils";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
-import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
 
 interface DieListDialogProps {
   open: boolean;
@@ -180,10 +180,14 @@ export function DieListDialog({
   // Compact High-Density Card Item (Fits 20 cards on 1 screen)
   const renderDieCard = (die: DieResponse) => {
     const isBox = die.category === "box" || !die.category;
-    const usageCode =
+    const firstHistoryItem =
       die.usageHistory?.find(
         (u: { proofingOrderId?: number; proofingOrderCode?: string }) => u.proofingOrderId === die.firstProofingOrderId
-      )?.proofingOrderCode || die.usageHistory?.[0]?.proofingOrderCode || die.firstProofingOrderCode || null;
+      ) || die.usageHistory?.[0];
+
+    const proofingOrderId = die.firstProofingOrderId || firstHistoryItem?.proofingOrderId || null;
+    const usageCode =
+      firstHistoryItem?.proofingOrderCode || die.firstProofingOrderCode || (proofingOrderId ? `PO-${proofingOrderId}` : null);
 
     return (
       <div
@@ -254,7 +258,29 @@ export function DieListDialog({
                 {formatDieSize(die) || "—"}
               </div>
               <div className="text-[11px] text-slate-500 truncate mt-0.5">
-                {usageCode ? `Mã bài: ${usageCode}` : (die.vendorName ? `NCC: ${die.vendorName}` : "Chưa gắn bài")}
+                {usageCode ? (
+                  <span className="inline-flex items-center gap-1">
+                    <span>Mã bài:</span>
+                    <button
+                      type="button"
+                      className="font-mono font-bold text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer inline-flex items-center gap-0.5 bg-emerald-50 hover:bg-emerald-100 px-1 py-0.5 rounded border border-emerald-200/80 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenChange(false);
+                        const targetId = proofingOrderId || usageCode.replace(/\D/g, "");
+                        if (targetId) {
+                          navigate(`/proofing/${targetId}`);
+                        }
+                      }}
+                      title={`Chuyển đến bài in ${usageCode}`}
+                    >
+                      {usageCode}
+                      <ExternalLink className="h-2.5 w-2.5 opacity-70 ml-0.5" />
+                    </button>
+                  </span>
+                ) : (
+                  die.vendorName ? `NCC: ${die.vendorName}` : "Chưa gắn bài"
+                )}
               </div>
             </div>
           </div>
@@ -298,10 +324,14 @@ export function DieListDialog({
         <TableBody>
           {diesList.map((die, idx) => {
             const isBox = die.category === "box" || !die.category;
-            const usageCode =
+            const firstHistoryItem =
               die.usageHistory?.find(
                 (u: { proofingOrderId?: number; proofingOrderCode?: string }) => u.proofingOrderId === die.firstProofingOrderId
-              )?.proofingOrderCode || die.usageHistory?.[0]?.proofingOrderCode || die.firstProofingOrderCode || null;
+              ) || die.usageHistory?.[0];
+
+            const proofingOrderId = die.firstProofingOrderId || firstHistoryItem?.proofingOrderId || null;
+            const usageCode =
+              firstHistoryItem?.proofingOrderCode || die.firstProofingOrderCode || (proofingOrderId ? `PO-${proofingOrderId}` : null);
 
             return (
               <TableRow
@@ -356,9 +386,22 @@ export function DieListDialog({
                 </TableCell>
                 <TableCell className="font-mono text-slate-600 py-2">
                   {usageCode ? (
-                    <span className="inline-flex items-center gap-1 bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded text-[11px]">
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-1.5 py-0.5 rounded text-[11px] font-bold text-emerald-700 hover:underline cursor-pointer transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenChange(false);
+                        const targetId = proofingOrderId || usageCode.replace(/\D/g, "");
+                        if (targetId) {
+                          navigate(`/proofing/${targetId}`);
+                        }
+                      }}
+                      title={`Chuyển đến bài in ${usageCode}`}
+                    >
                       {usageCode}
-                    </span>
+                      <ExternalLink className="h-3 w-3 opacity-70" />
+                    </button>
                   ) : (
                     "—"
                   )}

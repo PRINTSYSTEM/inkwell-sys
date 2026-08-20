@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +28,7 @@ import {
   Trash2,
   AlertCircle,
   Upload,
+  Image as ImageIcon,
   Edit,
   Plus,
   Search,
@@ -253,6 +254,8 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
 
   const [dieExportInitialSelectedIds, setDieExportInitialSelectedIds] =
     useState<number[] | undefined>(undefined);
+  const [isDraggingUpload, setIsDraggingUpload] = useState(false);
+  const uploadFileInputRef = useRef<HTMLInputElement>(null);
 
   // Helper functions for file classification
   const isImageFile = (file: File): boolean => {
@@ -263,34 +266,71 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
 
   return (
     <>
-      {/* Upload Images Dialog (only images, multiple allowed) */}
+      {/* Upload Images Dialog (only images, multiple allowed, drag-and-drop supported) */}
       <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
         <DialogContent className="max-w-xl max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader className="shrink-0">
             <DialogTitle>Tải lên ảnh bình bài</DialogTitle>
             <DialogDescription>
-              Chọn ảnh preview (JPG, PNG, ...) cho bài bình này. Có thể chọn
-              nhiều ảnh.
+              Chọn hoặc kéo thả ảnh preview (JPG, PNG, WEBP...) cho bài bình này. Có thể chọn nhiều ảnh.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 min-h-0 flex flex-col space-y-4 py-4 overflow-hidden">
-            <div className="space-y-2 shrink-0">
-              <Label>Chọn ảnh</Label>
-              <Input
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={(e) => {
-                  const files = Array.from(e.target.files || []);
-                  // Only keep image files
-                  const images = files.filter((f) => isImageFile(f));
-                  setUploadFiles((prev: File[]) => [...prev, ...images]);
+          <div className="flex-1 min-h-0 flex flex-col space-y-4 py-3 overflow-hidden">
+            <div className="space-y-1.5 shrink-0">
+              <Label className="text-xs font-bold text-slate-800">Chọn hoặc kéo thả tệp ảnh</Label>
+              <div
+                className={cn(
+                  "relative flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-xl transition-all cursor-pointer text-center",
+                  isDraggingUpload
+                    ? "border-emerald-500 bg-emerald-50/70 shadow-inner scale-[1.01]"
+                    : "border-slate-300 bg-slate-50/50 hover:bg-slate-100/70 hover:border-slate-400"
+                )}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsDraggingUpload(true);
                 }}
-              />
-              <p className="text-[10px] text-muted-foreground">
-                Tải lên 1 hoặc nhiều ảnh (JPG, PNG, ...).
-              </p>
+                onDragLeave={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsDraggingUpload(false);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setIsDraggingUpload(false);
+                  const files = Array.from(e.dataTransfer.files || []);
+                  const images = files.filter((f) => isImageFile(f));
+                  if (images.length > 0) {
+                    setUploadFiles((prev: File[]) => [...prev, ...images]);
+                  }
+                }}
+                onClick={() => uploadFileInputRef.current?.click()}
+              >
+                <input
+                  ref={uploadFileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    const images = files.filter((f) => isImageFile(f));
+                    setUploadFiles((prev: File[]) => [...prev, ...images]);
+                    e.target.value = "";
+                  }}
+                />
+                <div className="p-3 bg-white rounded-full shadow-2xs border border-slate-200 mb-2 text-emerald-600">
+                  <Upload className="h-6 w-6" />
+                </div>
+                <p className="text-xs font-bold text-slate-800">
+                  Kéo thả tệp ảnh vào đây hoặc <span className="text-emerald-700 underline font-semibold">bấm để chọn tệp</span>
+                </p>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Hỗ trợ JPG, PNG, WEBP... (Có thể chọn hoặc kéo thả nhiều tệp cùng lúc)
+                </p>
+              </div>
             </div>
 
             {/* Hiển thị danh sách ảnh đã chọn */}

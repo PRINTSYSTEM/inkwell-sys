@@ -939,20 +939,6 @@ export default function ProductionDispatch() {
                               >
                                 {proofingCode}
                               </span>
-
-                              {isReturned && (
-                                <Badge
-                                  className={cn(
-                                    "font-bold text-[10px] px-1.5 py-0 rounded-md flex items-center gap-1 border",
-                                    item.returnType === "dispatch"
-                                      ? "bg-red-100 text-red-800 border-red-300"
-                                      : "bg-rose-100 text-rose-800 border-rose-300"
-                                  )}
-                                >
-                                  <RotateCcw className={cn("h-2.5 w-2.5", item.returnType === "dispatch" ? "text-red-600" : "text-rose-600")} />
-                                  {item.returnTypeDisplayName || (item.returnType === "dispatch" ? "Điều lệnh trả về" : "Lệnh in trả về")}
-                                </Badge>
-                              )}
                             </div>
                           </TableCell>
 
@@ -1316,7 +1302,8 @@ export default function ProductionDispatch() {
                               <div className="bg-rose-100/80 border border-rose-200/90 rounded-lg p-2 text-[11px] leading-tight space-y-1">
                                 <div className="flex items-center justify-between text-rose-800 font-bold text-[10px]">
                                   <span className="flex items-center gap-1">
-                                    <RotateCcw className="h-3 w-3 text-rose-600 shrink-0" /> Thợ in trả về
+                                    <RotateCcw className="h-3 w-3 text-rose-600 shrink-0" />
+                                    {item.returnTypeDisplayName || (item.returnType === "dispatch" ? "Điều lệnh trả về" : "Lệnh in trả về")}
                                   </span>
                                   {item.returnedAt && (
                                     <span className="font-mono text-[9px] font-normal text-rose-700">
@@ -1327,11 +1314,6 @@ export default function ProductionDispatch() {
                                 <div className="text-slate-900 font-semibold break-words">
                                   {item.returnReason || "Không có ghi chú lý do"}
                                 </div>
-                                {item.returnedByName && (
-                                  <div className="text-[9.5px] text-slate-600">
-                                    Bởi: <strong className="text-slate-800">{item.returnedByName}</strong>
-                                  </div>
-                                )}
                               </div>
                             ) : generalNotes ? (
                               <div className="text-[11px] text-slate-700 line-clamp-2 italic" title={generalNotes}>

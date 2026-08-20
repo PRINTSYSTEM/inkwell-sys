@@ -334,6 +334,8 @@ export const API_SUFFIX = {
     `/production-orders/steps/${id}/assign`,
   PRODUCTION_STEP_STATUS: (id: number) =>
     `/production-orders/steps/${id}/status`,
+  PRODUCTION_STEP_HISTORY: (id: number) =>
+    `/production-orders/steps/${id}/history`,
   PRODUCTION_ORDERS_KCS: "/production-orders/kcs",
   PRODUCTION_ORDERS_KCS_SUMMARY: "/production-orders/kcs/design-type-summary",
   PRODUCTION_POST_PRINT: "/production-orders/post-print",

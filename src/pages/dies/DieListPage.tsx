@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,7 @@ import {
 import { cn } from "@/lib/utils";
 
 export default function DieListPage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const canViewPrice = useMemo(() => {
     return !!user?.role && ["admin", "sale", "manager", "accounting", "accounting_lead"].includes(user.role);
@@ -390,9 +392,19 @@ export default function DieListPage() {
                         <TableCell className="py-1 px-3">
                           {die.firstProofingOrderCode ? (
                             <div className="flex items-center gap-1">
-                              <span className="text-xs font-medium text-foreground font-mono">
+                              <button
+                                type="button"
+                                className="text-xs font-mono font-bold text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer inline-flex items-center gap-0.5 bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded border border-emerald-200/80 transition-colors"
+                                onClick={() => {
+                                  const targetId = die.firstProofingOrderId || die.firstProofingOrderCode?.replace(/\D/g, "");
+                                  if (targetId) {
+                                    navigate(`/proofing/${targetId}`);
+                                  }
+                                }}
+                                title={`Chuyển đến bài in ${die.firstProofingOrderCode}`}
+                              >
                                 {die.firstProofingOrderCode}
-                              </span>
+                              </button>
                               <Button
                                 variant="ghost"
                                 size="sm"

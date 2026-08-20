@@ -24,6 +24,8 @@ export interface PrintOrderResponse {
   sortOrder?: number;
   isPaused?: boolean | null;
   pauseReason?: string | null;
+  createdAt?: string | null;
+  updatedAt?: string | null;
   inputQty?: number;
   outputQty?: number;
   impositionCompletedAt?: string | null;

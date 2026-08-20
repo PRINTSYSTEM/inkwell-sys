@@ -11,6 +11,11 @@ export interface KcsProductionOrderResponse {
   designTypeId: number | null;
   designTypeName: string | null;
   designTypeCode: string | null;
+  materialTypeName?: string | null;
+  paperSizeName?: string | null;
+  basisWeight?: number | null;
+  specification?: string[] | string | null;
+  totalQuantity?: number | null;
   proofingOrderImages: {
     id: number;
     imageUrl: string;

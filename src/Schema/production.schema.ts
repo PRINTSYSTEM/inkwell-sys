@@ -113,6 +113,14 @@ export const ProductionOrderResponseSchema = GenProductionOrderResponseSchema.ex
       }).nullable().optional(),
     })).nullable().optional(),
   }).passthrough().nullable().optional(),
+  materialTypeName: z.string().nullish(),
+  paperSizeName: z.string().nullish(),
+  basisWeight: z.number().nullish(),
+  designTypeName: z.string().nullish(),
+  specification: z.union([z.array(z.string()), z.string()]).nullish(),
+  totalQuantity: z.number().nullish(),
+  impositionCompletedAt: z.string().nullish(),
+  printOrderCompletedAt: z.string().nullish(),
 }).passthrough();
 export type ProductionOrderResponse = z.infer<
   typeof ProductionOrderResponseSchema
@@ -133,6 +141,21 @@ export type ProductionStepResponse = z.infer<
   typeof ProductionStepResponseSchema
 >;
 
+// ===== ProductionStepHistoryResponse =====
+export const ProductionStepHistoryResponseSchema = z.object({
+  id: z.number(),
+  stepId: z.number(),
+  fromStatus: z.string().nullish(),
+  toStatus: z.string().nullish(),
+  note: z.string().nullish(),
+  userId: z.number().nullish(),
+  userName: z.string().nullish(),
+  createdAt: z.string().nullish(),
+}).passthrough();
+export type ProductionStepHistoryResponse = z.infer<
+  typeof ProductionStepHistoryResponseSchema
+>;
+
 // ===== CreateProductionOrderRequest =====
 export const CreateProductionOrderRequestSchema =
   GenCreateProductionOrderRequestSchema.passthrough();
@@ -142,7 +165,9 @@ export type CreateProductionOrderRequest = z.infer<
 
 // ===== UpdateProductionStepRequest =====
 export const UpdateProductionStepRequestSchema =
-  GenUpdateProductionStepRequestSchema.passthrough();
+  GenUpdateProductionStepRequestSchema.extend({
+    note: z.string().nullish(),
+  }).passthrough();
 export type UpdateProductionStepRequest = z.infer<
   typeof UpdateProductionStepRequestSchema
 >;

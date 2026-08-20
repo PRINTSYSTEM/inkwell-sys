@@ -207,6 +207,13 @@ export function QuantityCell({
           {itemsPerSheet} con/bài
         </span>
       </div>
+      {pod.outputQty != null && pod.outputQty > 0 && (
+        <div className="mt-0.5">
+          <span className="inline-flex items-center gap-1 text-[10px] font-black text-emerald-800 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 rounded px-1.5 py-0.5 shadow-2xs">
+            SLSX: {pod.outputQty.toLocaleString("vi-VN")}
+          </span>
+        </div>
+      )}
       {pod.design?.availableQuantityForProofing != null && (
         <p className="text-[10px] text-slate-500 font-medium">
           Còn: {formatQtyFromPieces(pod.design.availableQuantityForProofing)}

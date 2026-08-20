@@ -914,6 +914,8 @@ export const useCompleteProofingOrder = () => {
         });
       }
       queryClient.invalidateQueries({ queryKey: proofingKeys.all });
+      queryClient.invalidateQueries({ queryKey: ["print-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["production-orders"] });
 
       toast.success("Thành công", {
         description: "Đã hoàn tất bình bài",

@@ -882,16 +882,27 @@ export default function PrintOrdersPage() {
         <div className="space-y-4">
           {/* SECTION 1: ĐANG IN (Active Printing Jobs) */}
           {printingItems.length > 0 && (
-            <div className="bg-amber-50/70 rounded-xl border border-amber-200 shadow-2xs p-4 space-y-3">
-              <div className="flex items-center justify-between font-bold text-[#93631F]">
+            <div className="bg-gradient-to-r from-amber-500/10 via-amber-50/60 to-amber-500/10 rounded-2xl border border-amber-300/80 shadow-2xs p-4 space-y-3">
+              <div className="flex items-center justify-between font-bold text-[#93631F] px-0.5">
                 <div className="flex items-center gap-2 text-sm">
-                  <Printer className="h-4 w-4 text-amber-600 animate-pulse" />
-                  <span>Đang In Tại Xưởng ({printingItems.length} bài)</span>
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                  </span>
+                  <Printer className="h-4 w-4 text-amber-700" />
+                  <span className="font-extrabold text-amber-950">Đang In Tại Xưởng ({printingItems.length} bài)</span>
                 </div>
-                <span className="text-[11px] font-normal text-amber-700">Máy in đang chạy sản xuất</span>
+                <span className="text-[11px] font-semibold text-amber-800 bg-amber-100/80 px-2.5 py-0.5 rounded-full border border-amber-200">
+                  Máy in đang hoạt động
+                </span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div
+                className={cn(
+                  "grid gap-3",
+                  printingItems.length === 1 ? "grid-cols-1" : "grid-cols-1 xl:grid-cols-2"
+                )}
+              >
                 {printingItems.map((item) => {
                   const po = item.productionOrder;
                   const proofingCode = po?.proofingOrderCode || `PO-${item.productionOrderId}`;
@@ -900,60 +911,105 @@ export default function PrintOrdersPage() {
                   const thumbnail = formatImageUrl(rawThumbnail);
                   const fullImage = formatImageUrl(images[0]?.imageUrl || rawThumbnail);
                   const totalQty = po?.proofingOrder?.totalQuantity || po?.items?.[0]?.inputQty || 0;
+                  const materialName = item.materialTypeName || (po?.proofingOrder as any)?.materialType?.name || "—";
+                  const paperSizeName = po?.proofingOrder?.paperSize?.name || (po?.proofingOrder as any)?.customPaperSize || "";
+
+                  const returnReason = item.returnReason || po?.returnReason || (po as any)?.lastReturnReason;
+                  const returnType = item.returnType || (po as any)?.returnType;
+                  const returnTypeDisplayName = item.returnTypeDisplayName || (po as any)?.returnTypeDisplayName;
+                  const isRedispatchedReturned = !!(returnReason || item.returnedAt || (po as any)?.returnedAt || returnType);
 
                   return (
-                    <div key={item.id} className="bg-white p-3 rounded-xl border border-amber-300 shadow-2xs flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      key={item.id}
+                      className={cn(
+                        "bg-white p-3.5 px-4 rounded-xl border transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs hover:shadow-md",
+                        isRedispatchedReturned
+                          ? "border-rose-300 border-l-4 border-l-rose-500 bg-rose-50/20"
+                          : "border-amber-300/90"
+                      )}
+                    >
+                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                        {/* Thumbnail Image */}
                         <div
                           onClick={() => fullImage && setViewingImageUrl(fullImage)}
                           className={cn(
-                            "h-12 w-12 bg-slate-100 rounded-lg border border-slate-200 overflow-hidden shrink-0 transition-all",
-                            fullImage && "cursor-pointer hover:opacity-80 hover:ring-2 hover:ring-amber-500/80 shadow-2xs"
+                            "h-14 w-14 bg-slate-100 rounded-xl border border-slate-200 overflow-hidden shrink-0 transition-all",
+                            fullImage && "cursor-pointer hover:opacity-85 hover:ring-2 hover:ring-amber-500/80 shadow-2xs"
                           )}
                           title={fullImage ? "Bấm để xem ảnh phóng to" : undefined}
                         >
                           {thumbnail ? (
                             <img src={thumbnail} alt={proofingCode} className="h-full w-full object-cover" />
                           ) : (
-                            <div className="h-full w-full flex items-center justify-center text-slate-400">
-                              <ImageIcon className="h-5 w-5" />
+                            <div className="h-full w-full flex items-center justify-center text-slate-400 bg-slate-50">
+                              <ImageIcon className="h-6 w-6" />
                             </div>
                           )}
                         </div>
-                        <div className="space-y-0.5 min-w-0">
-                          <div className="flex items-center gap-1.5 font-mono font-bold text-sm text-slate-900">
+
+                        {/* Details */}
+                        <div className="space-y-1 min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
                             <button
                               onClick={() => handleOpenProofingDetail(item)}
-                              className="text-blue-600 hover:underline cursor-pointer font-bold flex items-center gap-1"
-                              title="Bấm để xem chi tiết bình bài"
+                              className="font-mono text-sm font-black text-blue-600 hover:text-blue-800 hover:underline cursor-pointer flex items-center gap-1"
+                              title="Bấm để xem chi tiết bài bình"
                             >
                               <span>{proofingCode}</span>
-                              <Eye className="h-3.5 w-3.5 text-blue-500" />
+                              <Eye className="h-3.5 w-3.5 text-blue-500 opacity-80" />
                             </button>
-                            <Badge className="bg-amber-100 text-amber-800 border-amber-300 font-bold text-[9.5px] px-1.5 py-0 animate-pulse">
+
+                            <Badge className="bg-amber-500 text-white font-extrabold text-[10px] px-2 py-0.5 shadow-2xs animate-pulse">
                               ⚡ Đang in...
                             </Badge>
+
+                            {isRedispatchedReturned && (
+                              <Badge
+                                className="bg-rose-100 text-rose-800 border-rose-300 font-extrabold text-[10px] px-2 py-0.5 shadow-2xs flex items-center gap-1"
+                                title={returnReason ? `Lý do trả về trước đó: ${returnReason}` : "Bài đã được xử lý & điều lệnh lại sau khi bị trả về"}
+                              >
+                                <RotateCcw className="h-3 w-3 text-rose-600 shrink-0" />
+                                {returnTypeDisplayName || (returnType === "dispatch" ? "Điều lại từ trả về" : "Trả về in lại")}
+                              </Badge>
+                            )}
+
+                            {po?.designType?.name && (
+                              <Badge variant="outline" className={getDesignTypeBadgeStyle(po?.designType?.code)}>
+                                {po.designType.name}
+                              </Badge>
+                            )}
                           </div>
-                          <div className="text-[11px] text-slate-500 truncate">
-                            {item.materialTypeName || (po?.proofingOrder as any)?.materialType?.name || "—"} • {totalQty.toLocaleString("vi-VN")} tờ
+
+                          <div className="text-xs text-slate-700 font-medium truncate flex flex-wrap items-center gap-1.5">
+                            <span className="font-bold text-slate-900">{materialName}</span>
+                            {paperSizeName && (
+                              <span className="text-slate-500">• Khổ: <strong className="text-slate-700">{paperSizeName}</strong></span>
+                            )}
+                            <span className="inline-flex items-center gap-1 bg-amber-100/90 text-amber-900 font-mono font-bold text-[11px] px-2 py-0.5 rounded border border-amber-200">
+                              {totalQty.toLocaleString("vi-VN")} tờ
+                            </span>
                           </div>
+
                           {item.startedAt && (
-                            <div className="text-[10px] text-slate-400 font-mono">
-                              Bắt đầu lúc: {formatDateTime(item.startedAt)}
+                            <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1">
+                              <Clock className="h-3 w-3 text-slate-400" />
+                              <span>Bắt đầu lúc: <strong className="text-slate-700">{formatDateTime(item.startedAt)}</strong></span>
                             </div>
                           )}
                         </div>
                       </div>
 
-                      {/* Actions for Printing Job */}
-                      <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end">
+                      {/* Actions for Active Printing Job */}
+                      <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end self-end sm:self-center">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleOpenHistory(item)}
-                          className="h-7 text-[10px] font-semibold text-slate-700 border-slate-200 hover:bg-slate-100 rounded-lg px-2 cursor-pointer"
+                          className="h-8 text-xs font-semibold text-slate-700 border-slate-200 hover:bg-slate-100 rounded-lg px-2.5 cursor-pointer shadow-2xs"
+                          title="Xem lịch sử sản xuất"
                         >
-                          <History className="h-3 w-3 mr-1 text-slate-500" /> Lịch sử
+                          <History className="h-3.5 w-3.5 mr-1 text-slate-500" /> Lịch sử
                         </Button>
 
                         <Button
@@ -961,22 +1017,22 @@ export default function PrintOrdersPage() {
                           size="sm"
                           onClick={() => handleOpenPauseDialog(item)}
                           disabled={pauseMutation.isPending}
-                          className="h-7 text-[10.5px] font-semibold text-purple-700 bg-purple-50/70 border-purple-200 hover:bg-purple-100 rounded-lg px-2 cursor-pointer"
+                          className="h-8 text-xs font-bold text-red-700 bg-red-50/80 border-red-200 hover:bg-red-100 rounded-lg px-2.5 cursor-pointer shadow-2xs"
                           title="Tạm dừng lệnh in này và đưa xuống cuối hàng chờ"
                         >
-                          <Pause className="h-3 w-3 mr-1 text-purple-600" /> Tạm dừng
+                          <Pause className="h-3.5 w-3.5 mr-1 text-red-600" /> Tạm dừng
                         </Button>
 
                         <Button
                           size="sm"
                           onClick={() => handleDirectComplete(item.id)}
                           disabled={completeMutation.isPending}
-                          className="h-7 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10.5px] px-2.5 rounded-lg shadow-2xs cursor-pointer"
+                          className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 rounded-lg shadow-2xs cursor-pointer transition-all"
                         >
                           {completeMutation.isPending ? (
-                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
                           ) : (
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
                           )}
                           Hoàn thành
                         </Button>
@@ -986,10 +1042,10 @@ export default function PrintOrdersPage() {
                           size="sm"
                           onClick={() => handleOpenReturnDialog(item)}
                           disabled={returnMutation.isPending}
-                          className="h-7 text-[10px] font-semibold text-rose-700 bg-rose-50/60 border-rose-200 hover:bg-rose-100 rounded-lg px-1.5 cursor-pointer"
+                          className="h-8 text-xs font-semibold text-rose-700 bg-rose-50/80 border-rose-200 hover:bg-rose-100 rounded-lg px-2.5 cursor-pointer shadow-2xs"
                           title="Trả về bộ phận Bình bài để xử lý"
                         >
-                          <RotateCcw className="h-3 w-3 mr-0.5 text-rose-600" /> Trả về
+                          <RotateCcw className="h-3.5 w-3.5 mr-1 text-rose-600" /> Trả về
                         </Button>
                       </div>
                     </div>
@@ -1050,11 +1106,11 @@ export default function PrintOrdersPage() {
                     if (isPaused) {
                       queueBadge = (
                         <div className="space-y-0.5">
-                          <Badge className="bg-purple-100 text-purple-900 border-purple-300 font-bold text-[10px] px-2 py-0 flex items-center gap-1 w-fit">
-                            <Clock className="h-3 w-3 text-purple-600" /> Tạm dừng
+                          <Badge className="bg-red-100 text-red-800 border-red-300 font-extrabold text-[10px] px-2 py-0 flex items-center gap-1 w-fit shadow-2xs">
+                            <AlertTriangle className="h-3 w-3 text-red-600 animate-pulse shrink-0" /> Tạm dừng
                           </Badge>
                           {item.pauseReason && (
-                            <span className="text-[10px] text-purple-700 italic truncate block max-w-[170px]" title={item.pauseReason}>
+                            <span className="text-[10px] text-red-700 italic truncate block max-w-[170px]" title={item.pauseReason}>
                               {item.pauseReason}
                             </span>
                           )}
@@ -1091,6 +1147,11 @@ export default function PrintOrdersPage() {
                     const isDragged = draggedItemId === item.id;
                     const isOver = dragOverItemId === item.id;
 
+                    const returnReason = item.returnReason || po?.returnReason || (po as any)?.lastReturnReason;
+                    const returnType = item.returnType || (po as any)?.returnType;
+                    const returnTypeDisplayName = item.returnTypeDisplayName || (po as any)?.returnTypeDisplayName;
+                    const isRedispatchedReturned = !!(returnReason || item.returnedAt || (po as any)?.returnedAt || returnType);
+
                     return (
                       <TableRow
                         key={item.id}
@@ -1104,7 +1165,9 @@ export default function PrintOrdersPage() {
                           isOver && "border-t-2 border-t-amber-500 bg-amber-50/60",
                           !isDragged && !isOver && index === 0 && !isMachinePrinting
                             ? "bg-amber-50/40 hover:bg-amber-50/70 border-l-4 border-l-amber-500"
-                            : "hover:bg-slate-50/80"
+                            : isRedispatchedReturned
+                              ? "bg-rose-50/40 hover:bg-rose-50/70 border-l-4 border-l-rose-500"
+                              : "hover:bg-slate-50/80"
                         )}
                       >
                         {/* Queue Position & Drag Controls */}
@@ -1185,6 +1248,15 @@ export default function PrintOrdersPage() {
                               <span>{proofingCode}</span>
                               <Eye className="h-3 w-3 text-blue-500 shrink-0" />
                             </button>
+                            {isRedispatchedReturned && (
+                              <Badge
+                                className="bg-rose-100 text-rose-800 border-rose-300 font-extrabold text-[9.5px] px-1.5 py-0 flex items-center gap-1 w-fit shadow-2xs"
+                                title={returnReason ? `Lý do trả về trước đó: ${returnReason}` : "Bài đã được xử lý & điều lệnh lại sau khi bị trả về"}
+                              >
+                                <RotateCcw className="h-2.5 w-2.5 text-rose-600 shrink-0" />
+                                {returnTypeDisplayName || (returnType === "dispatch" ? "Điều lại từ trả về" : "Trả về in lại")}
+                              </Badge>
+                            )}
                             {isUrgent && (
                               <Badge className="bg-red-500 text-white font-bold text-[9px] px-1 py-0 w-fit">
                                 <Flame className="h-2.5 w-2.5 mr-0.5" /> Gấp
@@ -1419,60 +1491,80 @@ export default function PrintOrdersPage() {
                         const fullImage = formatImageUrl(images[0]?.imageUrl || rawThumbnail);
                         const totalQty = po?.proofingOrder?.totalQuantity || po?.items?.[0]?.inputQty || 0;
 
+                        const returnReason = item.returnReason || po?.returnReason || (po as any)?.lastReturnReason;
+                        const returnType = item.returnType || (po as any)?.returnType;
+                        const returnTypeDisplayName = item.returnTypeDisplayName || (po as any)?.returnTypeDisplayName;
+                        const isRedispatchedReturned = !!(returnReason || item.returnedAt || (po as any)?.returnedAt || returnType);
+
                         return (
                           <TableRow
                             key={item.id}
                             onClick={() => handleToggleSelectNotQueued(item.id)}
                             className={cn(
                               "cursor-pointer transition-colors border-b border-slate-100",
-                              isSelected ? "bg-amber-50/50 hover:bg-amber-50/70" : "hover:bg-slate-50/70"
+                              isSelected
+                                ? "bg-amber-50/50 hover:bg-amber-50/70"
+                                : isRedispatchedReturned
+                                  ? "bg-rose-50/40 hover:bg-rose-50/70 border-l-4 border-l-rose-500"
+                                  : "hover:bg-slate-50/70"
                             )}
                           >
-                            <TableCell className="text-center py-1.5 px-2">
-                              <div className="flex items-center justify-center gap-1.5">
-                                <span className="text-[11px] font-medium text-slate-400">{index + 1}</span>
-                                <Checkbox
-                                  checked={isSelected}
-                                  onCheckedChange={() => handleToggleSelectNotQueued(item.id)}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="h-3.5 w-3.5 text-[#93631F]"
-                                />
-                              </div>
-                            </TableCell>
-
-                            <TableCell className="text-center py-1.5 px-1" onClick={(e) => e.stopPropagation()}>
-                              <div
-                                onClick={() => fullImage && setViewingImageUrl(fullImage)}
-                                className={cn(
-                                  "h-8 w-8 bg-slate-100 rounded border border-slate-200 mx-auto overflow-hidden transition-all",
-                                  fullImage && "cursor-pointer hover:opacity-80 hover:ring-2 hover:ring-amber-500/80 shadow-2xs"
-                                )}
-                                title={fullImage ? "Bấm để xem ảnh phóng to" : undefined}
-                              >
-                                {thumbnail ? (
-                                  <img src={thumbnail} alt={proofingCode} className="h-full w-full object-cover" />
-                                ) : (
-                                  <div className="h-full w-full flex items-center justify-center text-slate-400">
-                                    <ImageIcon className="h-3.5 w-3.5" />
+                                <TableCell className="text-center py-1.5 px-2">
+                                  <div className="flex items-center justify-center gap-1.5">
+                                    <span className="text-[11px] font-medium text-slate-400">{index + 1}</span>
+                                    <Checkbox
+                                      checked={isSelected}
+                                      onCheckedChange={() => handleToggleSelectNotQueued(item.id)}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="h-3.5 w-3.5 text-[#93631F]"
+                                    />
                                   </div>
-                                )}
-                              </div>
-                            </TableCell>
+                                </TableCell>
 
-                            {/* Mã Bình bài - Clickable link to ReadOnlyProofingDetailModal */}
-                            <TableCell className="py-1.5 px-2 font-mono font-bold text-slate-900">
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleOpenProofingDetail(item);
-                                }}
-                                className="text-blue-600 hover:underline cursor-pointer font-bold flex items-center gap-1 text-left"
-                                title="Bấm để xem thông tin bình bài (Read-Only)"
-                              >
-                                <span>{proofingCode}</span>
-                                <Eye className="h-3 w-3 text-blue-500 shrink-0" />
-                              </button>
-                            </TableCell>
+                                <TableCell className="text-center py-1.5 px-1" onClick={(e) => e.stopPropagation()}>
+                                  <div
+                                    onClick={() => fullImage && setViewingImageUrl(fullImage)}
+                                    className={cn(
+                                      "h-8 w-8 bg-slate-100 rounded border border-slate-200 mx-auto overflow-hidden transition-all",
+                                      fullImage && "cursor-pointer hover:opacity-80 hover:ring-2 hover:ring-amber-500/80 shadow-2xs"
+                                    )}
+                                    title={fullImage ? "Bấm để xem ảnh phóng to" : undefined}
+                                  >
+                                    {thumbnail ? (
+                                      <img src={thumbnail} alt={proofingCode} className="h-full w-full object-cover" />
+                                    ) : (
+                                      <div className="h-full w-full flex items-center justify-center text-slate-400">
+                                        <ImageIcon className="h-3.5 w-3.5" />
+                                      </div>
+                                    )}
+                                  </div>
+                                </TableCell>
+
+                                {/* Mã Bình bài - Clickable link to ReadOnlyProofingDetailModal */}
+                                <TableCell className="py-1.5 px-2 font-mono font-bold text-slate-900">
+                                  <div className="flex flex-col gap-0.5">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleOpenProofingDetail(item);
+                                      }}
+                                      className="text-blue-600 hover:underline cursor-pointer font-bold flex items-center gap-1 text-left"
+                                      title="Bấm để xem thông tin bình bài (Read-Only)"
+                                    >
+                                      <span>{proofingCode}</span>
+                                      <Eye className="h-3 w-3 text-blue-500 shrink-0" />
+                                    </button>
+                                    {isRedispatchedReturned && (
+                                      <Badge
+                                        className="bg-rose-100 text-rose-800 border-rose-300 font-extrabold text-[9.5px] px-1.5 py-0 flex items-center gap-1 w-fit shadow-2xs"
+                                        title={returnReason ? `Lý do trả về trước đó: ${returnReason}` : "Bài đã được xử lý & điều lệnh lại sau khi bị trả về"}
+                                      >
+                                        <RotateCcw className="h-2.5 w-2.5 text-rose-600 shrink-0" />
+                                        {returnTypeDisplayName || (returnType === "dispatch" ? "Điều lại từ trả về" : "Trả về in lại")}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </TableCell>
 
                             <TableCell className="py-1.5 px-2">
                               <Badge variant="outline" className={getDesignTypeBadgeStyle(po?.designType?.code)}>
