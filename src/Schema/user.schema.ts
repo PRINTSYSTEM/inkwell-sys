@@ -20,7 +20,9 @@ import {
 } from "./generated";
 
 // ===== UserResponse =====
-export const UserResponseSchema = GenUserResponseSchema.passthrough();
+export const UserResponseSchema = GenUserResponseSchema.passthrough().extend({
+  kpi: GenUserKpiResponseSchema.nullable().optional(),
+});
 export type UserResponse = z.infer<typeof UserResponseSchema>;
 
 // ===== UserResponsePagedResponse =====

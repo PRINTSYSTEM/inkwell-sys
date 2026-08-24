@@ -262,7 +262,10 @@ export default function ProductionDispatch() {
   };
 
   const handleConfirmReturnToProofing = () => {
-    if (!returnToProofingItem || !returnToProofingReason.trim()) return;
+    if (!returnToProofingItem) return;
+    const isReturnedFromPrint = returnToProofingItem.status === "returned" || !!returnToProofingItem.returnedAt;
+    if (!isReturnedFromPrint && !returnToProofingReason.trim()) return;
+
     returnToProofingMutation.mutate(
       {
         id: returnToProofingItem.id,
@@ -1626,19 +1629,23 @@ export default function ProductionDispatch() {
               <RotateCcw className="h-5 w-5" /> Trả về bộ phận Bình bài
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
-              Lệnh này sẽ được chuyển về bộ phận Bình bài để điều chỉnh file/kế hoạch bài in. Bài <strong>GIỮ NGUYÊN Lệnh sản xuất</strong> và lịch sử sản xuất.
+              Trả về bình bài để xử lí — bài <strong>GIỮ lại</strong>, không mất lịch sử sản xuất.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3 py-2">
             <label htmlFor="returnToProofingReason" className="text-xs font-bold text-slate-700 block">
-              Lý do trả về bình bài <span className="text-rose-500">*</span>
+              Lý do trả về bình bài {!returnToProofingItem?.returnedAt && <span className="text-rose-500">*</span>}
             </label>
             <Textarea
               id="returnToProofingReason"
               rows={4}
               maxLength={1000}
-              placeholder="Nhập chi tiết lý do trả về cho Bình bài (vd: Sai thông số file, cần chỉnh lại quy cách...)"
+              placeholder={
+                returnToProofingItem?.returnedAt
+                  ? "Có thể bỏ trống để giữ nguyên lý do của thợ in (hoặc bổ sung lý do mới)..."
+                  : "Nhập chi tiết lý do trả về cho Bình bài (vd: Sai thông số file, cần chỉnh lại quy cách...)"
+              }
               value={returnToProofingReason}
               onChange={(e) => setReturnToProofingReason(e.target.value)}
               className="text-xs bg-white"
@@ -1655,7 +1662,7 @@ export default function ProductionDispatch() {
             <Button
               size="sm"
               onClick={handleConfirmReturnToProofing}
-              disabled={!returnToProofingReason.trim() || returnToProofingMutation.isPending}
+              disabled={(!returnToProofingItem?.returnedAt && !returnToProofingReason.trim()) || returnToProofingMutation.isPending}
               className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs"
             >
               {returnToProofingMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}

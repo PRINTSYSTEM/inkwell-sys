@@ -43,8 +43,9 @@ const getEventBadgeStyle = (eventType: string) => {
     case "completed":
       return "bg-emerald-100 text-emerald-800 border-emerald-200";
     case "returned_by_print":
-    case "returned_to_dispatch":
       return "bg-rose-100 text-rose-800 border-rose-200";
+    case "returned_to_dispatch":
+      return "bg-orange-100 text-orange-800 border-orange-200";
     case "returned_to_proofing":
       return "bg-red-100 text-red-800 border-red-200";
     case "reproofed":
@@ -67,9 +68,11 @@ const getEventIcon = (eventType: string) => {
     case "completed":
       return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />;
     case "returned_by_print":
-    case "returned_to_dispatch":
-    case "returned_to_proofing":
       return <AlertTriangle className="h-3.5 w-3.5 text-rose-600" />;
+    case "returned_to_dispatch":
+      return <AlertTriangle className="h-3.5 w-3.5 text-orange-600" />;
+    case "returned_to_proofing":
+      return <AlertTriangle className="h-3.5 w-3.5 text-red-600" />;
     case "reproofed":
       return <RefreshCw className="h-3.5 w-3.5 text-indigo-600" />;
     default:

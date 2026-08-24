@@ -414,16 +414,14 @@ export const PrepressOrderRow = React.memo(function PrepressOrderRow({
                 : "bg-amber-100 text-amber-800 border-amber-300",
             )}
           />
-          {order.status === "production_returned" && (order.returnTypeDisplayName || order.returnReason) && (
+          {order.status === "production_returned" && (order.returnTypeDisplayName || order.returnType || order.returnReason) && (
             <div className="mt-1 flex flex-col gap-0.5">
-              {order.returnTypeDisplayName && (
-                <Badge variant="outline" className={cn(
-                  "text-[9.5px] font-bold py-0 px-1.5 border w-fit",
-                  order.returnType === "dispatch" ? "bg-red-50 text-red-700 border-red-200" : "bg-rose-50 text-rose-700 border-rose-200"
-                )}>
-                  {order.returnTypeDisplayName}
-                </Badge>
-              )}
+              <Badge variant="outline" className={cn(
+                "text-[9.5px] font-bold py-0 px-1.5 border w-fit",
+                order.returnType === "dispatch" ? "bg-red-50 text-red-700 border-red-200" : "bg-rose-50 text-rose-700 border-rose-200"
+              )}>
+                {order.returnTypeDisplayName || (order.returnType === "dispatch" ? "Điều lệnh trả về" : "Lệnh in trả về")}
+              </Badge>
               {order.returnReason && (
                 <span className="text-[10px] text-rose-700 font-medium italic line-clamp-2" title={order.returnReason}>
                   Lý do: {order.returnReason}

@@ -418,6 +418,9 @@ export default function PostPrintProductionPage() {
   const [selectedDesignTypeId, setSelectedDesignTypeId] = useState<number | undefined>(undefined);
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
 
+  // Main view tab: "processing" (đang làm), "completed" (hoàn thành)
+  const [viewTab, setViewTab] = useState<"processing" | "completed">("processing");
+
   // Pause Dialog State
   const [pauseDialogOpen, setPauseDialogOpen] = useState(false);
   const [pauseStepId, setPauseStepId] = useState<number | null>(null);
@@ -456,6 +459,35 @@ export default function PostPrintProductionPage() {
   const updateStepMutation = useUpdateProductionStep();
   const postPrintList = postPrintData?.items || [];
 
+  const isPostPrintCompleted = (item: ProductionOrderResponse) => {
+    if (item.status === "completed") return true;
+    const postPrintSteps = item.steps?.filter((s) => {
+      const type = (s.stepType || s.stepTypeName || "").toLowerCase();
+      return !type.includes("in") && !type.includes("print");
+    });
+    if (!postPrintSteps || postPrintSteps.length === 0) return false;
+    return postPrintSteps.every(
+      (s) => s.status?.toLowerCase() === "completed" || s.status?.toLowerCase() === "done"
+    );
+  };
+
+  const { processingList, completedList } = useMemo(() => {
+    const processing: ProductionOrderResponse[] = [];
+    const completed: ProductionOrderResponse[] = [];
+
+    postPrintList.forEach((item) => {
+      if (isPostPrintCompleted(item)) {
+        completed.push(item);
+      } else {
+        processing.push(item);
+      }
+    });
+
+    return { processingList: processing, completedList: completed };
+  }, [postPrintList]);
+
+  const activeDisplayList = viewTab === "processing" ? processingList : completedList;
+
   const getPrintCompletedDateKey = (item: ProductionOrderResponse) => {
     const rawDate = item.printOrderCompletedAt || item.impositionCompletedAt || (item.proofingOrder as any)?.completedAt;
     if (!rawDate) return "Chưa xác định ngày";
@@ -465,6 +497,7 @@ export default function PostPrintProductionPage() {
       return "Chưa xác định ngày";
     }
   };
+
   const groupedByDateSections = useMemo(() => {
     const dateMap = new Map<
       string,
@@ -475,7 +508,7 @@ export default function PostPrintProductionPage() {
       }
     >();
 
-    postPrintList.forEach((item) => {
+    activeDisplayList.forEach((item) => {
       const dateKey = getPrintCompletedDateKey(item);
       const rawDate = item.printOrderCompletedAt || item.impositionCompletedAt || (item.proofingOrder as any)?.completedAt;
       const sortTime = rawDate ? new Date(rawDate).getTime() : 0;
@@ -515,7 +548,7 @@ export default function PostPrintProductionPage() {
         items: sortedItems,
       };
     });
-  }, [postPrintList]);
+  }, [activeDisplayList]);
 
   // Handle Step Status Update
   const handleUpdateStepStatus = async (stepId: number, status: string, note?: string) => {
@@ -557,26 +590,71 @@ export default function PostPrintProductionPage() {
     <div className="space-y-6 p-6 max-w-[1680px] mx-auto pb-24 font-sans text-xs">
       {/* Unified Header & Filter Toolbar */}
       <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-        {/* Top Row: Title + Stats & Refresh */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-[#93631F]/10 text-[#93631F] rounded-lg">
-              <Scissors className="h-5 w-5" />
+        {/* Top Row: Title + 2 Main Navigation Tabs (Left) + Refresh Button (Right) */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+          {/* Left: Title & 2 Navigation Tabs */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-[#93631F]/10 text-[#93631F] rounded-lg">
+                <Scissors className="h-5 w-5" />
+              </div>
+              <h1 className="text-lg font-bold text-slate-900">Sản Xuất Sau In</h1>
             </div>
-            <h1 className="text-lg font-bold text-slate-900">Sản Xuất Sau In</h1>
+
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200 ml-1">
+              <button
+                onClick={() => setViewTab("processing")}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer",
+                  viewTab === "processing"
+                    ? "bg-white text-[#93631F] shadow-2xs"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+                )}
+              >
+                <Scissors className="h-3.5 w-3.5" />
+                <span>Đang sản xuất</span>
+                <span
+                  className={cn(
+                    "px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold",
+                    viewTab === "processing" ? "bg-[#93631F]/10 text-[#93631F]" : "bg-slate-200 text-slate-700"
+                  )}
+                >
+                  {processingList.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => setViewTab("completed")}
+                className={cn(
+                  "flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer",
+                  viewTab === "completed"
+                    ? "bg-white text-emerald-700 shadow-2xs"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
+                )}
+              >
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                <span>Sản xuất hoàn thành</span>
+                <span
+                  className={cn(
+                    "px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold",
+                    viewTab === "completed" ? "bg-emerald-50 text-emerald-700" : "bg-slate-200 text-slate-700"
+                  )}
+                >
+                  {completedList.length}
+                </span>
+              </button>
+            </div>
           </div>
 
+          {/* Right: Refresh Button */}
           <div className="flex items-center gap-2">
-            <Badge className="bg-amber-500 text-white font-bold text-xs px-2.5 py-1 shadow-2xs">
-              Đang sản xuất: {counts?.active || 0} bài
-            </Badge>
             <Button
               variant="outline"
               size="sm"
               onClick={() => refetch()}
-              className="h-8 text-xs font-semibold cursor-pointer"
+              className="h-8 text-xs font-semibold cursor-pointer border-slate-200 shadow-2xs hover:bg-slate-50"
             >
-              <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Làm mới
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5 text-slate-500" /> Làm mới
             </Button>
           </div>
         </div>

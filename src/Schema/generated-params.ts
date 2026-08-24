@@ -1598,8 +1598,11 @@ export type UserKpiTeamParams = z.infer<typeof UserKpiTeamParamsSchema>;
 export const UserListParamsSchema = PagedParamsSchema.extend({
   role: z.string().nullable().optional(),
   isActive: z.boolean().nullable().optional(),
+  search: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
+  fromDate: z.string().nullable().optional(),
+  toDate: z.string().nullable().optional(),
 });
 export type UserListParams = z.infer<typeof UserListParamsSchema>;
 

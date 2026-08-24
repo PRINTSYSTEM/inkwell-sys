@@ -41,6 +41,7 @@ import type { DesignResponse } from "@/Schema";
 import { DesignCreateDialog } from "@/components/design";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { designStatusConfig, designStatusLabels } from "@/lib/status-utils";
+import { formatImageUrl } from "@/lib/utils";
 import {
   Table,
   TableHeader,
@@ -149,7 +150,7 @@ export default function AllDesignsPage() {
   );
   const { data, isLoading } = useDesigns(useDesignsParams);
 
-  // --- Quick Stats Queries ---
+  // --- Quick Stats Queries (Khớp với khoảng thời gian / tháng / năm được chọn) ---
   const todayStr = useMemo(() => {
     const d = new Date();
     const year = d.getFullYear();
@@ -166,32 +167,49 @@ export default function AllDesignsPage() {
   });
   const todayCreatedCount = todayDesignsData?.total ?? 0;
 
-  const { data: todayConfirmedData } = useDesigns({
-    pageNumber: 1,
-    pageSize: 100,
-    status: "confirmed_for_printing",
-    startDate: `${todayStr}T00:00:00.000Z`,
-    endDate: `${todayStr}T23:59:59.999Z`,
-  });
-  const todayConfirmedCount = todayConfirmedData?.total ?? 0;
+  const dateFilterParams = useMemo(() => {
+    if (dateRange?.from) {
+      const dFrom = new Date(dateRange.from);
+      dFrom.setHours(0, 0, 0, 0);
+      const dTo = new Date(dateRange.to || dateRange.from);
+      dTo.setHours(23, 59, 59, 999);
+      return {
+        startDate: dFrom.toISOString(),
+        endDate: dTo.toISOString(),
+      };
+    }
+    return {
+      ...(selectedMonth ? { month: selectedMonth } : {}),
+      ...(selectedYear ? { year: selectedYear } : {}),
+    };
+  }, [dateRange, selectedMonth, selectedYear]);
 
-  const todayConfirmedByType = useMemo(() => {
+  const { data: confirmedData } = useDesigns({
+    pageNumber: 1,
+    pageSize: 500,
+    status: "confirmed_for_printing",
+    ...dateFilterParams,
+  });
+  const confirmedCount = confirmedData?.total ?? 0;
+
+  const confirmedByType = useMemo(() => {
     const counts: Record<string, number> = {};
-    if (todayConfirmedData?.items) {
-      todayConfirmedData.items.forEach((d) => {
+    if (confirmedData?.items) {
+      confirmedData.items.forEach((d) => {
         const typeName = d.designType?.name || (d as any).designTypeName || "Chưa phân loại";
         counts[typeName] = (counts[typeName] || 0) + 1;
       });
     }
     return counts;
-  }, [todayConfirmedData]);
+  }, [confirmedData]);
 
-  const { data: totalReturnedData } = useDesigns({
+  const { data: returnedData } = useDesigns({
     pageNumber: 1,
     pageSize: 1,
     status: "returned",
+    ...dateFilterParams,
   });
-  const totalReturnedCount = totalReturnedData?.total ?? 0;
+  const totalReturnedCount = returnedData?.total ?? 0;
   // -----------------------------
 
   // Designers list for assignment
@@ -404,21 +422,21 @@ export default function AllDesignsPage() {
 
           <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 shrink-0 mx-0.5" />
 
-          {/* Stat 3: Total Confirmed Today */}
+          {/* Stat 3: Total Confirmed */}
           <div className="flex flex-col items-center justify-center min-w-[64px] h-8 px-2 border rounded bg-emerald-100/30 border-emerald-300 dark:bg-emerald-950/20 dark:border-emerald-800">
             <span className="text-[8px] font-bold text-emerald-850 dark:text-emerald-300 uppercase tracking-wider leading-none whitespace-nowrap">
               Đã chốt in
             </span>
             <span className="text-xs font-black text-emerald-700 dark:text-emerald-400 mt-0.5 leading-none">
-              {todayConfirmedCount}
+              {confirmedCount}
             </span>
           </div>
 
           <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 shrink-0 mx-0.5" />
 
-          {/* 6 Design Types Stats for Confirmed Today */}
+          {/* 6 Design Types Stats for Confirmed */}
           {designTypes.map((type: any) => {
-            const count = todayConfirmedByType[type.name] || 0;
+            const count = confirmedByType[type.name] || 0;
             return (
               <div
                 key={type.id}
@@ -630,8 +648,10 @@ export default function AllDesignsPage() {
                     >
                       <TableCell className="py-2">
                         {(() => {
-                          const thumbUrl = design.designThumbnailUrl || (design as any).thumbnailUrl || design.designImageUrl || design.designFileUrl;
-                          const fullUrl = design.designImageUrl || design.designFileUrl || thumbUrl;
+                          const rawThumb = design.designThumbnailUrl || (design as any).thumbnailUrl || (design as any).files?.[0]?.thumbnailUrl || design.designImageUrl || design.designFileUrl;
+                          const rawFull = design.designImageUrl || design.designFileUrl || (design as any).files?.[0]?.fileUrl || rawThumb;
+                          const thumbUrl = formatImageUrl(rawThumb);
+                          const fullUrl = formatImageUrl(rawFull);
 
                           return (
                             <div

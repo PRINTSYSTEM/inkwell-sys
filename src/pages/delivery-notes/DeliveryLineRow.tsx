@@ -57,6 +57,7 @@ import {
   useFailureReasons,
   useUpdateDeliveryLineQuantity,
   useDeleteDeliveryNoteLine,
+  useUpdateDeliveryLineRedelivery,
 } from "@/hooks/use-delivery-note";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { Input } from "@/components/ui/input";
@@ -260,6 +261,19 @@ export default function DeliveryLineRow({
   const updateLineResultMutation = useUpdateDeliveryLineResult();
   const updateLineQuantityMutation = useUpdateDeliveryLineQuantity();
   const deleteLineMutation = useDeleteDeliveryNoteLine();
+  const updateLineRedeliveryMutation = useUpdateDeliveryLineRedelivery();
+
+  const handleToggleRedelivery = async () => {
+    if (!line?.id) return;
+    try {
+      await updateLineRedeliveryMutation.mutateAsync({
+        lineId: Number(line.id),
+        isRedelivery: !line.isRedelivery,
+      });
+    } catch {
+      // handled by hook
+    }
+  };
 
   // Note editing state
   const [isEditingNote, setIsEditingNote] = useState(false);
@@ -463,8 +477,8 @@ export default function DeliveryLineRow({
     <>
       <TableRow className="hover:bg-muted/30 transition-colors">
         {/* Mã hàng / Đơn */}
-        <TableCell>
-          <div className="flex items-center gap-3">
+        <TableCell className="pl-4 w-[170px]">
+          <div className="flex items-center gap-2.5">
             <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-muted/60 flex items-center justify-center border border-border">
               {line.designImageUrl || line.designThumbnailUrl ? (
                 <img
@@ -481,7 +495,7 @@ export default function DeliveryLineRow({
                 <ImageIcon className="h-5 w-5 text-muted-foreground/50" />
               )}
             </div>
-            <div>
+            <div className="whitespace-nowrap">
               <div className="font-mono font-bold text-foreground">
                 {line.designCode || "—"}
               </div>
@@ -493,19 +507,40 @@ export default function DeliveryLineRow({
         </TableCell>
 
         {/* Sản phẩm */}
-        <TableCell>
-          <div className="font-medium text-foreground max-w-[200px] truncate" title={line.designName || ""}>
-            {line.designName || "—"}
-          </div>
-          {(line.orderDetail as any)?.itemType && (
-            <div className="text-xs text-muted-foreground">
-              {(line.orderDetail as any).itemType}
+        <TableCell className="min-w-[180px]">
+          <div className="flex flex-col gap-1 items-start">
+            <span className="font-medium text-foreground text-sm break-words leading-tight" title={line.designName || ""}>
+              {line.designName || "—"}
+            </span>
+
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {/* Button / Badge toggle cờ Hàng giao lại */}
+              <button
+                type="button"
+                onClick={handleToggleRedelivery}
+                disabled={updateLineRedeliveryMutation.isPending}
+                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold border transition-all cursor-pointer select-none ${
+                  line.isRedelivery
+                    ? "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300 hover:bg-amber-200"
+                    : "bg-stone-50 text-stone-400 border-stone-200 dark:bg-stone-800 dark:text-stone-500 hover:bg-stone-100 hover:text-stone-600"
+                }`}
+                title="Bấm để bật/tắt cờ Hàng giao lại cho dòng sản phẩm này"
+              >
+                <RotateCcw className={`w-3 h-3 ${line.isRedelivery ? "text-amber-600 dark:text-amber-400" : "text-stone-400"}`} />
+                <span>{line.isRedelivery ? "HÀNG GIAO LẠI" : "+ Hàng giao lại"}</span>
+              </button>
+
+              {(line.orderDetail as any)?.itemType && (
+                <span className="text-xs text-muted-foreground">
+                  {(line.orderDetail as any).itemType}
+                </span>
+              )}
             </div>
-          )}
+          </div>
         </TableCell>
 
         {/* Mã bài */}
-        <TableCell>
+        <TableCell className="w-[85px]">
           {line.proofingOrderCodes && line.proofingOrderCodes.length > 0 ? (
             <div className="flex flex-wrap gap-1">
               {line.proofingOrderCodes.map((code) => (
@@ -518,7 +553,7 @@ export default function DeliveryLineRow({
         </TableCell>
 
         {/* Ghi chú */}
-        <TableCell className="max-w-[200px]">
+        <TableCell className="w-[120px] max-w-[140px]">
           {isEditingNote ? (
             <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
               <Input
@@ -575,7 +610,7 @@ export default function DeliveryLineRow({
         </TableCell>
 
         {/* SL đặt hàng */}
-        <TableCell className="text-right">
+        <TableCell className="w-[85px] text-right whitespace-nowrap">
           <span className="text-sm font-medium">
             {typeof line.orderedQty === "number"
               ? line.orderedQty.toLocaleString("vi-VN")
@@ -584,7 +619,7 @@ export default function DeliveryLineRow({
         </TableCell>
 
         {/* SL giao (Có hỗ trợ sửa trực tiếp) */}
-        <TableCell className="text-right">
+        <TableCell className="w-[90px] text-right whitespace-nowrap">
           {isEditingQty ? (
             <div
               className="flex items-center justify-end gap-1"
@@ -671,7 +706,7 @@ export default function DeliveryLineRow({
         </TableCell>
 
         {/* Phụ hao */}
-        <TableCell className="text-right">
+        <TableCell className="w-[70px] text-right whitespace-nowrap">
           <div className="flex flex-col items-end">
             {(() => {
               const scrapVal =
@@ -691,26 +726,26 @@ export default function DeliveryLineRow({
         </TableCell>
 
         {/* SL thực tính */}
-        <TableCell className="text-right font-medium">
+        <TableCell className="w-[90px] text-right whitespace-nowrap font-medium">
           {typeof line.netQtyTotal === "number"
             ? line.netQtyTotal.toLocaleString("vi-VN")
             : "—"}
         </TableCell>
 
         {/* Thành tiền */}
-        <TableCell className="text-right font-medium">
+        <TableCell className="w-[95px] text-right whitespace-nowrap font-medium">
           {typeof line.totalPrice === "number"
             ? formatCurrency(line.totalPrice)
             : "—"}
         </TableCell>
 
         {/* Trạng thái */}
-        <TableCell>
+        <TableCell className="w-[100px] text-center">
           <LineStatusBadge status={localStatus} />
         </TableCell>
 
         {/* Thao tác */}
-        <TableCell>
+        <TableCell className="w-[110px]">
           <div className="flex flex-col gap-1.5 w-fit">
             {showResultButtons && (
               <>

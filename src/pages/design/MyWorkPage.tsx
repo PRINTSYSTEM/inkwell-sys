@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { cn } from "@/lib/utils";
+import { cn, formatImageUrl } from "@/lib/utils";
 import {
   Search,
   Filter,
@@ -113,7 +113,7 @@ export default function MyWorkPage() {
   const reprintDesignMutation = useReprintDesign();
   const [viewingImage, setViewingImage] = useState<{ url: string; title?: string } | null>(null);
 
-  // API
+  // API - paginated list for table
   const { data, isLoading, isError } = useMyDesigns({
     pageNumber: currentPage,
     pageSize,
@@ -136,6 +136,32 @@ export default function MyWorkPage() {
         year: selectedYear ?? undefined,
       }),
   });
+
+  // API - full list query for accurate status tab stats across all pages
+  const { data: allMyDesignsData } = useMyDesigns({
+    pageNumber: 1,
+    pageSize: 1000,
+    status: "", // all statuses
+    ...(dateRange && dateRange.from
+      ? {
+        startDate: (() => {
+          const d = new Date(dateRange.from);
+          d.setHours(0, 0, 0, 0);
+          return d.toISOString();
+        })(),
+        endDate: (() => {
+          const d = new Date(dateRange.to || dateRange.from);
+          d.setHours(23, 59, 59, 999);
+          return d.toISOString();
+        })(),
+      }
+      : {
+        month: selectedMonth ?? undefined,
+        year: selectedYear ?? undefined,
+      }),
+  });
+
+  const allMyDesigns = useMemo(() => allMyDesignsData?.items || [], [allMyDesignsData?.items]);
 
   const { mutate: generateExcel } = useGenerateDesignExcel();
 
@@ -222,24 +248,25 @@ export default function MyWorkPage() {
     );
   }, [memoizedDesigns, searchQuery]);
 
-  // Stats
+  // Stats - calculated across all designs for accurate tab counts
   const stats = useMemo(() => {
+    const sourceList = allMyDesigns.length > 0 ? allMyDesigns : memoizedDesigns;
+    const grandTotal = allMyDesignsData?.total ?? totalCount;
     return {
-      total: totalCount,
-      received_info: memoizedDesigns.filter((d) => d.status === "received_info")
-        .length,
-      designing: memoizedDesigns.filter((d) => d.status === "designing").length,
-      editing: memoizedDesigns.filter((d) => d.status === "editing").length,
-      waiting_for_customer_approval: memoizedDesigns.filter(
+      total: grandTotal,
+      received_info: sourceList.filter((d) => d.status === "received_info").length,
+      designing: sourceList.filter((d) => d.status === "designing").length,
+      editing: sourceList.filter((d) => d.status === "editing").length,
+      waiting_for_customer_approval: sourceList.filter(
         (d) => d.status === "waiting_for_customer_approval"
       ).length,
-      confirmed_for_printing: memoizedDesigns.filter(
+      confirmed_for_printing: sourceList.filter(
         (d) => d.status === "confirmed_for_printing"
       ).length,
-      returned: memoizedDesigns.filter((d) => d.status === "returned").length,
-      cancelled: memoizedDesigns.filter((d) => d.status === "cancelled").length,
+      returned: sourceList.filter((d) => d.status === "returned").length,
+      cancelled: sourceList.filter((d) => d.status === "cancelled").length,
     };
-  }, [memoizedDesigns, totalCount]);
+  }, [allMyDesigns, allMyDesignsData?.total, memoizedDesigns, totalCount]);
 
   // Get status info
   const getStatusInfo = (design: DesignResponse) => {
@@ -540,8 +567,10 @@ export default function MyWorkPage() {
                       {/* Image thumbnail */}
                       <TableCell className="py-2">
                         {(() => {
-                          const thumbUrl = design.designThumbnailUrl || (design as any).thumbnailUrl || design.designImageUrl || design.designFileUrl;
-                          const fullUrl = design.designImageUrl || design.designFileUrl || thumbUrl;
+                          const rawThumb = design.designThumbnailUrl || (design as any).thumbnailUrl || (design as any).files?.[0]?.thumbnailUrl || design.designImageUrl || design.designFileUrl;
+                          const rawFull = design.designImageUrl || design.designFileUrl || (design as any).files?.[0]?.fileUrl || rawThumb;
+                          const thumbUrl = formatImageUrl(rawThumb);
+                          const fullUrl = formatImageUrl(rawFull);
 
                           return (
                             <div

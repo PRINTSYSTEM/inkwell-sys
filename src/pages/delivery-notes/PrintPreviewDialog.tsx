@@ -405,7 +405,10 @@ export default function PrintPreviewDialog({
                     return (
                       <tr key={l.id || index}>
                         <td className="border border-black text-center p-2">{index + 1}</td>
-                        <td className="border border-black p-2 font-medium text-left" style={{ textAlign: "left", paddingLeft: "8px" }}>{l.designName || "—"}</td>
+                        <td className="border border-black p-2 font-medium text-left" style={{ textAlign: "left", paddingLeft: "8px" }}>
+                          {(l as any).isRedelivery ? "Hàng giao lại: " : ""}
+                          {l.designName || "—"}
+                        </td>
                         <td className="border border-black text-center p-2">Cái</td>
                         <td className="border border-black text-center p-2 font-medium">
                           {(l.deliveryQty || 0).toLocaleString("vi-VN")}

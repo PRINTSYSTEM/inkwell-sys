@@ -378,6 +378,7 @@ export const API_SUFFIX = {
   DELIVERY_NOTES: "/delivery-notes",
   DELIVERY_NOTE_STATS: "/delivery-notes/stats",
   DELIVERY_NOTE_BY_ID: (id: number) => `/delivery-notes/${id}`,
+  DELIVERY_NOTE_REVERSE: (id: number) => `/delivery-notes/${id}/reverse`,
   DELIVERY_NOTE_STATUS: (id: number) => `/delivery-notes/${id}/status`,
   DELIVERY_NOTE_EXPORT_PDF: (id: number) => `/delivery-notes/${id}/export-pdf`,
   DELIVERY_NOTE_RECREATE: "/delivery-notes/recreate",
@@ -389,6 +390,8 @@ export const API_SUFFIX = {
   DELIVERY_NOTE_ADD_LINES: (id: number | string) => `/delivery-notes/${id}/lines`,
   DELIVERY_NOTE_LINE_QUANTITY: (lineId: number | string) =>
     `/delivery-notes/lines/${lineId}/quantity`,
+  DELIVERY_NOTE_LINE_REDELIVERY: (lineId: number | string) =>
+    `/delivery-notes/lines/${lineId}/redelivery`,
   DELIVERY_NOTE_LINE: (lineId: number | string) =>
     `/delivery-notes/lines/${lineId}`,
   DELIVERY_NOTE_RETURNABLE_LINES: (id: number) => `/delivery-notes/${id}/returnable-lines`,

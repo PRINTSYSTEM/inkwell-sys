@@ -96,7 +96,7 @@ const getDesignTypeBadgeStyle = (code?: string) => {
 const formatDateTime = (dateStr?: string | null) => {
   if (!dateStr) return "—";
   try {
-    return format(new Date(dateStr), "HH:mm dd/MM", { locale: vi });
+    return format(new Date(dateStr), "HH:mm - dd/MM/yyyy", { locale: vi });
   } catch {
     return dateStr;
   }
@@ -124,6 +124,18 @@ const formatImpositionDate = (item: PrintOrderResponse) => {
 
 const formatCompletedDate = (item: PrintOrderResponse) => {
   const rawDate = item.completedAt || item.updatedAt || (item as any).createdAt;
+  if (!rawDate) return "Chưa xác định ngày";
+  try {
+    const d = new Date(rawDate);
+    if (isNaN(d.getTime())) return "Chưa xác định ngày";
+    return format(d, "dd/MM/yyyy", { locale: vi });
+  } catch {
+    return "Chưa xác định ngày";
+  }
+};
+
+const formatDispatchedDate = (item: PrintOrderResponse) => {
+  const rawDate = item.dispatchedAt || item.createdAt;
   if (!rawDate) return "Chưa xác định ngày";
   try {
     const d = new Date(rawDate);
@@ -273,11 +285,11 @@ export default function PrintOrdersPage() {
     );
   }, [printOrdersList]);
 
-  // Available distinct dates for unqueued items date filter
+  // Available distinct dates for unqueued items date filter (Grouped by Dispatched Date)
   const availableNotQueuedDates = useMemo(() => {
     const setOfDates = new Set<string>();
     notQueuedItems.forEach((item) => {
-      const d = formatImpositionDate(item);
+      const d = formatDispatchedDate(item);
       if (d) setOfDates.add(d);
     });
     return Array.from(setOfDates).sort((a, b) => {
@@ -306,9 +318,9 @@ export default function PrintOrdersPage() {
         if (!matches) return false;
       }
 
-      // Date filter
+      // Date filter (Dispatched Date)
       if (notQueuedDateFilter && notQueuedDateFilter !== "all") {
-        const dateLabel = formatImpositionDate(item);
+        const dateLabel = formatDispatchedDate(item);
         if (dateLabel !== notQueuedDateFilter) return false;
       }
 
@@ -316,12 +328,12 @@ export default function PrintOrdersPage() {
     });
   }, [notQueuedItems, notQueuedSearchQuery, notQueuedDateFilter]);
 
-  // Group filtered unqueued items by date
+  // Group filtered unqueued items by Dispatched Date
   const groupedNotQueuedByDate = useMemo(() => {
     const groups: Record<string, PrintOrderResponse[]> = {};
 
     filteredNotQueuedItems.forEach((item) => {
-      const dateLabel = formatImpositionDate(item);
+      const dateLabel = formatDispatchedDate(item);
       if (!groups[dateLabel]) {
         groups[dateLabel] = [];
       }
@@ -567,24 +579,19 @@ export default function PrintOrdersPage() {
     <div className="space-y-4 p-5 max-w-[1650px] mx-auto pb-24 font-sans text-xs">
       {/* UNIFIED COMPACT HEADER & TOOLBAR CARD (MATCHING PRODUCTION DISPATCH STYLE) */}
       <div className="bg-white p-3 px-4 rounded-2xl border border-slate-200 shadow-2xs space-y-3">
-        {/* TOP ROW: Title + Segmented View Tabs + Refresh Button */}
+        {/* TOP ROW: Title + 2 Main Navigation Tabs (Left) + Refresh Button (Right) */}
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-2.5">
-          {/* Left: Title & Role Badge */}
-          <div className="flex items-center gap-2.5">
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-bold text-slate-900 leading-tight">Lệnh In</h1>
-            </div>
-          </div>
+          {/* Left: Title & 2 Navigation Tabs */}
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-base font-bold text-slate-900 leading-tight">Lệnh In</h1>
 
-          {/* Right: Main Tabs Segmented Controller + Refresh Button */}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center p-1 bg-slate-100/90 rounded-xl border border-slate-200/80">
+            <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg border border-slate-200 ml-1">
               <button
                 onClick={() => setViewTab("processing")}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                  "flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer",
                   viewTab === "processing"
-                    ? "bg-[#93631F] text-white shadow-2xs"
+                    ? "bg-white text-[#93631F] shadow-2xs"
                     : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
                 )}
               >
@@ -593,7 +600,7 @@ export default function PrintOrdersPage() {
                 <span
                   className={cn(
                     "px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold",
-                    viewTab === "processing" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+                    viewTab === "processing" ? "bg-[#93631F]/10 text-[#93631F]" : "bg-slate-200 text-slate-700"
                   )}
                 >
                   {processingTotalCount}
@@ -603,25 +610,28 @@ export default function PrintOrdersPage() {
               <button
                 onClick={() => setViewTab("completed")}
                 className={cn(
-                  "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                  "flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold transition-all cursor-pointer",
                   viewTab === "completed"
-                    ? "bg-emerald-600 text-white shadow-2xs"
+                    ? "bg-white text-emerald-700 shadow-2xs"
                     : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/60"
                 )}
               >
-                <CheckCircle2 className="h-3.5 w-3.5" />
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
                 <span>Lệnh in hoàn thành</span>
                 <span
                   className={cn(
                     "px-1.5 py-0.2 rounded-full text-[10px] font-mono font-bold",
-                    viewTab === "completed" ? "bg-white/20 text-white" : "bg-slate-200 text-slate-700"
+                    viewTab === "completed" ? "bg-emerald-50 text-emerald-700" : "bg-slate-200 text-slate-700"
                   )}
                 >
                   {counts?.completed || counts?.completedToday || 0}
                 </span>
               </button>
             </div>
+          </div>
 
+          {/* Right: Refresh Button */}
+          <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -1089,8 +1099,8 @@ export default function PrintOrdersPage() {
                   <TableHead className="w-[110px] py-2">Loại bài</TableHead>
                   <TableHead className="w-[200px] py-2">Chất liệu & Quy cách</TableHead>
                   <TableHead className="w-[110px] text-right py-2">Số lượng</TableHead>
+                  <TableHead className="w-[170px] py-2">Thời gian</TableHead>
                   <TableHead className="w-[180px] py-2">Trạng thái hàng chờ</TableHead>
-                  <TableHead className="w-[140px] py-2">Người điều lệnh</TableHead>
                   <TableHead className="w-[260px] text-center py-2 pr-3">Thao tác Thợ in</TableHead>
                 </TableRow>
               </TableHeader>
@@ -1262,11 +1272,11 @@ export default function PrintOrdersPage() {
                             </button>
                             {isRedispatchedReturned && (
                               <Badge
-                                className="bg-rose-100 text-rose-800 border-rose-300 font-extrabold text-[9.5px] px-1.5 py-0 flex items-center gap-1 w-fit shadow-2xs"
-                                title={returnReason ? `Lý do trả về trước đó: ${returnReason}` : "Bài đã được xử lý & điều lệnh lại sau khi bị trả về"}
+                                className="bg-sky-50 text-sky-800 border-sky-300 font-bold text-[9.5px] px-1.5 py-0 flex items-center gap-1 w-fit shadow-2xs"
+                                title={returnReason ? `Lý do xử lý/trả về trước đó: ${returnReason}` : "Bài đã được Điều lệnh chỉnh sửa & điều lại"}
                               >
-                                <RotateCcw className="h-2.5 w-2.5 text-rose-600 shrink-0" />
-                                {returnTypeDisplayName || (returnType === "dispatch" ? "Điều lại từ trả về" : "Trả về in lại")}
+                                <RotateCcw className="h-2.5 w-2.5 text-sky-600 shrink-0" />
+                                Điều lệnh đã chỉnh sửa
                               </Badge>
                             )}
                             {isUrgent && (
@@ -1286,12 +1296,12 @@ export default function PrintOrdersPage() {
 
                         {/* Chất liệu & Quy cách */}
                         <TableCell className="py-1.5 px-2">
-                          <div className="flex flex-col text-[11px] text-slate-700 leading-tight">
-                            <span className="font-semibold truncate">
+                          <div className="flex flex-col text-[11px] text-slate-900 leading-tight">
+                            <span className="font-bold truncate">
                               {item.materialTypeName || (po?.proofingOrder as any)?.materialType?.name || "—"}
                               {item.basisWeight ? ` ${item.basisWeight}g` : ""}
                             </span>
-                            <span className="text-[10px] text-slate-400">Khổ: {item.paperSizeName || "—"}</span>
+                            <span className="text-[10px] font-semibold text-slate-700">Khổ: {item.paperSizeName || "—"}</span>
                           </div>
                         </TableCell>
 
@@ -1300,24 +1310,26 @@ export default function PrintOrdersPage() {
                           {totalQty.toLocaleString("vi-VN")} tờ
                         </TableCell>
 
+                        {/* Thời gian: Điều lệnh & Bình bài */}
+                        <TableCell className="py-1.5 px-2">
+                          <div className="flex flex-col gap-1 text-[11px] font-mono leading-tight">
+                            <div className="flex items-center gap-1.5" title="Thời gian điều lệnh">
+                              <span className="text-[9.5px] font-sans font-bold text-amber-900 bg-amber-100 border border-amber-300 px-1 py-0.5 rounded shrink-0 shadow-2xs">Điều lệnh</span>
+                              <span className="font-extrabold text-slate-900">{formatDateTime(item.dispatchedAt)}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5" title="Thời gian hoàn thành bình bài">
+                              <span className="text-[9.5px] font-sans font-bold text-blue-900 bg-blue-100 border border-blue-300 px-1 py-0.5 rounded shrink-0 shadow-2xs">Bình bài</span>
+                              <span className="font-bold text-slate-800">{formatDateTime(item.productionOrder?.proofingOrder?.completedAt || item.impositionCompletedAt || item.impositionDate || item.productionOrder?.proofingOrder?.updatedAt || item.productionOrder?.createdAt)}</span>
+                            </div>
+                          </div>
+                        </TableCell>
+
                         {/* Trạng thái Hàng chờ */}
                         <TableCell className="py-1.5 px-2">{queueBadge}</TableCell>
 
-                        {/* Người điều lệnh */}
-                        <TableCell className="py-1.5 px-2 text-[11px]">
-                          {item.dispatchedByName ? (
-                            <div className="flex flex-col">
-                              <span className="font-semibold text-slate-800">{item.dispatchedByName}</span>
-                              <span className="text-[9.5px] font-mono text-slate-400">{formatDateTime(item.dispatchedAt)}</span>
-                            </div>
-                          ) : (
-                            "—"
-                          )}
-                        </TableCell>
-
                         {/* Thao tác Thợ in */}
                         <TableCell className="text-center py-1.5 px-2 pr-3">
-                          <div className="grid grid-cols-2 gap-1 w-[240px] mx-auto">
+                          <div className="grid grid-cols-2 gap-1 w-[250px] mx-auto">
                             <Button
                               size="sm"
                               onClick={() => handleStart(item.id)}
@@ -1360,9 +1372,9 @@ export default function PrintOrdersPage() {
                               onClick={() => handleOpenReturnDialog(item)}
                               disabled={returnMutation.isPending}
                               className="h-7 text-[10.5px] font-semibold text-rose-700 bg-rose-50/60 border-rose-200 hover:bg-rose-100 rounded-md px-1.5 w-full flex items-center justify-center gap-1 cursor-pointer"
-                              title="Trả về bộ phận Bình bài để xử lý"
+                              title="Trả về bộ phận Điều lệnh để xử lý"
                             >
-                              <RotateCcw className="h-3 w-3 text-rose-600 shrink-0" /> Trả về
+                              <RotateCcw className="h-3 w-3 text-rose-600 shrink-0" /> Trả về Điều lệnh
                             </Button>
                           </div>
                         </TableCell>
@@ -1397,10 +1409,10 @@ export default function PrintOrdersPage() {
 
                 {/* Sleek Styled Radix Select for Unqueued Dates */}
                 <Select value={notQueuedDateFilter} onValueChange={setNotQueuedDateFilter}>
-                  <SelectTrigger className="h-7 text-[11px] font-bold bg-[#FEFBF6] border border-amber-300 text-amber-900 rounded-lg px-2.5 shadow-2xs hover:bg-amber-100/60 w-auto min-w-[165px] cursor-pointer">
+                  <SelectTrigger className="h-7 text-[11px] font-bold bg-[#FEFBF6] border border-amber-300 text-amber-900 rounded-lg px-2.5 shadow-2xs hover:bg-amber-100/60 w-auto min-w-[175px] cursor-pointer">
                     <div className="flex items-center gap-1.5">
                       <Calendar className="h-3.5 w-3.5 text-amber-700 shrink-0" />
-                      <span className="text-slate-500 font-normal">Ngày bình: </span>
+                      <span className="text-slate-800 font-bold">Ngày điều lệnh: </span>
                       <SelectValue placeholder="Tất cả ngày" />
                     </div>
                   </SelectTrigger>
@@ -1467,10 +1479,10 @@ export default function PrintOrdersPage() {
               groupedNotQueuedByDate.map((group) => (
                 <div key={group.dateLabel} className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
                   {/* Date Group Header */}
-                  <div className="p-2 px-3.5 bg-amber-50/70 border-b border-amber-200/80 flex items-center justify-between font-bold text-xs text-amber-900">
+                  <div className="p-2 px-3.5 bg-amber-100/80 border-b border-amber-300 flex items-center justify-between font-extrabold text-xs text-amber-950">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-[#93631F]" />
-                      <span>Ngày bình bài: <strong>{group.dateLabel}</strong></span>
+                      <span>Ngày điều lệnh: <strong className="text-amber-950 underline decoration-amber-400 underline-offset-2">{group.dateLabel}</strong></span>
                       <Badge className="bg-[#93631F] text-white font-extrabold text-[10px] px-2 py-0">
                         {group.items.length} bài
                       </Badge>
@@ -1487,8 +1499,7 @@ export default function PrintOrdersPage() {
                         <TableHead className="w-[110px] py-2">Loại bài</TableHead>
                         <TableHead className="w-[220px] py-2">Chất liệu & Quy cách</TableHead>
                         <TableHead className="w-[120px] text-right py-2">Số lượng</TableHead>
-                        <TableHead className="w-[170px] py-2">Thời gian điều lệnh</TableHead>
-                        <TableHead className="w-[150px] py-2">Người điều lệnh</TableHead>
+                        <TableHead className="w-[170px] py-2">Thời gian</TableHead>
                         <TableHead className="w-[260px] text-center py-2 pr-3">Thao tác</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1523,7 +1534,7 @@ export default function PrintOrdersPage() {
                           >
                                 <TableCell className="text-center py-1.5 px-2">
                                   <div className="flex items-center justify-center gap-1.5">
-                                    <span className="text-[11px] font-medium text-slate-400">{index + 1}</span>
+                                    <span className="text-[11px] font-bold text-slate-700">{index + 1}</span>
                                     <Checkbox
                                       checked={isSelected}
                                       onCheckedChange={() => handleToggleSelectNotQueued(item.id)}
@@ -1567,14 +1578,14 @@ export default function PrintOrdersPage() {
                                       <Eye className="h-3 w-3 text-blue-500 shrink-0" />
                                     </button>
                                     {isRedispatchedReturned && (
-                                      <Badge
-                                        className="bg-rose-100 text-rose-800 border-rose-300 font-extrabold text-[9.5px] px-1.5 py-0 flex items-center gap-1 w-fit shadow-2xs"
-                                        title={returnReason ? `Lý do trả về trước đó: ${returnReason}` : "Bài đã được xử lý & điều lệnh lại sau khi bị trả về"}
-                                      >
-                                        <RotateCcw className="h-2.5 w-2.5 text-rose-600 shrink-0" />
-                                        {returnTypeDisplayName || (returnType === "dispatch" ? "Điều lại từ trả về" : "Trả về in lại")}
-                                      </Badge>
-                                    )}
+                                       <Badge
+                                         className="bg-sky-50 text-sky-800 border-sky-300 font-bold text-[9.5px] px-1.5 py-0 flex items-center gap-1 w-fit shadow-2xs"
+                                         title={returnReason ? `Lý do xử lý/trả về trước đó: ${returnReason}` : "Bài đã được Điều lệnh chỉnh sửa & điều lại"}
+                                       >
+                                         <RotateCcw className="h-2.5 w-2.5 text-sky-600 shrink-0" />
+                                         Điều lệnh đã chỉnh sửa
+                                       </Badge>
+                                     )}
                                   </div>
                                 </TableCell>
 
@@ -1585,11 +1596,11 @@ export default function PrintOrdersPage() {
                             </TableCell>
 
                             <TableCell className="py-1.5 px-2">
-                              <div className="flex flex-col text-[11px] text-slate-700 leading-tight">
-                                <span className="font-semibold truncate">
+                              <div className="flex flex-col text-[11px] text-slate-900 leading-tight">
+                                <span className="font-bold truncate">
                                   {item.materialTypeName || (po?.proofingOrder as any)?.materialType?.name || "—"}
                                 </span>
-                                <span className="text-[10px] text-slate-400">Khổ: {item.paperSizeName || "—"}</span>
+                                <span className="text-[10px] font-semibold text-slate-700">Khổ: {item.paperSizeName || "—"}</span>
                               </div>
                             </TableCell>
 
@@ -1597,28 +1608,27 @@ export default function PrintOrdersPage() {
                               {totalQty.toLocaleString("vi-VN")} tờ
                             </TableCell>
 
-                            <TableCell className="py-1.5 px-2 font-mono text-slate-600">
-                              {formatDateTime(item.impositionDate || item.impositionCompletedAt || item.dispatchedAt)}
-                            </TableCell>
-
-                            <TableCell className="py-1.5 px-2 text-[11px]">
-                              {item.dispatchedByName ? (
-                                <div className="flex flex-col">
-                                  <span className="font-semibold text-slate-800">{item.dispatchedByName}</span>
-                                  <span className="text-[9.5px] font-mono text-slate-400">{formatDateTime(item.dispatchedAt)}</span>
+                            {/* Thời gian: Điều lệnh & Bình bài */}
+                            <TableCell className="py-1.5 px-2">
+                              <div className="flex flex-col gap-1 text-[11px] font-mono leading-tight">
+                                <div className="flex items-center gap-1.5" title="Thời gian điều lệnh">
+                                  <span className="text-[9.5px] font-sans font-bold text-amber-900 bg-amber-100 border border-amber-300 px-1 py-0.5 rounded shrink-0 shadow-2xs">Điều lệnh</span>
+                                  <span className="font-extrabold text-slate-900">{formatDateTime(item.dispatchedAt)}</span>
                                 </div>
-                              ) : (
-                                "—"
-                              )}
+                                <div className="flex items-center gap-1.5" title="Thời gian hoàn thành bình bài">
+                                  <span className="text-[9.5px] font-sans font-bold text-blue-900 bg-blue-100 border border-blue-300 px-1 py-0.5 rounded shrink-0 shadow-2xs">Bình bài</span>
+                                  <span className="font-bold text-slate-800">{formatDateTime(item.productionOrder?.proofingOrder?.completedAt || item.impositionCompletedAt || item.impositionDate || item.productionOrder?.proofingOrder?.updatedAt || item.productionOrder?.createdAt)}</span>
+                                </div>
+                              </div>
                             </TableCell>
 
                             <TableCell className="text-center py-1.5 px-2 pr-3" onClick={(e) => e.stopPropagation()}>
-                              <div className="flex items-center justify-center gap-1.5">
+                              <div className="grid grid-cols-2 gap-1 w-[250px] mx-auto">
                                 <Button
                                   size="sm"
                                   onClick={() => handleEnqueueSingle(item.id)}
                                   disabled={enqueueMutation.isPending}
-                                  className="h-7 text-[10.5px] font-bold bg-[#93631F] hover:bg-[#7a521a] text-white rounded-md px-2 flex items-center gap-1 cursor-pointer shadow-2xs"
+                                  className="h-7 text-[10.5px] font-bold bg-[#93631F] hover:bg-[#7a521a] text-white rounded-md px-1.5 w-full flex items-center justify-center gap-1 cursor-pointer shadow-2xs"
                                   title="Thêm bài này vào hàng chờ in"
                                 >
                                   <PlusCircle className="h-3 w-3 shrink-0" /> Thêm hàng chờ
@@ -1628,7 +1638,7 @@ export default function PrintOrdersPage() {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleOpenProofingDetail(item)}
-                                  className="h-7 text-[10.5px] font-semibold text-blue-700 bg-blue-50/60 border-blue-200 hover:bg-blue-100 rounded-md px-1.5 flex items-center gap-1 cursor-pointer"
+                                  className="h-7 text-[10.5px] font-semibold text-blue-700 bg-blue-50/60 border-blue-200 hover:bg-blue-100 rounded-md px-1.5 w-full flex items-center justify-center gap-1 cursor-pointer"
                                   title="Xem chi tiết bài bình"
                                 >
                                   <Eye className="h-3 w-3 text-blue-600 shrink-0" /> Chi tiết
@@ -1638,9 +1648,20 @@ export default function PrintOrdersPage() {
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleOpenHistory(item)}
-                                  className="h-7 text-[10.5px] font-semibold text-slate-700 border-slate-200 hover:bg-slate-100 rounded-md px-1.5 flex items-center gap-1 cursor-pointer"
+                                  className="h-7 text-[10.5px] font-semibold text-slate-700 border-slate-200 hover:bg-slate-100 rounded-md px-1.5 w-full flex items-center justify-center gap-1 cursor-pointer"
                                 >
                                   <History className="h-3 w-3 text-slate-500 shrink-0" /> Lịch sử
+                                </Button>
+
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleOpenReturnDialog(item)}
+                                  disabled={returnMutation.isPending}
+                                  className="h-7 text-[10.5px] font-semibold text-rose-700 bg-rose-50/60 border-rose-200 hover:bg-rose-100 rounded-md px-1.5 w-full flex items-center justify-center gap-1 cursor-pointer"
+                                  title="Trả về bộ phận Điều lệnh để xử lý"
+                                >
+                                  <RotateCcw className="h-3 w-3 text-rose-600 shrink-0" /> Trả về Điều lệnh
                                 </Button>
                               </div>
                             </TableCell>
@@ -1750,27 +1771,27 @@ export default function PrintOrdersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* DIALOG: TRẢ VỀ BÌNH BÀI (TỪ MÀN THỢ IN) */}
+      {/* DIALOG: TRẢ VỀ ĐIỀU LỆNH (TỪ MÀN THỢ IN) */}
       <Dialog open={returnDialogOpen} onOpenChange={setReturnDialogOpen}>
         <DialogContent className="max-w-md bg-white border-slate-200">
           <DialogHeader>
             <DialogTitle className="text-rose-700 flex items-center gap-2">
-              <RotateCcw className="h-5 w-5" /> Trả về bộ phận Bình bài (Giữ LSX)
+              <RotateCcw className="h-5 w-5" /> Trả về bộ phận Điều lệnh
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
-              Lệnh in này sẽ được chuyển về bộ phận Bình bài để xử lý (vd: kẽm dơ, giấy không ăn mực...). Lệnh sản xuất <strong>GIỮ NGUYÊN</strong>, không bị xóa.
+              Lệnh in này sẽ được chuyển về bộ phận Điều lệnh để xử lý. Bài <strong>GIỮ NGUYÊN Lệnh sản xuất</strong> và lịch sử.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3 py-2">
             <label htmlFor="returnReason" className="text-xs font-bold text-slate-700 block">
-              Lý do trả về bộ phận Bình bài <span className="text-rose-500">*</span>
+              Lý do trả về bộ phận Điều lệnh <span className="text-rose-500">*</span>
             </label>
             <Textarea
               id="returnReason"
               rows={4}
               maxLength={1000}
-              placeholder="Nhập chi tiết lý do trả về bài in (ví dụ: giấy dơ không ăn mực, kẽm bị xước cần xuất lại...)"
+              placeholder="Nhập chi tiết lý do trả về cho Điều lệnh (ví dụ: giấy dơ không ăn mực, kẽm bị xước cần xuất lại...)"
               value={returnReason}
               onChange={(e) => setReturnReason(e.target.value)}
               className="text-xs bg-white"
@@ -1791,7 +1812,7 @@ export default function PrintOrdersPage() {
               className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs cursor-pointer"
             >
               {returnMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
-              Xác nhận Trả về Bình bài
+              Xác nhận Trả về Điều lệnh
             </Button>
           </DialogFooter>
         </DialogContent>
