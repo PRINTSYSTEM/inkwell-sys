@@ -340,6 +340,7 @@ export const API_SUFFIX = {
   PRODUCTION_ORDERS_KCS_SUMMARY: "/production-orders/kcs/design-type-summary",
   PRODUCTION_ORDERS_DESIGN_TYPE_SUMMARY: "/production-orders/design-type-summary",
   PRODUCTION_POST_PRINT: "/production-orders/post-print",
+  PRODUCTION_POST_PRINT_COMPLETED: "/production-orders/post-print/completed",
   PRODUCTION_POST_PRINT_COUNTS: "/production-orders/post-print/counts",
 
   // ========== PRINT ORDERS ==========

@@ -75,9 +75,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
+import { DatePicker } from "@/components/ui/date-picker";
 import { formatImageUrl, cn } from "@/lib/utils";
 import {
   usePostPrintProductionOrders,
+  usePostPrintCompletedProductionOrders,
   usePostPrintCounts,
   useUpdateProductionStep,
   useProductionStepHistory,
@@ -415,11 +417,15 @@ function ProductionDieDetailModal({
 
 export default function PostPrintProductionPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  // Date filter state (format YYYY-MM-DD or empty)
+  const [selectedDateFilter, setSelectedDateFilter] = useState<string>("");
   const [selectedDesignTypeId, setSelectedDesignTypeId] = useState<number | undefined>(undefined);
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
 
   // Main view tab: "processing" (đang làm), "completed" (hoàn thành)
   const [viewTab, setViewTab] = useState<"processing" | "completed">("processing");
+  // Quantity reporting filter for active tab: "all" | "unreported" | "reported"
+  const [reportedFilter, setReportedFilter] = useState<"all" | "unreported" | "reported">("all");
 
   // Pause Dialog State
   const [pauseDialogOpen, setPauseDialogOpen] = useState(false);
@@ -441,15 +447,33 @@ export default function PostPrintProductionPage() {
   const [selectedProofingOrderId, setSelectedProofingOrderId] = useState<number | null>(null);
 
   // Queries & Mutations
-  const { data: counts } = usePostPrintCounts();
+  const { data: counts, refetch: refetchCounts } = usePostPrintCounts();
   const { data: designTypesData } = useDesignTypeList();
   const designTypes = designTypesData?.items || [];
 
+  const isQuantityReportedParam = useMemo(() => {
+    if (reportedFilter === "unreported") return false;
+    if (reportedFilter === "reported") return true;
+    return undefined;
+  }, [reportedFilter]);
+
   const {
-    data: postPrintData,
-    isLoading,
-    refetch,
+    data: activePostPrintData,
+    isLoading: isLoadingActive,
+    refetch: refetchActive,
   } = usePostPrintProductionOrders({
+    pageNumber: 1,
+    pageSize: 200,
+    designTypeId: selectedDesignTypeId,
+    search: searchQuery.trim() || undefined,
+    isQuantityReported: isQuantityReportedParam,
+  });
+
+  const {
+    data: completedPostPrintData,
+    isLoading: isLoadingCompleted,
+    refetch: refetchCompleted,
+  } = usePostPrintCompletedProductionOrders({
     pageNumber: 1,
     pageSize: 200,
     designTypeId: selectedDesignTypeId,
@@ -457,36 +481,21 @@ export default function PostPrintProductionPage() {
   });
 
   const updateStepMutation = useUpdateProductionStep();
-  const postPrintList = postPrintData?.items || [];
 
-  const isPostPrintCompleted = (item: ProductionOrderResponse) => {
-    if (item.status === "completed") return true;
-    const postPrintSteps = item.steps?.filter((s) => {
-      const type = (s.stepType || s.stepTypeName || "").toLowerCase();
-      return !type.includes("in") && !type.includes("print");
-    });
-    if (!postPrintSteps || postPrintSteps.length === 0) return false;
-    return postPrintSteps.every(
-      (s) => s.status?.toLowerCase() === "completed" || s.status?.toLowerCase() === "done"
-    );
+  const isLoading = viewTab === "processing" ? isLoadingActive : isLoadingCompleted;
+
+  const activeDisplayList = useMemo(() => {
+    if (viewTab === "processing") {
+      return activePostPrintData?.items || [];
+    }
+    return completedPostPrintData?.items || [];
+  }, [viewTab, activePostPrintData, completedPostPrintData]);
+
+  const handleRefreshAll = () => {
+    refetchActive();
+    refetchCompleted();
+    refetchCounts();
   };
-
-  const { processingList, completedList } = useMemo(() => {
-    const processing: ProductionOrderResponse[] = [];
-    const completed: ProductionOrderResponse[] = [];
-
-    postPrintList.forEach((item) => {
-      if (isPostPrintCompleted(item)) {
-        completed.push(item);
-      } else {
-        processing.push(item);
-      }
-    });
-
-    return { processingList: processing, completedList: completed };
-  }, [postPrintList]);
-
-  const activeDisplayList = viewTab === "processing" ? processingList : completedList;
 
   const getPrintCompletedDateKey = (item: ProductionOrderResponse) => {
     const rawDate = item.printOrderCompletedAt || item.impositionCompletedAt || (item.proofingOrder as any)?.completedAt;
@@ -536,7 +545,7 @@ export default function PostPrintProductionPage() {
     });
 
     // Within each date group, sort items by designType code so same type items are next to each other
-    return sortedDates.map((dateSection) => {
+    const finalSections = sortedDates.map((dateSection) => {
       const sortedItems = [...dateSection.items].sort((a, b) => {
         const codeA = a.designType?.code || "Z";
         const codeB = b.designType?.code || "Z";
@@ -548,13 +557,24 @@ export default function PostPrintProductionPage() {
         items: sortedItems,
       };
     });
-  }, [activeDisplayList]);
+
+    if (selectedDateFilter) {
+      try {
+        const targetDateKey = format(new Date(selectedDateFilter), "dd/MM/yyyy");
+        return finalSections.filter((section) => section.dateKey === targetDateKey);
+      } catch {
+        return finalSections;
+      }
+    }
+
+    return finalSections;
+  }, [activeDisplayList, selectedDateFilter]);
 
   // Handle Step Status Update
   const handleUpdateStepStatus = async (stepId: number, status: string, note?: string) => {
     try {
       await updateStepMutation.mutate({ stepId, data: { status, note: note?.trim() || undefined } });
-      refetch();
+      handleRefreshAll();
     } catch {
       // Error handled in hook
     }
@@ -619,7 +639,7 @@ export default function PostPrintProductionPage() {
                     viewTab === "processing" ? "bg-[#93631F]/10 text-[#93631F]" : "bg-slate-200 text-slate-700"
                   )}
                 >
-                  {processingList.length}
+                  {counts?.active ?? 0}
                 </span>
               </button>
 
@@ -640,7 +660,7 @@ export default function PostPrintProductionPage() {
                     viewTab === "completed" ? "bg-emerald-50 text-emerald-700" : "bg-slate-200 text-slate-700"
                   )}
                 >
-                  {completedList.length}
+                  {counts?.completed ?? 0}
                 </span>
               </button>
             </div>
@@ -651,7 +671,7 @@ export default function PostPrintProductionPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => refetch()}
+              onClick={handleRefreshAll}
               className="h-8 text-xs font-semibold cursor-pointer border-slate-200 shadow-2xs hover:bg-slate-50"
             >
               <RefreshCw className="h-3.5 w-3.5 mr-1.5 text-slate-500" /> Làm mới
@@ -667,12 +687,12 @@ export default function PostPrintProductionPage() {
               variant={selectedDesignTypeId === undefined ? "default" : "outline"}
               size="sm"
               onClick={() => setSelectedDesignTypeId(undefined)}
-              className={`h-8 text-xs font-semibold cursor-pointer ${selectedDesignTypeId === undefined
+              className={`h-8 text-xs font-semibold cursor-pointer shrink-0 ${selectedDesignTypeId === undefined
                   ? "bg-[#93631F] hover:bg-[#7a521a] text-white"
                   : "text-slate-600"
                 }`}
             >
-              Tất cả loại ({postPrintList.length})
+              Tất cả loại ({activeDisplayList.length})
             </Button>
             {designTypes.map((dt) => (
               <Button
@@ -680,7 +700,7 @@ export default function PostPrintProductionPage() {
                 variant={selectedDesignTypeId === dt.id ? "default" : "outline"}
                 size="sm"
                 onClick={() => setSelectedDesignTypeId(dt.id)}
-                className={`h-8 text-xs font-semibold cursor-pointer ${selectedDesignTypeId === dt.id
+                className={`h-8 text-xs font-semibold cursor-pointer shrink-0 ${selectedDesignTypeId === dt.id
                     ? "bg-[#93631F] hover:bg-[#7a521a] text-white"
                     : "text-slate-600"
                   }`}
@@ -690,15 +710,27 @@ export default function PostPrintProductionPage() {
             ))}
           </div>
 
-          {/* Search Bar */}
-          <div className="relative w-full md:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-            <Input
-              placeholder="Tìm mã bình bài, mã bài..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 h-8 text-xs"
-            />
+          {/* Right Group: Date Filter + Search Bar */}
+          <div className="flex items-center gap-2 w-full md:w-auto shrink-0">
+            <div className="w-36 h-8 bg-white rounded-md border border-slate-200 flex items-center px-1.5 shadow-2xs">
+              <DatePicker
+                value={selectedDateFilter}
+                onChange={(val) => setSelectedDateFilter(val)}
+                allowClear
+                placeholder="Lọc ngày..."
+                className="w-full h-7 text-xs"
+              />
+            </div>
+
+            <div className="relative w-full md:w-64 shrink-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <Input
+                placeholder="Tìm mã bình bài, mã bài..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 h-8 text-xs bg-white"
+              />
+            </div>
           </div>
         </div>
       </div>
@@ -709,12 +741,22 @@ export default function PostPrintProductionPage() {
           <Loader2 className="h-8 w-8 text-[#93631F] animate-spin mx-auto mb-3" />
           <p className="text-xs text-slate-500 font-medium">Đang tải danh sách bài gia công sau in...</p>
         </div>
-      ) : postPrintList.length === 0 ? (
+      ) : activeDisplayList.length === 0 ? (
         <div className="bg-white rounded-2xl border border-dashed border-slate-300 py-16 px-4 text-center">
           <CheckCircle2 className="h-12 w-12 text-emerald-500 mx-auto mb-3 opacity-80" />
-          <h3 className="font-bold text-slate-800 text-base mb-1">Không có bài nào đang gia công sau in</h3>
+          <h3 className="font-bold text-slate-800 text-base mb-1">
+            {viewTab === "processing"
+              ? reportedFilter === "unreported"
+                ? "Không có bài nào chưa báo số lượng"
+                : reportedFilter === "reported"
+                ? "Không có bài nào đã báo số lượng"
+                : "Không có bài nào đang gia công sau in"
+              : "Chưa có bài nào hoàn thành gia công sau in"}
+          </h3>
           <p className="text-xs text-slate-500">
-            Tất cả các công đoạn sau in đã hoàn tất hoặc chưa có bài in hoàn thành mới.
+            {viewTab === "processing"
+              ? "Tất cả các công đoạn sau in đã hoàn tất hoặc không có bài nào khớp bộ lọc."
+              : "Các bài gia công khi hoàn thành tất cả công đoạn sẽ tự động xuất hiện tại đây."}
           </p>
         </div>
       ) : (

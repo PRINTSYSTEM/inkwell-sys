@@ -1115,6 +1115,7 @@ export const ProductionListParamsSchema = PagedParamsSchema.extend({
   sortOrder: z.string().nullable().optional(),
   tab: z.string().nullable().optional(),
   designTypeId: z.number().nullable().optional(),
+  isQuantityReported: z.boolean().nullable().optional(),
 });
 export type ProductionListParams = z.infer<typeof ProductionListParamsSchema>;
 

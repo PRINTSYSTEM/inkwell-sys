@@ -372,7 +372,7 @@ export const PrepressOrderRow = React.memo(function PrepressOrderRow({
         <TableCell className="py-3 font-medium text-xs align-top text-center">
           {order.paperSize?.name || order.customPaperSize || (order.rollWidth ? `Cuộn (Rộng: ${order.rollWidth} mm)` : "—")}
         </TableCell>
-        <TableCell className="py-3 font-bold text-xs align-top text-center text-rose-600 font-mono">
+        <TableCell className="py-3 font-bold text-sm align-top text-center text-rose-600 font-mono">
           {order.totalQuantity ? order.totalQuantity.toLocaleString("vi-VN") : "0"}
         </TableCell>
         <TableCell className="py-3 text-xs align-top">
@@ -463,10 +463,10 @@ export const PrepressOrderRow = React.memo(function PrepressOrderRow({
           )}
         </TableCell>
 
-        <TableCell className="py-3 font-medium align-top whitespace-nowrap text-[11px]">
-          <div className="flex flex-col gap-0.5 text-slate-700 dark:text-slate-300">
+        <TableCell className="py-3 align-top whitespace-nowrap">
+          <div className="flex flex-col gap-0.5">
             {order.status === "completed" ? (
-              <div>
+              <div className="text-xs font-bold text-slate-900 dark:text-slate-100 font-mono tracking-tight">
                 {order.completedAt
                   ? format(new Date(order.completedAt), "HH:mm:ss dd/MM/yyyy")
                   : order.updatedAt
@@ -474,7 +474,7 @@ export const PrepressOrderRow = React.memo(function PrepressOrderRow({
                     : "—"}
               </div>
             ) : (
-              <span className="text-muted-foreground italic">Chưa hoàn thành</span>
+              <span className="text-xs text-muted-foreground italic font-medium">Chưa hoàn thành</span>
             )}
             {order.createdBy && (
               <span className="text-[10px] text-muted-foreground/80 mt-0.5">

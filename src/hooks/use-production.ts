@@ -449,6 +449,13 @@ export const useCompleteProduction = () => {
   };
 };
 
+export interface PostPrintCountsResponse {
+  active: number;
+  unreported: number;
+  reported: number;
+  completed: number;
+}
+
 export const usePostPrintProductionOrders = (params?: ProductionListParams) => {
   return useQuery<ProductionOrderResponsePaginate>({
     queryKey: [...productionOrderKeys.all, "post-print", params],
@@ -464,11 +471,26 @@ export const usePostPrintProductionOrders = (params?: ProductionListParams) => {
   });
 };
 
+export const usePostPrintCompletedProductionOrders = (params?: ProductionListParams) => {
+  return useQuery<ProductionOrderResponsePaginate>({
+    queryKey: [...productionOrderKeys.all, "post-print-completed", params],
+    queryFn: async () => {
+      const res = await apiRequest.get<ProductionOrderResponsePaginate>(
+        API_SUFFIX.PRODUCTION_POST_PRINT_COMPLETED,
+        {
+          params: normalizeParams((params ?? {}) as Record<string, unknown>),
+        }
+      );
+      return res.data;
+    },
+  });
+};
+
 export const usePostPrintCounts = () => {
-  return useQuery<{ active: number }>({
+  return useQuery<PostPrintCountsResponse>({
     queryKey: [...productionOrderKeys.all, "post-print-counts"],
     queryFn: async () => {
-      const res = await apiRequest.get<{ active: number }>(
+      const res = await apiRequest.get<PostPrintCountsResponse>(
         API_SUFFIX.PRODUCTION_POST_PRINT_COUNTS
       );
       return res.data;

@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Table,
@@ -122,6 +123,7 @@ const formatDateTime = (dateStr?: string | null) => {
 export default function ProductionDispatch() {
   // State
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedDateFilter, setSelectedDateFilter] = useState<string>("");
   const [selectedDesignTypeId, setSelectedDesignTypeId] = useState<number | undefined>(undefined);
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -254,6 +256,68 @@ export default function ProductionDispatch() {
   };
 
   const candidateItems = candidatesData?.items || [];
+
+  const formatDispatchDateKey = (item: PrintOrderResponse) => {
+    const rawDate = item.dispatchedAt || (item as any).createdAt;
+    if (!rawDate) return "Chưa xác định ngày";
+    try {
+      const d = new Date(rawDate);
+      if (isNaN(d.getTime())) return "Chưa xác định ngày";
+      return format(d, "dd/MM/yyyy", { locale: vi });
+    } catch {
+      return "Chưa xác định ngày";
+    }
+  };
+
+  const groupedUndoSections = useMemo(() => {
+    const waitingItems = waitingPrintOrdersData?.items || [];
+    const dateMap = new Map<
+      string,
+      {
+        dateKey: string;
+        dateSortTime: number;
+        items: PrintOrderResponse[];
+      }
+    >();
+
+    waitingItems.forEach((item) => {
+      const dateKey = formatDispatchDateKey(item);
+      const rawDate = item.dispatchedAt || (item as any).createdAt;
+      const sortTime = rawDate ? new Date(rawDate).getTime() : 0;
+
+      if (!dateMap.has(dateKey)) {
+        dateMap.set(dateKey, {
+          dateKey,
+          dateSortTime: sortTime,
+          items: [],
+        });
+      }
+
+      const dateEntry = dateMap.get(dateKey)!;
+      if (sortTime > dateEntry.dateSortTime) {
+        dateEntry.dateSortTime = sortTime;
+      }
+      dateEntry.items.push(item);
+    });
+
+    // Sort dates descending (newest date first, "Chưa xác định ngày" last)
+    let result = Array.from(dateMap.values()).sort((a, b) => {
+      if (a.dateKey === "Chưa xác định ngày") return 1;
+      if (b.dateKey === "Chưa xác định ngày") return -1;
+      return b.dateSortTime - a.dateSortTime;
+    });
+
+    if (selectedDateFilter) {
+      try {
+        const targetDateKey = format(new Date(selectedDateFilter), "dd/MM/yyyy");
+        result = result.filter((s) => s.dateKey === targetDateKey);
+      } catch {
+        // ignore
+      }
+    }
+
+    return result;
+  }, [waitingPrintOrdersData?.items, selectedDateFilter]);
 
   const handleOpenReturnToProofing = (item: PrintOrderResponse) => {
     setReturnToProofingItem(item);
@@ -503,11 +567,22 @@ export default function ProductionDispatch() {
       return b.localeCompare(a);
     });
 
-    return sortedDateKeys.map((dateKey) => ({
+    let result = sortedDateKeys.map((dateKey) => ({
       dateLabel: dateKey,
       items: groups[dateKey],
     }));
-  }, [filteredItems, checkedKemMap, checkedKhuonMap, checkedGiayMap, checkedFluteMap]);
+
+    if (selectedDateFilter) {
+      try {
+        const targetDateKey = format(new Date(selectedDateFilter), "dd/MM/yyyy");
+        result = result.filter((g) => g.dateLabel === targetDateKey);
+      } catch {
+        // ignore
+      }
+    }
+
+    return result;
+  }, [filteredItems, checkedKemMap, checkedKhuonMap, checkedGiayMap, checkedFluteMap, selectedDateFilter]);
 
   const eligibleItemIds = useMemo(() => {
     return filteredItems
@@ -755,21 +830,24 @@ export default function ProductionDispatch() {
             </div>
           </div>
 
-      {/* Single-Row Unified Filter Bar */}
-      <div className="bg-white p-2 px-3 rounded-xl border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-2.5">
-        <div className="flex flex-wrap items-center gap-3">
-          {/* 1. Loại bài Filter */}
-          <div className="flex flex-wrap items-center gap-1">
-            <span className="text-[10px] font-extrabold uppercase text-slate-400 shrink-0 mr-1">Loại bài</span>
+      {/* Redesigned Clean 2-Row Filter Toolbar */}
+      <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs space-y-2.5">
+        {/* Row 1: Design Types (Left) + Date Picker & Search Bar (Right) */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-2.5">
+          {/* Left: Design Type Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto">
+            <span className="text-[10px] font-extrabold uppercase text-slate-400 shrink-0 mr-1">
+              Loại bài:
+            </span>
             <Button
               variant={selectedDesignTypeId === undefined ? "default" : "outline"}
               size="sm"
               onClick={() => setSelectedDesignTypeId(undefined)}
               className={cn(
-                "h-7 text-[11px] font-bold rounded-lg px-2 py-0",
+                "h-7 text-[11px] font-bold rounded-lg px-2.5 py-0 cursor-pointer shrink-0",
                 selectedDesignTypeId === undefined
-                  ? "bg-[#93631F] hover:bg-[#7a521a] text-white"
-                  : "text-slate-600 border-slate-200"
+                  ? "bg-[#93631F] hover:bg-[#7a521a] text-white shadow-2xs"
+                  : "text-slate-600 border-slate-200 hover:bg-slate-50"
               )}
             >
               Tất cả ({totalCount})
@@ -782,10 +860,10 @@ export default function ProductionDispatch() {
                   size="sm"
                   onClick={() => setSelectedDesignTypeId(dt.designTypeId)}
                   className={cn(
-                    "h-7 text-[11px] font-semibold rounded-lg px-2 py-0",
+                    "h-7 text-[11px] font-semibold rounded-lg px-2.5 py-0 cursor-pointer shrink-0",
                     selectedDesignTypeId === dt.designTypeId
-                      ? "bg-[#93631F] hover:bg-[#7a521a] text-white"
-                      : "text-slate-600 border-slate-200"
+                      ? "bg-[#93631F] hover:bg-[#7a521a] text-white shadow-2xs"
+                      : "text-slate-600 border-slate-200 hover:bg-slate-50"
                   )}
                 >
                   {dt.name} ({dt.count})
@@ -803,10 +881,10 @@ export default function ProductionDispatch() {
                     size="sm"
                     onClick={() => setSelectedDesignTypeId(dt.id)}
                     className={cn(
-                      "h-7 text-[11px] font-semibold rounded-lg px-2 py-0",
+                      "h-7 text-[11px] font-semibold rounded-lg px-2.5 py-0 cursor-pointer shrink-0",
                       selectedDesignTypeId === dt.id
-                        ? "bg-[#93631F] hover:bg-[#7a521a] text-white"
-                        : "text-slate-600 border-slate-200"
+                        ? "bg-[#93631F] hover:bg-[#7a521a] text-white shadow-2xs"
+                        : "text-slate-600 border-slate-200 hover:bg-slate-50"
                     )}
                   >
                     {dt.name} ({count})
@@ -816,106 +894,133 @@ export default function ProductionDispatch() {
             )}
           </div>
 
-          <div className="h-4 w-px bg-slate-200 shrink-0 hidden lg:block" />
+          {/* Right: Date Picker & Search Box */}
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="w-36 h-7 bg-white rounded-lg border border-slate-200 flex items-center px-1.5 shadow-2xs">
+              <DatePicker
+                value={selectedDateFilter}
+                onChange={(val) => setSelectedDateFilter(val)}
+                allowClear
+                placeholder="Lọc ngày..."
+                className="w-full h-6 text-[11px]"
+              />
+            </div>
 
-          {/* 2. Trạng thái Filter */}
-          <div className="flex flex-wrap items-center gap-1">
-            <span className="text-[10px] font-extrabold uppercase text-slate-400 shrink-0 mr-1">Trạng thái</span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSelectedStatusFilter("all")}
-              className={cn(
-                "h-7 text-[11px] font-bold rounded-lg px-2 py-0",
-                selectedStatusFilter === "all"
-                  ? "bg-[#93631F] text-white border-[#93631F]"
-                  : "text-slate-600 border-slate-200"
-              )}
-            >
-              Tất cả ({totalCount})
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSelectedStatusFilter("eligible")}
-              className={cn(
-                "h-7 text-[11px] font-bold rounded-lg px-2 py-0 transition-all",
-                selectedStatusFilter === "eligible"
-                  ? "bg-emerald-600 text-white border-emerald-600"
-                  : "bg-emerald-50/60 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-              )}
-            >
-              Đủ điều kiện ({eligibleCount})
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSelectedStatusFilter("missing_kem")}
-              className={cn(
-                "h-7 text-[11px] font-bold rounded-lg px-2 py-0 transition-all",
-                selectedStatusFilter === "missing_kem"
-                  ? "bg-amber-600 text-white border-amber-600"
-                  : "bg-amber-50/60 text-amber-700 border-amber-200 hover:bg-amber-100"
-              )}
-            >
-              Thiếu kẽm ({missingKemCount})
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSelectedStatusFilter("missing_khuon")}
-              className={cn(
-                "h-7 text-[11px] font-bold rounded-lg px-2 py-0 transition-all",
-                selectedStatusFilter === "missing_khuon"
-                  ? "bg-orange-600 text-white border-orange-600"
-                  : "bg-orange-50/60 text-orange-700 border-orange-200 hover:bg-orange-100"
-              )}
-            >
-              Thiếu khuôn ({missingKhuonCount})
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSelectedStatusFilter("missing_giay")}
-              className={cn(
-                "h-7 text-[11px] font-bold rounded-lg px-2 py-0 transition-all",
-                selectedStatusFilter === "missing_giay"
-                  ? "bg-red-600 text-white border-red-600"
-                  : "bg-red-50/60 text-red-700 border-red-200 hover:bg-red-100"
-              )}
-            >
-              Thiếu giấy ({missingGiayCount})
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setSelectedStatusFilter("missing_flute")}
-              className={cn(
-                "h-7 text-[11px] font-bold rounded-lg px-2 py-0 transition-all",
-                selectedStatusFilter === "missing_flute"
-                  ? "bg-purple-600 text-white border-purple-600"
-                  : "bg-purple-50/60 text-purple-700 border-purple-200 hover:bg-purple-100"
-              )}
-            >
-              Thiếu sóng ({missingFluteCount})
-            </Button>
+            <div className="relative w-56 shrink-0">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+              <Input
+                placeholder="Tìm mã bài, tên bài, chất liệu..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 h-7 text-[11px] rounded-lg border-slate-200 bg-white"
+              />
+            </div>
           </div>
         </div>
 
-        {/* 3. Search Box */}
-        <div className="relative w-full md:w-56 shrink-0 ml-auto">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-          <Input
-            placeholder="Tìm mã bài, tên bài, chất liệu..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8 h-7 text-[11px] rounded-lg border-slate-200"
-          />
+        {/* Row 2: Status Filters (Trạng thái) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pt-0.5">
+          <span className="text-[10px] font-extrabold uppercase text-slate-400 shrink-0 mr-1">
+            Trạng thái:
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSelectedStatusFilter("all")}
+            className={cn(
+              "h-7 text-[11px] font-bold rounded-lg px-2.5 py-0 cursor-pointer shrink-0",
+              selectedStatusFilter === "all"
+                ? "bg-slate-800 text-white border-slate-800 shadow-2xs"
+                : "text-slate-600 border-slate-200 hover:bg-slate-50"
+            )}
+          >
+            Tất cả ({totalCount})
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSelectedStatusFilter("eligible")}
+            className={cn(
+              "h-7 text-[11px] font-bold rounded-lg px-2.5 py-0 cursor-pointer transition-all shrink-0 flex items-center gap-1",
+              selectedStatusFilter === "eligible"
+                ? "bg-emerald-600 text-white border-emerald-600 shadow-2xs"
+                : "bg-emerald-50/70 text-emerald-800 border-emerald-200 hover:bg-emerald-100"
+            )}
+          >
+            <span>Đủ điều kiện</span>
+            <span className="px-1.5 py-0.1 rounded-full text-[10px] bg-black/10 font-mono">
+              {eligibleCount}
+            </span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSelectedStatusFilter("missing_kem")}
+            className={cn(
+              "h-7 text-[11px] font-bold rounded-lg px-2.5 py-0 cursor-pointer transition-all shrink-0 flex items-center gap-1",
+              selectedStatusFilter === "missing_kem"
+                ? "bg-amber-600 text-white border-amber-600 shadow-2xs"
+                : "bg-amber-50/70 text-amber-800 border-amber-200 hover:bg-amber-100"
+            )}
+          >
+            <span>Thiếu kẽm</span>
+            <span className="px-1.5 py-0.1 rounded-full text-[10px] bg-black/10 font-mono">
+              {missingKemCount}
+            </span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSelectedStatusFilter("missing_khuon")}
+            className={cn(
+              "h-7 text-[11px] font-bold rounded-lg px-2.5 py-0 cursor-pointer transition-all shrink-0 flex items-center gap-1",
+              selectedStatusFilter === "missing_khuon"
+                ? "bg-orange-600 text-white border-orange-600 shadow-2xs"
+                : "bg-orange-50/70 text-orange-800 border-orange-200 hover:bg-orange-100"
+            )}
+          >
+            <span>Thiếu khuôn</span>
+            <span className="px-1.5 py-0.1 rounded-full text-[10px] bg-black/10 font-mono">
+              {missingKhuonCount}
+            </span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSelectedStatusFilter("missing_giay")}
+            className={cn(
+              "h-7 text-[11px] font-bold rounded-lg px-2.5 py-0 cursor-pointer transition-all shrink-0 flex items-center gap-1",
+              selectedStatusFilter === "missing_giay"
+                ? "bg-red-600 text-white border-red-600 shadow-2xs"
+                : "bg-red-50/70 text-red-800 border-red-200 hover:bg-red-100"
+            )}
+          >
+            <span>Thiếu giấy</span>
+            <span className="px-1.5 py-0.1 rounded-full text-[10px] bg-black/10 font-mono">
+              {missingGiayCount}
+            </span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSelectedStatusFilter("missing_flute")}
+            className={cn(
+              "h-7 text-[11px] font-bold rounded-lg px-2.5 py-0 cursor-pointer transition-all shrink-0 flex items-center gap-1",
+              selectedStatusFilter === "missing_flute"
+                ? "bg-purple-600 text-white border-purple-600 shadow-2xs"
+                : "bg-purple-50/70 text-purple-800 border-purple-200 hover:bg-purple-100"
+            )}
+          >
+            <span>Thiếu sóng</span>
+            <span className="px-1.5 py-0.1 rounded-full text-[10px] bg-black/10 font-mono">
+              {missingFluteCount}
+            </span>
+          </Button>
         </div>
       </div>
 
@@ -1517,91 +1622,125 @@ export default function ProductionDispatch() {
               </span>
             </div>
 
-            <div className="relative w-full md:w-64">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-              <Input
-                placeholder="Tìm mã bài, tên bài, chất liệu..."
-                value={undoSearchQuery}
-                onChange={(e) => setUndoSearchQuery(e.target.value)}
-                className="pl-8 h-7 text-[11px] rounded-lg border-slate-200"
-              />
+            <div className="flex items-center gap-2 w-full md:w-auto shrink-0">
+              <div className="w-36 h-7 bg-white rounded-lg border border-slate-200 flex items-center px-1.5 shadow-2xs">
+                <DatePicker
+                  value={selectedDateFilter}
+                  onChange={(val) => setSelectedDateFilter(val)}
+                  allowClear
+                  placeholder="Lọc ngày..."
+                  className="w-full h-6 text-[11px]"
+                />
+              </div>
+
+              <div className="relative w-full md:w-56 shrink-0">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                <Input
+                  placeholder="Tìm mã bài, tên bài, chất liệu..."
+                  value={undoSearchQuery}
+                  onChange={(e) => setUndoSearchQuery(e.target.value)}
+                  className="pl-8 h-7 text-[11px] rounded-lg border-slate-200"
+                />
+              </div>
             </div>
           </div>
 
-          {/* Table of Dispatched Print Orders Waiting to Print */}
+          {/* Table Grouped by Dispatch Date */}
           {isLoadingWaiting ? (
             <div className="bg-white rounded-xl border border-slate-200 py-12 text-center">
               <Loader2 className="h-6 w-6 text-rose-600 animate-spin mx-auto mb-2" />
               <p className="text-xs text-slate-500 font-medium">Đang tải danh sách bài đã điều lệnh...</p>
             </div>
-          ) : (waitingPrintOrdersData?.items || []).length === 0 ? (
+          ) : groupedUndoSections.length === 0 ? (
             <div className="bg-white rounded-xl border border-slate-200 py-12 text-center text-slate-500">
               <CheckCircle2 className="h-10 w-10 text-slate-300 mx-auto mb-2" />
               <h3 className="font-bold text-slate-800 text-xs mb-1">Không có bài nào đã điều lệnh đang chờ in</h3>
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-slate-50 hover:bg-slate-50 border-b border-slate-200 text-[10.5px] font-bold text-slate-600 uppercase">
-                    <TableHead className="w-10 text-center py-2 px-1">#</TableHead>
-                    <TableHead className="w-[110px] py-2 px-2">Mã bài</TableHead>
-                    <TableHead className="w-[85px] py-2 px-2">Loại bài</TableHead>
-                    <TableHead className="w-[220px] py-2 px-2">Chất liệu & Quy cách</TableHead>
-                    <TableHead className="w-[140px] py-2 px-2">Người điều lệnh</TableHead>
-                    <TableHead className="w-[140px] py-2 px-2">Thời gian điều</TableHead>
-                    <TableHead className="w-[110px] py-2 px-2">Trạng thái</TableHead>
-                    <TableHead className="w-[140px] text-center py-2 px-2">Thao tác</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {(waitingPrintOrdersData?.items || []).map((item, index) => {
-                    const po = item.productionOrder;
-                    const proofingCode = po?.proofingOrderCode || `PO-${item.productionOrderId}`;
-                    const designTypeName = item.designTypeName || po?.designType?.name || "Hộp";
-                    const designTypeCode = item.designTypeCode || po?.designType?.code || "H";
-                    const materialName = item.materialTypeName || (po?.proofingOrder as any)?.materialType?.name || "—";
-                    const totalQty = item.totalQuantity ?? po?.proofingOrder?.totalQuantity ?? 0;
-                    const dispatchedBy = item.dispatchedByName || item.dispatchedByUserName || "—";
-                    const dispatchedAt = item.dispatchedAt ? formatDateTime(item.dispatchedAt) : "—";
+            <div className="space-y-6">
+              {groupedUndoSections.map((dateSection) => (
+                <div key={dateSection.dateKey} className="space-y-2 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm">
+                  {/* Section Header: Date */}
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 px-1">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-[#93631F]/10 text-[#93631F] rounded-lg">
+                        <Calendar className="h-4 w-4" />
+                      </div>
+                      <h2 className="text-xs font-black text-slate-900 font-mono">
+                        {dateSection.dateKey}
+                      </h2>
+                    </div>
+                    <Badge className="bg-slate-800 text-white font-bold text-[10px] px-2.5 py-0.5">
+                      {dateSection.items.length} bài điều lệnh
+                    </Badge>
+                  </div>
 
-                    return (
-                      <TableRow key={item.id} className="hover:bg-slate-50/70 border-b border-slate-100">
-                        <TableCell className="text-center py-2 px-2 text-slate-400 font-medium">{index + 1}</TableCell>
-                        <TableCell className="py-2 px-2 font-mono text-xs font-bold text-blue-600">{proofingCode}</TableCell>
-                        <TableCell className="py-2 px-2">
-                          <Badge variant="outline" className={cn("text-[10px] font-semibold px-2 py-0 rounded-full border", getDesignTypePillStyle(designTypeCode))}>
-                            {designTypeName}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="py-2 px-2">
-                          <div className="flex flex-col text-[11px] leading-tight">
-                            <span className="font-bold text-slate-900 truncate">{materialName}</span>
-                            <span className="text-[10px] text-slate-500">Số lượng: <strong className="text-slate-800">{totalQty.toLocaleString("vi-VN")} tờ</strong></span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="py-2 px-2 text-[11px] font-medium text-slate-700">{dispatchedBy}</TableCell>
-                        <TableCell className="py-2 px-2 text-[11px] font-mono text-slate-600">{dispatchedAt}</TableCell>
-                        <TableCell className="py-2 px-2">
-                          <Badge className="bg-amber-50 text-amber-800 border-amber-200 font-bold text-[10px]">
-                            Chưa in / Chờ in
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-center py-2 px-2">
-                          <Button
-                            size="sm"
-                            onClick={() => handleOpenUndoDialog(item)}
-                            className="h-7 text-[10.5px] font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-md px-2.5 flex items-center justify-center gap-1 cursor-pointer mx-auto shadow-2xs"
-                            title="Hủy điều lệnh để đưa bài về màn hình điều lệnh lại"
-                          >
-                            <RotateCcw className="h-3 w-3" /> Hủy điều lệnh
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                  {/* Table per Date */}
+                  <div className="rounded-xl border border-slate-200 overflow-hidden shadow-2xs">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-slate-50 hover:bg-slate-50 border-b border-slate-200 text-[10.5px] font-bold text-slate-600 uppercase">
+                          <TableHead className="w-10 text-center py-2 px-1">#</TableHead>
+                          <TableHead className="w-[110px] py-2 px-2">Mã bài</TableHead>
+                          <TableHead className="w-[85px] py-2 px-2">Loại bài</TableHead>
+                          <TableHead className="w-[220px] py-2 px-2">Chất liệu & Quy cách</TableHead>
+                          <TableHead className="w-[140px] py-2 px-2">Người điều lệnh</TableHead>
+                          <TableHead className="w-[140px] py-2 px-2">Thời gian điều</TableHead>
+                          <TableHead className="w-[110px] py-2 px-2">Trạng thái</TableHead>
+                          <TableHead className="w-[140px] text-center py-2 px-2">Thao tác</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {dateSection.items.map((item, index) => {
+                          const po = item.productionOrder;
+                          const proofingCode = po?.proofingOrderCode || `PO-${item.productionOrderId}`;
+                          const designTypeName = item.designTypeName || po?.designType?.name || "Hộp";
+                          const designTypeCode = item.designTypeCode || po?.designType?.code || "H";
+                          const materialName = item.materialTypeName || (po?.proofingOrder as any)?.materialType?.name || "—";
+                          const totalQty = item.totalQuantity ?? po?.proofingOrder?.totalQuantity ?? 0;
+                          const dispatchedBy = item.dispatchedByName || item.dispatchedByUserName || "—";
+                          const dispatchedAt = item.dispatchedAt ? formatDateTime(item.dispatchedAt) : "—";
+
+                          return (
+                            <TableRow key={item.id} className="hover:bg-slate-50/70 border-b border-slate-100">
+                              <TableCell className="text-center py-2 px-2 text-slate-400 font-medium">{index + 1}</TableCell>
+                              <TableCell className="py-2 px-2 font-mono text-xs font-bold text-blue-600">{proofingCode}</TableCell>
+                              <TableCell className="py-2 px-2">
+                                <Badge variant="outline" className={cn("text-[10px] font-semibold px-2 py-0 rounded-full border", getDesignTypePillStyle(designTypeCode))}>
+                                  {designTypeName}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="py-2 px-2">
+                                <div className="flex flex-col text-[11px] leading-tight">
+                                  <span className="font-bold text-slate-900 truncate">{materialName}</span>
+                                  <span className="text-[10px] text-slate-500">Số lượng: <strong className="text-slate-800">{totalQty.toLocaleString("vi-VN")} tờ</strong></span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="py-2 px-2 text-[11px] font-medium text-slate-700">{dispatchedBy}</TableCell>
+                              <TableCell className="py-2 px-2 text-[11px] font-mono text-slate-600">{dispatchedAt}</TableCell>
+                              <TableCell className="py-2 px-2">
+                                <Badge className="bg-amber-50 text-amber-800 border-amber-200 font-bold text-[10px]">
+                                  Chưa in / Chờ in
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-center py-2 px-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleOpenUndoDialog(item)}
+                                  className="h-7 text-[10.5px] font-bold text-white bg-rose-600 hover:bg-rose-700 rounded-md px-2.5 flex items-center justify-center gap-1 cursor-pointer mx-auto shadow-2xs"
+                                  title="Hủy điều lệnh để đưa bài về màn hình điều lệnh lại"
+                                >
+                                  <RotateCcw className="h-3 w-3" /> Hủy điều lệnh
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
