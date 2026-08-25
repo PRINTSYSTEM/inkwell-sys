@@ -373,27 +373,13 @@ export default function StockSummary() {
               </Button>
               <Button
                 onClick={() => {
-                  if (selectedVendorId === "all") {
-                    toast.error("Vui lòng chọn một Nhà cung cấp ở bộ lọc trước khi tạo nhanh!");
-                    return;
-                  }
-                  setIsCreateOpen(true);
-                }}
-                variant="outline"
-                size="sm"
-                className="cursor-pointer border-slate-200 text-xs h-9 rounded-lg hover:bg-slate-50 text-foreground"
-              >
-                Tạo nhanh vật tư lẻ
-              </Button>
-              <Button
-                onClick={() => {
                   setIsStockOutOpen(true);
                 }}
                 variant="outline"
                 size="sm"
                 className="cursor-pointer border-slate-200 text-xs h-9 rounded-lg hover:bg-slate-50 text-foreground"
               >
-                Xuất kho NCC
+                Tạo phiếu xuất kho
               </Button>
               <Button
                 onClick={() => setIsPendingExportsOpen(true)}
@@ -403,14 +389,6 @@ export default function StockSummary() {
               >
                 <Layers className="h-3.5 w-3.5 mr-1.5 text-rose-500" />
                 Bài chưa xuất kho
-              </Button>
-              <Button
-                onClick={() => setIsProductionOrderStockOutOpen(true)}
-                variant="outline"
-                size="sm"
-                className="cursor-pointer border-slate-200 text-xs h-9 rounded-lg hover:bg-slate-50 text-foreground"
-              >
-                Xuất kho theo bài
               </Button>
 
               <Button

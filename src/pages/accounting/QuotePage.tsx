@@ -1,5 +1,5 @@
 import { Helmet } from "react-helmet-async";
-import { CreditCard, Clock, AlertCircle, Layers } from "lucide-react";
+import { CreditCard, Clock, AlertCircle, Layers, TrendingUp } from "lucide-react";
 import { PaymentList } from "@/components/accounting";
 import { useSalesDashboard } from "@/hooks/use-order";
 
