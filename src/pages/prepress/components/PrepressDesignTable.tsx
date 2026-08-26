@@ -249,9 +249,9 @@ export function PrepressDesignTable({
                               >
                                 <TableCell className="py-2 px-3 w-20 align-middle">
                                   <div className="w-12 h-10">
-                                    {design.thumbnailUrl ? (
+                                    {design.thumbnailUrl || design.largeImageUrl || design.imageUrl ? (
                                       <img
-                                        src={design.thumbnailUrl}
+                                        src={design.thumbnailUrl || design.largeImageUrl || design.imageUrl}
                                         alt={design.code}
                                         loading="lazy"
                                         decoding="async"
@@ -260,7 +260,7 @@ export function PrepressDesignTable({
                                           e.stopPropagation();
                                           if (setViewingImageUrl) {
                                             setViewingImageUrl(
-                                              design.thumbnailUrl || null,
+                                              design.largeImageUrl || design.imageUrl || design.designImageUrl || design.thumbnailUrl || null,
                                             );
                                           }
                                           if (setImageViewerOpen) {

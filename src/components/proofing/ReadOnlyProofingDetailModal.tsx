@@ -18,7 +18,7 @@ import { DetailDieExportCard } from "@/pages/prepress/detail-components/DetailDi
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 
 interface ReadOnlyProofingDetailModalProps {
-  proofingOrderId: number | null;
+  proofingOrderId: number | string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -31,8 +31,8 @@ export function ReadOnlyProofingDetailModal({
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
 
   const { data: order, isLoading } = useProofingOrder(
-    proofingOrderId && proofingOrderId > 0 ? proofingOrderId : null,
-    Boolean(open && proofingOrderId && proofingOrderId > 0)
+    proofingOrderId ? proofingOrderId : null,
+    Boolean(open && proofingOrderId)
   );
 
   const orderDesigns = order?.proofingOrderDesigns || [];

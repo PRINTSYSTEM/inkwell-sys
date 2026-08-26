@@ -464,7 +464,7 @@ export function DesignTable({
                             onClick={(e) => {
                               e.stopPropagation();
                               setViewingImage({
-                                url: design.largeImageUrl || design.thumbnailUrl,
+                                url: design.imageUrl || design.largeImageUrl || design.thumbnailUrl,
                                 title: design.name,
                               });
                             }}

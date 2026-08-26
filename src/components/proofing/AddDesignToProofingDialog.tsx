@@ -448,7 +448,7 @@ export function AddDesignToProofingDialog({
                             onClick={(e) => {
                               e.stopPropagation();
                               setViewingImage({
-                                url: design.thumbnailUrl,
+                                url: design.imageUrl || design.largeImageUrl || design.thumbnailUrl,
                                 title: design.name,
                               });
                             }}

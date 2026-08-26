@@ -928,7 +928,7 @@ export default function DeliveryNoteListPage() {
 
   // Selection state
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
-  const [viewingProofingOrderId, setViewingProofingOrderId] = useState<number | null>(null);
+  const [viewingProofingOrderId, setViewingProofingOrderId] = useState<number | string | null>(null);
   const [selectedCustomerName, setSelectedCustomerName] = useState<string>("");
   const [selectedOrderDetailIds, setSelectedOrderDetailIds] = useState<Set<number>>(new Set());
   const [deliveryQtys, setDeliveryQtys] = useState<Record<number, number>>({});
@@ -2025,7 +2025,7 @@ function OrdersView({
                           const isBai = nameStr.toLowerCase().startsWith("bài");
                           const numPart = isBai ? nameStr.slice(4).trim() : nameStr;
                           const match = numPart.match(/\d+/);
-                          const pId = group.proofingOrderId || (group.details && group.details[0]?.proofingOrderId) || (match ? parseInt(match[0], 10) : null);
+                          const pId = group.proofingOrderId || (group.details && group.details[0]?.proofingOrderId) || group.proofingOrderCode || numPart || (match ? parseInt(match[0], 10) : null);
                           return (
                             <span
                               className="font-extrabold font-mono text-xs text-black dark:text-white flex items-center hover:underline cursor-pointer group/title"

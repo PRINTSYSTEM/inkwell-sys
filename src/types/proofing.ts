@@ -29,6 +29,8 @@ export interface DesignItem {
   laminationType?: string; // from design.laminationType
   thumbnailUrl: string; // from design.designThumbnailUrl || design.designImageUrl
   largeImageUrl?: string; // from design.designImageUrl
+  imageUrl?: string; // optional alias for largeImageUrl / original image
+  designImageUrl?: string; // optional alias for largeImageUrl / original image
   createdAt: string; // from design.createdAt
   designCreatedAt?: string;
   designUpdatedAt?: string;

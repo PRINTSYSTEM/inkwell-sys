@@ -1857,7 +1857,7 @@ export default function DesignDetailPage() {
             <div className="flex-1 min-h-0 flex">
               {/* File preview */}
               <div className="w-1/2 shrink-0 border-r p-4 flex flex-col gap-4 bg-muted/20">
-                {!d.designImageUrl && !d.designFileUrl && !d.excelFileUrl ? (
+                {!d.designImageUrl && !d.designThumbnailUrl && !(d as any).thumbnailUrl && !d.designFileUrl && !d.excelFileUrl ? (
                   <Card
                     className="flex-1 flex flex-col items-center justify-center border-2 border-dashed cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all"
                     onClick={() => fileInputRef.current?.click()}
@@ -1895,22 +1895,23 @@ export default function DesignDetailPage() {
                       }}
                     >
                       <div
-                        className={`relative aspect-square group ${d.designImageUrl ? "cursor-pointer" : ""
-                          }`}
-                        onClick={() =>
-                          d.designImageUrl &&
-                          setViewingImage({
-                            url: d.designImageUrl,
-                            title: "File thiết kế",
-                          })
-                        }
+                        className={`relative aspect-square group ${d.designImageUrl || d.designThumbnailUrl ? "cursor-pointer" : ""}`}
+                        onClick={() => {
+                          const fullUrl = d.designImageUrl || d.designThumbnailUrl || (d as any).thumbnailUrl;
+                          if (fullUrl) {
+                            setViewingImage({
+                              url: fullUrl,
+                              title: "File thiết kế",
+                            });
+                          }
+                        }}
                       >
                         <img
-                          src={d.designImageUrl || "/placeholder.svg"}
+                          src={d.designThumbnailUrl || (d as any).thumbnailUrl || d.designImageUrl || "/placeholder.svg"}
                           alt="Design preview"
                           className="w-full h-full object-cover"
                         />
-                        {d.designImageUrl && (
+                        {(d.designImageUrl || d.designThumbnailUrl || (d as any).thumbnailUrl) && (
                           <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                             <div className="flex flex-col items-center gap-2">
                               <Eye className="h-8 w-8 text-white" />

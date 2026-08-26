@@ -229,12 +229,13 @@ export function DetailOrderInfoCard({
                   <div
                     className="relative aspect-[21/9] w-full overflow-hidden rounded-md border border-muted-foreground/10 bg-muted/5 group cursor-zoom-in"
                     onClick={() => {
-                      setViewingImageUrl(order.imageUrl);
+                      const fullUrl = order.imageUrl || order.proofingImageUrl || order.proofingImageUrlConverted || order.thumbnailUrl;
+                      setViewingImageUrl(fullUrl);
                       setImageViewerOpen(true);
                     }}
                   >
                     <img
-                      src={order.imageUrl}
+                      src={order.thumbnailUrl || order.imageUrl}
                       alt="Bình bài"
                       className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
                     />
@@ -245,20 +246,23 @@ export function DetailOrderInfoCard({
                 )}
 
                 {/* Multi-image display */}
-                {order.images && order.images.map((img: any, idx: number) => (
-                  <div
-                    key={img.id || idx}
-                    className="relative aspect-[16/10] w-full overflow-hidden rounded-md border border-muted-foreground/10 bg-muted/5 group cursor-zoom-in"
-                  >
-                    <img
-                      src={img.imageUrl}
-                      alt={`Ảnh bình bài ${idx + 1}`}
-                      className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
-                      onClick={() => {
-                        setViewingImageUrl(img.imageUrl);
-                        setImageViewerOpen(true);
-                      }}
-                    />
+                {order.images && order.images.map((img: any, idx: number) => {
+                  const thumbUrl = img.thumbnailUrl || img.imageUrl;
+                  const fullUrl = img.imageUrl || img.originalUrl || img.thumbnailUrl;
+                  return (
+                    <div
+                      key={img.id || idx}
+                      className="relative aspect-[16/10] w-full overflow-hidden rounded-md border border-muted-foreground/10 bg-muted/5 group cursor-zoom-in"
+                    >
+                      <img
+                        src={thumbUrl}
+                        alt={`Ảnh bình bài ${idx + 1}`}
+                        className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
+                        onClick={() => {
+                          setViewingImageUrl(fullUrl);
+                          setImageViewerOpen(true);
+                        }}
+                      />
                     
                     {/* Maximize Icon */}
                     <div 
@@ -281,7 +285,8 @@ export function DetailOrderInfoCard({
                       </button>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ) : (
