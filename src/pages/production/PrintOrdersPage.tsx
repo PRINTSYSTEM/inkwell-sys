@@ -982,16 +982,12 @@ export default function PrintOrdersPage() {
                               <Eye className="h-3.5 w-3.5 text-blue-500 opacity-80" />
                             </button>
 
-                            <Badge className="bg-amber-500 text-white font-extrabold text-[10px] px-2 py-0.5 shadow-2xs animate-pulse">
-                              ⚡ Đang in...
-                            </Badge>
-
                             {isRedispatchedReturned && (
                               <Badge
-                                className="bg-rose-100 text-rose-800 border-rose-300 font-extrabold text-[10px] px-2 py-0.5 shadow-2xs flex items-center gap-1"
-                                title={returnReason ? `Lý do trả về trước đó: ${returnReason}` : "Bài đã được xử lý & điều lệnh lại sau khi bị trả về"}
+                                className="bg-sky-50 text-sky-800 border-sky-300 font-bold text-[9.5px] px-1.5 py-0 flex items-center gap-1 w-fit shadow-2xs"
+                                title={returnReason ? `Lý do xử lý/trả về trước đó: ${returnReason}` : "Bài đã được Điều lệnh chỉnh sửa & điều lại"}
                               >
-                                <RotateCcw className="h-3 w-3 text-rose-600 shrink-0" />
+                                <RotateCcw className="h-2.5 w-2.5 text-sky-600 shrink-0" />
                                 {returnTypeDisplayName || (returnType === "dispatch" ? "Điều lại từ trả về" : "Trả về in lại")}
                               </Badge>
                             )}
@@ -1022,8 +1018,9 @@ export default function PrintOrdersPage() {
                         </div>
                       </div>
 
-                      {/* Actions for Active Printing Job */}
-                      <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end self-end sm:self-center">
+                      {/* Actions for Active Printing Job: Lịch sử -> Đang in / Tạm dừng -> Hoàn thành -> Trả về */}
+                      <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end self-end sm:self-center">
+                        {/* 1. Lịch sử */}
                         <Button
                           variant="outline"
                           size="sm"
@@ -1034,17 +1031,23 @@ export default function PrintOrdersPage() {
                           <History className="h-3.5 w-3.5 mr-1 text-slate-500" /> Lịch sử
                         </Button>
 
+                        {/* 2. Đang in Status & Tạm dừng Button */}
+                        <Badge className="bg-amber-500 text-white font-extrabold text-xs px-2.5 py-1.5 shadow-2xs flex items-center gap-1.5 animate-pulse rounded-lg">
+                          <Sparkles className="h-3.5 w-3.5 fill-current" /> Đang in...
+                        </Badge>
+
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => handleOpenPauseDialog(item)}
                           disabled={pauseMutation.isPending}
-                          className="h-8 text-xs font-bold text-red-700 bg-red-50/80 border-red-200 hover:bg-red-100 rounded-lg px-2.5 cursor-pointer shadow-2xs"
+                          className="h-8 text-xs font-bold text-amber-800 bg-amber-50 border-amber-300 hover:bg-amber-100 rounded-lg px-2.5 cursor-pointer shadow-2xs"
                           title="Tạm dừng lệnh in này và đưa xuống cuối hàng chờ"
                         >
-                          <Pause className="h-3.5 w-3.5 mr-1 text-red-600" /> Tạm dừng
+                          <Pause className="h-3.5 w-3.5 mr-1 text-amber-600" /> Tạm dừng
                         </Button>
 
+                        {/* 3. Hoàn thành */}
                         <Button
                           size="sm"
                           onClick={() => handleDirectComplete(item.id)}
@@ -1059,6 +1062,7 @@ export default function PrintOrdersPage() {
                           Hoàn thành
                         </Button>
 
+                        {/* 4. Trả về */}
                         <Button
                           variant="outline"
                           size="sm"
@@ -1082,7 +1086,7 @@ export default function PrintOrdersPage() {
             <div className="p-3 px-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between font-bold text-xs text-slate-800">
               <div className="flex items-center gap-2">
                 <Layers className="h-4 w-4 text-[#93631F]" />
-                <span>Hàng Chờ In ({queuedItems.length} bài)</span>
+                <span>Bài Chờ In ({queuedItems.length} bài)</span>
               </div>
               <span className="text-[11px] font-normal text-slate-500 flex items-center gap-1">
                 <GripVertical className="h-3.5 w-3.5 text-slate-400 inline" />
@@ -1295,13 +1299,13 @@ export default function PrintOrdersPage() {
                         </TableCell>
 
                         {/* Chất liệu & Quy cách */}
-                        <TableCell className="py-1.5 px-2">
-                          <div className="flex flex-col text-[11px] text-slate-900 leading-tight">
-                            <span className="font-bold truncate">
+                        <TableCell className="py-2 px-2">
+                          <div className="flex flex-col text-slate-900 leading-tight gap-0.5">
+                            <span className="font-extrabold text-xs text-slate-900 truncate">
                               {item.materialTypeName || (po?.proofingOrder as any)?.materialType?.name || "—"}
                               {item.basisWeight ? ` ${item.basisWeight}g` : ""}
                             </span>
-                            <span className="text-[10px] font-semibold text-slate-700">Khổ: {item.paperSizeName || "—"}</span>
+                            <span className="text-[11px] font-semibold text-slate-600">Khổ: <strong className="text-slate-800 font-mono">{item.paperSizeName || "—"}</strong></span>
                           </div>
                         </TableCell>
 
@@ -1310,18 +1314,9 @@ export default function PrintOrdersPage() {
                           {totalQty.toLocaleString("vi-VN")} tờ
                         </TableCell>
 
-                        {/* Thời gian: Điều lệnh & Bình bài */}
-                        <TableCell className="py-1.5 px-2">
-                          <div className="flex flex-col gap-1 text-[11px] font-mono leading-tight">
-                            <div className="flex items-center gap-1.5" title="Thời gian điều lệnh">
-                              <span className="text-[9.5px] font-sans font-bold text-amber-900 bg-amber-100 border border-amber-300 px-1 py-0.5 rounded shrink-0 shadow-2xs">Điều lệnh</span>
-                              <span className="font-extrabold text-slate-900">{formatDateTime(item.dispatchedAt)}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5" title="Thời gian hoàn thành bình bài">
-                              <span className="text-[9.5px] font-sans font-bold text-blue-900 bg-blue-100 border border-blue-300 px-1 py-0.5 rounded shrink-0 shadow-2xs">Bình bài</span>
-                              <span className="font-bold text-slate-800">{formatDateTime(item.productionOrder?.proofingOrder?.completedAt || item.impositionCompletedAt || item.impositionDate || item.productionOrder?.proofingOrder?.updatedAt || item.productionOrder?.createdAt)}</span>
-                            </div>
-                          </div>
+                        {/* Thời gian Điều lệnh */}
+                        <TableCell className="py-1.5 px-2 font-mono text-[11.5px] font-extrabold text-slate-900">
+                          {formatDateTime(item.dispatchedAt)}
                         </TableCell>
 
                         {/* Trạng thái Hàng chờ */}
@@ -1400,7 +1395,7 @@ export default function PrintOrdersPage() {
                     className="h-3.5 w-3.5 text-[#93631F]"
                   />
                   <label htmlFor="select-all-not-queued" className="cursor-pointer font-bold text-xs text-slate-800 flex items-center gap-1.5">
-                    <span>Chưa Vào Hàng Chờ</span>
+                    <span>Bài chưa in</span>
                     <Badge className="bg-slate-200 text-slate-800 font-extrabold text-[10px] px-2 py-0">
                       {filteredNotQueuedItems.length} / {notQueuedItems.length} bài
                     </Badge>
@@ -1532,62 +1527,62 @@ export default function PrintOrdersPage() {
                                   : "hover:bg-slate-50/70"
                             )}
                           >
-                                <TableCell className="text-center py-1.5 px-2">
-                                  <div className="flex items-center justify-center gap-1.5">
-                                    <span className="text-[11px] font-bold text-slate-700">{index + 1}</span>
-                                    <Checkbox
-                                      checked={isSelected}
-                                      onCheckedChange={() => handleToggleSelectNotQueued(item.id)}
-                                      onClick={(e) => e.stopPropagation()}
-                                      className="h-3.5 w-3.5 text-[#93631F]"
-                                    />
-                                  </div>
-                                </TableCell>
+                            <TableCell className="text-center py-1.5 px-2">
+                              <div className="flex items-center justify-center gap-1.5">
+                                <span className="text-[11px] font-bold text-slate-700">{index + 1}</span>
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={() => handleToggleSelectNotQueued(item.id)}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="h-3.5 w-3.5 text-[#93631F]"
+                                />
+                              </div>
+                            </TableCell>
 
-                                <TableCell className="text-center py-1.5 px-1" onClick={(e) => e.stopPropagation()}>
-                                  <div
-                                    onClick={() => fullImage && setViewingImageUrl(fullImage)}
-                                    className={cn(
-                                      "h-8 w-8 bg-slate-100 rounded border border-slate-200 mx-auto overflow-hidden transition-all",
-                                      fullImage && "cursor-pointer hover:opacity-80 hover:ring-2 hover:ring-amber-500/80 shadow-2xs"
-                                    )}
-                                    title={fullImage ? "Bấm để xem ảnh phóng to" : undefined}
+                            <TableCell className="text-center py-1.5 px-1" onClick={(e) => e.stopPropagation()}>
+                              <div
+                                onClick={() => fullImage && setViewingImageUrl(fullImage)}
+                                className={cn(
+                                  "h-8 w-8 bg-slate-100 rounded border border-slate-200 mx-auto overflow-hidden transition-all",
+                                  fullImage && "cursor-pointer hover:opacity-80 hover:ring-2 hover:ring-amber-500/80 shadow-2xs"
+                                )}
+                                title={fullImage ? "Bấm để xem ảnh phóng to" : undefined}
+                              >
+                                {thumbnail ? (
+                                  <img src={thumbnail} alt={proofingCode} className="h-full w-full object-cover" />
+                                ) : (
+                                  <div className="h-full w-full flex items-center justify-center text-slate-400">
+                                    <ImageIcon className="h-3.5 w-3.5" />
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+
+                            {/* Mã Bình bài - Clickable link to ReadOnlyProofingDetailModal */}
+                            <TableCell className="py-1.5 px-2 font-mono font-bold text-slate-900">
+                              <div className="flex flex-col gap-0.5">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenProofingDetail(item);
+                                  }}
+                                  className="text-blue-600 hover:underline cursor-pointer font-bold flex items-center gap-1 text-left"
+                                  title="Bấm để xem thông tin bình bài (Read-Only)"
+                                >
+                                  <span>{proofingCode}</span>
+                                  <Eye className="h-3 w-3 text-blue-500 shrink-0" />
+                                </button>
+                                {isRedispatchedReturned && (
+                                  <Badge
+                                    className="bg-sky-50 text-sky-800 border-sky-300 font-bold text-[9.5px] px-1.5 py-0 flex items-center gap-1 w-fit shadow-2xs"
+                                    title={returnReason ? `Lý do xử lý/trả về trước đó: ${returnReason}` : "Bài đã được Điều lệnh chỉnh sửa & điều lại"}
                                   >
-                                    {thumbnail ? (
-                                      <img src={thumbnail} alt={proofingCode} className="h-full w-full object-cover" />
-                                    ) : (
-                                      <div className="h-full w-full flex items-center justify-center text-slate-400">
-                                        <ImageIcon className="h-3.5 w-3.5" />
-                                      </div>
-                                    )}
-                                  </div>
-                                </TableCell>
-
-                                {/* Mã Bình bài - Clickable link to ReadOnlyProofingDetailModal */}
-                                <TableCell className="py-1.5 px-2 font-mono font-bold text-slate-900">
-                                  <div className="flex flex-col gap-0.5">
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleOpenProofingDetail(item);
-                                      }}
-                                      className="text-blue-600 hover:underline cursor-pointer font-bold flex items-center gap-1 text-left"
-                                      title="Bấm để xem thông tin bình bài (Read-Only)"
-                                    >
-                                      <span>{proofingCode}</span>
-                                      <Eye className="h-3 w-3 text-blue-500 shrink-0" />
-                                    </button>
-                                    {isRedispatchedReturned && (
-                                       <Badge
-                                         className="bg-sky-50 text-sky-800 border-sky-300 font-bold text-[9.5px] px-1.5 py-0 flex items-center gap-1 w-fit shadow-2xs"
-                                         title={returnReason ? `Lý do xử lý/trả về trước đó: ${returnReason}` : "Bài đã được Điều lệnh chỉnh sửa & điều lại"}
-                                       >
-                                         <RotateCcw className="h-2.5 w-2.5 text-sky-600 shrink-0" />
-                                         Điều lệnh đã chỉnh sửa
-                                       </Badge>
-                                     )}
-                                  </div>
-                                </TableCell>
+                                    <RotateCcw className="h-2.5 w-2.5 text-sky-600 shrink-0" />
+                                    Điều lệnh đã chỉnh sửa
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
 
                             <TableCell className="py-1.5 px-2">
                               <Badge variant="outline" className={getDesignTypeBadgeStyle(po?.designType?.code)}>
@@ -1595,12 +1590,12 @@ export default function PrintOrdersPage() {
                               </Badge>
                             </TableCell>
 
-                            <TableCell className="py-1.5 px-2">
-                              <div className="flex flex-col text-[11px] text-slate-900 leading-tight">
-                                <span className="font-bold truncate">
+                            <TableCell className="py-2 px-2">
+                              <div className="flex flex-col text-slate-900 leading-tight gap-0.5">
+                                <span className="font-extrabold text-xs text-slate-900 truncate">
                                   {item.materialTypeName || (po?.proofingOrder as any)?.materialType?.name || "—"}
                                 </span>
-                                <span className="text-[10px] font-semibold text-slate-700">Khổ: {item.paperSizeName || "—"}</span>
+                                <span className="text-[11px] font-semibold text-slate-600">Khổ: <strong className="text-slate-800 font-mono">{item.paperSizeName || "—"}</strong></span>
                               </div>
                             </TableCell>
 
@@ -1608,18 +1603,9 @@ export default function PrintOrdersPage() {
                               {totalQty.toLocaleString("vi-VN")} tờ
                             </TableCell>
 
-                            {/* Thời gian: Điều lệnh & Bình bài */}
-                            <TableCell className="py-1.5 px-2">
-                              <div className="flex flex-col gap-1 text-[11px] font-mono leading-tight">
-                                <div className="flex items-center gap-1.5" title="Thời gian điều lệnh">
-                                  <span className="text-[9.5px] font-sans font-bold text-amber-900 bg-amber-100 border border-amber-300 px-1 py-0.5 rounded shrink-0 shadow-2xs">Điều lệnh</span>
-                                  <span className="font-extrabold text-slate-900">{formatDateTime(item.dispatchedAt)}</span>
-                                </div>
-                                <div className="flex items-center gap-1.5" title="Thời gian hoàn thành bình bài">
-                                  <span className="text-[9.5px] font-sans font-bold text-blue-900 bg-blue-100 border border-blue-300 px-1 py-0.5 rounded shrink-0 shadow-2xs">Bình bài</span>
-                                  <span className="font-bold text-slate-800">{formatDateTime(item.productionOrder?.proofingOrder?.completedAt || item.impositionCompletedAt || item.impositionDate || item.productionOrder?.proofingOrder?.updatedAt || item.productionOrder?.createdAt)}</span>
-                                </div>
-                              </div>
+                            {/* Thời gian Điều lệnh */}
+                            <TableCell className="py-1.5 px-2 font-mono text-[11.5px] font-extrabold text-slate-900">
+                              {formatDateTime(item.dispatchedAt)}
                             </TableCell>
 
                             <TableCell className="text-center py-1.5 px-2 pr-3" onClick={(e) => e.stopPropagation()}>

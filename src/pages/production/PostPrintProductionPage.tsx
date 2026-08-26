@@ -788,7 +788,6 @@ export default function PostPrintProductionPage() {
                         <TableHead className="w-[110px] text-center">LOẠI BÀI</TableHead>
                         <TableHead className="w-[190px]">CHẤT LIỆU</TableHead>
                         <TableHead className="w-[170px]">MỐC THỜI GIAN</TableHead>
-                        <TableHead className="w-[100px] text-center">LỆNH IN</TableHead>
                         {POST_PRINT_PROCESSES.map((proc) => (
                           <TableHead key={proc.key} className="w-[140px] text-center font-bold text-slate-800">
                             {proc.label}
@@ -918,12 +917,6 @@ export default function PostPrintProductionPage() {
                               </div>
                             </TableCell>
 
-                            {/* Column 5: LỆNH IN */}
-                            <TableCell className="text-center py-2.5">
-                              <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 font-bold text-[10px] px-2 py-1">
-                                Hoàn thành
-                              </Badge>
-                            </TableCell>
 
                             {/* Dynamic Post-Print Process Columns */}
                             {POST_PRINT_PROCESSES.map((proc) => {

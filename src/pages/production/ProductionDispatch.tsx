@@ -22,6 +22,7 @@ import {
   Package,
   RotateCcw,
   History,
+  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -375,7 +376,7 @@ export default function ProductionDispatch() {
     // Giấy condition (operator confirm paper available - reads BE item.isPaperReady or local check)
     const totalQty = item.totalQuantity ?? proofingOrder?.totalQuantity ?? 1000;
     const giayOk = checkedGiayMap[item.id] !== undefined ? checkedGiayMap[item.id] : (item.isPaperReady === true);
-    const giayLabel = `${totalQty.toLocaleString("vi-VN")}/${totalQty.toLocaleString("vi-VN")} tờ`;
+    const giayLabel = `${totalQty.toLocaleString("vi-VN")} tờ`;
 
     // Sóng condition (reads BE item.isFluteReady or local check)
     const matName = item.materialTypeName || (proofingOrder as any)?.materialType?.name || (proofingOrder as any)?.customPaperSize || "";
@@ -1080,6 +1081,7 @@ export default function ProductionDispatch() {
                       <TableHead className="w-[210px] py-2 px-2">Chất liệu & Quy cách</TableHead>
                       <TableHead className="min-w-[340px] py-2 px-2">Điều kiện sản xuất</TableHead>
                       <TableHead className="w-[120px] py-2 px-2">Trạng thái</TableHead>
+                      <TableHead className="w-[130px] py-2 px-2">Thời gian bình</TableHead>
                       <TableHead className="w-[210px] min-w-[210px] py-2 px-2">Ghi chú</TableHead>
                       <TableHead className="w-[210px] min-w-[210px] text-center py-2 px-2">Thao tác</TableHead>
                     </TableRow>
@@ -1139,18 +1141,16 @@ export default function ProductionDispatch() {
 
                           {/* Mã bài - Opens Read-Only Proofing Detail Modal */}
                           <TableCell className="py-1.5 px-2">
-                            <div className="flex flex-col gap-1 items-start">
-                              <span
-                                className="font-mono text-xs font-bold text-blue-600 hover:underline cursor-pointer"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleOpenDetailModal(item);
-                                }}
-                                title="Bấm để xem chi tiết bài bình (Read-Only Modal)"
-                              >
-                                {proofingCode}
-                              </span>
-                            </div>
+                            <span
+                              className="font-mono text-xs font-bold text-blue-600 hover:underline cursor-pointer"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenDetailModal(item);
+                              }}
+                              title="Bấm để xem chi tiết bài bình (Read-Only Modal)"
+                            >
+                              {proofingCode}
+                            </span>
                           </TableCell>
 
                           {/* Thumbnail */}
@@ -1187,16 +1187,16 @@ export default function ProductionDispatch() {
                           </TableCell>
 
                           {/* Chất liệu & Quy cách */}
-                          <TableCell className="py-1.5 px-2">
-                            <div className="flex flex-col text-[11px] leading-tight">
-                              <span className="font-bold text-slate-900 truncate" title={materialName}>
+                          <TableCell className="py-2 px-2">
+                            <div className="flex flex-col text-slate-900 leading-tight gap-0.5">
+                              <span className="font-extrabold text-xs text-slate-900 truncate" title={materialName}>
                                 {materialName}{basisWeight ? ` ${basisWeight}g` : ""}
                               </span>
-                              <span className="text-[10px] text-slate-500">
-                                Khổ: <strong className="text-slate-700">{paperSizeName}</strong> • {itemCount} mã hàng
+                              <span className="text-[11px] font-semibold text-slate-600">
+                                Khổ: <strong className="text-slate-800 font-mono">{paperSizeName}</strong> • {itemCount} mã hàng
                               </span>
-                              <span className="text-[10px] text-slate-500">
-                                Số giấy in: <strong className="text-slate-800 font-bold">{totalQty.toLocaleString("vi-VN")} tờ</strong>
+                              <span className="text-[11px] font-semibold text-slate-600">
+                                Số giấy in: <strong className="text-amber-900 font-bold font-mono">{totalQty.toLocaleString("vi-VN")} tờ</strong>
                               </span>
                             </div>
                           </TableCell>
@@ -1512,6 +1512,25 @@ export default function ProductionDispatch() {
                             </div>
                           </TableCell>
 
+                          {/* Thời gian bình bài */}
+                          <TableCell className="py-1.5 px-2">
+                            {(() => {
+                              const prepressTime = formatDateTime(
+                                item.productionOrder?.proofingOrder?.completedAt ||
+                                item.impositionCompletedAt ||
+                                item.impositionDate ||
+                                item.productionOrder?.proofingOrder?.updatedAt ||
+                                item.productionOrder?.createdAt
+                              );
+                              return (
+                                <span className="text-[11px] font-mono font-bold text-slate-800 flex items-center gap-1">
+                                  <Clock className="h-3 w-3 text-slate-400 shrink-0" />
+                                  {prepressTime}
+                                </span>
+                              );
+                            })()}
+                          </TableCell>
+
                           {/* Ghi chú */}
                           <TableCell className="py-1.5 px-2" onClick={(e) => e.stopPropagation()}>
                             {isReturned ? (
@@ -1704,7 +1723,29 @@ export default function ProductionDispatch() {
                           return (
                             <TableRow key={item.id} className="hover:bg-slate-50/70 border-b border-slate-100">
                               <TableCell className="text-center py-2 px-2 text-slate-400 font-medium">{index + 1}</TableCell>
-                              <TableCell className="py-2 px-2 font-mono text-xs font-bold text-blue-600">{proofingCode}</TableCell>
+                              <TableCell className="py-2 px-2">
+                                <div className="flex flex-col gap-0.5 items-start">
+                                  <span className="font-mono text-xs font-bold text-blue-600">{proofingCode}</span>
+                                  {(() => {
+                                    const prepressTime = formatDateTime(
+                                      item.productionOrder?.proofingOrder?.completedAt ||
+                                      item.impositionCompletedAt ||
+                                      item.impositionDate ||
+                                      item.productionOrder?.proofingOrder?.updatedAt ||
+                                      item.productionOrder?.createdAt
+                                    );
+                                    return prepressTime !== "—" ? (
+                                      <span
+                                        className="text-[9.5px] font-mono text-slate-500 font-medium flex items-center gap-1 shrink-0"
+                                        title="Thời gian hoàn thành bình bài"
+                                      >
+                                        <Clock className="h-2.5 w-2.5 text-slate-400 shrink-0" />
+                                        {prepressTime}
+                                      </span>
+                                    ) : null;
+                                  })()}
+                                </div>
+                              </TableCell>
                               <TableCell className="py-2 px-2">
                                 <Badge variant="outline" className={cn("text-[10px] font-semibold px-2 py-0 rounded-full border", getDesignTypePillStyle(designTypeCode))}>
                                   {designTypeName}
