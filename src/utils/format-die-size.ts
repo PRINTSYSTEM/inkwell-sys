@@ -51,7 +51,9 @@ export function formatDesignDimensions(
  * Format die size display (handles width = 0 case)
  * If width is 0, only displays length x height
  */
-export function formatDieSize(die: DieResponse): string {
+export function formatDieSize(die?: DieResponse | null): string {
+  if (!die) return "—";
+
   // If die has length, width, height fields, use them to format
   if (
     die.length != null &&

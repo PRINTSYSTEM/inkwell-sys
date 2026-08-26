@@ -57,6 +57,8 @@ export const ROUTE_PATHS = {
     DISPATCH: "/productions/dispatch" as const,
     PROOFING: "/productions/proofing" as const,
     KCS: "/productions/kcs" as const,
+    PRINT_ORDERS: "/production/print-orders" as const,
+    POST_PRINT: "/production/post-print" as const,
   },
 
 

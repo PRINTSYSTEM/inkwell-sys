@@ -53,37 +53,6 @@ import { cn } from "@/lib/utils";
 
 type Designer = UserResponse;
 
-// Component to display KPI for a single designer
-function DesignerKpiCell({
-  designerId,
-  fromDate,
-  toDate,
-}: {
-  designerId: number | null;
-  fromDate: string;
-  toDate: string;
-}) {
-  const { data: kpiData, isLoading } = useUserKpi(
-    designerId,
-    { fromDate, toDate },
-    !!designerId
-  );
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center">
-        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  return (
-    <span className="text-sm font-medium">
-      {kpiData?.designsCompleted ?? 0}
-    </span>
-  );
-}
-
 export default function DesignersPage() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
@@ -105,14 +74,7 @@ export default function DesignersPage() {
   const [selectedYear, setSelectedYear] = useState<number>(
     new Date().getFullYear()
   );
-
-  // ====== Lấy danh sách designer (user.role = "design") với pagination và search ======
-  const { data, isLoading } = useUsers({
-    role: "design",
-    pageNumber: currentPage,
-    pageSize: itemsPerPage,
-    search: debouncedSearch || "",
-  });
+  const [kpiSortOrder, setKpiSortOrder] = useState<"asc" | "desc" | null>(null);
 
   // Calculate date range for selected month
   const monthDateRange = useMemo(() => {
@@ -124,14 +86,37 @@ export default function DesignersPage() {
     };
   }, [selectedMonth, selectedYear]);
 
+  // ====== Lấy danh sách designer (user.role = "design") gộp luôn KPI (1 request duy nhất) ======
+  const { data, isLoading } = useUsers({
+    role: "design",
+    pageNumber: currentPage,
+    pageSize: itemsPerPage,
+    search: debouncedSearch || "",
+    fromDate: monthDateRange.from,
+    toDate: monthDateRange.to,
+  });
+
   // Fetch team KPI
   const { data: teamKpi, isLoading: loadingTeamKpi } = useTeamKpi(
     { fromDate: monthDateRange.from, toDate: monthDateRange.to, role: "design" }
   );
 
-  const designers: Designer[] = data?.items ?? [];
+  const rawDesigners: Designer[] = data?.items ?? [];
   const totalCount = data?.total ?? 0;
   const totalPages = Math.ceil(totalCount / itemsPerPage) || 1;
+
+  // Client-side sort theo KPI Đã chốt in
+  const designers = useMemo(() => {
+    const list = [...rawDesigners];
+    if (kpiSortOrder) {
+      list.sort((a, b) => {
+        const kpiA = a.kpi?.designsCompleted ?? 0;
+        const kpiB = b.kpi?.designsCompleted ?? 0;
+        return kpiSortOrder === "asc" ? kpiA - kpiB : kpiB - kpiA;
+      });
+    }
+    return list;
+  }, [rawDesigners, kpiSortOrder]);
 
   // Calculate stats from current page data (could be enhanced with separate stats API)
   const activeCount = designers.filter((d) => d.isActive).length;
@@ -437,8 +422,24 @@ export default function DesignersPage() {
                     <TableHead className="h-9 text-xs font-semibold">
                       Liên hệ
                     </TableHead>
-                    <TableHead className="h-9 text-xs font-semibold">
-                      Đã chốt in
+                    <TableHead
+                      className="h-9 text-xs font-semibold cursor-pointer select-none hover:text-foreground"
+                      onClick={() =>
+                        setKpiSortOrder((prev) =>
+                          prev === null ? "desc" : prev === "desc" ? "asc" : null
+                        )
+                      }
+                      title="Bấm để sắp xếp theo số bài đã chốt in"
+                    >
+                      <div className="flex items-center gap-1">
+                        <span>Đã chốt in</span>
+                        {kpiSortOrder === "desc" && (
+                          <span className="text-[10px] text-blue-600 font-extrabold">↓</span>
+                        )}
+                        {kpiSortOrder === "asc" && (
+                          <span className="text-[10px] text-blue-600 font-extrabold">↑</span>
+                        )}
+                      </div>
                     </TableHead>
                     <TableHead className="h-9 text-xs font-semibold">
                       Trạng thái
@@ -510,11 +511,9 @@ export default function DesignersPage() {
                           </div>
                         </TableCell>
                         <TableCell className="py-2">
-                          <DesignerKpiCell
-                            designerId={designer.id ?? null}
-                            fromDate={monthDateRange.from}
-                            toDate={monthDateRange.to}
-                          />
+                          <span className="text-sm font-bold text-blue-700 font-mono">
+                            {designer.kpi?.designsCompleted ?? 0}
+                          </span>
                         </TableCell>
                         <TableCell
                           className="py-2"

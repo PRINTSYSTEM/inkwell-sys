@@ -115,6 +115,8 @@ export const API_SUFFIX = {
   CUSTOMER_DEBT_STATEMENT_BY_RANGE: (id: number) => `/customers/${id}/debt-statement-by-range`,
   CUSTOMER_MONTHLY_DEBT: (id: number) => `/customers/${id}/monthly-debt`,
   CUSTOMER_DEBT_SUMMARY: (id: number) => `/customers/${id}/debt-summary`,
+  CUSTOMER_RECALCULATE_DEBT: (id: number) => `/customers/${id}/recalculate-debt`,
+  CUSTOMER_RECALCULATE_ALL_DEBTS: "/customers/recalculate-all-debts",
   CUSTOMER_STATISTICS: (id: number) => `/customers/${id}/statistics`,
   CUSTOMER_FAVORITE_STATS: (id: number) => `/customers/${id}/favorite-stats`,
   CUSTOMER_ORDERS: (id: number) => `/customers/${id}/order-history`,
@@ -245,6 +247,9 @@ export const API_SUFFIX = {
   VENDOR_SETTLE_DEBT_BATCH: "/vendors/debt/settle-batch",
   VENDOR_DEBT_SETTLEMENTS: (id: number) => `/vendors/${id}/debt/settlements`,
   VENDOR_DELETE_DEBT_SETTLEMENT: (historyId: number) => `/vendors/debt/settlements/${historyId}`,
+  VENDOR_OTHER_COST: (id: number) => `/vendors/${id}/debt/other-cost`,
+  VENDOR_OTHER_COSTS: (id: number) => `/vendors/${id}/debt/other-costs`,
+  VENDOR_DELETE_OTHER_COST: (historyId: number) => `/vendors/debt/other-costs/${historyId}`,
 
   // ========== DIES ==========
   DIES: "/dies",
@@ -329,14 +334,39 @@ export const API_SUFFIX = {
     `/production-orders/steps/${id}/assign`,
   PRODUCTION_STEP_STATUS: (id: number) =>
     `/production-orders/steps/${id}/status`,
+  PRODUCTION_STEP_HISTORY: (id: number) =>
+    `/production-orders/steps/${id}/history`,
   PRODUCTION_ORDERS_KCS: "/production-orders/kcs",
   PRODUCTION_ORDERS_KCS_SUMMARY: "/production-orders/kcs/design-type-summary",
+  PRODUCTION_ORDERS_DESIGN_TYPE_SUMMARY: "/production-orders/design-type-summary",
+  PRODUCTION_POST_PRINT: "/production-orders/post-print",
+  PRODUCTION_POST_PRINT_COMPLETED: "/production-orders/post-print/completed",
+  PRODUCTION_POST_PRINT_COUNTS: "/production-orders/post-print/counts",
+
+  // ========== PRINT ORDERS ==========
+  PRINT_ORDERS: "/print-orders",
+  PRINT_ORDER_DISPATCH_CANDIDATES: "/print-orders/dispatch-candidates",
+  PRINT_ORDER_DISPATCH_CANDIDATES_SUMMARY: "/print-orders/dispatch-candidates/summary",
+  PRINT_ORDER_DISPATCH: "/print-orders/dispatch",
+  PRINT_ORDER_COUNTS: "/print-orders/counts",
+  PRINT_ORDER_ENQUEUE: "/print-orders/enqueue",
+  PRINT_ORDER_DEQUEUE: (id: number) => `/print-orders/${id}/dequeue`,
+  PRINT_ORDER_START: (id: number) => `/print-orders/${id}/start`,
+  PRINT_ORDER_PAUSE: (id: number) => `/print-orders/${id}/pause`,
+  PRINT_ORDER_COMPLETE: (id: number) => `/print-orders/${id}/complete`,
+  PRINT_ORDER_RETURN: (id: number) => `/print-orders/${id}/return`,
+  PRINT_ORDER_CONFIRM_PAPER: (id: number) => `/print-orders/dispatch-candidates/${id}/confirm-paper`,
+  PRINT_ORDER_CONFIRM_FLUTE: (id: number) => `/print-orders/dispatch-candidates/${id}/confirm-flute`,
+  PRINT_ORDER_REORDER: "/print-orders/reorder",
+  PRINT_ORDER_RETURN_TO_PROOFING: (id: number) => `/print-orders/dispatch-candidates/${id}/return-to-proofing`,
+  PRINT_ORDER_UNDO_DISPATCH: (id: number) => `/print-orders/${id}/undo-dispatch`,
+  PRINT_ORDER_HISTORY: (id: number) => `/print-orders/${id}/history`,
+  PRODUCTION_ORDER_PRINT_LABEL: (poId: number, itemId: number) =>
+    `/production-orders/${poId}/items/${itemId}/print-label`,
 
   // ========== OUTSOURCE ORDERS ==========
   OUTSOURCE_ORDERS: "/outsource-orders",
   OUTSOURCE_ORDER_BY_ID: (id: number) => `/outsource-orders/${id}`,
-  PRODUCTION_ORDER_PRINT_LABEL: (poId: number, itemId: number) =>
-    `/production-orders/${poId}/items/${itemId}/print-label`,
 
   // ========== DEFECT RECORDS ==========
   DEFECT_RECORDS: "/defect-records",
@@ -349,6 +379,7 @@ export const API_SUFFIX = {
   DELIVERY_NOTES: "/delivery-notes",
   DELIVERY_NOTE_STATS: "/delivery-notes/stats",
   DELIVERY_NOTE_BY_ID: (id: number) => `/delivery-notes/${id}`,
+  DELIVERY_NOTE_REVERSE: (id: number) => `/delivery-notes/${id}/reverse`,
   DELIVERY_NOTE_STATUS: (id: number) => `/delivery-notes/${id}/status`,
   DELIVERY_NOTE_EXPORT_PDF: (id: number) => `/delivery-notes/${id}/export-pdf`,
   DELIVERY_NOTE_RECREATE: "/delivery-notes/recreate",
@@ -360,6 +391,8 @@ export const API_SUFFIX = {
   DELIVERY_NOTE_ADD_LINES: (id: number | string) => `/delivery-notes/${id}/lines`,
   DELIVERY_NOTE_LINE_QUANTITY: (lineId: number | string) =>
     `/delivery-notes/lines/${lineId}/quantity`,
+  DELIVERY_NOTE_LINE_REDELIVERY: (lineId: number | string) =>
+    `/delivery-notes/lines/${lineId}/redelivery`,
   DELIVERY_NOTE_LINE: (lineId: number | string) =>
     `/delivery-notes/lines/${lineId}`,
   DELIVERY_NOTE_RETURNABLE_LINES: (id: number) => `/delivery-notes/${id}/returnable-lines`,

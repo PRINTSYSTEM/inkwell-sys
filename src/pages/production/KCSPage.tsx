@@ -13,6 +13,7 @@ import { defectRecordKeys } from "@/hooks/use-defect-record";
 import { useAuth } from "@/hooks/use-auth";
 import { useDesignTypeList } from "@/hooks/use-design-type";
 import { useDesign } from "@/hooks/use-design";
+import { checkIsDecalSet } from "@/types/proofing";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,10 +40,14 @@ import {
   ClipboardList,
   CheckCircle2,
   AlertTriangle,
+  BarChart2,
+  Eye,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
+import { ReadOnlyProofingDetailModal } from "@/components/proofing/ReadOnlyProofingDetailModal";
 import { AsyncSelect } from "@/components/forms/AsyncSelect";
 import {
   Select,
@@ -88,8 +93,9 @@ export default function KCSPage() {
   const [printDefaultQty, setPrintDefaultQty] = useState<number>(0);
   const [isPrintLabelOpen, setIsPrintLabelOpen] = useState(false);
 
-  // ImageViewer Dialog State
+  // ImageViewer & ProofingDetail Dialog State
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
+  const [viewingProofingOrderId, setViewingProofingOrderId] = useState<number | null>(null);
 
   const handleOpenPrintLabel = useCallback((poId: number, itemId: number, defaultQty: number) => {
     setPrintPoId(poId);
@@ -454,10 +460,10 @@ export default function KCSPage() {
               <TableHeader className="bg-muted/50 sticky top-0 z-10">
                 <TableRow>
                   <TableHead className="w-[130px] font-bold">Hình Bình Bài</TableHead>
-                  <TableHead className="w-[110px] font-bold">Mã BB</TableHead>
+                  <TableHead className="w-[200px] font-bold">Mã BB & Bài In</TableHead>
                   <TableHead className="w-[130px] font-bold">Hoàn thành BB</TableHead>
                   <TableHead className="w-[140px] font-bold">Loại thiết kế</TableHead>
-                  <TableHead className="font-bold">Danh sách mã hàng</TableHead>
+                  <TableHead className="font-bold">Danh sách mã hàng (Báo số KCS)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -467,6 +473,7 @@ export default function KCSPage() {
                     prod={prod}
                     onOpenPrintLabel={handleOpenPrintLabel}
                     onOpenImageViewer={handleOpenImageViewer}
+                    onOpenProofingDetail={(id) => setViewingProofingOrderId(id)}
                   />
                 ))}
               </TableBody>
@@ -519,7 +526,218 @@ export default function KCSPage() {
         itemId={printItemId}
         defaultQty={printDefaultQty}
       />
+
+      {/* Read-Only Proofing Detail Modal */}
+      <ReadOnlyProofingDetailModal
+        proofingOrderId={viewingProofingOrderId}
+        open={!!viewingProofingOrderId}
+        onOpenChange={(open) => !open && setViewingProofingOrderId(null)}
+      />
     </div>
+  );
+}
+
+function YieldComparisonTable({
+  productions,
+  onOpenImageViewer,
+  onOpenProofingDetail,
+}: {
+  productions: KcsProductionOrderResponse[];
+  onOpenImageViewer: (url: string) => void;
+  onOpenProofingDetail?: (proofingOrderId: number) => void;
+}) {
+  const flatItems = useMemo(() => {
+    const list: {
+      productionOrderId: number;
+      proofingOrderId?: number;
+      proofingOrderCode: string | null;
+      designTypeName: string | null;
+      materialTypeName?: string | null;
+      paperSizeName?: string | null;
+      basisWeight?: number | null;
+      specification?: string[] | string | null;
+      totalQuantity?: number | null;
+      item: KcsProductionOrderResponse["items"][number];
+      layoutImageUrl: string | null;
+    }[] = [];
+
+    productions.forEach((prod) => {
+      let layoutUrl: string | null = null;
+      if (prod.proofingOrderImages && prod.proofingOrderImages.length > 0) {
+        const img = prod.proofingOrderImages[0];
+        const url = img.thumbnailUrl || img.imageUrl;
+        if (url) {
+          layoutUrl = url.startsWith("http")
+            ? url
+            : `${(import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "")}/${url.replace(/^\//, "")}`;
+        }
+      }
+
+      (prod.items || []).forEach((item) => {
+        list.push({
+          productionOrderId: prod.productionOrderId,
+          proofingOrderId: prod.proofingOrderId,
+          proofingOrderCode: prod.proofingOrderCode,
+          designTypeName: prod.designTypeName,
+          materialTypeName: prod.materialTypeName,
+          paperSizeName: prod.paperSizeName,
+          basisWeight: prod.basisWeight,
+          specification: prod.specification,
+          totalQuantity: prod.totalQuantity,
+          item,
+          layoutImageUrl: layoutUrl,
+        });
+      });
+    });
+
+    return list;
+  }, [productions]);
+
+  return (
+    <Table>
+      <TableHeader className="bg-muted/50 sticky top-0 z-10 uppercase text-[11px] font-bold text-slate-700">
+        <TableRow>
+          <TableHead className="w-12 text-center py-2.5">#</TableHead>
+          <TableHead className="w-[180px] py-2.5">MÃ HÀNG / THIẾT KẾ</TableHead>
+          <TableHead className="w-[140px] py-2.5">MÃ BÌNH BÀI</TableHead>
+          <TableHead className="w-[220px] py-2.5">CHẤT LIỆU & QUY CÁCH</TableHead>
+          <TableHead className="w-[120px] text-right py-2.5">GIẤY ĐIỀU (TỜ)</TableHead>
+          <TableHead className="w-[130px] text-right py-2.5">BÁO SỐ THỰC TẾ</TableHead>
+          <TableHead className="w-[120px] text-right py-2.5">HIỆU SUẤT (%)</TableHead>
+          <TableHead className="w-[140px] text-center py-2.5">ĐÁNH GIÁ HAO HỤT</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {flatItems.length === 0 ? (
+          <TableRow>
+            <TableCell colSpan={8} className="py-12 text-center text-slate-400 italic">
+              Chưa có dữ liệu báo số để đối chiếu hiệu suất.
+            </TableCell>
+          </TableRow>
+        ) : (
+          flatItems.map((row, idx) => {
+            const totalQty = row.totalQuantity || 0;
+            const outputQty = row.item.outputQty || 0;
+            const yieldPct = totalQty > 0 ? (outputQty / totalQty) * 100 : 0;
+
+            let yieldBadge = null;
+            if (totalQty === 0) {
+              yieldBadge = (
+                <Badge variant="outline" className="bg-slate-100 text-slate-600 border-slate-200">
+                  Chưa có giấy điều
+                </Badge>
+              );
+            } else if (yieldPct >= 95) {
+              yieldBadge = (
+                <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 font-extrabold text-[10.5px]">
+                  Tốt ({yieldPct.toFixed(1)}%)
+                </Badge>
+              );
+            } else if (yieldPct >= 90) {
+              yieldBadge = (
+                <Badge className="bg-amber-100 text-amber-800 border-amber-300 font-extrabold text-[10.5px]">
+                  Đạt ({yieldPct.toFixed(1)}%)
+                </Badge>
+              );
+            } else {
+              yieldBadge = (
+                <Badge className="bg-rose-100 text-rose-800 border-rose-300 font-extrabold text-[10.5px]">
+                  Hao hụt cao ({yieldPct.toFixed(1)}%)
+                </Badge>
+              );
+            }
+
+            const specStr = Array.isArray(row.specification)
+              ? row.specification.join(" • ")
+              : typeof row.specification === "string"
+                ? row.specification
+                : "—";
+
+            return (
+              <TableRow
+                key={`${row.productionOrderId}-${row.item.productionOrderItemId}-${idx}`}
+                className="hover:bg-slate-50/80 transition-colors border-b border-slate-100 text-xs"
+              >
+                <TableCell className="text-center font-mono text-slate-400">{idx + 1}</TableCell>
+
+                <TableCell className="font-mono font-bold text-slate-900">
+                  <div className="flex items-center gap-2">
+                    {row.item.designImageUrl || row.item.designThumbnailUrl ? (
+                      <img
+                        src={row.item.designThumbnailUrl || row.item.designImageUrl || ""}
+                        alt="design"
+                        className="w-8 h-8 rounded border object-cover shrink-0 cursor-pointer"
+                        onClick={() =>
+                          onOpenImageViewer(
+                            row.item.designImageUrl || row.item.designThumbnailUrl || ""
+                          )
+                        }
+                      />
+                    ) : null}
+                    <div className="flex flex-col">
+                      <span className="text-blue-600 font-mono font-bold">{row.item.designCode || "—"}</span>
+                      {row.item.designName && (
+                        <span className="text-[11px] font-normal text-slate-500 truncate max-w-[130px]" title={row.item.designName}>
+                          {row.item.designName}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </TableCell>
+
+                <TableCell className="font-mono font-bold text-slate-800">
+                  <div className="flex flex-col">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (row.proofingOrderId && onOpenProofingDetail) {
+                          onOpenProofingDetail(row.proofingOrderId);
+                        }
+                      }}
+                      className="text-blue-600 font-mono font-bold hover:underline cursor-pointer flex items-center gap-1 text-left"
+                      title="Bấm để xem chi tiết bài bình"
+                    >
+                      <span>{row.proofingOrderCode || `PO-${row.productionOrderId}`}</span>
+                      <Eye className="h-3 w-3 text-blue-500 shrink-0 opacity-80" />
+                    </button>
+                    {row.designTypeName && (
+                      <span className="text-[10px] text-slate-400 font-normal">{row.designTypeName}</span>
+                    )}
+                  </div>
+                </TableCell>
+
+                <TableCell>
+                  <div className="flex flex-col text-[11px] leading-tight space-y-0.5">
+                    <span className="font-semibold text-slate-800">
+                      {row.materialTypeName || "—"}
+                      {row.basisWeight ? ` ${row.basisWeight}g` : ""}
+                      {row.paperSizeName ? ` (${row.paperSizeName})` : ""}
+                    </span>
+                    <span className="text-[10px] text-slate-400 truncate max-w-[200px]" title={specStr}>
+                      Quy cách: {specStr}
+                    </span>
+                  </div>
+                </TableCell>
+
+                <TableCell className="text-right font-mono font-bold text-slate-900">
+                  {totalQty > 0 ? `${totalQty.toLocaleString("vi-VN")} tờ` : "—"}
+                </TableCell>
+
+                <TableCell className="text-right font-mono font-bold text-emerald-700">
+                  {outputQty > 0 ? `${outputQty.toLocaleString("vi-VN")}` : "0"}
+                </TableCell>
+
+                <TableCell className="text-right font-mono font-black text-slate-900">
+                  {totalQty > 0 ? `${yieldPct.toFixed(1)}%` : "—"}
+                </TableCell>
+
+                <TableCell className="text-center">{yieldBadge}</TableCell>
+              </TableRow>
+            );
+          })
+        )}
+      </TableBody>
+    </Table>
   );
 }
 
@@ -551,18 +769,18 @@ const KcsItemRow = React.memo(function KcsItemRow({
   // Query design detail to get sidesClassification
   const { data: design } = useDesign(item.designId || null, !!item.designId);
 
-  const isDecal =
-    (prod.designTypeName || "").toLowerCase().includes("decal") ||
-    (design?.designType?.name || "").toLowerCase().includes("decal") ||
-    (design?.materialType?.name || "").toLowerCase().includes("decal");
-
-  const isBo = isDecal && design?.sidesClassification === "two_side";
+  const side = (item as any).side || "both";
+  const isDecalSet = checkIsDecalSet(design || (item as any));
+  const isBoBoth = isDecalSet && (side === "both" || !side);
 
   const formatQty = (qty: number | undefined | null) => {
     if (qty == null) return "0";
-    if (isBo) {
+    if (side === "front" || side === "back") {
+      return qty.toLocaleString("vi-VN");
+    }
+    if (isBoBoth) {
       const sets = Math.floor(qty / 2);
-      return `${qty.toLocaleString("vi-VN")} / ${sets.toLocaleString("vi-VN")} bộ`;
+      return `${sets.toLocaleString("vi-VN")} bộ`;
     }
     return qty.toLocaleString("vi-VN");
   };
@@ -578,11 +796,10 @@ const KcsItemRow = React.memo(function KcsItemRow({
 
   return (
     <div
-      className={`grid grid-cols-[1fr_auto] gap-3 p-2 border rounded-md transition-all items-start shadow-sm border-l-4 ${
-        hasValue
-          ? "bg-emerald-100/90 dark:bg-emerald-900/30 border-emerald-400 dark:border-emerald-800 border-l-emerald-600 dark:border-l-emerald-500 hover:bg-emerald-200/60 dark:hover:bg-emerald-900/40"
-          : "bg-slate-50/50 dark:bg-slate-900/10 border-slate-200 dark:border-slate-800 border-l-slate-300 dark:border-l-slate-700 hover:shadow-sm"
-      }`}
+      className={`grid grid-cols-[1fr_auto] gap-3 p-2 border rounded-md transition-all items-start shadow-sm border-l-4 ${hasValue
+        ? "bg-emerald-100/90 dark:bg-emerald-900/30 border-emerald-400 dark:border-emerald-800 border-l-emerald-600 dark:border-l-emerald-500 hover:bg-emerald-200/60 dark:hover:bg-emerald-900/40"
+        : "bg-slate-50/50 dark:bg-slate-900/10 border-slate-200 dark:border-slate-800 border-l-slate-300 dark:border-l-slate-700 hover:shadow-sm"
+        }`}
     >
       {/* Left part: item image & text details */}
       <div className="flex gap-2 min-w-0">
@@ -618,9 +835,21 @@ const KcsItemRow = React.memo(function KcsItemRow({
           </div>
         )}
         <div className="min-w-0 text-xs leading-normal">
-          <p className="text-sm font-black text-slate-900 dark:text-slate-100 truncate" title={item.designName || ""}>
-            {item.designName || "—"}
-          </p>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <p className="text-sm font-black text-slate-900 dark:text-slate-100 truncate" title={item.designName || ""}>
+              {item.designName || "—"}
+            </p>
+            {isDecalSet && (item as any).side === "front" && (
+              <span className="bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide shrink-0">
+                Mặt trước
+              </span>
+            )}
+            {isDecalSet && (item as any).side === "back" && (
+              <span className="bg-purple-600 text-white text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide shrink-0">
+                Mặt sau
+              </span>
+            )}
+          </div>
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-slate-500 mt-1">
             <span>Mã: <strong className="text-slate-800 dark:text-slate-200 font-bold">{item.designCode || "—"}</strong></span>
             <span>•</span>
@@ -647,11 +876,10 @@ const KcsItemRow = React.memo(function KcsItemRow({
                 value={itemVals.outputQty}
                 onChange={(e) => handleValChange(item.productionOrderItemId, "outputQty", e.target.value)}
                 onWheel={(e) => (e.target as HTMLInputElement).blur()}
-                className={`h-7 text-xs font-bold w-24 tabular-nums focus-visible:ring-emerald-500 transition-colors ${
-                  Number(itemVals.outputQty || 0) > 0
-                    ? "text-emerald-700 dark:text-emerald-500 border-emerald-300 dark:border-emerald-800 bg-emerald-50/20 dark:bg-emerald-950/10"
-                    : ""
-                }`}
+                className={`h-7 text-xs font-bold w-24 tabular-nums focus-visible:ring-emerald-500 transition-colors ${Number(itemVals.outputQty || 0) > 0
+                  ? "text-emerald-700 dark:text-emerald-500 border-emerald-300 dark:border-emerald-800 bg-emerald-50/20 dark:bg-emerald-950/10"
+                  : ""
+                  }`}
                 data-output-index={idx}
               />
             </div>
@@ -713,11 +941,10 @@ const KcsItemRow = React.memo(function KcsItemRow({
           <div className="flex items-center gap-4 text-xs font-bold shrink-0">
             <div className="text-right">
               <span className="text-[10px] block text-slate-400 dark:text-slate-500 font-bold uppercase leading-none mb-1">Ra</span>
-              <span className={`text-base font-black tabular-nums ${
-                (item.outputQty || 0) > 0
-                  ? "text-emerald-800 dark:text-emerald-400 font-extrabold"
-                  : "text-slate-400 dark:text-slate-650"
-              }`}>
+              <span className={`text-base font-black tabular-nums ${(item.outputQty || 0) > 0
+                ? "text-emerald-800 dark:text-emerald-400 font-extrabold"
+                : "text-slate-400 dark:text-slate-650"
+                }`}>
                 {formatRawQty(item.outputQty)}
               </span>
             </div>
@@ -760,12 +987,14 @@ interface KcsOrderRowProps {
   prod: KcsProductionOrderResponse;
   onOpenPrintLabel: (poId: number, itemId: number, defaultQty: number) => void;
   onOpenImageViewer: (url: string) => void;
+  onOpenProofingDetail?: (proofingOrderId: number) => void;
 }
 
 const KcsOrderRow = React.memo(function KcsOrderRow({
   prod,
   onOpenPrintLabel,
   onOpenImageViewer,
+  onOpenProofingDetail,
 }: KcsOrderRowProps) {
   const queryClient = useQueryClient();
 
@@ -1093,16 +1322,38 @@ const KcsOrderRow = React.memo(function KcsOrderRow({
         )}
       </TableCell>
 
-      {/* Code */}
+      {/* Code & Proofing Details */}
       <TableCell className="align-top py-3 text-sm">
-        <span className="text-base font-black text-slate-900 dark:text-slate-100">
-          {prod.proofingOrderCode || `LSX #${prod.productionOrderId}`}
-        </span>
-        {isChecked && (
-          <span className="mt-1.5 flex items-center gap-1 text-[11px] font-extrabold text-emerald-700 dark:text-emerald-500 uppercase">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Đã KCS
-          </span>
-        )}
+        <div className="flex flex-col gap-1">
+          <button
+            type="button"
+            onClick={() => {
+              if (prod.proofingOrderId && onOpenProofingDetail) {
+                onOpenProofingDetail(prod.proofingOrderId);
+              }
+            }}
+            className="text-base font-black text-blue-600 hover:text-blue-800 hover:underline cursor-pointer flex items-center gap-1.5 w-fit"
+            title="Bấm để xem chi tiết bài bình"
+          >
+            <span>{prod.proofingOrderCode || `LSX #${prod.productionOrderId}`}</span>
+            <Eye className="h-4 w-4 text-blue-500 shrink-0 opacity-80" />
+          </button>
+          {isChecked && (
+            <span className="flex items-center gap-1 text-[11px] font-extrabold text-emerald-700 dark:text-emerald-500 uppercase">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Đã KCS
+            </span>
+          )}
+          {prod.materialTypeName && (
+            <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+              {prod.materialTypeName}{prod.basisWeight ? ` ${prod.basisWeight}g` : ""}{prod.paperSizeName ? ` (${prod.paperSizeName})` : ""}
+            </span>
+          )}
+          {prod.totalQuantity != null && (
+            <span className="text-[11px] font-mono font-extrabold text-[#93631F]">
+              Số giấy in: {prod.totalQuantity.toLocaleString("vi-VN")} tờ
+            </span>
+          )}
+        </div>
       </TableCell>
 
       {/* Completed date */}

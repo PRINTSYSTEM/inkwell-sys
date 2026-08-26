@@ -460,3 +460,44 @@ export const useCustomerDebtStatementByRange = (
   });
 };
 
+// ================== RECALCULATE CUSTOMER DEBT ==================
+// POST /customers/{id}/recalculate-debt
+export const useRecalculateCustomerDebt = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (customerId: number) => {
+      const res = await apiRequest.post<{
+        customerId: number;
+        currentDebt: number;
+        debtStatus?: string;
+        message?: string;
+      }>(API_SUFFIX.CUSTOMER_RECALCULATE_DEBT(customerId));
+      return res.data;
+    },
+    onSuccess: (_, customerId) => {
+      queryClient.invalidateQueries({ queryKey: ["customer", customerId] });
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+    },
+  });
+};
+
+// ================== RECALCULATE ALL CUSTOMER DEBTS ==================
+// POST /customers/recalculate-all-debts
+export const useRecalculateAllCustomerDebts = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest.post<{
+        successCount: number;
+        errorCount: number;
+        errors?: string[];
+        message?: string;
+      }>(API_SUFFIX.CUSTOMER_RECALCULATE_ALL_DEBTS);
+      return res.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+    },
+  });
+};
+

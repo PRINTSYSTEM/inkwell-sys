@@ -372,7 +372,7 @@ export const PrepressOrderRow = React.memo(function PrepressOrderRow({
         <TableCell className="py-3 font-medium text-xs align-top text-center">
           {order.paperSize?.name || order.customPaperSize || (order.rollWidth ? `Cuộn (Rộng: ${order.rollWidth} mm)` : "—")}
         </TableCell>
-        <TableCell className="py-3 font-bold text-xs align-top text-center text-rose-600 font-mono">
+        <TableCell className="py-3 font-bold text-sm align-top text-center text-rose-600 font-mono">
           {order.totalQuantity ? order.totalQuantity.toLocaleString("vi-VN") : "0"}
         </TableCell>
         <TableCell className="py-3 text-xs align-top">
@@ -414,6 +414,21 @@ export const PrepressOrderRow = React.memo(function PrepressOrderRow({
                 : "bg-amber-100 text-amber-800 border-amber-300",
             )}
           />
+          {order.status === "production_returned" && (order.returnTypeDisplayName || order.returnType || order.returnReason) && (
+            <div className="mt-1 flex flex-col gap-0.5">
+              <Badge variant="outline" className={cn(
+                "text-[9.5px] font-bold py-0 px-1.5 border w-fit",
+                order.returnType === "dispatch" ? "bg-red-50 text-red-700 border-red-200" : "bg-rose-50 text-rose-700 border-rose-200"
+              )}>
+                {order.returnTypeDisplayName || (order.returnType === "dispatch" ? "Điều lệnh trả về" : "Lệnh in trả về")}
+              </Badge>
+              {order.returnReason && (
+                <span className="text-[10px] text-rose-700 font-medium italic line-clamp-2" title={order.returnReason}>
+                  Lý do: {order.returnReason}
+                </span>
+              )}
+            </div>
+          )}
         </TableCell>
         <TableCell className="py-3 align-top">
           <StatusBadge
@@ -448,10 +463,10 @@ export const PrepressOrderRow = React.memo(function PrepressOrderRow({
           )}
         </TableCell>
 
-        <TableCell className="py-3 font-medium align-top whitespace-nowrap text-[11px]">
-          <div className="flex flex-col gap-0.5 text-slate-700 dark:text-slate-300">
+        <TableCell className="py-3 align-top whitespace-nowrap">
+          <div className="flex flex-col gap-0.5">
             {order.status === "completed" ? (
-              <div>
+              <div className="text-xs font-bold text-slate-900 dark:text-slate-100 font-mono tracking-tight">
                 {order.completedAt
                   ? format(new Date(order.completedAt), "HH:mm:ss dd/MM/yyyy")
                   : order.updatedAt
@@ -459,7 +474,7 @@ export const PrepressOrderRow = React.memo(function PrepressOrderRow({
                     : "—"}
               </div>
             ) : (
-              <span className="text-muted-foreground italic">Chưa hoàn thành</span>
+              <span className="text-xs text-muted-foreground italic font-medium">Chưa hoàn thành</span>
             )}
             {order.createdBy && (
               <span className="text-[10px] text-muted-foreground/80 mt-0.5">

@@ -360,18 +360,16 @@ export default function StockSummary() {
             <div className="flex gap-2 flex-wrap">
               <Button
                 onClick={() => {
-                  if (selectedVendorId === "all") {
-                    toast.error("Vui lòng chọn một Nhà cung cấp ở bộ lọc trước khi nhập vật tư mới!");
-                    return;
-                  }
-                  setIsCreateOpen(true);
+                  const url = selectedVendorId !== "all"
+                    ? `/stock/stock-ins/create?vendorId=${selectedVendorId}`
+                    : `/stock/stock-ins/create`;
+                  navigate(url);
                 }}
-                variant="outline"
                 size="sm"
-                className="cursor-pointer border-slate-200 text-xs h-9 rounded-lg hover:bg-slate-50 text-foreground"
+                className="cursor-pointer text-xs h-9 rounded-lg bg-[#93631F] hover:bg-[#7a521a] text-white font-semibold shadow-sm"
               >
                 <Plus className="h-3.5 w-3.5 mr-1.5" />
-                Nhập vật tư mới
+                Tạo phiếu nhập kho
               </Button>
               <Button
                 onClick={() => {
@@ -381,7 +379,7 @@ export default function StockSummary() {
                 size="sm"
                 className="cursor-pointer border-slate-200 text-xs h-9 rounded-lg hover:bg-slate-50 text-foreground"
               >
-                Xuất kho NCC
+                Tạo phiếu xuất kho
               </Button>
               <Button
                 onClick={() => setIsPendingExportsOpen(true)}
@@ -391,14 +389,6 @@ export default function StockSummary() {
               >
                 <Layers className="h-3.5 w-3.5 mr-1.5 text-rose-500" />
                 Bài chưa xuất kho
-              </Button>
-              <Button
-                onClick={() => setIsProductionOrderStockOutOpen(true)}
-                variant="outline"
-                size="sm"
-                className="cursor-pointer border-slate-200 text-xs h-9 rounded-lg hover:bg-slate-50 text-foreground"
-              >
-                Xuất kho theo bài
               </Button>
 
               <Button

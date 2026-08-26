@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
 import { Plus, Trash2, Loader2, AlertCircle, Minus, Info, Check, ChevronsUpDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -257,6 +258,56 @@ function JobCodeSelector({
   );
 }
 
+function findMatchingMaterial(
+  item: FormItem,
+  vendorMaterials: any[],
+  enrichedProductionOrders: any[]
+) {
+  if (!vendorMaterials || vendorMaterials.length === 0) return null;
+
+  const po = item.jobCode
+    ? enrichedProductionOrders.find(
+        (p) =>
+          p.proofingOrderCode === item.jobCode ||
+          `BB${p.proofingOrderId}` === item.jobCode ||
+          String(p.proofingOrderId) === item.jobCode
+      )
+    : null;
+
+  if (po) {
+    const codeMatch = vendorMaterials.find(
+      (m) =>
+        (po.materialCode && m.code?.toLowerCase() === po.materialCode.toLowerCase()) ||
+        (po.paperName && m.name?.toLowerCase() === po.paperName.toLowerCase())
+    );
+    if (codeMatch) return codeMatch.id;
+  }
+
+  const searchName = item.prefillPaperName || po?.paperName;
+  if (searchName) {
+    const rawClean = searchName.toLowerCase().replace(/giấy|dạng|tờ|cuộn/gi, "").trim();
+    const targetKeywords = rawClean.split(/\s+/).filter(Boolean);
+
+    let match = vendorMaterials.find((m) => {
+      const mLower = (m.name || "").toLowerCase();
+      if (!rawClean) return false;
+      return mLower.includes(rawClean) || rawClean.includes(mLower);
+    });
+
+    if (match) return match.id;
+
+    if (targetKeywords.length > 0) {
+      match = vendorMaterials.find((m) => {
+        const mLower = (m.name || "").toLowerCase();
+        return targetKeywords.some((kw) => kw.length >= 3 && mLower.includes(kw));
+      });
+      if (match) return match.id;
+    }
+  }
+
+  return null;
+}
+
 export function StockOutByVendorDialog({
   open,
   onOpenChange,
@@ -269,6 +320,9 @@ export function StockOutByVendorDialog({
   // Purpose: production, outsource, return_vendor, adjustment
   const [purpose, setPurpose] = useState<string>("production");
   const [activeVendorId, setActiveVendorId] = useState<number | null>(null);
+  const [stockOutDate, setStockOutDate] = useState<string>(() =>
+    format(new Date(), "yyyy-MM-dd'T'HH:mm")
+  );
 
   // Sync activeVendorId when dialog opens or selectedVendorId changes
   useEffect(() => {
@@ -420,6 +474,7 @@ export function StockOutByVendorDialog({
       setAdjNotes("");
       setOutsourceVendorId(null);
       setReceiverPhone("");
+      setStockOutDate(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
 
       if (prefillItems && prefillItems.length > 0) {
         setItems(prefillItems);
@@ -429,29 +484,26 @@ export function StockOutByVendorDialog({
     }
   }, [open, prefillItems]);
 
-  // Auto-select material from vendorMaterials if prefillPaperName is present
+  // Auto-select material from vendorMaterials if items have unselected materialId
   useEffect(() => {
-    if (open && prefillItems && prefillItems.length > 0 && vendorMaterials.length > 0 && !hasResolvedPrefill) {
-      const newItems = items.map(item => {
-        if (item.materialId === null && item.prefillPaperName) {
-          const paperLower = item.prefillPaperName.toLowerCase().replace(/\s+/g, "");
-          const match = vendorMaterials.find(m => {
-            const mNameLower = (m.name || "").toLowerCase().replace(/\s+/g, "");
-            return mNameLower.includes(paperLower) || paperLower.includes(mNameLower);
-          });
-          if (match) {
-            return {
-              ...item,
-              materialId: match.id,
-            };
+    if (open && vendorMaterials.length > 0 && items.length > 0 && !hasResolvedPrefill) {
+      let changed = false;
+      const newItems = items.map((item) => {
+        if (item.materialId === null) {
+          const matchedId = findMatchingMaterial(item, vendorMaterials, enrichedProductionOrders);
+          if (matchedId) {
+            changed = true;
+            return { ...item, materialId: matchedId };
           }
         }
         return item;
       });
-      setItems(newItems);
+      if (changed) {
+        setItems(newItems);
+      }
       setHasResolvedPrefill(true);
     }
-  }, [vendorMaterials, open, prefillItems, hasResolvedPrefill]);
+  }, [vendorMaterials, enrichedProductionOrders, open, items, hasResolvedPrefill]);
 
   // Prefill return_vendor fields when purpose is selected
   useEffect(() => {
@@ -487,18 +539,23 @@ export function StockOutByVendorDialog({
     newItems[index] = { ...newItems[index], [field]: value };
     
     if (field === "jobCode" && value) {
-      const po = enrichedProductionOrders.find((p) => p.proofingOrderCode === value);
+      const po = enrichedProductionOrders.find(
+        (p) =>
+          p.proofingOrderCode === value ||
+          `BB${p.proofingOrderId}` === value ||
+          String(p.proofingOrderId) === value
+      );
       if (po) {
         if (po.totalQuantity) {
           newItems[index].quantity = po.totalQuantity;
         }
-        const matchingMaterial = vendorMaterials.find(
-          (m) =>
-            (po.materialCode && m.code === po.materialCode) ||
-            (po.paperName && m.name === po.paperName)
+        const matchedId = findMatchingMaterial(
+          { ...newItems[index], jobCode: value },
+          vendorMaterials,
+          enrichedProductionOrders
         );
-        if (matchingMaterial) {
-          newItems[index].materialId = matchingMaterial.id;
+        if (matchedId) {
+          newItems[index].materialId = matchedId;
         }
       }
     }
@@ -549,12 +606,16 @@ export function StockOutByVendorDialog({
         }
       }
 
+      const formattedStockOutDate = stockOutDate
+        ? new Date(stockOutDate).toISOString()
+        : new Date().toISOString();
+
       // Prepare payload
       const payload = {
         vendorId: activeVendorId,
         receiverName: receiverName.trim(),
         exportReason: exportReason.trim(),
-        stockOutDate: new Date().toISOString(),
+        stockOutDate: formattedStockOutDate,
         items: items.map((item) => ({
           materialId: item.materialId,
           quantity: Math.round(item.quantity),
@@ -603,12 +664,16 @@ export function StockOutByVendorDialog({
         }
       }
 
+      const formattedStockOutDate = stockOutDate
+        ? new Date(stockOutDate).toISOString()
+        : new Date().toISOString();
+
       const payload = {
         vendorId: purpose === "outsource" ? outsourceVendorId : activeVendorId,
         exportReason: exportReason.trim(),
         warehouseName: warehouseName.trim() || undefined,
         warehouseAddress: warehouseAddress.trim() || undefined,
-        stockOutDate: new Date().toISOString(),
+        stockOutDate: formattedStockOutDate,
         items: items.map((item) => ({
           materialId: item.materialId,
           quantity: Math.round(item.quantity),
@@ -658,11 +723,15 @@ export function StockOutByVendorDialog({
         adjNotes.trim() ? `Ghi chú: ${adjNotes.trim()}` : ""
       ].filter(Boolean).join(" - ");
 
+      const formattedStockOutDate = stockOutDate
+        ? new Date(stockOutDate).toISOString()
+        : new Date().toISOString();
+
       const payload = {
         materialId: adjMaterialId,
         quantity: Math.round(adjQuantity),
         notes: combinedNotes,
-        stockOutDate: new Date().toISOString(),
+        stockOutDate: formattedStockOutDate,
       };
 
       try {
@@ -693,8 +762,8 @@ export function StockOutByVendorDialog({
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
           <div className="flex-1 overflow-y-auto p-5 space-y-4">
-            {/* 1. Chọn nhà cung cấp & nghiệp vụ xuất kho */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* 1. Chọn nhà cung cấp, nghiệp vụ xuất kho & ngày xuất kho */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-slate-700">Nhà cung cấp vật tư <span className="text-red-500">*</span></Label>
                 <Select
@@ -750,6 +819,16 @@ export function StockOutByVendorDialog({
                     <SelectItem value="adjustment" className="text-xs cursor-pointer">Xuất điều chỉnh giảm kho</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Ngày xuất kho <span className="text-red-500">*</span></Label>
+                <Input
+                  type="datetime-local"
+                  value={stockOutDate}
+                  onChange={(e) => setStockOutDate(e.target.value)}
+                  className="h-10 text-xs border-slate-200 rounded-lg cursor-pointer bg-white"
+                />
               </div>
             </div>
 

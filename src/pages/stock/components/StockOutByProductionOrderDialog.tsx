@@ -250,6 +250,9 @@ export function StockOutByProductionOrderDialog({
   const [selectedProductionOrderCode, setSelectedProductionOrderCode] = useState("");
   const [receiverName, setReceiverName] = useState("");
   const [exportReason, setExportReason] = useState("");
+  const [stockOutDate, setStockOutDate] = useState<string>(() =>
+    format(new Date(), "yyyy-MM-dd'T'HH:mm")
+  );
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<FormItem[]>([
     { materialId: null, quantity: 1 },
@@ -307,6 +310,7 @@ export function StockOutByProductionOrderDialog({
       setSelectedProductionOrderCode("");
       setReceiverName("");
       setExportReason("");
+      setStockOutDate(format(new Date(), "yyyy-MM-dd'T'HH:mm"));
       setNotes("");
       setItems([{ materialId: null, quantity: 1 }]);
     }
@@ -383,13 +387,17 @@ export function StockOutByProductionOrderDialog({
       }
     }
 
+    const formattedStockOutDate = stockOutDate
+      ? new Date(stockOutDate).toISOString()
+      : new Date().toISOString();
+
     try {
       const res = await createStockOut({
         productionOrderId: selectedProductionOrderId,
         data: {
           receiverName: receiverName.trim(),
           exportReason: exportReason.trim(),
-          stockOutDate: new Date().toISOString(),
+          stockOutDate: formattedStockOutDate,
           notes: notes.trim() || undefined,
           items: items.map((item) => {
             const bodyItem: any = {
@@ -433,7 +441,7 @@ export function StockOutByProductionOrderDialog({
 
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
           <div className="flex-1 overflow-y-auto p-5 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold text-slate-700">
                   Chọn lệnh sản xuất <span className="text-red-500">*</span>
@@ -492,6 +500,18 @@ export function StockOutByProductionOrderDialog({
                   placeholder="Nhập lý do xuất..."
                   value={exportReason}
                   onChange={(e) => setExportReason(e.target.value)}
+                  className="h-10 text-xs border-slate-200 focus-visible:ring-rose-500 rounded-lg"
+                  required
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">
+                  Ngày xuất kho <span className="text-red-500">*</span>
+                </Label>
+                <Input
+                  type="datetime-local"
+                  value={stockOutDate}
+                  onChange={(e) => setStockOutDate(e.target.value)}
                   className="h-10 text-xs border-slate-200 focus-visible:ring-rose-500 rounded-lg"
                   required
                 />

@@ -42,10 +42,24 @@ import { proofingStatusLabels } from "@/lib/status-utils";
 
 const normalizeMaterial = (materialName: string | undefined | null): string => {
   if (!materialName) return "";
-  let name = materialName.replace(/\(.*?\)/g, "").trim().toLowerCase();
+  let name = materialName
+    .replace(/\(.*?\)/g, "")
+    .replace(/\d+\s*gsm/gi, "")
+    .replace(/\d+/g, "")
+    .trim()
+    .toLowerCase();
+
   if (name.includes("couche")) return "couche";
   if (name.includes("thẻ treo") || name.includes("the treo")) return "the_treo";
   if (name.includes("metaline") || name.includes("metalized") || name.includes("metalise")) return "metaline";
+  if (name.includes("duplex")) return "duplex";
+  if (name.includes("ivory")) return "ivory";
+  if (name.includes("kraft")) return "kraft";
+  if (name.includes("bristol")) return "bristol";
+  if (name.includes("fort") || name.includes("ford")) return "fort";
+  if (name.includes("decal")) return "decal";
+  if (name.includes("carton")) return "carton";
+
   return name;
 };
 
@@ -121,17 +135,30 @@ export function MergeProofingOrderWizard({
 
   // Merge availableBins with existingOrders and destinationDetail to get complete details
   const resolvedBins = useMemo(() => {
-    return availableBins.map(bin => {
+    const binMap = new Map<number, any>();
+
+    // 1. Add bins from availableBins API
+    availableBins.forEach(bin => {
       const found = existingOrders?.find(o => o.id === bin.id) || (bin.id === selectedBinId ? destinationDetail : null);
-      if (found) {
-        return {
-          ...bin,
-          ...found,
-        };
-      }
-      return bin;
+      binMap.set(bin.id, found ? { ...bin, ...found } : bin);
     });
-  }, [availableBins, existingOrders, selectedBinId, destinationDetail]);
+
+    // 2. Also check existingOrders passed from parent
+    if (existingOrders && existingOrders.length > 0) {
+      existingOrders.forEach(o => {
+        if (!binMap.has(o.id)) {
+          const oTypeId = o.designTypeId ?? o.designType?.id;
+          const isCompatibleType = !activeDesignTypeId || !oTypeId || oTypeId === activeDesignTypeId;
+          const isMergeableStatus = o.status === "not_completed" || o.status === "pending" || o.status === "paused" || o.status === "production_returned" || o.status === "in_progress";
+          if (isCompatibleType && isMergeableStatus) {
+            binMap.set(o.id, o);
+          }
+        }
+      });
+    }
+
+    return Array.from(binMap.values());
+  }, [availableBins, existingOrders, selectedBinId, destinationDetail, activeDesignTypeId]);
 
   // Initialize quantities for Step 3
   useEffect(() => {
@@ -173,11 +200,19 @@ export function MergeProofingOrderWizard({
   const filteredBins = useMemo(() => {
     if (cartItems.length === 0) return [];
     const activeMaterialNormalized = normalizeMaterial(cartItems[0].materialTypeName);
-    
+
     return resolvedBins.filter(bin => {
       const binMaterialLabel = getMaterialLabel(bin);
       const binMaterialNormalized = normalizeMaterial(binMaterialLabel);
-      return !binMaterialNormalized || binMaterialNormalized === activeMaterialNormalized;
+
+      if (!binMaterialNormalized || binMaterialNormalized === "—") return true;
+      if (!activeMaterialNormalized) return true;
+
+      return (
+        binMaterialNormalized === activeMaterialNormalized ||
+        binMaterialNormalized.includes(activeMaterialNormalized) ||
+        activeMaterialNormalized.includes(binMaterialNormalized)
+      );
     });
   }, [resolvedBins, cartItems]);
 

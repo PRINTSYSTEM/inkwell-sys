@@ -38,11 +38,14 @@ import {
   Loader2,
   History,
   Image as ImageIcon,
+  ExternalLink,
 } from "lucide-react";
 import {
   useAvailableOrderDetailsForDeliveryNote,
   useAddDeliveryNoteLines,
 } from "@/hooks/use-delivery-note";
+import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
+import { ReadOnlyProofingDetailModal } from "@/components/proofing/ReadOnlyProofingDetailModal";
 import type { OrderDetailForDeliveryResponse } from "@/Schema/delivery-note.schema";
 import { toast } from "sonner";
 
@@ -87,6 +90,7 @@ export default function AddItemsToDeliveryNoteDialog({
   const [searchQuery, setSearchQuery] = useState("");
   const [confirmTransitOpen, setConfirmTransitOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [viewingProofingOrderId, setViewingProofingOrderId] = useState<number | null>(null);
 
   // Reset selection on dialog open/close
   React.useEffect(() => {
@@ -399,18 +403,28 @@ export default function AddItemsToDeliveryNoteDialog({
                             )}
                           </TableCell>
 
-                          <TableCell>
+                          <TableCell onClick={(e) => e.stopPropagation()}>
                             {item.proofingOrderCodes && item.proofingOrderCodes.length > 0 ? (
                               <div className="flex flex-wrap gap-1">
-                                {item.proofingOrderCodes.map((c) => (
-                                  <Badge
-                                    key={c}
-                                    variant="outline"
-                                    className="font-mono text-[10px] px-1.5 py-0"
-                                  >
-                                    {c}
-                                  </Badge>
-                                ))}
+                                {item.proofingOrderCodes.map((c) => {
+                                  const match = c.match(/\d+/);
+                                  const pId = match ? parseInt(match[0], 10) : null;
+                                  return (
+                                    <Badge
+                                      key={c}
+                                      variant="outline"
+                                      className="font-mono text-[10px] px-1.5 py-0 hover:bg-amber-100 hover:text-amber-900 cursor-pointer text-amber-700 border-amber-300 gap-0.5"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (pId) setViewingProofingOrderId(pId);
+                                      }}
+                                      title="Bấm để xem chi tiết bài bình"
+                                    >
+                                      {c}
+                                      <ExternalLink className="h-2.5 w-2.5 opacity-70 inline" />
+                                    </Badge>
+                                  );
+                                })}
                               </div>
                             ) : (
                               <span className="text-muted-foreground">—</span>
@@ -558,6 +572,12 @@ export default function AddItemsToDeliveryNoteDialog({
           </DialogContent>
         </Dialog>
       )}
+
+      <ReadOnlyProofingDetailModal
+        proofingOrderId={viewingProofingOrderId}
+        open={!!viewingProofingOrderId}
+        onOpenChange={(open) => !open && setViewingProofingOrderId(null)}
+      />
     </>
   );
 }

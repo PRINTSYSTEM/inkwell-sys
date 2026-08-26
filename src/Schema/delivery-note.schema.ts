@@ -66,6 +66,7 @@ export const CreateDeliveryNoteRequestSchema =
           orderDetailId: z.number().int(),
           deliveryQty: z.number().int().gte(1),
           note: z.string().nullish(),
+          isRedelivery: z.boolean().optional(),
         })
       )
       .nullish(),
@@ -115,6 +116,7 @@ export const RecreateDeliveryNoteRequestSchema = z.object({
         deliveryQty: z.number().int().gte(1),
         customerAddressId: z.number().int().nullish(),
         note: z.string().nullish(),
+        isRedelivery: z.boolean().optional(),
       })
     )
     .nullish(),
@@ -128,6 +130,7 @@ export type RecreateDeliveryNoteRequest = z.infer<
 export const DeliveryLineRequestSchema =
   GenDeliveryLineRequestSchema.extend({
     note: z.string().nullish(),
+    isRedelivery: z.boolean().optional(),
   }).passthrough();
 export type DeliveryLineRequest = z.infer<typeof DeliveryLineRequestSchema>;
 
@@ -164,6 +167,8 @@ export const DeliveryNoteLineResponseSchema =
     designThumbnailUrl: z.string().nullable().optional(),
     proofingOrderCodes: z.array(z.string()).nullable().optional(),
     maxEditableQty: z.number().nullable().optional(),
+    isRedelivery: z.boolean().optional(),
+    isRedeliveryName: z.string().optional(),
   }).passthrough();
 export type DeliveryNoteLineResponse = z.infer<
   typeof DeliveryNoteLineResponseSchema
@@ -208,6 +213,7 @@ export const OrderDetailForDeliveryResponseSchema = z
     customerId: z.number().int(),
     customerName: z.string().nullable(),
     proofingOrderCodes: z.array(z.string()).nullable().optional(),
+    completedProofingOrderCodes: z.array(z.string()).nullable().optional(),
     // Lịch sử phiếu giao hàng hiệu lực của mã hàng (để đối chiếu khi tạo PGH)
     deliveryHistory: z
       .array(DeliveryNoteHistoryItemResponseSchema)

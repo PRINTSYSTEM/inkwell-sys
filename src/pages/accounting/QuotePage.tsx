@@ -1,5 +1,5 @@
 import { Helmet } from "react-helmet-async";
-import { CreditCard, Clock, AlertCircle, Layers } from "lucide-react";
+import { CreditCard, Clock, AlertCircle, Layers, TrendingUp } from "lucide-react";
 import { PaymentList } from "@/components/accounting";
 import { useSalesDashboard } from "@/hooks/use-order";
 
@@ -45,8 +45,8 @@ export default function QuotePage() {
             </div>
             <div className="rounded-lg border bg-card p-3">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-success/10">
-                  <Clock className="h-4 w-4 text-success" />
+                <div className="p-1.5 rounded-lg bg-primary/10">
+                  <TrendingUp className="h-4 w-4 text-primary" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground font-semibold">Đơn tạo hôm nay</p>
@@ -67,12 +67,12 @@ export default function QuotePage() {
             </div>
             <div className="rounded-lg border bg-card p-3">
               <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-destructive/10">
-                  <AlertCircle className="h-4 w-4 text-destructive" />
+                <div className="p-1.5 rounded-lg bg-success/10">
+                  <Clock className="h-4 w-4 text-success" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground font-semibold">Chờ duyệt công nợ</p>
-                  <p className="text-xl font-bold">{dashboardData?.awaitingDebtApproval ?? 0}</p>
+                  <p className="text-xs text-muted-foreground font-semibold">Tổng đơn hoàn thành</p>
+                  <p className="text-xl font-bold">{dashboardData?.completed ?? 0}</p>
                 </div>
               </div>
             </div>

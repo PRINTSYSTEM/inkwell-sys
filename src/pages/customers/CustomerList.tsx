@@ -11,9 +11,11 @@ import {
   ChevronRight,
   Trash2,
   AlertTriangle,
+  RefreshCw,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useCustomers, useExportDebtComparison, useDeleteCustomer } from "@/hooks/use-customer";
+import { useCustomers, useExportDebtComparison, useDeleteCustomer, useRecalculateAllCustomerDebts } from "@/hooks/use-customer";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -94,7 +96,19 @@ export default function Customers() {
   const { mutate: exportDebtComparison, loading: exporting } =
     useExportDebtComparison();
 
-  const { mutate: deleteCustomer, isPending: deleting } = useDeleteCustomer();
+  const { mutateAsync: deleteCustomer, isPending: deleting } = useDeleteCustomer();
+  const recalculateAllDebtsMutation = useRecalculateAllCustomerDebts();
+
+  const handleRecalculateAllDebts = async () => {
+    try {
+      const res = await recalculateAllDebtsMutation.mutateAsync();
+      toast.success(
+        `Đã đồng bộ tất cả công nợ! Thành công: ${res.successCount || 0} KH | Lỗi: ${res.errorCount || 0}`
+      );
+    } catch (err: any) {
+      toast.error("Lỗi đồng bộ tất cả công nợ: " + (err?.message || "Lỗi không xác định"));
+    }
+  };
 
   const handleExportDebtComparison = async (customerId: number) => {
     setExportingId(customerId);
@@ -263,6 +277,23 @@ export default function Customers() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {(userRole === ROLE.ADMIN || userRole === ROLE.ACCOUNTING_LEAD) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRecalculateAllDebts}
+              disabled={recalculateAllDebtsMutation.isPending}
+              className="h-9 gap-2"
+              title="Đồng bộ lại công nợ chính xác của tất cả khách hàng từ sổ chi tiết"
+            >
+              {recalculateAllDebtsMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              <span>Đồng bộ tất cả công nợ</span>
+            </Button>
+          )}
           <Button size="sm" variant="destructive" onClick={handleOpenMergeDialog} className="h-9 flex items-center gap-2" title="Dành cho đội hỗ trợ">
             <AlertTriangle className="h-4 w-4" />
             <span>Gom khách hàng</span>

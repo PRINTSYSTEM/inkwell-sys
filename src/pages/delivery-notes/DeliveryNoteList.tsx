@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { useDebounce } from "use-debounce";
@@ -32,6 +33,7 @@ import {
   ExternalLink,
   History,
   CheckSquare,
+  Eye,
 } from "lucide-react";
 
 import {
@@ -40,6 +42,7 @@ import {
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { useProductionOrders } from "@/hooks/use-production";
+import { ReadOnlyProofingDetailModal } from "@/components/proofing/ReadOnlyProofingDetailModal";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -202,9 +205,10 @@ function HighlightText({ text, query }: { text: string | null | undefined; query
 interface ProofingCodeProps {
   code: string;
   query?: string;
+  onOpenDetail?: (id: number) => void;
 }
 
-function ProofingCodeWithProductions({ code, query }: ProofingCodeProps) {
+function ProofingCodeWithProductions({ code, query, onOpenDetail }: ProofingCodeProps) {
   const match = code.match(/\d+/);
   const proofingOrderId = match ? parseInt(match[0], 10) : null;
 
@@ -223,6 +227,13 @@ function ProofingCodeWithProductions({ code, query }: ProofingCodeProps) {
 
   const content = <HighlightText text={code} query={query || ""} />;
 
+  const handleOpenDetail = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onOpenDetail && proofingOrderId) {
+      onOpenDetail(proofingOrderId);
+    }
+  };
+
   if (!proofingOrderId) {
     return <span className="font-black text-red-600 dark:text-red-400 font-mono text-sm">{content}</span>;
   }
@@ -230,20 +241,42 @@ function ProofingCodeWithProductions({ code, query }: ProofingCodeProps) {
   return (
     <HoverCard openDelay={200} closeDelay={150}>
       <HoverCardTrigger asChild>
-        <Link
-          to={`/delivery-notes?tab=completed-qc&search=${code}`}
-          className="font-black text-red-600 dark:text-red-400 font-mono text-sm hover:underline inline-flex items-center gap-0.5 cursor-pointer"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {content}
-          <ExternalLink className="h-3.5 w-3.5 inline opacity-70" />
-        </Link>
+        {onOpenDetail ? (
+          <button
+            type="button"
+            onClick={handleOpenDetail}
+            className="font-black text-red-600 dark:text-red-400 font-mono text-sm hover:underline inline-flex items-center gap-0.5 cursor-pointer bg-transparent border-0 p-0"
+            title="Bấm để xem chi tiết bài bình"
+          >
+            {content}
+            <ExternalLink className="h-3.5 w-3.5 inline opacity-70" />
+          </button>
+        ) : (
+          <Link
+            to={`/delivery-notes?tab=completed-qc&search=${code}`}
+            className="font-black text-red-600 dark:text-red-400 font-mono text-sm hover:underline inline-flex items-center gap-0.5 cursor-pointer"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {content}
+            <ExternalLink className="h-3.5 w-3.5 inline opacity-70" />
+          </Link>
+        )}
       </HoverCardTrigger>
       <HoverCardContent 
         className="w-80 p-3 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-lg rounded-lg text-left"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="space-y-2">
+          {onOpenDetail && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full text-xs h-7 gap-1.5 font-bold text-[#93631F] border-[#93631F]/30 hover:bg-[#93631F]/10 dark:text-[#d4a359] dark:border-[#93631F]/50 mb-1"
+              onClick={handleOpenDetail}
+            >
+              <Eye className="w-3.5 h-3.5" /> Xem chi tiết bài bình #{proofingOrderId}
+            </Button>
+          )}
           <div className="font-bold text-xs text-stone-500 uppercase tracking-wider">
             Lệnh sản xuất liên quan ({code})
           </div>
@@ -895,6 +928,7 @@ export default function DeliveryNoteListPage() {
 
   // Selection state
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
+  const [viewingProofingOrderId, setViewingProofingOrderId] = useState<number | null>(null);
   const [selectedCustomerName, setSelectedCustomerName] = useState<string>("");
   const [selectedOrderDetailIds, setSelectedOrderDetailIds] = useState<Set<number>>(new Set());
   const [deliveryQtys, setDeliveryQtys] = useState<Record<number, number>>({});
@@ -936,7 +970,7 @@ export default function DeliveryNoteListPage() {
     return [] as OrderForDeliveryResponse[];
   }, [allOrders]);
 
-  // Group available orders by prepress code (Mã bài)
+  // Group available orders by completed prepress code (Mã bài đã báo số)
   const groupedPrepressOrders = useMemo(() => {
     if (!Array.isArray(availableOrdersRaw)) return [];
 
@@ -945,9 +979,20 @@ export default function DeliveryNoteListPage() {
     availableOrdersRaw.forEach((order) => {
       if (!order.details) return;
       order.details.forEach((detail) => {
-        const codes = detail.proofingOrderCodes || [];
-        if (codes.length === 0) {
-          const key = "no_proofing_code";
+        // Chỉ hiện các con hàng đã có bài báo số (completedProofingOrderCodes)
+        const dAny = detail as any;
+        const completedCodes = dAny.completedProofingOrderCodes !== undefined
+          ? (dAny.completedProofingOrderCodes || [])
+          : (detail.proofingOrderCodes || []);
+
+        if (completedCodes.length === 0) {
+          // Bỏ qua các con hàng chưa có bài hoàn thành / chưa báo số
+          return;
+        }
+
+        completedCodes.forEach((code: string) => {
+          if (!code) return;
+          const key = code.trim().toUpperCase();
           if (!groupsMap.has(key)) {
             groupsMap.set(key, []);
           }
@@ -961,24 +1006,7 @@ export default function DeliveryNoteListPage() {
             recipientAddress: order.recipientAddress,
             createdAt: order.createdAt,
           });
-        } else {
-          codes.forEach((code) => {
-            const key = code.trim().toUpperCase();
-            if (!groupsMap.has(key)) {
-              groupsMap.set(key, []);
-            }
-            groupsMap.get(key)!.push({
-              ...detail,
-              orderId: order.orderId,
-              orderCode: order.orderCode,
-              customerId: order.customerId,
-              customerName: order.customerName,
-              deliveryAddress: order.deliveryAddress,
-              recipientAddress: order.recipientAddress,
-              createdAt: order.createdAt,
-            });
-          });
-        }
+        });
       });
     });
 
@@ -1690,6 +1718,7 @@ export default function DeliveryNoteListPage() {
             handleCreateDeliveryNote={handleCreateDeliveryNote}
             onImageClick={handleImageClick}
             selectedCustomerId={selectedCustomerId}
+            onOpenProofingDetail={(id) => setViewingProofingOrderId(id)}
           />
         </TabsContent>
 
@@ -1725,6 +1754,7 @@ export default function DeliveryNoteListPage() {
             updatingIds={updatingIds}
             onImageClick={handleImageClick}
             allNotesForStats={allNotesData}
+            onOpenProofingDetail={(id) => setViewingProofingOrderId(id)}
           />
         </TabsContent>
 
@@ -1789,6 +1819,12 @@ export default function DeliveryNoteListPage() {
           title="Xem ảnh thiết kế"
         />
       )}
+
+      <ReadOnlyProofingDetailModal
+        proofingOrderId={viewingProofingOrderId}
+        open={!!viewingProofingOrderId}
+        onOpenChange={(open) => !open && setViewingProofingOrderId(null)}
+      />
     </div>
   );
 }
@@ -1815,6 +1851,7 @@ interface OrdersViewProps {
   handleCreateDeliveryNote: () => void;
   onImageClick: (url: string, e: React.MouseEvent) => void;
   selectedCustomerId: number | null;
+  onOpenProofingDetail?: (id: number) => void;
 }
 
 function OrdersView({
@@ -1835,7 +1872,9 @@ function OrdersView({
   handleCreateDeliveryNote,
   onImageClick,
   selectedCustomerId,
+  onOpenProofingDetail,
 }: OrdersViewProps) {
+  const queryClient = useQueryClient();
   const [expandedPrepressOrders, setExpandedPrepressOrders] = useState<Set<string>>(new Set());
   const [orderInputPage, setOrderInputPage] = useState<string>(String(currentPage));
 
@@ -1889,7 +1928,10 @@ function OrdersView({
         <Button
           variant="outline"
           size="sm"
-          onClick={() => refetchOrders()}
+          onClick={() => {
+            queryClient.invalidateQueries();
+            refetchOrders();
+          }}
           disabled={ordersLoading}
           className="h-10 border-stone-200 dark:border-stone-800 font-semibold w-full md:w-auto"
         >
@@ -1982,12 +2024,22 @@ function OrdersView({
                           const nameStr = group.displayName || "";
                           const isBai = nameStr.toLowerCase().startsWith("bài");
                           const numPart = isBai ? nameStr.slice(4).trim() : nameStr;
+                          const match = numPart.match(/\d+/);
+                          const pId = group.proofingOrderId || (group.details && group.details[0]?.proofingOrderId) || (match ? parseInt(match[0], 10) : null);
                           return (
-                            <span className="font-extrabold font-mono text-xs text-black dark:text-white flex items-center">
+                            <span
+                              className="font-extrabold font-mono text-xs text-black dark:text-white flex items-center hover:underline cursor-pointer group/title"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (pId && onOpenProofingDetail) onOpenProofingDetail(pId);
+                              }}
+                              title="Bấm để xem chi tiết bài bình"
+                            >
                               {isBai && <span>Bài&nbsp;</span>}
-                              <span className="text-sm font-black text-red-600 dark:text-red-400">
+                              <span className="text-sm font-black text-red-600 dark:text-red-400 group-hover/title:underline">
                                 <HighlightText text={numPart} query={searchQuery} />
                               </span>
+                              <ExternalLink className="h-3 w-3 ml-1 text-red-500 opacity-60 inline" />
                             </span>
                           );
                         })()}
@@ -2306,6 +2358,7 @@ interface DeliveryNotesViewProps {
   updatingIds: Set<number>;
   onImageClick: (url: string, e: React.MouseEvent) => void;
   allNotesForStats: unknown;
+  onOpenProofingDetail?: (id: number) => void;
 }
 
 function DeliveryNotesView({
@@ -2339,6 +2392,7 @@ function DeliveryNotesView({
   updatingIds,
   onImageClick,
   allNotesForStats,
+  onOpenProofingDetail,
 }: DeliveryNotesViewProps) {
   const [expandedNoteIds, setExpandedNoteIds] = useState<Set<number>>(new Set());
   const [noteInputPage, setNoteInputPage] = useState<string>(String(deliveryNotePage));

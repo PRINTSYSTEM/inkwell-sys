@@ -26,6 +26,7 @@ export const ProofingOrderDesignResponseSchema =
   GenProofingOrderDesignResponseSchema.extend({
     designThumbnailUrl: z.string().nullable().optional(),
     proofingAllocations: z.array(ProofingAllocationResponseSchema).nullable().optional(),
+    outputQty: z.number().nullable().optional(),
   }).passthrough();
 export type ProofingOrderDesignResponse = z.infer<
   typeof ProofingOrderDesignResponseSchema
@@ -45,6 +46,10 @@ export const ProofingOrderResponseSchema =
     scheduleStatus: z.string().nullable().optional(),
     completedAt: z.string().nullable().optional(),
     images: z.array(ProofingOrderImageResponseSchema).nullable().optional(),
+    returnType: z.string().nullable().optional(),
+    returnTypeDisplayName: z.string().nullable().optional(),
+    returnReason: z.string().nullable().optional(),
+    producedQty: z.number().nullable().optional(),
   }).passthrough();
 export type ProofingOrderResponse = z.infer<typeof ProofingOrderResponseSchema>;
 
@@ -54,6 +59,9 @@ export const ProofingOrderListResponseSchema =
     thumbnailUrl: z.string().nullable().optional(),
     scheduleStatus: z.string().nullable().optional(),
     completedAt: z.string().nullable().optional(),
+    returnType: z.string().nullable().optional(),
+    returnTypeDisplayName: z.string().nullable().optional(),
+    returnReason: z.string().nullable().optional(),
   }).passthrough();
 export type ProofingOrderListResponse = z.infer<typeof ProofingOrderListResponseSchema>;
 
@@ -91,14 +99,18 @@ export type ProofingOrderResponsePaginate = ProofingOrderListResponsePaginate;
 
 // ===== AddProofingOrderDetailItem =====
 export const AddProofingOrderDetailItemSchema =
-  GenAddProofingOrderDetailItemSchema.passthrough();
+  GenAddProofingOrderDetailItemSchema.extend({
+    side: z.enum(["both", "front", "back"]).optional(),
+  }).passthrough();
 export type AddProofingOrderDetailItem = z.infer<
   typeof AddProofingOrderDetailItemSchema
 >;
 
 // ===== UpdateProofingDesignItem =====
 export const UpdateProofingDesignItemSchema =
-  GenUpdateProofingDesignItemSchema.passthrough();
+  GenUpdateProofingDesignItemSchema.extend({
+    side: z.enum(["both", "front", "back"]).optional(),
+  }).passthrough();
 export type UpdateProofingDesignItem = z.infer<
   typeof UpdateProofingDesignItemSchema
 >;
@@ -107,6 +119,7 @@ export type UpdateProofingDesignItem = z.infer<
 export const UpdateProofingOrderRequestSchema =
   GenUpdateProofingOrderRequestSchema.extend({
     completedAt: z.string().nullable().optional(),
+    designUpdates: z.array(UpdateProofingDesignItemSchema).nullable().optional(),
   }).passthrough();
 export type UpdateProofingOrderRequest = z.infer<
   typeof UpdateProofingOrderRequestSchema

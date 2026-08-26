@@ -27,6 +27,12 @@ import {
   XCircle,
   AlertTriangle,
   FileImage,
+  History,
+  User,
+  Clock,
+  Eye,
+  Flame,
+  ClipboardList,
 } from "lucide-react";
 import {
   Dialog,
@@ -38,8 +44,12 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import { vi } from "date-fns/locale";
 import {
   productionStepStatusLabels,
+  getStepStatusLabel,
   laminationTypeLabels,
   dieLocationLabels,
 } from "@/lib/status-utils";
@@ -53,7 +63,11 @@ import {
   useUpdateProductionOrderItem,
   useDeleteProductionOrder,
   useBulkUpdateProductionOrderItems,
+  useProductionStepHistory,
+  useProductionOrder,
 } from "@/hooks/use-production";
+import { usePrintOrderHistory } from "@/hooks/use-print-order";
+import { ReadOnlyProofingDetailModal } from "@/components/proofing/ReadOnlyProofingDetailModal";
 import {
   Select,
   SelectContent,
@@ -151,19 +165,417 @@ function getSteps(
   ).sort((a, b) => (a.stepOrder || 0) - (b.stepOrder || 0));
 }
 
+const getDesignTypeBadgeStyle = (code?: string) => {
+  switch (code?.toUpperCase()) {
+    case "H":
+      return "bg-blue-100 text-blue-800 border-blue-200";
+    case "N":
+      return "bg-purple-100 text-purple-800 border-purple-200";
+    case "D":
+      return "bg-amber-100 text-amber-800 border-amber-200";
+    case "T":
+      return "bg-emerald-100 text-emerald-800 border-emerald-200";
+    default:
+      return "bg-slate-100 text-slate-800 border-slate-200";
+  }
+};
+
+const formatDateTime = (dateStr?: string | null) => {
+  if (!dateStr) return "—";
+  try {
+    return format(new Date(dateStr), "HH:mm dd/MM/yyyy", { locale: vi });
+  } catch {
+    return dateStr;
+  }
+};
+
+const getEventBadgeStyle = (eventType?: string) => {
+  switch (eventType) {
+    case "dispatched":
+      return "bg-blue-100 text-blue-800 border-blue-200";
+    case "re_dispatched":
+      return "bg-sky-100 text-sky-800 border-sky-200";
+    case "started":
+      return "bg-amber-100 text-amber-800 border-amber-200";
+    case "paused":
+      return "bg-purple-100 text-purple-800 border-purple-200";
+    case "completed":
+      return "bg-emerald-100 text-emerald-800 border-emerald-200";
+    case "returned_by_print":
+    case "returned_to_dispatch":
+    case "returned_to_proofing":
+      return "bg-rose-100 text-rose-800 border-rose-200";
+    case "reproofed":
+      return "bg-indigo-100 text-indigo-800 border-indigo-200";
+    default:
+      return "bg-slate-100 text-slate-800 border-slate-200";
+  }
+};
+
+// Modal xem nhật ký chuyển trạng thái của Step (kết hợp cả history công đoạn & history lệnh in)
+function StepHistoryModal({
+  stepId,
+  stepName,
+  isOpen,
+  onOpenChange,
+  printOrderId,
+}: {
+  stepId: number | null;
+  stepName?: string;
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+  printOrderId?: number | null;
+}) {
+  const { data: stepHistories, isLoading: isStepLoading } = useProductionStepHistory(
+    isOpen ? stepId : null,
+  );
+  const { data: printHistories, isLoading: isPrintLoading } = usePrintOrderHistory(
+    isOpen ? printOrderId : null,
+  );
+
+  const histories = React.useMemo(() => {
+    const list: any[] = [];
+    if (stepHistories && Array.isArray(stepHistories)) {
+      stepHistories.forEach((h: any) => {
+        list.push({
+          id: `step-${h.id}`,
+          type: h.eventType ? "print" : "step",
+          eventType: h.eventType,
+          eventTypeDisplayName: h.eventTypeDisplayName,
+          fromStatus: h.fromStatus,
+          toStatus: h.toStatus,
+          userName: h.userName || h.userFullName || "Hệ thống",
+          note: h.reason || h.note || h.description,
+          createdAt: h.createdAt,
+        });
+      });
+    }
+    if (printHistories && Array.isArray(printHistories)) {
+      printHistories.forEach((p: any) => {
+        // Prevent duplicate if already returned by BE stepHistories
+        const alreadyExists = list.some((item) => item.createdAt === p.createdAt && item.eventType === (p.eventType || p.action));
+        if (!alreadyExists) {
+          list.push({
+            id: `print-${p.id}`,
+            type: "print",
+            eventType: p.eventType || p.action,
+            eventTypeDisplayName: p.eventTypeDisplayName || p.action,
+            fromStatus: p.fromStatus || p.oldStatus,
+            toStatus: p.toStatus || p.newStatus,
+            userName: p.userName || p.userFullName || p.createdByName || "Hệ thống",
+            note: p.reason || p.notes || p.description,
+            createdAt: p.createdAt,
+          });
+        }
+      });
+    }
+    return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [stepHistories, printHistories]);
+
+  const isLoading = isStepLoading || (!!printOrderId && isPrintLoading);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md bg-white border-slate-200">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-slate-900 font-bold text-base">
+            <History className="h-5 w-5 text-[#93631F]" />
+            Nhật ký công đoạn {stepName ? `(${stepName})` : ""}
+          </DialogTitle>
+          <DialogDescription className="text-xs text-slate-500">
+            Lịch sử chuyển trạng thái và ghi chú lý do tạm dừng công đoạn này.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="py-3 max-h-[60vh] overflow-y-auto pr-1">
+          {isLoading ? (
+            <div className="py-12 text-center">
+              <Loader2 className="h-6 w-6 text-[#93631F] animate-spin mx-auto mb-2" />
+              <p className="text-xs text-slate-500">Đang tải nhật ký công đoạn...</p>
+            </div>
+          ) : histories.length === 0 ? (
+            <div className="py-10 text-center text-xs text-slate-400">
+              Chưa có ghi nhận nhật ký chuyển trạng thái nào cho công đoạn này.
+            </div>
+          ) : (
+            <div className="relative pl-6 space-y-4 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+              {histories.map((h) => (
+                <div key={h.id} className="relative group space-y-1 bg-slate-50 p-2.5 rounded-xl border border-slate-200/80">
+                  <div className="absolute -left-6 top-1 h-5 w-5 rounded-full bg-white border-2 border-slate-300 flex items-center justify-center shadow-2xs">
+                    <Clock className="h-3 w-3 text-slate-500" />
+                  </div>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    {h.type === "print" ? (
+                      <Badge variant="outline" className={cn("text-[10px] font-bold px-1.5 py-0", getEventBadgeStyle(h.eventType))}>
+                        {h.eventTypeDisplayName || getStepStatusLabel(h.eventType || h.toStatus)}
+                      </Badge>
+                    ) : (
+                      <div className="flex items-center gap-1 text-xs font-bold">
+                        {h.fromStatus && (
+                          <>
+                            <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0", getStatusColorClass(h.fromStatus))}>
+                              {getStepStatusLabel(h.fromStatus)}
+                            </Badge>
+                            <span className="text-slate-400">→</span>
+                          </>
+                        )}
+                        <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0", getStatusColorClass(h.toStatus || ""))}>
+                          {getStepStatusLabel(h.toStatus)}
+                        </Badge>
+                      </div>
+                    )}
+                    <span className="text-[10px] font-mono text-slate-400">
+                      {formatDateTime(h.createdAt)}
+                    </span>
+                  </div>
+
+                  <div className="text-[11px] text-slate-700 font-medium flex items-center gap-1 pt-0.5">
+                    <User className="h-3 w-3 text-slate-400 shrink-0" />
+                    <span>{h.userName || "Hệ thống"}</span>
+                  </div>
+
+                  {h.note && (
+                    <div className="mt-1 text-[11px] text-red-900 bg-red-50 border border-red-200/80 rounded-lg p-2 font-mono">
+                      <span className="font-bold font-sans text-red-900">Lý do: </span>
+                      {h.note}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Modal hiển thị báo số KCS từng con hàng (dạng danh sách list đầy đủ như KCS)
+function ProductionReportModal({
+  prod: initialProd,
+  isOpen,
+  onOpenChange,
+}: {
+  prod: ProductionOrderResponse | null;
+  isOpen: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { data: fullProd, isLoading: isProdLoading } = useProductionOrder(
+    initialProd?.id || null,
+    !!initialProd?.id && isOpen,
+  );
+
+  const prod = fullProd || initialProd;
+
+  if (!initialProd) return null;
+
+  const items = (prod as any)?.items || [];
+  const proofingOrder = (prod as any)?.proofingOrder;
+  const proofingDesigns = proofingOrder?.proofingOrderDesigns || [];
+  const proofingCode = prod?.proofingOrderCode || (proofingOrder as any)?.code || `BB${prod?.proofingOrderId}`;
+
+  const formatUrl = (url: string | null | undefined) => {
+    if (!url) return "";
+    if (url.startsWith("http://") || url.startsWith("https://")) return url;
+    const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "");
+    const cleanUrl = url.startsWith("/") ? url : `/${url}`;
+    return baseUrl ? `${baseUrl}${cleanUrl}` : cleanUrl;
+  };
+
+  const getCustomerName = (item: any) => {
+    if (!item) return "—";
+    const design = item.design || {};
+    const itemCustomer = item.customer || design.customer || {};
+    const poCustomer = proofingOrder?.customer || proofingOrder?.order?.customer || {};
+    const prodCustomer = (prod as any)?.customer || (prod as any)?.proofingOrder?.customer || {};
+
+    return (
+      item.customerCompanyName ||
+      item.customerName ||
+      itemCustomer.companyName ||
+      itemCustomer.name ||
+      design.customerCompanyName ||
+      design.customerName ||
+      proofingOrder?.customerCompanyName ||
+      proofingOrder?.customerName ||
+      poCustomer.companyName ||
+      poCustomer.name ||
+      (prod as any)?.customerCompanyName ||
+      (prod as any)?.customerName ||
+      prodCustomer.companyName ||
+      prodCustomer.name ||
+      "—"
+    );
+  };
+
+  const displayItems = items.length > 0 ? items : proofingDesigns;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl bg-white border-slate-200 p-5 rounded-2xl">
+        <DialogHeader className="pb-2 border-b border-slate-100">
+          <DialogTitle className="flex items-center gap-2 text-slate-900 font-extrabold text-base">
+            <ClipboardList className="h-5 w-5 text-[#93631F]" />
+            Báo số KCS — Bài in {proofingCode}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="py-2 space-y-3 max-h-[70vh] overflow-y-auto pr-1">
+          <div className="flex items-center gap-2 text-xs font-black text-emerald-800 dark:text-emerald-400 uppercase tracking-tight">
+            <Box className="h-4 w-4 text-emerald-600 shrink-0" />
+            <span>SỐ LƯỢNG KCS THEO TỪNG CON HÀNG ({displayItems.length})</span>
+          </div>
+
+          {isProdLoading ? (
+            <div className="py-8 text-center text-xs text-slate-400">
+              <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2 text-amber-600" />
+              Đang tải dữ liệu KCS...
+            </div>
+          ) : items.length > 0 ? (
+            <div className="space-y-2.5">
+              {items.map((item: any, idx: number) => {
+                const imgUrl = formatUrl(item.designThumbnailUrl || item.designImageUrl || item.design?.imageUrl);
+                const name = item.designName || item.designCode || `Mã hàng #${idx + 1}`;
+                const code = item.designCode || "—";
+                const customer = getCustomerName(item);
+                const inputQty = item.inputQty != null ? item.inputQty.toLocaleString("vi-VN") : "0";
+                const itemsPerSheet = item.itemsPerSheet != null && item.itemsPerSheet > 0 ? item.itemsPerSheet : 1;
+                const outputQty = item.outputQty != null ? item.outputQty.toLocaleString("vi-VN") : "0";
+                const defectQty = item.defectQty != null ? item.defectQty.toLocaleString("vi-VN") : "0";
+
+                return (
+                  <div
+                    key={item.id || item.productionOrderItemId || idx}
+                    className="p-3 bg-emerald-50/40 border border-emerald-300/80 rounded-xl flex items-center justify-between gap-3 shadow-2xs hover:border-emerald-400 transition-colors"
+                  >
+                    {/* Left: Thumbnail & Main Information */}
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-11 h-11 border rounded-lg bg-white overflow-hidden flex items-center justify-center shrink-0 shadow-2xs">
+                        {imgUrl ? (
+                          <img src={imgUrl} alt={name} className="w-full h-full object-cover" />
+                        ) : (
+                          <FileImage className="w-4 h-4 text-slate-300" />
+                        )}
+                      </div>
+
+                      <div className="min-w-0 space-y-1">
+                        <div className="font-black text-slate-900 text-sm truncate" title={name}>
+                          {name}
+                        </div>
+
+                        <div className="flex items-center gap-x-2 gap-y-0.5 text-xs text-slate-600 flex-wrap">
+                          <span>Mã: <strong className="font-bold text-slate-800">{code}</strong></span>
+                          <span>•</span>
+                          <span>SL Bình bài: <strong className="font-black text-[#93631F] text-sm">{inputQty}</strong></span>
+                          <span>•</span>
+                          <span className="bg-white text-slate-700 border border-slate-200/90 text-[11px] font-bold px-2 py-0.5 rounded-md shadow-2xs">
+                            {itemsPerSheet} con/bài
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: RA & LỖI stats */}
+                    <div className="flex items-center gap-4 shrink-0 text-right pr-1">
+                      <div className="flex flex-col items-end">
+                        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide">RA</span>
+                        <span className="text-base font-mono font-black text-emerald-700">{outputQty}</span>
+                      </div>
+
+                      <div className="flex flex-col items-end">
+                        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide">LỖI</span>
+                        <span className="text-base font-mono font-black text-red-600">{defectQty}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : proofingDesigns.length > 0 ? (
+            <div className="space-y-2.5">
+              {proofingDesigns.map((pod: any, idx: number) => {
+                const name = pod.design?.name || pod.design?.code || `Mã hàng #${idx + 1}`;
+                const code = pod.design?.code || "—";
+                const customer = getCustomerName(pod);
+                const imgUrl = formatUrl(pod.design?.thumbnailUrl || pod.design?.imageUrl);
+                const qty = pod.quantity != null ? pod.quantity.toLocaleString("vi-VN") : "0";
+                const itemsPerSheet = pod.itemsPerSheet != null && pod.itemsPerSheet > 0 ? pod.itemsPerSheet : 1;
+                const outputQty = pod.outputQty != null ? pod.outputQty.toLocaleString("vi-VN") : "0";
+
+                return (
+                  <div
+                    key={pod.id || idx}
+                    className="p-3 bg-emerald-50/40 border border-emerald-300/80 rounded-xl flex items-center justify-between gap-3 shadow-2xs"
+                  >
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-11 h-11 border rounded-lg bg-white overflow-hidden flex items-center justify-center shrink-0 shadow-2xs">
+                        {imgUrl ? (
+                          <img src={imgUrl} alt={name} className="w-full h-full object-cover" />
+                        ) : (
+                          <FileImage className="w-4 h-4 text-slate-300" />
+                        )}
+                      </div>
+
+                      <div className="min-w-0 space-y-1">
+                        <div className="font-black text-slate-900 text-sm truncate" title={name}>
+                          {name}
+                        </div>
+
+                        <div className="flex items-center gap-x-2 gap-y-0.5 text-xs text-slate-600 flex-wrap">
+                          <span>Mã: <strong className="font-bold text-slate-800">{code}</strong></span>
+                          <span>•</span>
+                          <span>SL Bình bài: <strong className="font-black text-[#93631F] text-sm">{qty}</strong></span>
+                          <span>•</span>
+                          <span className="bg-white text-slate-700 border border-slate-200/90 text-[11px] font-bold px-2 py-0.5 rounded-md shadow-2xs">
+                            {itemsPerSheet} con/bài
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 shrink-0 text-right pr-1">
+                      <div className="flex flex-col items-end">
+                        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide">RA</span>
+                        <span className="text-base font-mono font-black text-emerald-700">{outputQty}</span>
+                      </div>
+
+                      <div className="flex flex-col items-end">
+                        <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wide">LỖI</span>
+                        <span className="text-base font-mono font-black text-red-600">0</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="py-6 text-center text-xs text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+              Chưa có dữ liệu con hàng cho bài in này.
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // Outer helper to get status colors
 function getStatusColorClass(status: string) {
   const effectiveStatus = status || "pending";
-  switch (effectiveStatus) {
+  switch (effectiveStatus.toLowerCase()) {
     case "pending":
       return "text-slate-700 bg-slate-100 hover:bg-slate-200 dark:text-slate-300 dark:bg-slate-900/40";
     case "ready":
       return "text-blue-700 bg-blue-100 hover:bg-blue-200 dark:text-blue-300 dark:bg-blue-900/40";
     case "in_progress":
-      return "text-amber-700 bg-amber-100 hover:bg-amber-200 dark:text-amber-300 dark:bg-amber-900/40";
+    case "running":
+      return "text-amber-900 bg-amber-100 border-amber-300 hover:bg-amber-200 font-bold animate-pulse";
     case "done":
-      return "text-emerald-700 bg-emerald-100 hover:bg-emerald-200 dark:text-emerald-300 dark:bg-emerald-900/40";
+    case "completed":
+      return "text-emerald-800 bg-emerald-100 border-emerald-300 hover:bg-emerald-200 font-bold";
     case "blocked":
+    case "paused":
+      return "text-red-800 bg-red-100 border-red-300 hover:bg-red-200 font-extrabold shadow-2xs";
     case "cancelled":
       return "text-destructive bg-destructive/15 hover:bg-destructive/25 dark:text-red-300 dark:bg-red-900/40";
     default:
@@ -176,6 +588,7 @@ interface InlineStepStatusProps {
   isEnabled?: boolean;
   isStatusLocked?: boolean;
   defaultPrintQty: number;
+  onOpenHistory?: (stepId: number, name: string, printOrderId?: number | null) => void;
 }
 
 function InlineStepStatus({
@@ -183,8 +596,10 @@ function InlineStepStatus({
   isEnabled = true,
   isStatusLocked = false,
   defaultPrintQty,
+  onOpenHistory,
 }: InlineStepStatusProps) {
   const { mutate: updateStep } = useUpdateProductionStep();
+  const isPaused = step.status === "paused" || step.status === "blocked";
 
   const handleStatusChange = (newStatus: string) => {
     updateStep({
@@ -201,59 +616,61 @@ function InlineStepStatus({
 
   return (
     <div
-      className={`flex items-center gap-1.5 h-7 transition-all duration-300 ${!isEnabled ? "opacity-30 grayscale pointer-events-none select-none" : ""} ${isStatusLocked ? "pointer-events-none" : ""}`}
+      className={`flex items-center justify-center gap-1 h-7 transition-all duration-300 ${!isEnabled ? "opacity-30 grayscale pointer-events-none select-none" : ""} ${isStatusLocked ? "pointer-events-none" : ""}`}
       onClick={(e) => e.stopPropagation()}
     >
       <Select
         value={
-          step.status || "pending"
+          step.status === "completed" ? "done" : (step.status || "pending")
         }
         onValueChange={handleStatusChange}
         disabled={!isEnabled}
       >
         <SelectTrigger
-          className={`h-7 min-w-[105px] text-[10px] px-2 font-bold border-transparent focus:ring-0 shadow-sm ${getStatusColorClass(
+          className={`h-7 min-w-[92px] text-[10px] px-1.5 font-bold border-slate-200 shadow-2xs ${getStatusColorClass(
             step.status || "pending",
           )} ${isStatusLocked ? "opacity-100 select-none" : ""}`}
         >
-          <SelectValue placeholder="Trạng thái" />
+          <div className="flex items-center gap-1 truncate">
+            {isPaused && <AlertTriangle className="h-3 w-3 text-red-600 animate-pulse shrink-0" />}
+            <SelectValue placeholder="Trạng thái" />
+          </div>
         </SelectTrigger>
         <SelectContent>
-          <SelectItem
-            value="pending"
-            className="text-xs font-semibold cursor-pointer"
-            disabled={step.status === "in_progress"}
-          >
+          <SelectItem value="pending" className="text-xs font-semibold cursor-pointer" disabled={step.status === "in_progress"}>
             Chờ
           </SelectItem>
           {step.status === "ready" && (
-            <SelectItem
-              value="ready"
-              className="text-xs font-semibold cursor-pointer"
-            >
+            <SelectItem value="ready" className="text-xs font-semibold cursor-pointer">
               Sẵn sàng
             </SelectItem>
           )}
-          <SelectItem
-            value="in_progress"
-            className="text-xs font-semibold cursor-pointer"
-          >
+          <SelectItem value="in_progress" className="text-xs font-semibold cursor-pointer">
             Đang thực hiện
           </SelectItem>
-          <SelectItem
-            value="done"
-            className="text-xs font-semibold cursor-pointer"
-          >
+          <SelectItem value="done" className="text-xs font-semibold cursor-pointer">
             Hoàn thành
           </SelectItem>
-          <SelectItem
-            value="blocked"
-            className="text-xs font-semibold cursor-pointer"
-          >
-            Bị chặn/Lỗi
+          <SelectItem value="blocked" className="text-xs font-bold text-red-700 cursor-pointer">
+            <div className="flex items-center gap-1 text-red-700">
+              <AlertTriangle className="h-3 w-3 text-red-600" /> Tạm dừng
+            </div>
           </SelectItem>
         </SelectContent>
       </Select>
+
+      {step.id && onOpenHistory && (
+        <Button
+          variant="ghost"
+          size="icon"
+          type="button"
+          onClick={() => onOpenHistory(step.id!, step.stepTypeName || step.stepType || "")}
+          className="h-6 w-6 text-slate-400 hover:text-[#93631F] hover:bg-amber-50 rounded shrink-0 cursor-pointer p-0"
+          title="Xem nhật ký công đoạn"
+        >
+          <History className="h-3 w-3" />
+        </Button>
+      )}
     </div>
   );
 }
@@ -273,6 +690,7 @@ interface StepItemProps {
   isStatusLocked?: boolean;
   defaultPrintQty: number;
   productionItems: any[];
+  onOpenHistory?: (stepId: number, name: string, printOrderId?: number | null) => void;
 }
 
 function StepItem({
@@ -290,9 +708,11 @@ function StepItem({
   isStatusLocked = false,
   defaultPrintQty,
   productionItems,
+  onOpenHistory,
 }: StepItemProps) {
   const { mutate: updateStep } = useUpdateProductionStep();
   const { mutate: updateOrderItem } = useUpdateProductionOrderItem();
+  const isPaused = step.status === "paused" || step.status === "blocked";
 
   // Auto-fill with proofing order qty if step qty not yet set (or zero)
   const initialInputQty = step.inputQty
@@ -443,56 +863,58 @@ function StepItem({
         </span>
       )}
       {!hideStatus && (
-        <>
+        <div className="flex items-center justify-center gap-1 w-full">
           <Select
             value={
-              step.status || "pending"
+              step.status === "completed" ? "done" : (step.status || "pending")
             }
             onValueChange={(val: any) => handleUpdate({ status: val })}
             disabled={!isEnabled}
           >
             <SelectTrigger
-              className={`h-6 text-[9px] font-bold px-1 w-full border-transparent focus:ring-0 shadow-sm ${getStatusColorClass(step.status || "pending")} ${!isEnabled ? "opacity-30 grayscale" : ""} ${isStatusLocked ? "opacity-100 pointer-events-none select-none" : ""}`}
+              className={`h-6 text-[9px] font-bold px-1.5 w-full border-slate-200 shadow-2xs ${getStatusColorClass(step.status || "pending")} ${!isEnabled ? "opacity-30 grayscale" : ""} ${isStatusLocked ? "opacity-100 pointer-events-none select-none" : ""}`}
             >
-              <SelectValue placeholder="Trạng thái" />
+              <div className="flex items-center gap-1 truncate">
+                {isPaused && <AlertTriangle className="h-3 w-3 text-red-600 animate-pulse shrink-0" />}
+                <SelectValue placeholder="Trạng thái" />
+              </div>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem
-                value="pending"
-                className="text-xs font-semibold cursor-pointer"
-                disabled={step.status === "in_progress"}
-              >
+              <SelectItem value="pending" className="text-xs font-semibold cursor-pointer" disabled={step.status === "in_progress"}>
                 Chờ
               </SelectItem>
               {step.status === "ready" && (
-                <SelectItem
-                  value="ready"
-                  className="text-xs font-semibold cursor-pointer"
-                >
+                <SelectItem value="ready" className="text-xs font-semibold cursor-pointer">
                   Sẵn sàng
                 </SelectItem>
               )}
-              <SelectItem
-                value="in_progress"
-                className="text-xs font-semibold cursor-pointer"
-              >
+              <SelectItem value="in_progress" className="text-xs font-semibold cursor-pointer">
                 Đang thực hiện
               </SelectItem>
-              <SelectItem
-                value="done"
-                className="text-xs font-semibold cursor-pointer"
-              >
+              <SelectItem value="done" className="text-xs font-semibold cursor-pointer">
                 Hoàn thành
               </SelectItem>
-              <SelectItem
-                value="blocked"
-                className="text-xs font-semibold cursor-pointer"
-              >
-                Bị chặn/Lỗi
+              <SelectItem value="blocked" className="text-xs font-bold text-red-700 cursor-pointer">
+                <div className="flex items-center gap-1 text-red-700">
+                  <AlertTriangle className="h-3 w-3 text-red-600" /> Tạm dừng
+                </div>
               </SelectItem>
             </SelectContent>
           </Select>
-        </>
+
+          {step.id && onOpenHistory && (
+            <Button
+              variant="ghost"
+              size="icon"
+              type="button"
+              onClick={() => onOpenHistory(step.id!, step.stepTypeName || step.stepType || "")}
+              className="h-6 w-6 text-slate-400 hover:text-[#93631F] hover:bg-amber-50 rounded shrink-0 cursor-pointer p-0"
+              title="Xem nhật ký công đoạn"
+            >
+              <History className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
       )}
 
       {isCheckStep && !isEditing && (
@@ -619,6 +1041,7 @@ interface StepCellProps {
   defaultPrintQty: number;
   productionItems: any[];
   className?: string;
+  onOpenHistory?: (stepId: number, name: string, printOrderId?: number | null) => void;
 }
 
 function StepCell({
@@ -631,6 +1054,7 @@ function StepCell({
   defaultPrintQty,
   productionItems,
   className,
+  onOpenHistory,
 }: StepCellProps) {
   // If no step AND no info, show empty
   if (!step && !info)
@@ -654,6 +1078,7 @@ function StepCell({
             isStatusLocked={isStatusLocked}
             defaultPrintQty={defaultPrintQty}
             productionItems={productionItems}
+            onOpenHistory={onOpenHistory}
           />
         )}
         {info && <div className="w-full text-center">{info}</div>}
@@ -662,33 +1087,45 @@ function StepCell({
   );
 }
 
+interface ProductionTableRowProps {
+  prod: ProductionOrderResponse;
+  searchTerm: string;
+  onProductionClick: (id: number) => void;
+  onOpenHistory?: (stepId: number, name: string, printOrderId?: number | null) => void;
+  onOpenProofingDetail?: (proofingOrderId: number) => void;
+  onOpenReportModal?: (prod: ProductionOrderResponse) => void;
+}
+
 const ProductionTableRow = React.memo(
   function ProductionTableRow({
     prod,
     searchTerm,
     onProductionClick,
-  }: {
-    prod: ProductionOrderResponse;
-    searchTerm: string;
-    onProductionClick: (id: number) => void;
-  }) {
+    onOpenHistory,
+    onOpenProofingDetail,
+    onOpenReportModal,
+  }: ProductionTableRowProps) {
     const queryClient = useQueryClient();
     const [openDiePopover, setOpenDiePopover] = useState(false);
     const [openPlatePopover, setOpenPlatePopover] = useState(false);
-    const [showCancelDialog, setShowCancelDialog] = useState(false);
-    const [isCancelling, setIsCancelling] = useState(false);
-    const { mutate: deleteProductionOrder } = useDeleteProductionOrder();
     const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
     const [activeImageIdx, setActiveImageIdx] = useState(0);
     const imageContainerRef = React.useRef<HTMLDivElement>(null);
-    const [isExpanded, setIsExpanded] = useState(false);
 
-    const { data: defectRecordsData } = useDefectRecordsByProductionOrder(
-      prod.id || null,
-      undefined,
-      !!prod.id && isExpanded,
+    const printOrderIdForHistory =
+      (prod as any)?.printOrderId ||
+      (prod as any)?.printOrder?.id ||
+      prod.proofingOrderId ||
+      prod.id;
+
+    const handleStepHistoryOpen = React.useCallback(
+      (stepId: number, name: string) => {
+        if (onOpenHistory) {
+          onOpenHistory(stepId, name, printOrderIdForHistory);
+        }
+      },
+      [onOpenHistory, printOrderIdForHistory],
     );
-    const defectRecords = defectRecordsData?.items || [];
 
     const loadUsersOptions = async (search?: string) => {
       try {
@@ -712,8 +1149,6 @@ const ProductionTableRow = React.memo(
     };
 
     const isDraft = !prod.id;
-
-    const isProofingLoading = false;
     const proofingOrder = prod.proofingOrder as any;
 
     const isOrderUrgent = React.useMemo(() => {
@@ -761,7 +1196,6 @@ const ProductionTableRow = React.memo(
         thumbUrls.push(formatUrl(thumb || large));
       };
 
-      // 1. Get from loaded proofingOrder if available
       if (proofingOrder) {
         if (proofingOrder.imageUrl) {
           addImage(proofingOrder.imageUrl, proofingOrder.thumbnailUrl);
@@ -773,7 +1207,6 @@ const ProductionTableRow = React.memo(
         }
       }
 
-      // 2. Fallback to batch-loaded images in prod
       if (largeUrls.length === 0 && Array.isArray((prod as any).proofingOrderImages)) {
         (prod as any).proofingOrderImages.forEach((img: any) => {
           addImage(img.imageUrl, img.thumbnailUrl);
@@ -790,65 +1223,21 @@ const ProductionTableRow = React.memo(
       setActiveImageIdx(0);
     }, [orderImages]);
 
-    const [isImageHovered, setIsImageHovered] = useState(false);
-
-    React.useEffect(() => {
-      const el = imageContainerRef.current;
-      if (!el || !isImageHovered || orderImages.length <= 1) return;
-      const handleWheel = (e: WheelEvent) => {
-        if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.deltaY > 0) {
-          setActiveImageIdx((prev) => (prev + 1) % orderImages.length);
-        } else {
-          setActiveImageIdx((prev) => (prev - 1 + orderImages.length) % orderImages.length);
-        }
-      };
-      el.addEventListener("wheel", handleWheel, { passive: false });
-      return () => {
-        el.removeEventListener("wheel", handleWheel);
-      };
-    }, [isImageHovered, orderImages]);
-
     const productionItems = (prod as any).items || [];
-
-    const { mutate: updateStep } = useUpdateProductionStep();
-    const { mutate: updateOrderItem } = useUpdateProductionOrderItem();
-    const { mutateAsync: bulkUpdateOrderItems } = useBulkUpdateProductionOrderItems();
-
     const steps = prod.steps || [];
+    const hasAnyPausedStep = (steps || []).some(
+      (s) => s.status?.toLowerCase() === "paused" || s.status?.toLowerCase() === "blocked"
+    );
 
-    // Extract steps based on requested columns
-    const materialExportStep = getStepStatus(
-      steps,
-      ["xuất nguyên liệu"],
-      "material_export",
-    );
+    const materialExportStep = getStepStatus(steps, ["xuất nguyên liệu"], "material_export");
     const printStep = getStepStatus(steps, ["in"], "print");
-    const laminationStep = getStepStatus(
-      steps,
-      ["cán màng", "cán"],
-      "lamination",
-    );
+    const laminationStep = getStepStatus(steps, ["cán màng", "cán"], "lamination");
+    const mountingStep = getStepStatus(steps, ["bồi"], "mounting") || steps.find(s => s.stepTypeName?.toLowerCase().includes("bồi")) || null;
+    const foilingStep = getStepStatus(steps, ["ép kim", "ép"], "pressing") || steps.find(s => s.stepType === "foiling" || s.stepTypeName?.toLowerCase().includes("ép")) || null;
     const dieCutStep = getStepStatus(steps, ["bế"], "die_cut");
     const cutStep = getStepStatus(steps, ["cắt"], "cut");
     const glueStep = getStepStatus(steps, ["dán"], "glue");
-    const specialProcessStep = steps.find(
-      (s) =>
-        s.stepType === "mounting" ||
-        s.stepType === "pressing" ||
-        (s.stepTypeName &&
-          ["bồi", "ép"].some((k) => s.stepTypeName!.toLowerCase().includes(k))),
-    ) || null;
-    const packagingSteps = getSteps(
-      steps,
-      ["đóng gói", "giao hàng"],
-      "packaging",
-    );
-    const packagingStep = packagingSteps[0] || null;
 
-    // Không ràng buộc tuần tự nữa, tất cả đều được enable nếu không phải là draft
     const isMaterialExportEnabled = !isDraft;
     const isPrintEnabled = !isDraft;
     const isSpecialProcessEnabled = !isDraft;
@@ -856,807 +1245,205 @@ const ProductionTableRow = React.memo(
     const isDieCutEnabled = !isDraft;
     const isCutEnabled = !isDraft;
     const isGlueEnabled = !isDraft;
-    const isPackagingEnabled = !isDraft;
 
-    const defaultPrintQty =
-      proofingOrder?.totalProcessedQty ||
-      proofingOrder?.totalQuantity ||
-      0;
+    const defaultPrintQty = proofingOrder?.totalProcessedQty || proofingOrder?.totalQuantity || 0;
 
     const displayDesignType = React.useMemo(() => {
       if (!proofingOrder) return "";
-
-      // 1. Check if designType or designTypeName is directly on production order (prod) or proofingOrder
-      const directName = (prod as any).designTypeName ||
-        (prod as any).designType?.name ||
-        proofingOrder.designTypeName ||
-        proofingOrder.designType?.name;
+      const directName = (prod as any).designTypeName || (prod as any).designType?.name || proofingOrder.designTypeName || proofingOrder.designType?.name;
       if (directName) return directName;
-
-      // 2. Extract from proofingOrderDesigns
       const designs = proofingOrder.proofingOrderDesigns || [];
-      const names = Array.from(
-        new Set(
-          designs.map((pod: any) => pod.design?.designType?.name).filter(Boolean)
-        )
-      );
+      const names = Array.from(new Set(designs.map((pod: any) => pod.design?.designType?.name).filter(Boolean)));
       return names.join(", ");
     }, [proofingOrder, prod]);
 
     const displayBasisWeight = React.useMemo(() => {
       if (!proofingOrder) return "";
-
-      // 1. Direct basisWeight from proofingOrder
       if (proofingOrder.basisWeight) return `${proofingOrder.basisWeight}gsm`;
-
-      // 2. Extract from proofingOrderDesigns
       const designs = proofingOrder.proofingOrderDesigns || [];
-      const weights = Array.from(
-        new Set(
-          designs.map((pod: any) => pod.design?.basisWeight).filter(Boolean)
-        )
-      );
-      if (weights.length > 0) {
-        return `${weights.join("/")}gsm`;
-      }
+      const weights = Array.from(new Set(designs.map((pod: any) => pod.design?.basisWeight).filter(Boolean)));
+      if (weights.length > 0) return `${weights.join("/")}gsm`;
       return "";
     }, [proofingOrder]);
 
-    // Aggregate lamination info from order and all designs
     const laminationInfo = React.useMemo(() => {
       if (!proofingOrder) return null;
-
       const lams = new Set<string>();
-
-      // 1. From order level
-      if (proofingOrder.laminationTypeName)
-        lams.add(proofingOrder.laminationTypeName);
+      if (proofingOrder.laminationTypeName) lams.add(proofingOrder.laminationTypeName);
       else if (proofingOrder.laminationType) {
-        lams.add(
-          laminationTypeLabels[proofingOrder.laminationType] ||
-          proofingOrder.laminationType,
-        );
+        lams.add(laminationTypeLabels[proofingOrder.laminationType] || proofingOrder.laminationType);
       }
-
-      // 2. From designs
       proofingOrder.proofingOrderDesigns?.forEach((pod: any) => {
         const designLam = pod.design?.laminationType;
         if (designLam) {
           lams.add(laminationTypeLabels[designLam] || designLam);
         }
       });
-
       return Array.from(lams).join(", ");
     }, [proofingOrder]);
-
-    // Date formatter helper
-    const formatDate = (dateString: string | undefined | null) => {
-      if (!dateString) return "—";
-      try {
-        const date = new Date(dateString);
-        return new Intl.DateTimeFormat("vi-VN", {
-          hour: "2-digit",
-          minute: "2-digit",
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        }).format(date);
-      } catch (e) {
-        return "—";
-      }
-    };
-
-    const formatDateTimeWithSeconds = (dateString: string | undefined | null) => {
-      if (!dateString) return null;
-      try {
-        const date = new Date(dateString);
-        return new Intl.DateTimeFormat("vi-VN", {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        }).format(date);
-      } catch (e) {
-        return null;
-      }
-    };
 
     return (
       <>
         <TableRow
-          className={`border-b transition-colors duration-150 ${isHighlighted
-            ? "bg-amber-100/50 dark:bg-amber-900/30 font-medium border-amber-500 dark:border-amber-700"
-            : isDraft
-              ? "bg-blue-50/20 dark:bg-blue-900/10"
-              : ""
-            }`}
+          className={cn(
+            "border-b transition-colors duration-150",
+            hasAnyPausedStep
+              ? "bg-red-50/80 hover:bg-red-100/70 border-l-4 border-l-red-500"
+              : isHighlighted
+                ? "bg-amber-100/50 hover:bg-amber-100/70"
+                : "hover:bg-slate-50/80"
+          )}
         >
-          <TableCell
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="p-1.5 text-center w-10 align-top pt-4 border-r border-border/40 bg-muted/10 cursor-pointer hover:bg-muted/30 select-none transition-colors"
-          >
-            <Button
-              variant="outline"
-              size="icon"
-              className="w-8 h-8 rounded-md bg-background hover:bg-muted text-slate-700 shadow-sm border-slate-200"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsExpanded(!isExpanded);
-              }}
-              title={isExpanded ? "Thu gọn" : "Mở rộng"}
-            >
-              {isExpanded ? (
-                <ChevronDown className="w-4.5 h-4.5 stroke-[2.5]" />
-              ) : (
-                <ChevronRight className="w-4.5 h-4.5 stroke-[2.5]" />
-              )}
-            </Button>
-          </TableCell>
-          <TableCell
-            onClick={() => setIsExpanded(!isExpanded)}
-            className="py-3 align-top font-bold text-sm text-primary bg-muted/20 border-r border-border/50 text-center w-[90px] max-w-[90px] cursor-pointer hover:bg-muted/30 select-none transition-colors"
-          >
-            {isProofingLoading ? (
-              <div className="flex justify-center mt-2">
-                <div className="h-4 bg-muted rounded w-16 animate-pulse"></div>
-              </div>
-            ) : prod.proofingOrderId ? (
-              <div className="flex flex-col items-center justify-center mt-2 gap-1 px-1">
-                {isExpanded ? (
-                  <div className="flex flex-col items-center gap-1 px-2 py-0.5 text-slate-700 dark:text-slate-300">
-                    <span className="font-bold text-slate-900 dark:text-slate-100">
-                      {prod.proofingOrderCode || (proofingOrder as any)?.code || `BB${prod.proofingOrderId}`}
-                    </span>
-                    {isOrderUrgent && (
-                      <span className="px-1 py-0.5 rounded text-[8px] font-extrabold bg-rose-50 text-rose-600 border border-rose-200 leading-none">
-                        GẤP
-                      </span>
-                    )}
-                  </div>
+          {/* Col 0: MÃ BÌNH BÀI */}
+          <TableCell className="py-2 px-2 align-middle w-[140px] border-r border-slate-200/60">
+            <div className="flex items-center gap-2">
+              <div
+                className="h-10 w-10 bg-slate-100 rounded-lg border border-slate-200 overflow-hidden relative shrink-0 cursor-pointer shadow-2xs"
+                onClick={() => orderImages.length > 0 && setViewingImageUrl(orderImages[0])}
+                title="Bấm để xem ảnh bài in"
+              >
+                {orderThumbnails.length > 0 ? (
+                  <img src={orderThumbnails[0]} alt="Hình bài" className="h-full w-full object-cover select-none" />
                 ) : (
-                  <div className="flex items-center gap-1 px-1 py-0.5 text-slate-700 dark:text-slate-300 w-full justify-center flex-wrap animate-fadeIn">
-                    <span className="font-bold text-slate-900 dark:text-slate-100 leading-none">
-                      {prod.proofingOrderCode || (proofingOrder as any)?.code || `BB${prod.proofingOrderId}`}
-                    </span>
-                    {isOrderUrgent && (
-                      <span className="px-1 py-0.5 rounded text-[8px] font-extrabold bg-rose-50 text-rose-600 border border-rose-200 leading-none shrink-0">
-                        GẤP
-                      </span>
-                    )}
-                    {!isDraft && materialExportStep?.status !== "done" && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowCancelDialog(true);
-                        }}
-                        className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-red-600 hover:bg-red-700 text-white leading-none shrink-0 active:scale-95 transition-transform"
-                        title="Hủy lệnh sản xuất"
-                      >
-                        Hủy
-                      </button>
-                    )}
-                    {orderImages.length > 0 && (
-                      <div
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setViewingImageUrl(orderImages[0]);
-                        }}
-                        className="w-7 h-7 rounded border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-slate-50 dark:bg-slate-900 cursor-zoom-in hover:scale-105 transition-all duration-150 shrink-0 ml-1"
-                        title="Xem nhanh hình ảnh bài in"
-                      >
-                        <img
-                          src={orderThumbnails[0] || orderImages[0]}
-                          alt="Hình bài"
-                          decoding="async"
-                          className="w-full h-full object-cover select-none"
-                        />
-                      </div>
-                    )}
+                  <div className="h-full w-full flex items-center justify-center text-slate-400 bg-slate-50">
+                    <FileImage className="h-4 w-4" />
                   </div>
                 )}
-
-                {prod.customerName && (
-                  <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 whitespace-normal break-words text-center leading-tight line-clamp-3 px-1 mb-1">
-                    {prod.customerName}
-                  </span>
-                )}
-
-                {/* Hình ảnh bài in với Carousel (Mũi tên & Cuộn chuột) */}
-                {isExpanded && orderImages.length > 0 && (
-                  <div className="mt-1 flex flex-col items-center gap-1 shrink-0">
-                    <div
-                      ref={imageContainerRef}
-                      onMouseEnter={() => setIsImageHovered(true)}
-                      onMouseLeave={() => setIsImageHovered(false)}
-                      className="relative w-16 h-16 rounded border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden bg-slate-50 dark:bg-slate-900 group/img cursor-zoom-in shrink-0"
-                    >
-                      <img
-                        src={orderThumbnails[activeImageIdx] || orderImages[activeImageIdx]}
-                        alt="Hình bài"
-                        loading="lazy"
-                        decoding="async"
-                        className="w-full h-full object-cover select-none"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setViewingImageUrl(orderImages[activeImageIdx]);
-                        }}
-                      />
-
-                      {orderImages.length > 1 && (
-                        <>
-                          {/* Mũi tên trái */}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveImageIdx((prev) => (prev - 1 + orderImages.length) % orderImages.length);
-                            }}
-                            className="absolute left-0.5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-slate-900/75 hover:bg-slate-900 text-white flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity duration-150 border border-slate-700/50"
-                            title="Hình trước"
-                          >
-                            <ChevronLeft className="w-3 h-3 stroke-[3]" />
-                          </button>
-
-                          {/* Mũi tên phải */}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setActiveImageIdx((prev) => (prev + 1) % orderImages.length);
-                            }}
-                            className="absolute right-0.5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-slate-900/75 hover:bg-slate-900 text-white flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity duration-150 border border-slate-700/50"
-                            title="Hình sau"
-                          >
-                            <ChevronRight className="w-3 h-3 stroke-[3]" />
-                          </button>
-
-                          {/* Chỉ số trang */}
-                          <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 bg-slate-900/75 text-white text-[8px] font-bold px-1 py-0.5 rounded-sm tracking-tighter select-none">
-                            {activeImageIdx + 1}/{orderImages.length}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Nút hủy lệnh SX */}
-                {isExpanded && !isDraft && materialExportStep?.status !== "done" && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowCancelDialog(true);
-                    }}
-                    className="mt-1.5 flex items-center text-[9px] font-bold bg-red-600 hover:bg-red-700 text-white rounded px-1.5 py-0.5 transition-all duration-150 w-full justify-center"
-                  >
-                    Hủy SX
-                  </button>
-                )}
-
-                {/* Hiển thị thời gian bình bài xong bên dưới hình/mã */}
-                {isExpanded && (() => {
-                  const finishedTime = proofingOrder?.completedAt || proofingOrder?.updatedAt;
-                  const formatted = formatDateTimeWithSeconds(finishedTime);
-                  if (!formatted) return null;
-                  return (
-                    <div className="text-[9px] text-muted-foreground text-center leading-tight font-medium max-w-[90px] whitespace-normal break-words mt-1 border-t border-dashed border-slate-200 dark:border-slate-800 pt-1 w-full">
-                      <span className="block font-bold text-slate-500 uppercase tracking-tighter text-[8px] mb-0.5">Xong BB:</span>
-                      <span className="tabular-nums font-semibold text-slate-600 dark:text-slate-400">{formatted}</span>
-                    </div>
-                  );
-                })()}
               </div>
-            ) : (
-              <div className="flex justify-center mt-2 text-muted-foreground font-normal">
-                —
+
+              <div className="space-y-0.5 min-w-0">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const pId = prod.proofingOrderId || (proofingOrder as any)?.id;
+                    if (pId && onOpenProofingDetail) onOpenProofingDetail(pId);
+                  }}
+                  className="font-mono text-xs font-black text-slate-900 hover:text-blue-600 hover:underline cursor-pointer text-left block truncate"
+                  title="Bấm để xem thông tin bình bài (Read-Only)"
+                >
+                  {prod.proofingOrderCode || (proofingOrder as any)?.code || `BB${prod.proofingOrderId}`}
+                </button>
+
+                {isOrderUrgent && (
+                  <Badge className="bg-red-500 text-white font-bold text-[8px] px-1 py-0 animate-pulse">
+                    <Flame className="h-2 w-2 mr-0.5" /> GẤP
+                  </Badge>
+                )}
               </div>
-            )}
+            </div>
           </TableCell>
+
+          {/* Col 1: LOẠI BÀI */}
+          <TableCell className="text-center py-2.5 px-2 align-top w-[100px]">
+            <Badge variant="outline" className={cn("text-[9.5px] font-bold", getDesignTypeBadgeStyle(displayDesignType))}>
+              {displayDesignType || "—"}
+            </Badge>
+          </TableCell>
+
+          {/* Col 2: CHẤT LIỆU & QUY CÁCH */}
+          <TableCell className="py-2.5 px-2 align-top w-[220px]">
+            <div className="flex flex-col text-[11px] text-slate-700 leading-tight space-y-0.5">
+              <div className="font-semibold text-slate-900 truncate" title={proofingOrder?.materialType?.name || ""}>
+                {proofingOrder?.materialType?.name || (prod as any).materialTypeName || "—"}
+                {displayBasisWeight ? ` ${displayBasisWeight}` : ""}
+              </div>
+              <div className="text-[10.5px] text-slate-500">
+                Khổ: {proofingOrder?.paperSize?.name || proofingOrder?.customPaperSize || "—"}
+              </div>
+              <div className="font-mono font-bold text-[10.5px] text-[#93631F]">
+                Số lượng: {defaultPrintQty.toLocaleString("vi-VN")} tờ
+              </div>
+            </div>
+          </TableCell>
+
+          {/* Cols 3 - 10: Steps */}
           <StepCell
             step={materialExportStep}
             isEnabled={isMaterialExportEnabled}
+            className="w-[110px] px-1 text-center align-top py-2.5"
             defaultPrintQty={defaultPrintQty}
             productionItems={productionItems}
+            onOpenHistory={handleStepHistoryOpen}
           />
-          <TableCell className="py-3 align-top w-[120px] max-w-[120px] text-center">
-            {isProofingLoading ? (
-              <div className="space-y-4 animate-pulse">
-                <div className="h-4 bg-muted rounded w-3/4"></div>
-                <div className="h-4 bg-muted rounded w-1/2"></div>
-                <div className="h-4 bg-muted rounded w-5/6"></div>
-              </div>
-            ) : !prod.proofingOrderId ? (
-              <div className="text-sm font-medium text-muted-foreground flex flex-col items-center justify-center p-4 bg-muted/20 border-2 border-dashed rounded-lg text-center">
-                <Package className="w-6 h-6 mb-2 opacity-50" />
-                Không có thông tin bình bài đính kèm
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2.5 text-sm items-center text-center">
-                {/* 1. Trạng thái IN (Đưa lên đầu cho đồng bộ) */}
-                {printStep && (
-                  <div className={cn("w-full", isExpanded && "pb-3 border-b border-dashed")}>
-                    {/* <div className="text-[10px] font-bold text-muted-foreground uppercase mb-1.5">Trạng thái In:</div> */}
-                    <InlineStepStatus step={printStep} isEnabled={isPrintEnabled} defaultPrintQty={defaultPrintQty} />
-                  </div>
-                )}
-
-                {/* 2. Header & General Info */}
-                {isExpanded && (
-                  <div className="space-y-2 w-full">
-                    <div className="flex justify-between items-start">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {/* Trạng thái công đoạn In đã chuyển lên đầu */}
-                      </div>
-                    </div>
-                    <div className="flex flex-col gap-1 text-[11px] text-center w-full">
-                      <div>
-                        <span className="text-muted-foreground font-medium">Chất liệu: </span>
-                        <span className="font-bold text-foreground">
-                          {(() => {
-                            const designTypeName = displayDesignType || "";
-                            const materialTypeName = proofingOrder?.materialType?.name || "";
-                            const displayMatName = designTypeName 
-                              ? materialTypeName.toLowerCase() 
-                              : materialTypeName;
-                            const basisWeightVal = displayBasisWeight ? ` ${displayBasisWeight}` : "";
-                            return `${designTypeName} ${displayMatName}${basisWeightVal}`.trim() || "—";
-                          })()}
-                        </span>
-                      </div>
-
-                      <div className="border-t border-dashed border-muted/50 pt-1 mt-0.5">
-                        <span className="text-muted-foreground font-medium">Khổ giấy: </span>
-                        <span className="font-bold text-foreground">
-                          {proofingOrder?.paperSize?.name || proofingOrder?.customPaperSize || "—"} mm
-                        </span>
-                      </div>
-
-                      <div className="border-t border-dashed border-muted/50 pt-1 mt-0.5">
-                        <span className="text-muted-foreground font-medium">Số lượng in: </span>
-                        <span className="font-bold text-blue-600">
-                          {defaultPrintQty.toLocaleString("vi-VN")} tờ
-                        </span>
-                      </div>
-
-                      {(() => {
-                        const method = (proofingOrder?.plateExport?.productionMethod || "").toLowerCase();
-                        const isOutsource = method === "outsource";
-                        const partnerName = proofingOrder?.plateExport?.printingVendorName || proofingOrder?.plateExport?.printingVendor?.name;
-                        if (isOutsource && partnerName) {
-                          return (
-                            <div className="border-t border-dashed border-muted/50 pt-1 mt-0.5">
-                              <span className="text-muted-foreground font-medium">In gia công: </span>
-                              <span className="font-bold text-orange-600">
-                                {partnerName}
-                              </span>
-                            </div>
-                          );
-                        }
-                        return null;
-                      })()}
-
-                      {(prod.notes || proofingOrder?.notes || proofingOrder?.additionalNotes) && (
-                        <div className="flex flex-col border-t border-dashed border-muted/50 pt-1.5 mt-0.5">
-                          <span className="text-muted-foreground font-medium mb-0.5">
-                            Ghi chú:
-                          </span>
-                          <span className="font-medium text-amber-700 break-words whitespace-pre-wrap italic leading-snug">
-                            {prod.notes || proofingOrder?.notes || proofingOrder?.additionalNotes}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {isDraft && (
-                      <div className="mt-3 flex items-center gap-2 text-[10px] text-blue-600 font-bold animate-pulse">
-                        <PlayCircle className="w-3.5 h-3.5" />
-                        ĐANG KHỞI TẠO LỆNH...
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* 4. Thông tin khuôn bế & Kẽm (Buttons + Popovers) */}
-                {isExpanded && proofingOrder?.plateExport && (
-                  <div className="flex flex-row gap-2 mt-1 w-full justify-center">
-                    <div className="flex flex-col items-center w-full max-w-[110px]">
-                      <HoverCard>
-                        <HoverCardTrigger asChild>
-                          <div className="cursor-help text-[9px] font-extrabold text-blue-600 dark:text-blue-400 uppercase flex items-center justify-center gap-1 border border-blue-200/40 dark:border-blue-800/40 rounded bg-blue-50/30 dark:bg-blue-950/10 py-0.5 px-1.5 mt-1.5 w-full hover:bg-blue-100/40 dark:hover:bg-blue-900/40 transition-colors">
-                            <FileText className="w-2.5 h-2.5" /> Kẽm
-                          </div>
-                        </HoverCardTrigger>
-                        <HoverCardContent className="w-[250px] p-2 bg-blue-50/95 dark:bg-blue-950/95 border-blue-200/50 dark:border-blue-800/50" align="center">
-                          {[proofingOrder?.plateExport]
-                            .filter(Boolean)
-                            .map((plateExport: any, i: number) => {
-                              const isInHouse = (plateExport.productionMethod || "").toLowerCase() !== "outsource";
-                              const partnerName = plateExport.printingVendorName || plateExport.printingVendor?.name;
-                              const receiveTime = plateExport.isReceived && plateExport.receivedAt
-                                ? formatDate(plateExport.receivedAt)
-                                : plateExport.estimatedReceiveAt
-                                  ? `${formatDate(plateExport.estimatedReceiveAt)} (Dự kiến)`
-                                  : "—";
-
-                              return (
-                                <div
-                                  key={plateExport.id || i}
-                                  className="flex flex-col gap-1 text-[11px]"
-                                >
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-muted-foreground font-medium">
-                                      Mã kẽm:
-                                    </span>
-                                    <span className="font-bold text-foreground">
-                                      {plateExport.id ? `ZK${plateExport.id}` : "—"}
-                                    </span>
-                                  </div>
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-muted-foreground font-medium">
-                                      Số lượng:
-                                    </span>
-                                    <span className="font-bold text-amber-700 dark:text-amber-500">
-                                      {plateExport.plateCount || "—"} bản
-                                    </span>
-                                  </div>
-                                  <div className="flex justify-between items-center border-t border-blue-100/50 dark:border-blue-900/30 pt-0.5">
-                                    <span className="text-muted-foreground font-medium">
-                                      Hình thức in:
-                                    </span>
-                                    <span className="font-bold text-foreground">
-                                      {isInHouse ? "In tại xưởng" : "In gia công"}
-                                    </span>
-                                  </div>
-                                  {!isInHouse && partnerName && (
-                                    <div className="flex flex-col pt-0.5 border-t border-blue-100/50 dark:border-blue-900/30">
-                                      <span className="text-muted-foreground font-medium">
-                                        Đơn vị gia công:
-                                      </span>
-                                      <span className="font-semibold text-foreground">
-                                        {partnerName}
-                                      </span>
-                                    </div>
-                                  )}
-                                  <div className="flex justify-between items-center border-t border-blue-100/50 dark:border-blue-900/30 pt-0.5">
-                                    <span className="text-muted-foreground font-medium">
-                                      Thời gian nhận:
-                                    </span>
-                                    <span className="font-semibold text-foreground">
-                                      {receiveTime}
-                                    </span>
-                                  </div>
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-muted-foreground font-medium">
-                                      Tình trạng:
-                                    </span>
-                                    <span className={cn(
-                                      "font-semibold",
-                                      plateExport.isReceived ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-                                    )}>
-                                      {plateExport.isReceived ? "Đã nhận" : "Chưa nhận"}
-                                    </span>
-                                  </div>
-                                  {/* Ghi chú Kẽm */}
-                                  {(plateExport.notes || plateExport.plate?.notes) && (
-                                    <div className="flex flex-col pt-0.5 border-t border-blue-100/50 dark:border-blue-900/30 mt-0.5">
-                                      <span className="text-muted-foreground font-medium text-[10px]">
-                                        Ghi chú:
-                                      </span>
-                                      <span className="italic text-amber-700 dark:text-amber-500 break-words font-medium whitespace-pre-wrap">
-                                        {plateExport.notes || plateExport.plate?.notes}
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                        </HoverCardContent>
-                      </HoverCard>
-                      <span className={cn(
-                        "text-[8px] font-extrabold mt-0.5 text-center leading-none whitespace-nowrap",
-                        proofingOrder?.plateExport?.isReceived ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-                      )}>
-                        {proofingOrder?.plateExport?.isReceived ? "Đã nhận kẽm" : "Chưa nhận kẽm"}
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </TableCell>
           <StepCell
-            step={specialProcessStep}
-            isEnabled={isSpecialProcessEnabled}
-            className="w-[70px] max-w-[70px] px-1 text-center"
-            info={
-              isExpanded && specialProcessStep?.stepTypeName && (
-                <div className="text-[13px] font-bold text-amber-600 dark:text-amber-400 italic uppercase mt-1">
-                  {specialProcessStep.stepTypeName}
-                </div>
-              )
-            }
+            step={printStep}
+            isEnabled={isPrintEnabled}
+            className="w-[110px] px-1 text-center align-top py-2.5"
             defaultPrintQty={defaultPrintQty}
             productionItems={productionItems}
+            onOpenHistory={handleStepHistoryOpen}
           />
           <StepCell
             step={laminationStep}
             isEnabled={isLaminationEnabled}
-            className="w-[80px] max-w-[80px] px-1 text-center"
+            className="w-[120px] px-1 text-center align-top py-2.5"
             info={
-              isExpanded && laminationInfo && (
-                <div className="text-[13px] font-bold text-primary italic uppercase mt-1">
+              laminationInfo ? (
+                <div className="text-[10px] font-extrabold text-amber-800 italic uppercase mt-1 tracking-tight">
                   {laminationInfo}
                 </div>
-              )
+              ) : null
             }
             defaultPrintQty={defaultPrintQty}
             productionItems={productionItems}
+            onOpenHistory={handleStepHistoryOpen}
+          />
+          <StepCell
+            step={mountingStep}
+            isEnabled={isSpecialProcessEnabled}
+            className="w-[120px] px-1 text-center align-top py-2.5"
+            defaultPrintQty={defaultPrintQty}
+            productionItems={productionItems}
+            onOpenHistory={handleStepHistoryOpen}
+          />
+          <StepCell
+            step={foilingStep}
+            isEnabled={isSpecialProcessEnabled}
+            className="w-[120px] px-1 text-center align-top py-2.5"
+            defaultPrintQty={defaultPrintQty}
+            productionItems={productionItems}
+            onOpenHistory={handleStepHistoryOpen}
           />
           <StepCell
             step={dieCutStep}
             isEnabled={isDieCutEnabled}
-            className="w-[80px] max-w-[80px] px-1 text-center"
+            className="w-[120px] px-1 text-center align-top py-2.5"
             defaultPrintQty={defaultPrintQty}
             productionItems={productionItems}
-            info={
-              isExpanded &&
-              ((proofingOrder as any)?.dieExports?.length > 0 ||
-                (proofingOrder as any)?.proofingOrderDies?.length > 0) && (
-                <div onClick={(e) => e.stopPropagation()}>
-                  {(() => {
-                    const allDies = [
-                      ...((proofingOrder as any).dieExports || []),
-                      ...((proofingOrder as any).proofingOrderDies || []),
-                    ];
-                    const uniqueDies = allDies.filter(
-                      (die, index, self) =>
-                        index ===
-                        self.findIndex(
-                          (d) =>
-                            (d.id && d.id === die.id) ||
-                            (d.code && d.code === die.code),
-                        ),
-                    );
-
-                    if (uniqueDies.length === 0) return null;
-
-                    const allReceived = uniqueDies.every((d: any) => {
-                      const dieCode = (d.code || d.die?.code || "").trim();
-                      const pCode = (proofingOrder?.code || "").trim();
-                      const isNewDie = !!(dieCode && pCode && dieCode.toLowerCase() === pCode.toLowerCase());
-                      return d.isReceived || !isNewDie;
-                    });
-
-                    return (
-                      <div className="flex flex-col items-center w-full">
-                        <HoverCard>
-                          <HoverCardTrigger asChild>
-                            <div className="cursor-help text-[10px] font-bold text-slate-500 uppercase flex items-center justify-center gap-1.5 mt-1 border border-slate-200 dark:border-slate-700 rounded bg-slate-50 dark:bg-slate-900/50 p-1 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors w-full">
-                              <Box className="w-3 h-3" /> khuôn bế
-                            </div>
-                          </HoverCardTrigger>
-                          <HoverCardContent className="w-[250px] p-2 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800" align="center">
-                            <div className="flex flex-col gap-1.5 w-full">
-                              {uniqueDies.map((dieExport: any, i: number) => {
-                                const dieImg = dieExport.die?.imageUrl || dieExport.imageUrl;
-                                const locationKey = dieExport.die?.location;
-                                const displayLocation = locationKey
-                                  ? (dieLocationLabels[locationKey] ||
-                                    dieLocationLabels[Object.keys(dieLocationLabels).find(k => k.toLowerCase() === locationKey.toLowerCase()) || ""] ||
-                                    locationKey)
-                                  : "Trong kho";
-
-                                const dieCode = (dieExport.code || dieExport.die?.code || "").trim();
-                                const pCode = (proofingOrder?.code || "").trim();
-                                const isNewDie = dieCode && pCode && dieCode.toLowerCase() === pCode.toLowerCase();
-
-                                return (
-                                  <div
-                                    key={dieExport.id || i}
-                                    className="flex flex-col gap-1 text-left text-[11px] border-b border-slate-100 dark:border-slate-800 last:border-0 pb-1.5 last:pb-0"
-                                  >
-                                    {dieImg && (
-                                      <div
-                                        className="relative w-full aspect-video rounded border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 overflow-hidden mb-1.5 cursor-zoom-in hover:brightness-95 transition-all"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setViewingImageUrl(dieImg);
-                                        }}
-                                        title="Nhấp để phóng to hình khuôn bế"
-                                      >
-                                        <img
-                                          src={dieImg}
-                                          alt="Hình ảnh khuôn"
-                                          loading="lazy"
-                                          decoding="async"
-                                          className="w-full h-full object-contain select-none"
-                                        />
-                                      </div>
-                                    )}
-                                    <div className="flex flex-col">
-                                      <span className="text-[9px] text-muted-foreground font-medium uppercase">
-                                        Mã khuôn:
-                                      </span>
-                                      <span className="font-bold text-foreground">
-                                        {dieExport.code || dieExport.die?.code || "—"}
-                                      </span>
-                                    </div>
-                                    <div className="flex flex-col">
-                                      <span className="text-[9px] text-muted-foreground font-medium uppercase">
-                                        Kích thước:
-                                      </span>
-                                      <span className="font-bold text-amber-700 dark:text-amber-500">
-                                        {dieExport.size ||
-                                          (dieExport.die
-                                            ? formatDieSize(dieExport.die)
-                                            : "—")}
-                                      </span>
-                                    </div>
-                                    <div className="flex justify-between items-center border-t border-slate-200 dark:border-slate-700 pt-0.5">
-                                      <span className="text-[9px] text-muted-foreground font-medium uppercase">
-                                        Tình trạng:
-                                      </span>
-                                      <span className="font-bold text-green-600 dark:text-green-400">
-                                        {displayLocation}
-                                      </span>
-                                    </div>
-
-                                    <div className="flex flex-col border-t border-slate-200 dark:border-slate-700 pt-0.5">
-                                      <span className="text-[9px] text-muted-foreground font-medium uppercase">
-                                        Loại khuôn:
-                                      </span>
-                                      <span className="font-semibold text-foreground">
-                                        {isNewDie ? "Sử dụng khuôn bế mới" : "Sử dụng khuôn bế cũ"}
-                                      </span>
-                                    </div>
-
-                                    {isNewDie && (
-                                      <>
-                                        <div className="flex justify-between items-center border-t border-slate-200 dark:border-slate-700 pt-0.5">
-                                          <span className="text-[9px] text-muted-foreground font-medium uppercase">
-                                            Trạng thái nhận:
-                                          </span>
-                                          <span className={cn(
-                                            "font-bold",
-                                            dieExport.isReceived ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"
-                                          )}>
-                                            {dieExport.isReceived ? "Đã nhận" : "Chưa nhận"}
-                                          </span>
-                                        </div>
-
-                                        {dieExport.isReceived ? (
-                                          dieExport.receivedAt && (
-                                            <div className="flex flex-col border-t border-slate-200 dark:border-slate-700 pt-0.5">
-                                              <span className="text-[9px] text-muted-foreground font-medium uppercase">
-                                                Thời gian nhận:
-                                              </span>
-                                              <span className="font-semibold text-foreground">
-                                                {formatDate(dieExport.receivedAt)}
-                                              </span>
-                                            </div>
-                                          )
-                                        ) : (
-                                          dieExport.estimatedReceiveAt && (
-                                            <div className="flex flex-col border-t border-slate-200 dark:border-slate-700 pt-0.5">
-                                              <span className="text-[9px] text-muted-foreground font-medium uppercase">
-                                                Hẹn có khuôn:
-                                              </span>
-                                              <span className="font-semibold text-foreground">
-                                                {formatDate(dieExport.estimatedReceiveAt)}
-                                              </span>
-                                            </div>
-                                          )
-                                        )}
-                                      </>
-                                    )}
-
-                                    {/* Ghi chú Khuôn */}
-                                    {(dieExport.notes || dieExport.die?.notes || dieExport.dieExportNotes) && (
-                                      <div className="flex flex-col pt-0.5 border-t border-slate-200 dark:border-slate-700 mt-0.5">
-                                        <span className="text-[9px] text-muted-foreground font-medium uppercase">
-                                          Ghi chú:
-                                        </span>
-                                        <span className="italic text-amber-700 dark:text-amber-500 break-words font-medium whitespace-pre-wrap">
-                                          {dieExport.notes || dieExport.die?.notes || dieExport.dieExportNotes}
-                                        </span>
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </HoverCardContent>
-                        </HoverCard>
-                        <span className={cn(
-                          "text-[9px] font-bold mt-1 text-center leading-none",
-                          allReceived ? "text-green-600 dark:text-green-400" : "text-amber-600 dark:text-amber-400"
-                        )}>
-                          {allReceived ? "Đã nhận khuôn" : "Chưa nhận khuôn"}
-                        </span>
-                      </div>
-                    );
-                  })()}
-                </div>
-              )
-            }
+            onOpenHistory={handleStepHistoryOpen}
           />
           <StepCell
             step={cutStep}
             isEnabled={isCutEnabled}
-            className="w-[68px] max-w-[68px] px-1 text-center"
+            className="w-[120px] px-1 text-center align-top py-2.5"
             defaultPrintQty={defaultPrintQty}
             productionItems={productionItems}
+            onOpenHistory={handleStepHistoryOpen}
           />
           <StepCell
             step={glueStep}
             isEnabled={isGlueEnabled}
-            className="w-[68px] max-w-[68px] px-1 text-center"
+            className="w-[120px] px-1 text-center align-top py-2.5"
             defaultPrintQty={defaultPrintQty}
             productionItems={productionItems}
+            onOpenHistory={handleStepHistoryOpen}
           />
+
+          {/* Col 11: BÁO SỐ */}
+          <TableCell className="text-center py-2.5 px-2 align-top w-[110px]">
+            <Button
+              variant="outline"
+              size="sm"
+              type="button"
+              onClick={() => onOpenReportModal && onOpenReportModal(prod)}
+              className="h-7 text-[10.5px] font-bold px-2 bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-200/80 shadow-2xs gap-1 cursor-pointer w-full mt-0.5"
+              title="Xem chi tiết số lượng báo sản xuất & phế phẩm"
+            >
+              <ClipboardList className="h-3.5 w-3.5 text-[#93631F]" />
+              Báo số
+            </Button>
+          </TableCell>
         </TableRow>
-
-        {/* Dialog xác nhận hủy lệnh sản xuất */}
-        <Dialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-          <DialogContent
-            className="max-w-sm"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-red-600">
-                <AlertTriangle className="w-5 h-5" />
-                Hủy lệnh sản xuất
-              </DialogTitle>
-              <DialogDescription className="text-sm text-slate-600 dark:text-slate-400 pt-1">
-                Bạn có chắc muốn hủy lệnh sản xuất{" "}
-                <span className="font-bold text-foreground">
-                  {(proofingOrder as any)?.code ||
-                    `BB${(proofingOrder as any)?.id}` ||
-                    "này"}
-                </span>
-                ?
-                <br />
-                <span className="text-red-500 font-medium text-xs mt-1 block">
-                  Hành động này không thể hoàn tác.
-                </span>
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter className="flex gap-2 pt-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowCancelDialog(false)}
-                className="flex-1"
-              >
-                Quay lại
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                className="flex-1 gap-1.5"
-                disabled={isCancelling}
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  if (!prod.id) return;
-                  setIsCancelling(true);
-                  try {
-                    await deleteProductionOrder(prod.id);
-                    setShowCancelDialog(false);
-                  } finally {
-                    setIsCancelling(false);
-                  }
-                }}
-              >
-                <XCircle className="w-4 h-4" />
-                Xác nhận hủy
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-
 
         {viewingImageUrl && (
           <ImageViewerDialog
@@ -1713,6 +1500,34 @@ export function ProductionListTable({
   onPageInputChange,
   onPageInputBlur,
 }: ProductionListTableProps) {
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [historyStepId, setHistoryStepId] = useState<number | null>(null);
+  const [historyStepName, setHistoryStepName] = useState<string>("");
+  const [historyPrintOrderId, setHistoryPrintOrderId] = useState<number | null>(null);
+
+  const [proofingModalOpen, setProofingModalOpen] = useState(false);
+  const [selectedProofingOrderId, setSelectedProofingOrderId] = useState<number | null>(null);
+
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [selectedReportProd, setSelectedReportProd] = useState<ProductionOrderResponse | null>(null);
+
+  const handleOpenHistory = (stepId: number, name: string, printOrderId?: number | null) => {
+    setHistoryStepId(stepId);
+    setHistoryStepName(name);
+    setHistoryPrintOrderId(printOrderId || null);
+    setHistoryModalOpen(true);
+  };
+
+  const handleOpenProofingDetail = (proofingOrderId: number) => {
+    setSelectedProofingOrderId(proofingOrderId);
+    setProofingModalOpen(true);
+  };
+
+  const handleOpenReportModal = (prod: ProductionOrderResponse) => {
+    setSelectedReportProd(prod);
+    setReportModalOpen(true);
+  };
+
   return (
     <div className="flex-1 flex flex-col min-h-0 relative">
       <div
@@ -1721,37 +1536,24 @@ export function ProductionListTable({
       >
         {isLoading ? (
           <Table>
-            <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
-              <TableRow className="bg-muted/50 hover:bg-muted/50">
-                <TableHead className="w-8 p-0 text-center" />
-                <TableHead className="h-10 font-bold text-sm text-center w-[90px] max-w-[90px] bg-muted/50 border-r border-border/50">
-                  MÃ BB
-                </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center w-[85px] max-w-[85px]">
-                  XUẤT VẬT TƯ
-                </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center w-[120px] max-w-[120px]">
-                  LỆNH IN
-                </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center w-[70px] max-w-[70px]">
-                  QUY TRÌNH
-                </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center w-[80px] max-w-[80px]">
-                  CÁN MÀNG
-                </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center w-[80px] max-w-[80px]">
-                  BẾ
-                </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center w-[68px] max-w-[68px]">
-                  CẮT
-                </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center w-[68px] max-w-[68px]">
-                  DÁN
-                </TableHead>
+            <TableHeader className="sticky top-0 bg-[#fbf8f3] z-10 shadow-2xs border-b border-slate-200">
+              <TableRow className="bg-[#fbf8f3] hover:bg-[#fbf8f3] uppercase text-[11px] font-bold text-slate-700">
+                <TableHead className="h-10 font-bold text-[#93631F] text-center whitespace-nowrap w-[140px] border-r border-slate-200">MÃ BÌNH BÀI</TableHead>
+                <TableHead className="h-10 font-bold text-slate-700 text-center whitespace-nowrap w-[100px]">LOẠI BÀI</TableHead>
+                <TableHead className="h-10 font-bold text-slate-700 text-left w-[220px]">CHẤT LIỆU & QUY CÁCH</TableHead>
+                <TableHead className="h-10 font-bold text-slate-700 text-center whitespace-nowrap w-[110px]">XUẤT VẬT TƯ</TableHead>
+                <TableHead className="h-10 font-bold text-slate-700 text-center whitespace-nowrap w-[110px]">LỆNH IN</TableHead>
+                <TableHead className="h-10 font-bold text-slate-700 text-center whitespace-nowrap w-[120px]">CÁN MÀNG</TableHead>
+                <TableHead className="h-10 font-bold text-slate-700 text-center whitespace-nowrap w-[120px]">BỒI</TableHead>
+                <TableHead className="h-10 font-bold text-slate-700 text-center whitespace-nowrap w-[120px]">ÉP KIM</TableHead>
+                <TableHead className="h-10 font-bold text-slate-700 text-center whitespace-nowrap w-[120px]">BẾ</TableHead>
+                <TableHead className="h-10 font-bold text-slate-700 text-center whitespace-nowrap w-[120px]">CẮT</TableHead>
+                <TableHead className="h-10 font-bold text-slate-700 text-center whitespace-nowrap w-[120px]">DÁN</TableHead>
+                <TableHead className="h-10 font-bold text-[#93631F] text-center whitespace-nowrap w-[110px]">BÁO SỐ</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              <TableSkeleton cols={9} rows={5} rowHeight="h-32" />
+              <TableSkeleton cols={12} rows={5} rowHeight="h-32" />
             </TableBody>
           </Table>
         ) : productions.length === 0 ? (
@@ -1763,33 +1565,20 @@ export function ProductionListTable({
           </div>
         ) : (
           <Table>
-            <TableHeader className="sticky top-0 bg-background z-10 shadow-sm">
-              <TableRow className="bg-muted/50 hover:bg-muted/50">
-                <TableHead className="w-8 p-0 text-center bg-muted/50" />
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[90px] max-w-[90px] bg-muted/50 border-r border-border/50">
-                  MÃ BB
-                </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[85px] max-w-[85px]">
-                  XUẤT VẬT TƯ
-                </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center w-[120px] max-w-[120px]">
-                  LỆNH IN
-                </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[70px] max-w-[70px]">
-                  QUY TRÌNH
-                </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[80px] max-w-[80px]">
-                  CÁN MÀNG
-                </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[80px] max-w-[80px]">
-                  BẾ
-                </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[68px] max-w-[68px]">
-                  CẮT
-                </TableHead>
-                <TableHead className="h-10 font-bold text-sm text-center whitespace-nowrap w-[68px] max-w-[68px]">
-                  DÁN
-                </TableHead>
+            <TableHeader className="sticky top-0 bg-[#fbf8f3] z-10 shadow-2xs border-b border-slate-200">
+              <TableRow className="bg-[#fbf8f3] hover:bg-[#fbf8f3] uppercase text-[11px] font-bold text-slate-700">
+                <TableHead className="h-10 font-bold text-[#93631F] text-center whitespace-nowrap w-[140px] border-r border-slate-200">MÃ BÌNH BÀI</TableHead>
+                <TableHead className="h-10 font-bold text-slate-700 text-center whitespace-nowrap w-[100px]">LOẠI BÀI</TableHead>
+                <TableHead className="h-10 font-bold text-slate-700 text-left w-[220px]">CHẤT LIỆU & QUY CÁCH</TableHead>
+                <TableHead className="h-10 font-bold text-slate-700 text-center whitespace-nowrap w-[110px]">XUẤT VẬT TƯ</TableHead>
+                <TableHead className="h-10 font-bold text-slate-700 text-center whitespace-nowrap w-[110px]">LỆNH IN</TableHead>
+                <TableHead className="h-10 font-bold text-slate-700 text-center whitespace-nowrap w-[120px]">CÁN MÀNG</TableHead>
+                <TableHead className="h-10 font-bold text-slate-700 text-center whitespace-nowrap w-[120px]">BỒI</TableHead>
+                <TableHead className="h-10 font-bold text-slate-700 text-center whitespace-nowrap w-[120px]">ÉP KIM</TableHead>
+                <TableHead className="h-10 font-bold text-slate-700 text-center whitespace-nowrap w-[120px]">BẾ</TableHead>
+                <TableHead className="h-10 font-bold text-slate-700 text-center whitespace-nowrap w-[120px]">CẮT</TableHead>
+                <TableHead className="h-10 font-bold text-slate-700 text-center whitespace-nowrap w-[120px]">DÁN</TableHead>
+                <TableHead className="h-10 font-bold text-[#93631F] text-center whitespace-nowrap w-[110px]">BÁO SỐ</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1799,12 +1588,35 @@ export function ProductionListTable({
                   prod={prod}
                   searchTerm={searchTerm}
                   onProductionClick={onProductionClick}
+                  onOpenHistory={handleOpenHistory}
+                  onOpenProofingDetail={handleOpenProofingDetail}
+                  onOpenReportModal={handleOpenReportModal}
                 />
               ))}
             </TableBody>
           </Table>
         )}
       </div>
+
+      <StepHistoryModal
+        stepId={historyStepId}
+        stepName={historyStepName}
+        printOrderId={historyPrintOrderId}
+        isOpen={historyModalOpen}
+        onOpenChange={setHistoryModalOpen}
+      />
+
+      <ReadOnlyProofingDetailModal
+        proofingOrderId={selectedProofingOrderId}
+        open={proofingModalOpen}
+        onOpenChange={setProofingModalOpen}
+      />
+
+      <ProductionReportModal
+        prod={selectedReportProd}
+        isOpen={reportModalOpen}
+        onOpenChange={setReportModalOpen}
+      />
 
       {/* Pagination */}
       {!isLoading && productions.length > 0 && totalCount > 0 && (

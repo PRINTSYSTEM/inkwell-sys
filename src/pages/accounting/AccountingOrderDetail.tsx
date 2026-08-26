@@ -69,7 +69,6 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { ROLE } from "@/constants/role.constant";
 import {
-  useApproveDebt,
   useCreateAccountingForOrder,
 } from "@/hooks/use-accounting";
 import { useCustomerAddresses } from "@/hooks/use-customer";
@@ -430,7 +429,6 @@ export default function AccountingOrderDetail() {
   const generateExcelMutation = useGenerateOrderExcel();
   const generateExcelNoVatMutation = useGenerateOrderExcelNoVat();
   const exportPDFMutation = useExportOrderPDF();
-  const approveDebtMutation = useApproveDebt();
   const createDebtNotificationMutation = useCreateDebtNotification();
   const createAccountingMutation = useCreateAccountingForOrder();
   const cancelOrderMutation = useCancelOrder();
@@ -754,10 +752,9 @@ export default function AccountingOrderDetail() {
       // (xem postApprovedCashReceiptForOrder trong use-order.ts)
 
       if (cardName === "paymentInfo" && order.customerId) {
-        // Tạo accounting record cho khách lẻ chưa duyệt nợ
+        // Tạo accounting record cho khách lẻ
         if (
-          deriveCustomerType(order.customer?.companyName) === "retail" &&
-          order.isDebtApproved !== true
+          deriveCustomerType(order.customer?.companyName) === "retail"
         ) {
           try {
             await createAccountingMutation.mutate(order.id);
@@ -864,30 +861,6 @@ export default function AccountingOrderDetail() {
     if (order.customer?.type === "retail") {
       setDepositAmount("");
       setIsDepositDialogOpen(true);
-    } else {
-      try {
-        // Sau khi duyệt công nợ, tạo thông báo công nợ
-        const targetId = order.customerId || order.customer?.id;
-
-        if (targetId) {
-          const customerName =
-            order.customerName || order.customer?.name || "—";
-          const companyName =
-            order.customerCompanyName ||
-            order.customer?.companyName ||
-            "Khách hàng lẻ";
-          const today = new Date().toLocaleDateString("vi-VN");
-
-          await createDebtNotificationMutation.mutate({
-            type: "string",
-            subject: `Duyệt công nợ #${order.orderCode || order.id}`,
-            body: `Tên: ${customerName}\nCông ty: ${companyName}\n—\nChi tiết gửi\nTrạng thái: Chưa gửi\nNgày gửi: ${today}\n—\nĐơn hàng đã được duyệt công nợ thành công.`,
-            customerIds: [targetId],
-          });
-        }
-      } catch (error) {
-        console.error("❌ [Approve Debt Error]:", error);
-      }
     }
   };
 
@@ -1169,21 +1142,6 @@ export default function AccountingOrderDetail() {
                   )}
                   Xuất PDF Đơn Hàng
                 </Button>
-                {order.isDebtApproved !== true &&
-                  order.customer?.type !== "retail" && (
-                    <Button
-                      size="sm"
-                      onClick={() => approveDebtMutation.mutate(order.id)}
-                      disabled={approveDebtMutation.loading}
-                    >
-                      {approveDebtMutation.loading ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <CreditCard className="h-4 w-4 mr-2" />
-                      )}
-                      Xác nhận đã báo giá
-                    </Button>
-                  )}
                 {(user?.role === ROLE.ADMIN ||
                   user?.role === ROLE.SALE ||
                   user?.role === ROLE.ACCOUNTING ||

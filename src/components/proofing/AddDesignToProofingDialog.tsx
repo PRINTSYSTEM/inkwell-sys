@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import type { DesignItem } from "@/types/proofing";
+import { type DesignItem, checkIsDecalSet } from "@/types/proofing";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -34,6 +41,57 @@ import { toast } from "sonner";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { sidesClassificationLabels } from "@/lib/status-utils";
 
+export const getMaxAvailableQtyForSide = (
+  design: DesignItem,
+  side: "both" | "front" | "back" = "both"
+) => {
+  const isDecalBo = checkIsDecalSet(design);
+  const baseAvail =
+    design.availableQuantity !== undefined && design.availableQuantity >= 0
+      ? design.availableQuantity
+      : design.quantity;
+
+  if (!isDecalBo) {
+    return {
+      maxAvailable: baseAvail,
+      label: `${baseAvail.toLocaleString("vi-VN")}`,
+      isSet: false,
+    };
+  }
+
+  const frontQty = design.availableFrontQty != null ? design.availableFrontQty : baseAvail;
+  const backQty = design.availableBackQty != null ? design.availableBackQty : baseAvail;
+
+  if (side === "front") {
+    return {
+      maxAvailable: frontQty,
+      label: `${frontQty.toLocaleString("vi-VN")} mặt trước`,
+      isSet: false,
+    };
+  }
+
+  if (side === "back") {
+    return {
+      maxAvailable: backQty,
+      label: `${backQty.toLocaleString("vi-VN")} mặt sau`,
+      isSet: false,
+    };
+  }
+
+  // side === "both"
+  const sheetsMax =
+    design.availableFrontQty != null && design.availableBackQty != null
+      ? Math.min(design.availableFrontQty, design.availableBackQty) * 2
+      : baseAvail;
+  const setsMax = Math.floor(sheetsMax / 2);
+
+  return {
+    maxAvailable: sheetsMax,
+    label: `${sheetsMax.toLocaleString("vi-VN")} (${setsMax.toLocaleString("vi-VN")} bộ)`,
+    isSet: true,
+  };
+};
+
 interface AddDesignToProofingDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -45,6 +103,7 @@ interface AddDesignToProofingDialogProps {
       orderDetailId: number | null;
       readyDesignId: number | null;
       quantity: number;
+      side?: "both" | "front" | "back";
     }>
   ) => Promise<void>;
   isSubmitting?: boolean;
@@ -61,6 +120,9 @@ export function AddDesignToProofingDialog({
 }: AddDesignToProofingDialogProps) {
   const [designQuantities, setDesignQuantities] = useState<
     Record<number, number>
+  >({});
+  const [designSides, setDesignSides] = useState<
+    Record<number, "both" | "front" | "back">
   >({});
   const [selectedDesignIds, setSelectedDesignIds] = useState<Set<number>>(
     new Set()
@@ -112,14 +174,18 @@ export function AddDesignToProofingDialog({
   useEffect(() => {
     if (open) {
       const initialQuantities: Record<number, number> = {};
+      const initialSides: Record<number, "both" | "front" | "back"> = {};
       const initialSelected = new Set<number>();
       filteredDesigns.forEach((design) => {
         initialQuantities[design.id] = 0;
+        initialSides[design.id] = "both";
       });
       setDesignQuantities(initialQuantities);
+      setDesignSides(initialSides);
       setSelectedDesignIds(initialSelected);
     } else {
       setDesignQuantities({});
+      setDesignSides({});
       setSelectedDesignIds(new Set());
     }
   }, [open, filteredDesigns]);
@@ -196,12 +262,14 @@ export function AddDesignToProofingDialog({
           if (quantity <= 0) {
             throw new Error("Số lượng phải lớn hơn 0");
           }
-          const design = filteredDesigns.find((d) => d.id === parseInt(id, 10));
+          const designId = parseInt(id, 10);
+          const design = filteredDesigns.find((d) => d.id === designId);
           const isPoolDesign = design?.queueItemId?.startsWith("RD_") || false;
           return {
             orderDetailId: isPoolDesign ? null : (design?.id ?? null),
             readyDesignId: design?.readyDesignId ?? design?.designId ?? null,
             quantity: quantity,
+            side: designSides[designId] || "both",
           };
         });
 
@@ -326,7 +394,7 @@ export function AddDesignToProofingDialog({
                 <TableHead className="w-24 text-right">Đặt hàng</TableHead>
                 <TableHead className="w-24 text-right">Còn lại</TableHead>
                 <TableHead className="w-40">Chất liệu</TableHead>
-                <TableHead className="w-24">Số mặt</TableHead>
+                <TableHead className="w-32">Mặt in</TableHead>
                 <TableHead className="w-48">Số lượng lấy</TableHead>
                 <TableHead className="w-28 text-right">Sau khi lấy</TableHead>
                 <TableHead className="w-40 text-center">Thời gian tạo</TableHead>
@@ -347,25 +415,15 @@ export function AddDesignToProofingDialog({
                 </TableRow>
               ) : (
                 filteredDesigns.map((design, index) => {
-                  const currentQty = designQuantities[design.id] || 0;
                   const isSelected = selectedDesignIds.has(design.id);
- 
-                  const baseAvailableQty =
-                    design.availableQuantity !== undefined &&
-                    design.availableQuantity >= 0
-                      ? design.availableQuantity
-                      : design.quantity;
- 
-                  const maxQty = baseAvailableQty;
-                  const remainingQty = Math.max(
-                    0,
-                    baseAvailableQty - currentQty
-                  );
+                  const currentSide = designSides[design.id] || "both";
+                  const { maxAvailable: maxQty, label: availLabel } = getMaxAvailableQtyForSide(design, currentSide);
+                  const currentQty = designQuantities[design.id] || 0;
+
+                  const remainingQty = Math.max(0, maxQty - currentQty);
                   const isValid = currentQty > 0 && currentQty <= maxQty;
                   const isExceeded = currentQty > maxQty;
-                  const hasAvailableQuantity =
-                    design.availableQuantity !== undefined;
- 
+
                   return (
                     <TableRow
                       key={design.id}
@@ -433,24 +491,20 @@ export function AddDesignToProofingDialog({
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
-                        {hasAvailableQuantity ? (
-                          <span
-                            className={cn(
-                              "text-sm font-medium",
-                              design.availableQuantity! > 0
-                                ? "text-green-600"
-                                : design.availableQuantity! === 0
-                                  ? "text-orange-600"
-                                  : "text-red-600"
-                            )}
-                          >
-                            {design.availableQuantity!.toLocaleString()}
-                          </span>
-                        ) : (
-                          <span className="text-sm text-muted-foreground">
-                            -
-                          </span>
-                        )}
+                        <span
+                          className={cn(
+                            "text-sm font-semibold whitespace-nowrap",
+                            maxQty > 0
+                              ? currentSide === "front"
+                                ? "text-blue-600 dark:text-blue-400"
+                                : currentSide === "back"
+                                  ? "text-purple-600 dark:text-purple-400"
+                                  : "text-green-600 dark:text-green-400"
+                              : "text-red-600"
+                          )}
+                        >
+                          {availLabel}
+                        </span>
                       </TableCell>
                       <TableCell>
                         <div className="text-sm text-muted-foreground max-w-[150px] truncate" title={design.materialTypeName}>
@@ -459,13 +513,38 @@ export function AddDesignToProofingDialog({
                         </div>
                       </TableCell>
                       <TableCell>
-                        {design.sidesClassification ? (
-                          <Badge variant="outline" className="text-xs font-normal">
-                            {sidesClassificationLabels[design.sidesClassification] || design.sidesClassification}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">—</span>
-                        )}
+                        {(() => {
+                          const isDecalBo = checkIsDecalSet(design);
+                          if (!isDecalBo) return <span className="text-xs text-muted-foreground">—</span>;
+
+                          return (
+                            <Select
+                              value={currentSide}
+                              onValueChange={(val: "both" | "front" | "back") => {
+                                setDesignSides((prev) => ({
+                                  ...prev,
+                                  [design.id]: val,
+                                }));
+                                const { maxAvailable: newMax } = getMaxAvailableQtyForSide(design, val);
+                                if (selectedDesignIds.has(design.id)) {
+                                  setDesignQuantities((prev) => ({
+                                    ...prev,
+                                    [design.id]: newMax,
+                                  }));
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="h-7 text-xs font-semibold bg-white border-slate-200 min-w-[95px]">
+                                <SelectValue placeholder="Mặt in" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="both" className="text-xs font-medium">Cả 2 mặt</SelectItem>
+                                <SelectItem value="front" className="text-xs font-semibold text-blue-600">Mặt trước</SelectItem>
+                                <SelectItem value="back" className="text-xs font-semibold text-purple-600">Mặt sau</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="w-48 min-w-[150px]">
                         <div className="flex items-center gap-1.5 min-w-[140px]">
@@ -484,15 +563,15 @@ export function AddDesignToProofingDialog({
                               handleQuantityChange(
                                 design.id,
                                 e.target.value,
-                                design.quantity,
-                                design.availableQuantity
+                                maxQty,
+                                maxQty
                               )
                             }
                             placeholder="0"
                             disabled={!isSelected}
                           />
                           <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
-                            /{maxQty.toLocaleString()}
+                            /{maxQty.toLocaleString("vi-VN")}
                           </span>
                         </div>
                       </TableCell>

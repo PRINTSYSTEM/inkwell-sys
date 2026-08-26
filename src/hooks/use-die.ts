@@ -105,6 +105,10 @@ export const useCreateDie = () => {
       if (size != null && size !== "") {
         formData.append("Size", size);
       }
+      const category = (d.Category ?? d.category) as string | undefined;
+      if (category != null && category !== "") {
+        formData.append("Category", category);
+      }
       const price = (d.Price ?? d.price) as number | undefined;
       if (price != null) {
         formData.append("Price", price.toString());
@@ -657,6 +661,7 @@ export const useReceiveDie = () => {
       queryClient.invalidateQueries({ queryKey: ["proofing-orders"] });
       queryClient.invalidateQueries({ queryKey: ["production-orders"] });
       queryClient.invalidateQueries({ queryKey: ["productions"] });
+      queryClient.invalidateQueries({ queryKey: ["print-orders"] });
       toast.success("Đã xác nhận nhận khuôn bế thành công");
     },
     onError: (error: ApiError) => {

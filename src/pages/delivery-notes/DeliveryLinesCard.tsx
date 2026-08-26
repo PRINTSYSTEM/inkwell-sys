@@ -122,18 +122,18 @@ export default function DeliveryLinesCard({
             <div className="overflow-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-muted/30">
-                    <TableHead className="pl-4">Mã hàng / Đơn</TableHead>
-                    <TableHead>Sản phẩm</TableHead>
-                    <TableHead>Mã bài</TableHead>
-                    <TableHead>Ghi chú</TableHead>
-                    <TableHead className="text-right">SL đặt hàng</TableHead>
-                    <TableHead className="text-right">SL giao</TableHead>
-                    <TableHead className="text-right">Phụ hao</TableHead>
-                    <TableHead className="text-right">SL thực tính</TableHead>
-                    <TableHead className="text-right">Thành tiền</TableHead>
-                    <TableHead>Trạng thái</TableHead>
-                    <TableHead>Thao tác</TableHead>
+                  <TableRow className="bg-muted/30 text-xs">
+                    <TableHead className="pl-4 w-[170px]">Mã hàng / Đơn</TableHead>
+                    <TableHead className="min-w-[180px]">Sản phẩm</TableHead>
+                    <TableHead className="w-[85px]">Mã bài</TableHead>
+                    <TableHead className="w-[120px]">Ghi chú</TableHead>
+                    <TableHead className="w-[85px] text-right whitespace-nowrap">SL đặt hàng</TableHead>
+                    <TableHead className="w-[90px] text-right whitespace-nowrap">SL giao</TableHead>
+                    <TableHead className="w-[70px] text-right whitespace-nowrap">Phụ hao</TableHead>
+                    <TableHead className="w-[90px] text-right whitespace-nowrap">SL thực tính</TableHead>
+                    <TableHead className="w-[95px] text-right whitespace-nowrap">Thành tiền</TableHead>
+                    <TableHead className="w-[100px] text-center whitespace-nowrap">Trạng thái</TableHead>
+                    <TableHead className="w-[110px] text-center whitespace-nowrap">Thao tác</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

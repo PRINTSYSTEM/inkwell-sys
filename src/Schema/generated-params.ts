@@ -666,6 +666,7 @@ export const DieListParamsSchema = PagedParamsSchema.extend({
   location: z.string().nullable().optional(),
   designId: z.number().int().nullable().optional(),
   designTypeId: z.number().int().nullable().optional(),
+  category: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
 });
@@ -1113,6 +1114,8 @@ export const ProductionListParamsSchema = PagedParamsSchema.extend({
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
   tab: z.string().nullable().optional(),
+  designTypeId: z.number().nullable().optional(),
+  isQuantityReported: z.boolean().nullable().optional(),
 });
 export type ProductionListParams = z.infer<typeof ProductionListParamsSchema>;
 
@@ -1596,8 +1599,11 @@ export type UserKpiTeamParams = z.infer<typeof UserKpiTeamParamsSchema>;
 export const UserListParamsSchema = PagedParamsSchema.extend({
   role: z.string().nullable().optional(),
   isActive: z.boolean().nullable().optional(),
+  search: z.string().nullable().optional(),
   sortColumn: z.string().nullable().optional(),
   sortOrder: z.string().nullable().optional(),
+  fromDate: z.string().nullable().optional(),
+  toDate: z.string().nullable().optional(),
 });
 export type UserListParams = z.infer<typeof UserListParamsSchema>;
 

@@ -40,6 +40,7 @@ import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import { AddressBookManager } from "./DeliveryNoteList";
 import { toast } from "sonner";
 import { useOrder } from "@/hooks/use-order";
+import { ReadOnlyProofingDetailModal } from "@/components/proofing/ReadOnlyProofingDetailModal";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -81,7 +82,9 @@ import {
   useUpdateDeliveryLineResult,
   useUpdateDeliveryNote,
   useDeleteDeliveryNote,
+  useReverseDeliveryNote,
 } from "@/hooks/use-delivery-note";
+import { ReverseDeliveryNoteDialog } from "./ReverseDeliveryNoteDialog";
 import {
   useCreateReturnNote,
   useReturnNotesByDeliveryNote,
@@ -97,6 +100,7 @@ import {
   getStatusColorClass,
 } from "@/lib/status-utils";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { cn } from "@/lib/utils";
 import DeliveryLinesCard from "./DeliveryLinesCard";
 import DeliveryInfoSidebar from "./DeliveryInfoSidebar";
 import DeliveryNoteUpdateDialog from "./DeliveryNoteUpdateDialog";
@@ -171,10 +175,13 @@ export default function DeliveryNoteDetailPage() {
   const [failureReason, setFailureReason] = useState("");
   const [failureType, setFailureType] = useState<string>("");
   const [affectsDebt, setAffectsDebt] = useState(false);
+  const [viewingProofingOrderId, setViewingProofingOrderId] = useState<number | null>(null);
   const [notes, setNotes] = useState("");
   const [isRecreateDialogOpen, setIsRecreateDialogOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [isReverseConfirmOpen, setIsReverseConfirmOpen] = useState(false);
   const deleteMutation = useDeleteDeliveryNote();
+  const reverseMutation = useReverseDeliveryNote();
   const isAuthorizedToDelete =
     user?.role === ROLE.ADMIN ||
     user?.role === ROLE.ACCOUNTING ||
@@ -222,6 +229,16 @@ export default function DeliveryNoteDetailPage() {
     deleteMutation.mutate(deliveryNoteId, {
       onSuccess: () => {
         setIsDeleteConfirmOpen(false);
+        navigate("/delivery-notes");
+      },
+    });
+  };
+
+  const handleReverseDeliveryNote = async (reason: string) => {
+    if (!deliveryNoteId) return;
+    await reverseMutation.mutateAsync({ id: deliveryNoteId, reason }, {
+      onSuccess: () => {
+        setIsReverseConfirmOpen(false);
         navigate("/delivery-notes");
       },
     });
@@ -901,15 +918,34 @@ export default function DeliveryNoteDetailPage() {
             )}
 
             {isAuthorizedToDelete && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsDeleteConfirmOpen(true)}
-                className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20 font-semibold"
-              >
-                <Trash2 className="w-4 h-4" />
-                Xóa phiếu
-              </Button>
+              (() => {
+                const noteStatus = (deliveryNote.status || "").toLowerCase();
+                const isUncompleted = ["pending", "in_transit", "draft", "confirmed", "ready_to_ship", "handed_over"].includes(noteStatus);
+
+                return isUncompleted ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsDeleteConfirmOpen(true)}
+                    className="gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20 font-semibold"
+                    title="Xóa phiếu giao hàng chưa chốt kết quả"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Xóa phiếu tạo sai
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsReverseConfirmOpen(true)}
+                    className="gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200 dark:border-red-900/60 font-bold"
+                    title="Xóa phiếu giao hàng đã hoàn thành và hoàn tác công nợ, xuất kho"
+                  >
+                    <Trash2 className="w-4 h-4 text-red-600" />
+                    Xóa phiếu
+                  </Button>
+                );
+              })()
             )}
           </div>
         </div>
@@ -1426,6 +1462,23 @@ export default function DeliveryNoteDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ReadOnlyProofingDetailModal
+        proofingOrderId={viewingProofingOrderId}
+        open={!!viewingProofingOrderId}
+        onOpenChange={(open) => !open && setViewingProofingOrderId(null)}
+      />
+
+      {/* Reverse Delivery Note Dialog */}
+      <ReverseDeliveryNoteDialog
+        open={isReverseConfirmOpen}
+        onOpenChange={setIsReverseConfirmOpen}
+        deliveryNoteId={deliveryNoteId}
+        deliveryNoteCode={deliveryNote?.code}
+        isInvoiced={Array.isArray(lines) && lines.some((l: any) => l?.invoiceId || (l?.invoicedQty && l.invoicedQty > 0))}
+        isPending={reverseMutation.isPending}
+        onConfirm={handleReverseDeliveryNote}
+      />
     </div>
   );
 }

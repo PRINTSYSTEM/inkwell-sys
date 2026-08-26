@@ -1,4 +1,4 @@
-import { ArrowLeft, Pencil, Download, Plus } from "lucide-react";
+import { ArrowLeft, Pencil, Download, Plus, RefreshCw, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +22,8 @@ interface CustomerHeaderProps {
   onEdit: () => void;
   onExportDebt: () => void;
   onCreateCashReceipt?: () => void;
+  onRecalculateDebt?: () => void;
+  isRecalculatingDebt?: boolean;
   canViewFinancialInfo?: boolean;
 }
 
@@ -30,6 +32,8 @@ export function CustomerHeader({
   onEdit,
   onExportDebt,
   onCreateCashReceipt,
+  onRecalculateDebt,
+  isRecalculatingDebt = false,
   canViewFinancialInfo = true,
 }: CustomerHeaderProps) {
   const navigate = useNavigate();
@@ -73,6 +77,22 @@ export function CustomerHeader({
             </Button>
             {canViewFinancialInfo && (
               <>
+                {onRecalculateDebt && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onRecalculateDebt}
+                    disabled={isRecalculatingDebt}
+                    title="Đồng bộ lại công nợ chính xác từ sổ chi tiết"
+                  >
+                    {isRecalculatingDebt ? (
+                      <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4 mr-1.5" />
+                    )}
+                    Đồng bộ công nợ
+                  </Button>
+                )}
                 <Button variant="outline" size="sm" onClick={onExportDebt}>
                   <Download className="h-4 w-4 mr-1.5" />
                   Xuất công nợ

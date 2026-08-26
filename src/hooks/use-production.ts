@@ -15,6 +15,7 @@ import type {
   ProductionStepResponse,
   CreateProductionOrderRequest,
   UpdateProductionStepRequest,
+  ProductionStepHistoryResponse,
   ProductionListParams,
   AssignProductionStepRequest,
   ProductionPendingMaterialParams,
@@ -120,10 +121,13 @@ export const useUpdateProductionStep = () => {
     try {
       const result = await execute(payload);
 
-      // Invalidate production order queries to refresh step data
-      queryClient.invalidateQueries({
-        queryKey: productionOrderKeys.all,
-      });
+      // Invalidate all production order, print order, and post-print queries so all screens refresh simultaneously
+      invalidateRelatedQueries(queryClient, [
+        "production-orders",
+        "productions",
+        "print-orders",
+        "post-print",
+      ]);
 
       toast.success("Thành công", {
         description: "Đã cập nhật trạng thái bước sản xuất",
@@ -131,12 +135,15 @@ export const useUpdateProductionStep = () => {
 
       return result;
     } catch (err: unknown) {
-      const error = err as ApiError;
-      toast.error("Lỗi", {
-        description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Không thể cập nhật trạng thái bước sản xuất",
+      const errorObj = err as any;
+      const errorMsg =
+        errorObj?.response?.data?.message ||
+        errorObj?.response?.data?.detail ||
+        errorObj?.response?.data?.title ||
+        errorObj?.message ||
+        "Không thể cập nhật trạng thái bước sản xuất";
+      toast.error("Không thể cập nhật", {
+        description: errorMsg,
       });
       throw err;
     }
@@ -149,6 +156,49 @@ export const useUpdateProductionStep = () => {
     mutate,
     reset,
   };
+};
+
+export interface ProductionDesignTypeSummaryItem {
+  designTypeId: number;
+  code: string;
+  name: string;
+  count: number;
+}
+
+export interface ProductionDesignTypeSummaryResponse {
+  total: number;
+  designTypes: ProductionDesignTypeSummaryItem[];
+}
+
+// GET /api/production-orders/design-type-summary
+export const useProductionDesignTypeSummary = (params?: Record<string, unknown>) => {
+  return useQuery<ProductionDesignTypeSummaryResponse>({
+    queryKey: ["production-orders-design-type-summary", params],
+    queryFn: async () => {
+      const res = await apiRequest.get<ProductionDesignTypeSummaryResponse>(
+        API_SUFFIX.PRODUCTION_ORDERS_DESIGN_TYPE_SUMMARY,
+        {
+          params: normalizeParams((params ?? {}) as Record<string, unknown>),
+        }
+      );
+      return res.data;
+    },
+  });
+};
+
+// GET /api/production-orders/steps/:stepId/history - Fetch production step status transition history
+export const useProductionStepHistory = (stepId: number | null) => {
+  return useQuery<ProductionStepHistoryResponse[]>({
+    queryKey: ["production-step-history", stepId],
+    queryFn: async () => {
+      if (!stepId) return [];
+      const res = await apiRequest.get<ProductionStepHistoryResponse[]>(
+        API_SUFFIX.PRODUCTION_STEP_HISTORY(stepId),
+      );
+      return res.data;
+    },
+    enabled: !!stepId,
+  });
 };
 
 // DELETE /api/production-orders/:id - Delete (cancel) a production order
@@ -174,11 +224,12 @@ export const useDeleteProductionOrder = () => {
       });
     } catch (err: unknown) {
       const error = err as ApiError;
-      toast.error("Lỗi", {
+      const serverMsg = error?.response?.data?.message || error?.message;
+      toast.error("Không thể hủy/xóa lệnh sản xuất", {
         description:
-          error?.response?.data?.message ||
-          error?.message ||
-          "Không thể hủy lệnh sản xuất",
+          serverMsg ||
+          "Lệnh sản xuất đã có lịch sử sản xuất hoặc báo lỗi — Vui lòng dùng luồng Trả về bình bài.",
+        duration: 5000,
       });
       throw err;
     }
@@ -396,6 +447,56 @@ export const useCompleteProduction = () => {
     },
     reset: () => {},
   };
+};
+
+export interface PostPrintCountsResponse {
+  active: number;
+  unreported: number;
+  reported: number;
+  completed: number;
+}
+
+export const usePostPrintProductionOrders = (params?: ProductionListParams) => {
+  return useQuery<ProductionOrderResponsePaginate>({
+    queryKey: [...productionOrderKeys.all, "post-print", params],
+    queryFn: async () => {
+      const res = await apiRequest.get<ProductionOrderResponsePaginate>(
+        API_SUFFIX.PRODUCTION_POST_PRINT,
+        {
+          params: normalizeParams((params ?? {}) as Record<string, unknown>),
+        }
+      );
+      return res.data;
+    },
+  });
+};
+
+export const usePostPrintCompletedProductionOrders = (params?: ProductionListParams) => {
+  return useQuery<ProductionOrderResponsePaginate>({
+    queryKey: [...productionOrderKeys.all, "post-print-completed", params],
+    queryFn: async () => {
+      const res = await apiRequest.get<ProductionOrderResponsePaginate>(
+        API_SUFFIX.PRODUCTION_POST_PRINT_COMPLETED,
+        {
+          params: normalizeParams((params ?? {}) as Record<string, unknown>),
+        }
+      );
+      return res.data;
+    },
+  });
+};
+
+export const usePostPrintCounts = () => {
+  return useQuery<PostPrintCountsResponse>({
+    queryKey: [...productionOrderKeys.all, "post-print-counts"],
+    queryFn: async () => {
+      const res = await apiRequest.get<PostPrintCountsResponse>(
+        API_SUFFIX.PRODUCTION_POST_PRINT_COUNTS
+      );
+      return res.data;
+    },
+    refetchInterval: 15000,
+  });
 };
 
 export { productionOrderCrudApi, productionOrderKeys };

@@ -176,20 +176,30 @@ export function PendingExportsDialog({
     });
   }, [enrichedOrders, searchQuery]);
 
-  const handleExportClick = (po: any, supplierName: string) => {
-    // Find vendor from active vendors by name (fuzzy match)
-    const match = vendors.find((v) => {
-      const vName = (v.name || "").toLowerCase();
-      const sName = supplierName.toLowerCase();
-      return vName.includes(sName) || sName.includes(vName);
-    });
-
-    if (!match) {
-      toast.error(`Không tìm thấy Nhà cung cấp "${supplierName}" trong danh sách hệ thống. Vui lòng tạo NCC này trước!`);
-      return;
+  const handleExportClick = (po: any, supplierName?: string) => {
+    let vendorId = 0;
+    if (supplierName) {
+      const match = vendors.find((v) => {
+        const vName = (v.name || "").toLowerCase();
+        const sName = supplierName.toLowerCase();
+        return vName.includes(sName) || sName.includes(vName);
+      });
+      if (match) {
+        vendorId = match.id;
+      }
     }
 
-    onInitiateStockOut(match.id, po.proofingOrderCode || `BB${po.proofingOrderId}`, po.totalQuantity, po.paperName, !!po.isBoxCarton);
+    if (!vendorId && vendors.length > 0) {
+      vendorId = vendors[0].id;
+    }
+
+    onInitiateStockOut(
+      vendorId,
+      po.proofingOrderCode || `BB${po.proofingOrderId}`,
+      po.totalQuantity,
+      po.paperName,
+      !!po.isBoxCarton
+    );
   };
 
   const isLoading = isLoadingPending || isLoadingProofing;
@@ -280,9 +290,15 @@ export function PendingExportsDialog({
                             </div>
                           ) : (
                             <div className="text-center">
-                              <Badge variant="secondary" className="bg-slate-100 text-slate-500 font-normal hover:bg-slate-100 py-0.5 text-[10px] rounded">
-                                Tự chọn NCC
-                              </Badge>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleExportClick(po)}
+                                className="w-full h-7 text-[10px] font-bold border-slate-200 hover:border-amber-300 hover:bg-amber-50 text-slate-600 hover:text-amber-800 rounded-lg cursor-pointer px-2 flex items-center justify-center gap-1"
+                              >
+                                <span>Tự chọn NCC</span>
+                                <ArrowRight className="h-3 w-3 shrink-0" />
+                              </Button>
                             </div>
                           )}
                         </td>

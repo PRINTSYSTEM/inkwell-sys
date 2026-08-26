@@ -360,6 +360,46 @@ export const useDeleteDeliveryNote = (
   });
 };
 
+// ================== REVERSE DELIVERY NOTE ==================
+// DELETE /delivery-notes/{id}/reverse
+export const useReverseDeliveryNote = (
+  options?: UseMutationOptions<void, Error, { id: number; reason: string }>
+) => {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, { id: number; reason: string }>({
+    ...options,
+    mutationFn: async ({ id, reason }) => {
+      await apiRequest.delete(API_SUFFIX.DELIVERY_NOTE_REVERSE(id), {
+        data: { reason: reason.trim() },
+      });
+    },
+    onSuccess: (data, variables, context) => {
+      const deliveryNoteId = variables.id;
+      queryClient.invalidateQueries({ queryKey: ["deliveryNotes"] });
+      queryClient.invalidateQueries({ queryKey: ["deliveryNote", deliveryNoteId] });
+      queryClient.invalidateQueries({ queryKey: ["deliveryNoteStats"] });
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      queryClient.invalidateQueries({ queryKey: ["availableOrdersForDelivery"] });
+      queryClient.invalidateQueries({ queryKey: ["availableOrderDetailsForDeliveryNote"] });
+      queryClient.invalidateQueries({ queryKey: ["proofing-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-outs"] });
+      queryClient.invalidateQueries({ queryKey: ["stock-ins"] });
+      toast.success("Đã đảo ngược phiếu giao hàng và hoàn tác công nợ, xuất kho, trạng thái đơn hàng");
+      if (options?.onSuccess) options.onSuccess(data, variables, context);
+    },
+    onError: (error: any, variables, context) => {
+      const message =
+        error.response?.data?.message ||
+        error.response?.data?.detail ||
+        error.message ||
+        "Không thể đảo ngược phiếu giao hàng";
+      toast.error("Đảo ngược phiếu giao hàng thất bại", { description: message });
+      if (options?.onError) options.onError(error, variables, context);
+    },
+  });
+};
+
 // ================== GET AVAILABLE ORDER DETAILS FOR DELIVERY NOTE ==================
 // GET /delivery-notes/available-order-details?forDeliveryNoteId={id}
 export const useAvailableOrderDetailsForDeliveryNote = (
@@ -455,6 +495,53 @@ export const useUpdateDeliveryLineQuantity = () => {
         error.response?.data?.message ||
         error.message ||
         "Cập nhật số lượng giao thất bại";
+      toast.error(message);
+    },
+  });
+};
+
+// ================== UPDATE DELIVERY LINE REDELIVERY ==================
+// PUT /delivery-notes/lines/{lineId}/redelivery
+export const useUpdateDeliveryLineRedelivery = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      lineId,
+      isRedelivery,
+    }: {
+      lineId: number;
+      isRedelivery: boolean;
+    }) => {
+      const res = await apiRequest.put<DeliveryNoteLineResponse>(
+        API_SUFFIX.DELIVERY_NOTE_LINE_REDELIVERY(lineId),
+        { isRedelivery }
+      );
+      return res.data;
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["deliveryNote"] });
+      queryClient.invalidateQueries({ queryKey: ["deliveryNotes"] });
+
+      if (data && typeof data.isRedelivery === "boolean") {
+        if (data.isRedelivery !== variables.isRedelivery) {
+          toast.warning("Hệ thống chưa ghi nhận cờ hàng giao lại trên server.");
+        } else {
+          toast.success(
+            variables.isRedelivery
+              ? "Đã gắn cờ: HÀNG GIAO LẠI"
+              : "Đã bỏ cờ hàng giao lại"
+          );
+        }
+      } else {
+        toast.success("Cập nhật cờ hàng giao lại thành công");
+      }
+    },
+    onError: (error: any) => {
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Cập nhật cờ hàng giao lại thất bại";
       toast.error(message);
     },
   });

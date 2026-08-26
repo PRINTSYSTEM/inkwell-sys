@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useMemo } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -115,17 +115,44 @@ interface MaterialSelectorProps {
   materials: MaterialResponse[];
   placeholder?: string;
   className?: string;
+  onCreateNew?: () => void;
+  vendorId?: number | null;
 }
 
 function MaterialSelector({
   value,
   onSelect,
   materials,
-  placeholder = "Chọn chất liệu",
+  placeholder = "Chọn sản phẩm / vật tư",
   className,
+  onCreateNew,
+  vendorId,
 }: MaterialSelectorProps) {
   const [open, setOpen] = useState(false);
+
+  // Filter materials strictly to only those belonging to the selected vendor
+  const vendorMaterials = useMemo(() => {
+    if (!vendorId) return [];
+    return materials.filter((m) => m.vendorId === vendorId);
+  }, [materials, vendorId]);
+
   const selectedMaterial = materials.find((m) => m.id === value);
+
+  if (!vendorId) {
+    return (
+      <Button
+        variant="outline"
+        disabled
+        className={cn(
+          "h-8 w-full justify-between text-xs bg-slate-100/80 text-slate-400 font-normal cursor-not-allowed border-dashed border-slate-300",
+          className
+        )}
+      >
+        <span className="truncate">Vui lòng chọn NCC trước...</span>
+        <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-30" />
+      </Button>
+    );
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -135,7 +162,8 @@ function MaterialSelector({
           role="combobox"
           aria-expanded={open}
           className={cn(
-            "h-8 w-full justify-between text-xs bg-slate-50/50 font-normal",
+            "h-8 w-full justify-between text-xs font-normal border-slate-300 bg-white hover:bg-slate-50 transition-colors",
+            selectedMaterial ? "font-semibold text-slate-800" : "text-slate-500",
             className
           )}
         >
@@ -147,35 +175,73 @@ function MaterialSelector({
           <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] p-0" align="start">
+      <PopoverContent className="w-[340px] p-0" align="start">
         <Command>
-          <div className="flex items-center border-b px-3" cmdk-input-wrapper="">
+          <div className="flex items-center border-b px-3">
             <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
             <CommandInput
-              placeholder="Tìm chất liệu..."
+              placeholder="Tìm sản phẩm của NCC..."
               className="h-8 border-none focus:ring-0"
             />
           </div>
-          <CommandList className="max-h-[300px]">
-            <CommandEmpty>Không tìm thấy chất liệu nào.</CommandEmpty>
+          {onCreateNew && (
+            <div className="p-1 border-b bg-amber-50/70">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start text-xs font-bold text-amber-800 hover:text-amber-900 hover:bg-amber-100 h-8"
+                onClick={() => {
+                  setOpen(false);
+                  onCreateNew();
+                }}
+              >
+                <Plus className="mr-1.5 h-3.5 w-3.5 text-amber-700" />
+                + Tạo vật tư mới cho NCC này
+              </Button>
+            </div>
+          )}
+          <CommandList className="max-h-[280px]">
+            <CommandEmpty className="py-4 text-center text-xs text-slate-500 px-3">
+              NCC này chưa có vật tư nào trong danh mục.
+              {onCreateNew && (
+                <div className="mt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-7 border-amber-600/40 text-amber-700 hover:bg-amber-50"
+                    onClick={() => {
+                      setOpen(false);
+                      onCreateNew();
+                    }}
+                  >
+                    <Plus className="mr-1 h-3 w-3" /> Tạo mới ngay
+                  </Button>
+                </div>
+              )}
+            </CommandEmpty>
             <CommandGroup>
-              {materials.map((m) => (
+              {vendorMaterials.map((m) => (
                 <CommandItem
                   key={m.id}
-                  value={m.name || m.materialTypeName || ""}
+                  value={`${m.name || m.materialTypeName || ""} ${m.code || ""}`}
                   onSelect={() => {
                     onSelect(m.id?.toString() || "");
                     setOpen(false);
                   }}
-                  className="text-xs"
+                  className="text-xs cursor-pointer py-2"
                 >
                   <Check
                     className={cn(
-                      "mr-2 h-3 w-3",
+                      "mr-2 h-3.5 w-3.5 text-amber-600 shrink-0",
                       value === m.id ? "opacity-100" : "opacity-0"
                     )}
                   />
-                  {m.name || m.materialTypeName}
+                  <div className="flex flex-col truncate">
+                    <span className="font-semibold text-slate-800 truncate">{m.name || m.materialTypeName}</span>
+                    <span className="text-[10px] text-slate-400 font-mono">SKU: {m.code || "—"} | ĐVT: {m.unit || "—"}</span>
+                  </div>
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -188,6 +254,9 @@ function MaterialSelector({
 
 export default function StockInCreatePage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialVendorId = searchParams.get("vendorId");
+
   const {
     mutate: createStockInFromVendor,
     isPending: isPendingStandard,
@@ -212,10 +281,9 @@ export default function StockInCreatePage() {
   );
 
   const [formData, setFormData] = useState({
-    vendorId: null as number | null,
+    vendorId: initialVendorId ? Number(initialVendorId) : null as number | null,
     notes: "",
     stockInDate: new Date().toISOString().slice(0, 16),
-    laborCost: undefined as number | undefined,
   });
 
   const selectedVendor = allVendors.find((v) => v.id === formData.vendorId);
@@ -278,17 +346,6 @@ export default function StockInCreatePage() {
   const [creatingMaterialIndex, setCreatingMaterialIndex] = useState<
     number | null
   >(null);
-
-
-
-  const [layoutMode, setLayoutMode] = useState<"grid" | "table">(() => {
-    const saved = localStorage.getItem("stockInLayoutMode");
-    return (saved as "grid" | "table") || "grid";
-  });
-
-  useEffect(() => {
-    localStorage.setItem("stockInLayoutMode", layoutMode);
-  }, [layoutMode]);
 
   const [items, setItems] = useState<FormStockInItem[]>([
     {
@@ -524,75 +581,19 @@ export default function StockInCreatePage() {
       return;
     }
 
-    if (isAuxiliaryVendor) {
-      const validItems = items.filter((item) => {
-        const trimmedName = item.itemName?.trim() || "";
-        return (
-          trimmedName.length >= 1 &&
-          item.materialTypeId !== undefined &&
-          item.quantity !== undefined &&
-          item.quantity > 0
-        );
-      });
-
-      if (validItems.length === 0) {
-        toast.error("Vui lòng thêm ít nhất một vật phẩm hợp lệ", {
-          description: "Tên vật phẩm bắt buộc, loại vật tư bắt buộc và số lượng phải lớn hơn 0",
-        });
-        return;
-      }
-
-      createAuxiliaryStockIn(
-        {
-          vendorId: formData.vendorId,
-          stockInDate: formData.stockInDate
-            ? formatDateWithOffset(formData.stockInDate)
-            : new Date().toISOString(),
-          items: validItems.map((item) => ({
-            materialTypeId: item.materialTypeId || 0,
-            name: item.itemName.trim(),
-            quantity: item.quantity || 0,
-            unit: item.unit?.trim() || "cái",
-            unitPrice: item.unitPrice ?? undefined,
-            lineAmount: item.unitPrice !== undefined ? (item.quantity || 0) * item.unitPrice : undefined,
-            note: item.notes?.trim() || undefined,
-          })),
-        },
-        {
-          onSuccess: (data) => {
-            if (data?.id) {
-              navigate(`/stock/stock-ins/${data.id}`);
-            }
-          },
-        }
-      );
-      return;
-    }
-
     const validItems = items.filter((item) => {
-      const trimmedName = item.itemName?.trim() || "";
-      const isItemRam = item.calculationMethod === "ram";
-      if (isItemRam) {
-        return (
-          trimmedName.length >= 1 &&
-          item.ramQuantity !== undefined &&
-          item.ramQuantity !== null &&
-          !isNaN(item.ramQuantity) &&
-          item.ramQuantity > 0 &&
-          item.ramQuantity <= 2147483647
-        );
-      }
       return (
-        trimmedName.length >= 1 &&
+        !!item.materialId &&
+        item.quantity !== undefined &&
+        item.quantity !== null &&
         Number.isInteger(item.quantity) &&
-        item.quantity >= 1 &&
-        item.quantity <= 2147483647
+        item.quantity >= 1
       );
     });
 
     if (validItems.length === 0) {
-      toast.error("Vui lòng thêm ít nhất một vật phẩm hợp lệ", {
-        description: "Tên vật phẩm bắt buộc (ít nhất 1 ký tự) và số lượng phải hợp lệ",
+      toast.error("Vui lòng chọn sản phẩm và nhập số lượng hợp lệ", {
+        description: "Chọn sản phẩm từ nhà cung cấp và nhập số lượng ≥ 1",
       });
       return;
     }
@@ -600,37 +601,16 @@ export default function StockInCreatePage() {
     createStockInFromVendor(
       {
         vendorId: formData.vendorId,
-        itemType: "material",
         notes: formData.notes?.trim() || undefined,
-        laborCost: formData.laborCost ?? undefined,
         stockInDate: formData.stockInDate
           ? formatDateWithOffset(formData.stockInDate)
           : undefined,
-        items: validItems.map((item) => {
-          const isItemRam = item.calculationMethod === "ram";
-          return {
-            itemName: item.itemName.trim(),
-            itemCode: (item.itemCode || "").trim() || undefined,
-            unit: isItemRam ? "tờ" : ((item.unit || "").trim() || undefined),
-            quantity: isItemRam ? undefined : item.quantity,
-            ramQuantity: isItemRam ? (item.ramQuantity ?? 0) : undefined,
-            unitPrice: item.unitPrice ?? undefined,
-            notes: (item.notes || "").trim() || undefined,
-            materialId: item.materialId ?? undefined,
-            orderDetailId: item.orderDetailId ?? undefined,
-            lineKind: item.lineKind ?? undefined,
-            length: item.length ?? undefined,
-            width: item.width ?? undefined,
-            jobCode: item.jobCode?.trim() || undefined,
-            proofingOrderId: (() => {
-              if (typeof item.proofingOrderId === "string") {
-                const parsed = parseInt(item.proofingOrderId.trim(), 10);
-                return isNaN(parsed) ? undefined : parsed;
-              }
-              return item.proofingOrderId ?? undefined;
-            })(),
-          };
-        }),
+        items: validItems.map((item) => ({
+          materialId: item.materialId!,
+          quantity: item.quantity!,
+          unitPrice: item.unitPrice !== undefined && item.unitPrice !== null ? item.unitPrice : undefined,
+          notes: (item.notes || "").trim() || undefined,
+        })),
       },
       {
         onSuccess: (data) => {
@@ -710,21 +690,50 @@ export default function StockInCreatePage() {
           {/* Compact Main Information */}
           <div className="bg-white rounded-xl shadow-md border border-slate-200 p-4 sticky top-0 z-10 backdrop-blur-sm bg-white/95">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
-              <div className="md:col-span-3 space-y-1.5">
-                <Label htmlFor="vendorId" className="text-xs font-semibold text-slate-600 flex items-center gap-1">
-                  <Building2 className="h-3 w-3" /> Nhà cung cấp vật tư *
+              <div className="md:col-span-4 space-y-1.5">
+                <Label htmlFor="vendorId" className="text-xs font-bold text-amber-900 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Building2 className="h-4 w-4 text-amber-600" /> 1. CHỌN NHÀ CUNG CẤP VẬT TƯ *
+                  </span>
+                  {!formData.vendorId && (
+                    <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full animate-pulse border border-amber-300">
+                      Bắt buộc chọn trước
+                    </span>
+                  )}
                 </Label>
-                <div className="flex gap-1">
+                <div className="flex gap-1.5">
                   <Select
                     value={formData.vendorId?.toString() || ""}
-                    onValueChange={(value) => setFormData({ ...formData, vendorId: Number(value) })}
+                    onValueChange={(value) => {
+                      const newVendorId = value ? Number(value) : null;
+                      setFormData({ ...formData, vendorId: newVendorId });
+                      // Reset row material selections when vendor changes
+                      setItems(items.map((item) => ({
+                        ...item,
+                        materialId: undefined,
+                        itemName: "",
+                        itemCode: "",
+                        unit: "",
+                        unitPrice: undefined,
+                      })));
+                    }}
                   >
-                    <SelectTrigger id="vendorId" className="h-9">
-                      <SelectValue placeholder="Chọn NCC" />
+                    <SelectTrigger
+                      id="vendorId"
+                      className={cn(
+                        "h-10 text-xs font-semibold rounded-lg transition-all",
+                        !formData.vendorId
+                          ? "border-2 border-amber-500 bg-amber-50/70 ring-2 ring-amber-400/30 text-amber-900 shadow-sm"
+                          : "border-slate-300 bg-white text-slate-900"
+                      )}
+                    >
+                      <SelectValue placeholder="-- Chọn Nhà Cung Cấp Vật Tư --" />
                     </SelectTrigger>
                     <SelectContent>
                       {allVendors.map((v) => (
-                        <SelectItem key={v.id} value={v.id?.toString() || "0"}>{v.name}</SelectItem>
+                        <SelectItem key={v.id} value={v.id?.toString() || "0"} className="text-xs font-medium">
+                          {v.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -732,7 +741,7 @@ export default function StockInCreatePage() {
                     type="button"
                     variant="outline"
                     size="icon"
-                    className="h-9 w-9 shrink-0"
+                    className="h-10 w-10 shrink-0 border-amber-300 hover:bg-amber-50"
                     onClick={() => {
                       setNewVendorData({
                         name: "",
@@ -744,13 +753,14 @@ export default function StockInCreatePage() {
                       });
                       setIsCreateVendorDialogOpen(true);
                     }}
+                    title="Tạo nhà cung cấp mới"
                   >
-                    <UserPlus className="h-4 w-4" />
+                    <UserPlus className="h-4 w-4 text-amber-700" />
                   </Button>
                 </div>
               </div>
 
-              <div className="md:col-span-2 space-y-1.5">
+              <div className="md:col-span-3 space-y-1.5">
                 <Label htmlFor="stockInDate" className="text-xs font-semibold text-slate-600 flex items-center gap-1">
                   <Calendar className="h-3 w-3" /> Ngày nhập
                 </Label>
@@ -760,21 +770,6 @@ export default function StockInCreatePage() {
                   value={formData.stockInDate.slice(0, 16)}
                   onChange={(e) => setFormData({ ...formData, stockInDate: e.target.value })}
                   className="h-9"
-                />
-              </div>
-
-              <div className="md:col-span-2 space-y-1.5">
-                <Label htmlFor="laborCost" className="text-xs font-semibold text-slate-600 flex items-center gap-1">
-                  <Coins className="h-3 w-3" /> Tiền công
-                </Label>
-                <Input
-                  id="laborCost"
-                  type="number"
-                  min="0"
-                  value={formData.laborCost ?? ""}
-                  onChange={(e) => setFormData({ ...formData, laborCost: e.target.value ? Math.max(0, parseFloat(e.target.value)) : undefined })}
-                  placeholder="0.00"
-                  className="h-9 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
               </div>
 
@@ -797,611 +792,116 @@ export default function StockInCreatePage() {
             </div>
           </div>
 
-          {/* Items Grid/Table Layout */}
+          {/* Items Table List */}
           <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Package className="h-5 w-5 text-[#93631F]" />
-                  <h2 className="font-bold text-slate-900">Danh sách vật phẩm ({items.length})</h2>
-                </div>
-              </div>
-              
-              <div className="flex items-center bg-slate-100 p-1 rounded-lg border border-slate-200 self-end sm:self-auto">
-                <Button
-                  type="button"
-                  variant={layoutMode === "grid" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setLayoutMode("grid")}
-                  className={`h-8 w-8 p-0 ${layoutMode === "grid" ? "bg-white shadow-sm text-[#93631F] hover:bg-white" : "text-slate-500 hover:text-slate-900"}`}
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </Button>
-                <Button
-                  type="button"
-                  variant={layoutMode === "table" ? "default" : "ghost"}
-                  size="sm"
-                  onClick={() => setLayoutMode("table")}
-                  className={`h-8 w-8 p-0 ${layoutMode === "table" ? "bg-white shadow-sm text-[#93631F] hover:bg-white" : "text-slate-500 hover:text-slate-900"}`}
-                >
-                  <List className="h-4 w-4" />
-                </Button>
+            <div className="flex items-center justify-between px-1">
+              <div className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-[#93631F]" />
+                <h2 className="font-bold text-slate-900">Danh sách vật phẩm ({items.length})</h2>
               </div>
             </div>
 
-            {layoutMode === "grid" ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {items.map((item, index) => (
-                  <div key={index} className="group relative bg-white rounded-xl shadow-sm border border-slate-200 p-4 hover:shadow-md hover:border-[#93631F]/30 transition-all duration-200 flex flex-col gap-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-100 text-[10px] font-bold text-slate-500">
-                          {index + 1}
-                        </span>
-                        <span className="text-sm font-bold text-slate-700 truncate max-w-[150px]">
-                          {item.itemName || "Sản phẩm mới"}
-                        </span>
-                      </div>
-                      {items.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveItem(index)}
-                          className="h-7 w-7 text-slate-400 hover:text-red-500 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-
-                    <div className="space-y-3">
-                      {isAuxiliaryVendor ? (
-                        <>
-                          <div className="grid grid-cols-1 gap-2">
-                            <div className="space-y-1">
-                              <Label className="text-[10px] uppercase font-bold text-slate-400">Loại vật tư *</Label>
-                              <Select
-                                value={item.materialTypeId?.toString() || ""}
-                                onValueChange={(val) => handleItemChange(index, "materialTypeId", Number(val))}
-                              >
-                                <SelectTrigger className="h-8 text-xs bg-slate-50/50">
-                                  <SelectValue placeholder="Chọn loại vật tư" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {materialTypes.map((t) => (
-                                    <SelectItem key={t.id} value={t.id.toString()} className="text-xs">
-                                      {t.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <Input
-                              value={item.itemName}
-                              onChange={(e) => handleItemChange(index, "itemName", e.target.value)}
-                              placeholder="Tên vật phẩm *"
-                              className={`h-8 text-sm ${itemErrors[index]?.itemName ? "border-red-500" : ""}`}
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="space-y-1">
-                              <Label className="text-[10px] uppercase font-bold text-slate-400">Số lượng *</Label>
-                              <Input
-                                type="number"
-                                value={item.quantity ?? ""}
-                                onChange={(e) => {
-                                  const val = parseInt(e.target.value, 10);
-                                  handleItemChange(index, "quantity", isNaN(val) ? undefined : val);
-                                }}
-                                className="h-8 text-sm"
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-[10px] uppercase font-bold text-slate-400">Đơn vị *</Label>
-                              <Input
-                                value={item.unit || ""}
-                                onChange={(e) => handleItemChange(index, "unit", e.target.value)}
-                                placeholder="tấm, kg, lít..."
-                                className="h-8 text-sm"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="space-y-1">
-                              <Label className="text-[10px] uppercase font-bold text-slate-400">Đơn giá</Label>
-                              <Input
-                                type="number"
-                                min="0"
-                                value={item.unitPrice ?? ""}
-                                onChange={(e) => handleItemChange(index, "unitPrice", e.target.value ? Math.max(0, parseFloat(e.target.value)) : undefined)}
-                                placeholder="0"
-                                className="h-8 text-sm w-full"
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-[10px] uppercase font-bold text-slate-400">Thành tiền</Label>
-                              <div className="h-8 bg-slate-50 border border-slate-200 rounded-md px-3 flex items-center text-xs font-mono font-bold text-slate-700">
-                                {((item.quantity || 0) * (item.unitPrice || 0)).toLocaleString()} đ
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 gap-2">
-                            <Input
-                              value={item.notes || ""}
-                              onChange={(e) => handleItemChange(index, "notes", e.target.value)}
-                              placeholder="Ghi chú thêm..."
-                              className="h-8 text-xs italic"
-                            />
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="grid grid-cols-1 gap-2">
-                            <div className="flex gap-1">
-                              <MaterialSelector
-                                value={item.materialId}
-                                onSelect={(v) => handleMaterialSelect(index, v)}
-                                materials={materials}
-                                className="flex-1"
-                              />
-                              <Select
-                                value={item.calculationMethod || "m2"}
-                                onValueChange={(val: "m2" | "ram") => handleItemChange(index, "calculationMethod", val)}
-                              >
-                                <SelectTrigger className="w-[110px] h-8 text-xs font-normal">
-                                  <SelectValue placeholder="Cách tính" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="m2" className="text-xs">Tính m²</SelectItem>
-                                  <SelectItem value="ram" className="text-xs">Tính RAM</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="icon"
-                                className="h-8 w-8 shrink-0 hover:bg-[#93631F]/10 text-[#93631F] border-[#93631F]/20"
-                                onClick={() => {
-                                  setCreatingMaterialIndex(index);
-                                  setIsCreateMaterialDialogOpen(true);
-                                }}
-                              >
-                                <Plus className="h-3.5 w-3.5" />
-                              </Button>
-                            </div>
-                            <Input
-                              value={item.itemName}
-                              onChange={(e) => handleItemChange(index, "itemName", e.target.value)}
-                              placeholder="Tên vật phẩm *"
-                              className={`h-8 text-sm ${itemErrors[index]?.itemName ? "border-red-500" : ""}`}
-                            />
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-2">
-                            <div className="space-y-1">
-                              <Label className="text-[10px] uppercase font-bold text-slate-400">
-                                {item.calculationMethod === "ram" ? "Số ram" : (item.lineKind === "sheet" ? "Số tờ" : "Số lượng")}
-                              </Label>
-                              <Input
-                                type="number"
-                                value={item.calculationMethod === "ram" ? (item.ramQuantity ?? "") : item.quantity}
-                                onChange={(e) => {
-                                  const val = parseFloat(e.target.value);
-                                  if (item.calculationMethod === "ram") {
-                                    handleItemChange(index, "ramQuantity", isNaN(val) ? undefined : val);
-                                  } else {
-                                    const intVal = parseInt(e.target.value, 10);
-                                    handleItemChange(index, "quantity", isNaN(intVal) ? undefined : intVal);
-                                  }
-                                }}
-                                className={`h-8 text-sm ${itemErrors[index]?.quantity ? "border-red-500" : ""}`}
-                              />
-                              {item.calculationMethod === "ram" && (
-                                <div className="text-[10px] text-slate-400 mt-0.5">
-                                  Quy đổi: {((item.ramQuantity ?? 0) * 500).toLocaleString()} tờ
-                                </div>
-                              )}
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-[10px] uppercase font-bold text-slate-400">Đơn vị</Label>
-                              <Input
-                                value={item.unit || ""}
-                                onChange={(e) => handleItemChange(index, "unit", e.target.value)}
-                                placeholder="vị"
-                                className="h-8 text-sm"
-                              />
-                            </div>
-                          </div>
-
-                          {item.lineKind === "sheet" && (
-                            <div className="grid grid-cols-2 gap-2 mt-2">
-                              <div className="space-y-1">
-                                <Label className="text-[10px] uppercase font-bold text-slate-400">Dài</Label>
-                                <Input
-                                  type="number"
-                                  step="any"
-                                  value={item.length ?? ""}
-                                  onChange={(e) => {
-                                    const val = parseFloat(e.target.value);
-                                    handleItemChange(index, "length", isNaN(val) ? undefined : val);
-                                  }}
-                                  placeholder="Chiều dài"
-                                  className="h-8 text-sm"
-                                />
-                              </div>
-                              <div className="space-y-1">
-                                <Label className="text-[10px] uppercase font-bold text-slate-400">Rộng</Label>
-                                <Input
-                                  type="number"
-                                  step="any"
-                                  value={item.width ?? ""}
-                                  onChange={(e) => {
-                                    const val = parseFloat(e.target.value);
-                                    handleItemChange(index, "width", isNaN(val) ? undefined : val);
-                                  }}
-                                  placeholder="Chiều rộng"
-                                  className="h-8 text-sm"
-                                />
-                              </div>
-                            </div>
-                          )}
-
-                          <div className="grid grid-cols-3 gap-2">
-                            <div className="space-y-1">
-                              <Label className="text-[10px] uppercase font-bold text-slate-400">Đơn giá</Label>
-                              <Input
-                                type="number"
-                                min="0"
-                                value={item.unitPrice ?? ""}
-                                onChange={(e) => handleItemChange(index, "unitPrice", e.target.value ? Math.max(0, parseFloat(e.target.value)) : undefined)}
-                                placeholder="0"
-                                className="h-8 text-sm w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-[10px] uppercase font-bold text-slate-400">Mã bài</Label>
-                              <Input
-                                type="text"
-                                value={item.jobCode ?? ""}
-                                onChange={(e) => handleItemChange(index, "jobCode", e.target.value)}
-                                placeholder="Mã bài"
-                                className="h-8 text-sm w-full"
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <Label className="text-[10px] uppercase font-bold text-slate-400">Mã bài HT</Label>
-                              <Input
-                                type="text"
-                                value={item.proofingOrderId ?? ""}
-                                onChange={(e) => handleItemChange(index, "proofingOrderId", e.target.value)}
-                                placeholder="Hệ thống"
-                                className="h-8 text-sm w-full"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 gap-2">
-                            <Input
-                              value={item.notes || ""}
-                              onChange={(e) => handleItemChange(index, "notes", e.target.value)}
-                              placeholder="Ghi chú..."
-                              className="h-8 text-xs italic"
-                            />
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                ))}
-
-                <button
-                  type="button"
-                  onClick={handleAddItem}
-                  className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 p-6 text-slate-400 hover:border-[#93631F]/30 hover:text-[#93631F] hover:bg-[#93631F]/5 transition-all group active:scale-95 min-h-[220px]"
-                >
-                  <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-[#93631F]/10 transition-colors">
-                    <Plus className="h-6 w-6" />
-                  </div>
-                  <span className="font-medium text-sm">Thêm dòng mới</span>
-                </button>
-              </div>
-            ) : (
-              <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      {isAuxiliaryVendor ? (
-                        <TableRow className="bg-slate-50/50">
-                          <TableHead className="w-12 text-center">#</TableHead>
-                          <TableHead className="w-[200px]">Loại vật tư *</TableHead>
-                          <TableHead className="min-w-[200px]">Tên vật phẩm *</TableHead>
-                          <TableHead className="w-[120px] text-right">Số lượng *</TableHead>
-                          <TableHead className="w-[100px]">ĐVT *</TableHead>
-                          <TableHead className="w-[150px] text-right">Đơn giá</TableHead>
-                          <TableHead className="w-[150px] text-right">Thành tiền</TableHead>
-                          <TableHead>Ghi chú</TableHead>
-                          <TableHead className="w-10"></TableHead>
-                        </TableRow>
-                      ) : (
-                        <TableRow className="bg-slate-50/50">
-                          <TableHead className="w-12 text-center">#</TableHead>
-                          <TableHead className="w-[180px]">Chất liệu</TableHead>
-                          <TableHead className="w-[120px]">Cách tính</TableHead>
-                          <TableHead className="min-w-[200px]">Tên vật phẩm *</TableHead>
-                          <TableHead className="w-[120px] text-right">Số lượng / Số ram</TableHead>
-                          <TableHead className="w-[80px]">ĐVT</TableHead>
-                          <TableHead className="w-[90px] text-right">Dài</TableHead>
-                          <TableHead className="w-[90px] text-right">Rộng</TableHead>
-                          <TableHead className="w-[120px] text-right">Đơn giá</TableHead>
-                          <TableHead className="w-[100px]">Mã bài</TableHead>
-                          <TableHead className="w-[100px]">Mã bài HT</TableHead>
-                          <TableHead>Ghi chú</TableHead>
-                          <TableHead className="w-10"></TableHead>
-                        </TableRow>
-                      )}
-                    </TableHeader>
-                    <TableBody>
-                      {items.map((item, index) => (
-                        isAuxiliaryVendor ? (
-                          <TableRow key={index} className="group">
-                            <TableCell className="text-center font-medium text-slate-400">{index + 1}</TableCell>
-                            <TableCell>
-                              <Select
-                                value={item.materialTypeId?.toString() || ""}
-                                onValueChange={(val) => handleItemChange(index, "materialTypeId", Number(val))}
-                              >
-                                <SelectTrigger className="h-8 text-xs font-normal">
-                                  <SelectValue placeholder="Chọn loại vật tư" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {materialTypes.map((t) => (
-                                    <SelectItem key={t.id} value={t.id.toString()} className="text-xs">
-                                      {t.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                value={item.itemName}
-                                onChange={(e) => handleItemChange(index, "itemName", e.target.value)}
-                                placeholder="Tên vật phẩm..."
-                                className={`h-8 text-sm ${itemErrors[index]?.itemName ? "border-red-500" : ""}`}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="number"
-                                value={item.quantity ?? ""}
-                                onChange={(e) => {
-                                  const val = parseInt(e.target.value, 10);
-                                  handleItemChange(index, "quantity", isNaN(val) ? undefined : val);
-                                }}
-                                className="h-8 text-sm text-right"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                value={item.unit || ""}
-                                onChange={(e) => handleItemChange(index, "unit", e.target.value)}
-                                placeholder="cái, kg..."
-                                className="h-8 text-sm"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="number"
-                                min="0"
-                                value={item.unitPrice ?? ""}
-                                onChange={(e) => handleItemChange(index, "unitPrice", e.target.value ? Math.max(0, parseFloat(e.target.value)) : undefined)}
-                                placeholder="0"
-                                className="h-8 text-sm text-right"
-                              />
-                            </TableCell>
-                            <TableCell className="text-right font-mono font-bold text-slate-750">
-                              {((item.quantity || 0) * (item.unitPrice || 0)).toLocaleString()} đ
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                value={item.notes || ""}
-                                onChange={(e) => handleItemChange(index, "notes", e.target.value)}
-                                placeholder="..."
-                                className="h-8 text-sm"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              {items.length > 1 && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleRemoveItem(index)}
-                                  className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          <TableRow key={index} className="group">
-                            <TableCell className="text-center font-medium text-slate-400">{index + 1}</TableCell>
-                            <TableCell>
-                              <div className="flex gap-1">
-                                <MaterialSelector
-                                  value={item.materialId}
-                                  onSelect={(v) => handleMaterialSelect(index, v)}
-                                  materials={materials}
-                                />
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 shrink-0 text-[#93631F] hover:bg-[#93631F]/10"
-                                  onClick={() => {
-                                    setCreatingMaterialIndex(index);
-                                    setIsCreateMaterialDialogOpen(true);
-                                  }}
-                                >
-                                  <Plus className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Select
-                                value={item.calculationMethod || "m2"}
-                                onValueChange={(val: "m2" | "ram") => handleItemChange(index, "calculationMethod", val)}
-                              >
-                                <SelectTrigger className="h-8 text-xs font-normal">
-                                  <SelectValue placeholder="Cách tính" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="m2" className="text-xs">Tính theo m²</SelectItem>
-                                  <SelectItem value="ram" className="text-xs">Tính theo RAM</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                value={item.itemName}
-                                onChange={(e) => handleItemChange(index, "itemName", e.target.value)}
-                                placeholder="Tên..."
-                                className={`h-8 text-sm ${itemErrors[index]?.itemName ? "border-red-500" : ""}`}
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="number"
-                                value={item.calculationMethod === "ram" ? (item.ramQuantity ?? "") : item.quantity}
-                                onChange={(e) => {
-                                  const val = parseFloat(e.target.value);
-                                  if (item.calculationMethod === "ram") {
-                                    handleItemChange(index, "ramQuantity", isNaN(val) ? undefined : val);
-                                  } else {
-                                    const intVal = parseInt(e.target.value, 10);
-                                    handleItemChange(index, "quantity", isNaN(intVal) ? undefined : intVal);
-                                  }
-                                }}
-                                className={`h-8 text-sm text-right ${itemErrors[index]?.quantity ? "border-red-500" : ""}`}
-                              />
-                              {item.calculationMethod === "ram" && (
-                                <div className="text-[10px] text-right text-slate-400 mt-1">
-                                  Quy đổi: {((item.ramQuantity ?? 0) * 500).toLocaleString()} tờ
-                                </div>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                value={item.unit || ""}
-                                onChange={(e) => handleItemChange(index, "unit", e.target.value)}
-                                placeholder="vị"
-                                className="h-8 text-sm"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              {item.lineKind === "sheet" ? (
-                                <Input
-                                  type="number"
-                                  step="any"
-                                  value={item.length ?? ""}
-                                  onChange={(e) => {
-                                    const val = parseFloat(e.target.value);
-                                    handleItemChange(index, "length", isNaN(val) ? undefined : val);
-                                  }}
-                                  placeholder="Dài"
-                                  className="h-8 text-sm text-right"
-                                />
-                              ) : (
-                                <div className="text-center text-slate-400 font-mono text-xs select-none">—</div>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              {item.lineKind === "sheet" ? (
-                                <Input
-                                  type="number"
-                                  step="any"
-                                  value={item.width ?? ""}
-                                  onChange={(e) => {
-                                    const val = parseFloat(e.target.value);
-                                    handleItemChange(index, "width", isNaN(val) ? undefined : val);
-                                  }}
-                                  placeholder="Rộng"
-                                  className="h-8 text-sm text-right"
-                                />
-                              ) : (
-                                <div className="text-center text-slate-400 font-mono text-xs select-none">—</div>
-                              )}
-                            </TableCell>
-
-                            <TableCell>
-                              <Input
-                                type="number"
-                                min="0"
-                                value={item.unitPrice ?? ""}
-                                onChange={(e) => handleItemChange(index, "unitPrice", e.target.value ? Math.max(0, parseFloat(e.target.value)) : undefined)}
-                                placeholder="0"
-                                className="h-8 text-sm text-right [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                type="text"
-                                value={item.jobCode ?? ""}
-                                onChange={(e) => handleItemChange(index, "jobCode", e.target.value)}
-                                placeholder="Mã bài"
-                                className="h-8 text-sm"
-                              />
-                            </TableCell>
-                            <TableCell>
-                             <Input
-                               type="text"
-                               value={item.proofingOrderId ?? ""}
-                               onChange={(e) => handleItemChange(index, "proofingOrderId", e.target.value)}
-                               placeholder="Hệ thống"
-                               className="h-8 text-sm"
-                             />
-                            </TableCell>
-                            <TableCell>
-                              <Input
-                                value={item.notes || ""}
-                                onChange={(e) => handleItemChange(index, "notes", e.target.value)}
-                                placeholder="..."
-                                className="h-8 text-sm"
-                              />
-                            </TableCell>
-                            <TableCell>
-                              {items.length > 1 && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleRemoveItem(index)}
-                                  className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        )
-                      ))}
-                      <TableRow className="hover:bg-slate-50/50 cursor-pointer" onClick={handleAddItem}>
-                        <TableCell colSpan={isAuxiliaryVendor ? 9 : 13} className="py-3 text-center text-[#93631F] font-bold text-xs uppercase tracking-wider">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <Plus className="h-4 w-4" /> Thêm dòng vật phẩm mới
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-50/50">
+                      <TableHead className="w-10 text-center">#</TableHead>
+                      <TableHead className="w-[140px]">Mã hàng</TableHead>
+                      <TableHead className="w-[300px]">Sản phẩm / Vật tư *</TableHead>
+                      <TableHead className="w-[120px] text-right">Số lượng *</TableHead>
+                      <TableHead className="w-[90px] text-center">ĐVT</TableHead>
+                      <TableHead className="w-[130px] text-right">Đơn giá (đ)</TableHead>
+                      <TableHead className="w-[140px] text-right">Thành tiền (đ)</TableHead>
+                      <TableHead>Ghi chú</TableHead>
+                      <TableHead className="w-10"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {items.map((item, index) => (
+                      <TableRow key={index} className="group hover:bg-slate-50/40">
+                        <TableCell className="text-center font-medium text-slate-400">{index + 1}</TableCell>
+                        <TableCell>
+                          <div className="h-8 px-2.5 flex items-center font-mono text-xs font-semibold text-slate-700 bg-slate-100/70 border border-slate-200 rounded-md select-none truncate">
+                            {item.itemCode || "—"}
                           </div>
                         </TableCell>
+                        <TableCell>
+                          <MaterialSelector
+                            value={item.materialId}
+                            onSelect={(v) => handleMaterialSelect(index, v)}
+                            materials={materials}
+                            vendorId={formData.vendorId}
+                            onCreateNew={() => {
+                              setCreatingMaterialIndex(index);
+                              setIsCreateMaterialDialogOpen(true);
+                            }}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            min="1"
+                            value={item.quantity ?? ""}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10);
+                              handleItemChange(index, "quantity", isNaN(val) ? undefined : val);
+                            }}
+                            className={`h-8 text-sm text-right ${itemErrors[index]?.quantity ? "border-red-500" : ""}`}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div className="h-8 px-2 flex items-center justify-center text-xs font-medium text-slate-700 bg-slate-100/70 border border-slate-200 rounded-md select-none">
+                            {item.unit || "—"}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            min="0"
+                            value={item.unitPrice ?? ""}
+                            onChange={(e) => handleItemChange(index, "unitPrice", e.target.value ? Math.max(0, parseFloat(e.target.value)) : undefined)}
+                            placeholder="0"
+                            className="h-8 text-sm text-right [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                          />
+                        </TableCell>
+                        <TableCell className="text-right font-mono font-bold text-slate-800 text-xs">
+                          {((item.quantity || 0) * (item.unitPrice || 0)).toLocaleString()} đ
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            value={item.notes || ""}
+                            onChange={(e) => handleItemChange(index, "notes", e.target.value)}
+                            placeholder="Ghi chú..."
+                            className="h-8 text-xs italic"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {items.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleRemoveItem(index)}
+                              className="h-8 w-8 text-slate-400 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </TableCell>
                       </TableRow>
-                    </TableBody>
-                  </Table>
-                </div>
+                    ))}
+                    <TableRow className="hover:bg-slate-50/50 cursor-pointer" onClick={handleAddItem}>
+                      <TableCell colSpan={9} className="py-3 text-center text-[#93631F] font-bold text-xs uppercase tracking-wider">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <Plus className="h-4 w-4" /> + THÊM DÒNG VẬT PHẨM MỚI
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
               </div>
-            )}
+            </div>
           </div>
         </form>
       </div>
@@ -1568,27 +1068,40 @@ export default function StockInCreatePage() {
       <CreateMaterialDialog
         open={isCreateMaterialDialogOpen}
         onOpenChange={setIsCreateMaterialDialogOpen}
+        defaultVendorId={formData.vendorId || undefined}
         showQuantity={true}
         dimensionUnit="m"
         submitButtonClassName="bg-[#93631F] hover:bg-[#7a521a]"
-        onSuccess={(id, _newMaterial, unit, unitPrice) => {
+        onSuccess={(id, newMaterial, unit, unitPrice) => {
           if (creatingMaterialIndex !== null && id) {
+            const matName = newMaterial?.name || "";
+            const matCode = newMaterial?.code || (matName ? generateMaterialCode(matName) : "");
+            const matUnit = unit || newMaterial?.unit || "tờ";
+            const matPrice = unitPrice !== undefined ? unitPrice : (newMaterial?.unitPrice || 0);
+
             // Store metadata in localStorage
             localStorage.setItem(`material_meta_${id}`, JSON.stringify({
-              unit: unit || "",
-              unitPrice: unitPrice || 0
+              unit: matUnit,
+              unitPrice: matPrice
             }));
 
-            handleMaterialSelect(
-              creatingMaterialIndex,
-              id.toString()
-            );
-            if (unitPrice !== undefined) {
-              handleItemChange(creatingMaterialIndex, "unitPrice", unitPrice);
-            }
-            if (unit) {
-              handleItemChange(creatingMaterialIndex, "unit", unit);
-            }
+            // Direct state injection so newly created material is instantly & automatically selected!
+            setItems((prevItems) => {
+              const updated = [...prevItems];
+              if (updated[creatingMaterialIndex]) {
+                updated[creatingMaterialIndex] = {
+                  ...updated[creatingMaterialIndex],
+                  materialId: id,
+                  itemName: matName,
+                  itemCode: matCode,
+                  unit: matUnit,
+                  unitPrice: matPrice,
+                };
+              }
+              return updated;
+            });
+
+            toast.success(`Đã tự động chọn vật tư vừa tạo: ${matName || matCode}`);
           }
           setCreatingMaterialIndex(null);
         }}

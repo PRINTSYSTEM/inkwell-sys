@@ -152,6 +152,7 @@ export default function StockOutDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [editReceiverName, setEditReceiverName] = useState("");
   const [editReceiverAddress, setEditReceiverAddress] = useState("");
+  const [editStockOutDate, setEditStockOutDate] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [editItems, setEditItems] = useState<any[]>([]);
   const { mutate: updateStockOut, isPending: isUpdating } = useUpdateStockOut();
@@ -168,6 +169,11 @@ export default function StockOutDetailPage() {
           stockOut.supplier?.address ||
           stockOut.vendorAddress ||
           "")
+      );
+      setEditStockOutDate(
+        stockOut.stockOutDate
+          ? format(new Date(stockOut.stockOutDate), "yyyy-MM-dd'T'HH:mm")
+          : format(new Date(), "yyyy-MM-dd'T'HH:mm")
       );
       setEditNotes(stockOut.notes ?? "");
       setEditItems(
@@ -193,6 +199,11 @@ export default function StockOutDetailPage() {
           stockOut.supplier?.address ||
           stockOut.vendorAddress ||
           "")
+      );
+      setEditStockOutDate(
+        stockOut.stockOutDate
+          ? format(new Date(stockOut.stockOutDate), "yyyy-MM-dd'T'HH:mm")
+          : format(new Date(), "yyyy-MM-dd'T'HH:mm")
       );
       setEditNotes(stockOut.notes ?? "");
       setEditItems(
@@ -220,6 +231,11 @@ export default function StockOutDetailPage() {
           stockOut.supplier?.address ||
           stockOut.vendorAddress ||
           "")
+      );
+      setEditStockOutDate(
+        stockOut.stockOutDate
+          ? format(new Date(stockOut.stockOutDate), "yyyy-MM-dd'T'HH:mm")
+          : format(new Date(), "yyyy-MM-dd'T'HH:mm")
       );
       setEditNotes(stockOut.notes ?? "");
       setEditItems(
@@ -274,6 +290,7 @@ export default function StockOutDetailPage() {
         data: {
           receiverName: editReceiverName.trim() || null,
           receiverAddress: editReceiverAddress.trim() || null,
+          stockOutDate: editStockOutDate ? new Date(editStockOutDate).toISOString() : undefined,
           notes: editNotes.trim() || null,
           items: updatedItems,
         },
@@ -778,8 +795,22 @@ export default function StockOutDetailPage() {
                   <h2 className="text-2xl font-bold tracking-wider uppercase text-slate-900 print:text-black">
                     PHIẾU XUẤT KHO
                   </h2>
-                  <div className="text-xs text-slate-800 print:text-black font-medium">
-                    Ngày...<span className="font-bold">{day}</span>...tháng...<span className="font-bold">{month}</span>...năm...<span className="font-bold">{year}</span>...
+                  <div className="text-xs text-slate-800 print:text-black font-medium flex items-center justify-center gap-1">
+                    {isEditing ? (
+                      <div className="flex items-center gap-2 bg-blue-50/60 p-1.5 rounded-lg border border-dashed border-blue-300">
+                        <span className="text-xs font-bold text-blue-900">Ngày xuất kho:</span>
+                        <Input
+                          type="datetime-local"
+                          value={editStockOutDate}
+                          onChange={(e) => setEditStockOutDate(e.target.value)}
+                          className="h-7 text-xs bg-white border-blue-400 font-medium text-slate-900 px-2"
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        Ngày...<span className="font-bold">{day}</span>...tháng...<span className="font-bold">{month}</span>...năm...<span className="font-bold">{year}</span>...
+                      </>
+                    )}
                   </div>
                   <div className="text-xs font-semibold text-slate-800 print:text-black">
                     Số: ........<span className="font-mono font-bold text-red-600 print:text-black">{stockOut.code || stockOut.id}</span>........

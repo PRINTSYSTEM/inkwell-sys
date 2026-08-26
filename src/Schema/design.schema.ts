@@ -47,6 +47,7 @@ export type DesignTimelineEntryResponsePaginate = z.infer<
 // ===== DesignResponse =====
 export const DesignResponseSchema = GenDesignResponseSchema.extend({
   designThumbnailUrl: z.string().nullable().optional(),
+  thumbnailUrl: z.string().nullable().optional(),
 }).passthrough();
 export type DesignResponse = z.infer<typeof DesignResponseSchema>;
 
@@ -57,10 +58,12 @@ export type DesignResponsePagedResponse = z.infer<
   typeof DesignResponsePagedResponseSchema
 >;
 
-// Re-export generated paginate schema for compatibility
-export { GenDesignResponsePaginateSchema as DesignResponsePaginateSchema };
+export const DesignResponsePaginateSchema =
+  GenDesignResponsePaginateSchema.extend({
+    items: z.array(DesignResponseSchema).nullable().optional(),
+  });
 export type DesignResponsePaginate = z.infer<
-  typeof GenDesignResponsePaginateSchema
+  typeof DesignResponsePaginateSchema
 >;
 
 // Note: DesignResponsePaginateSchema is also available from generated.ts

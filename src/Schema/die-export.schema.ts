@@ -11,8 +11,9 @@ export const DieExportResponseSchema = GenDieExportResponseSchema.passthrough();
 export type DieExportResponse = z.infer<typeof DieExportResponseSchema>;
 
 // ===== RecordDieExportRequest =====
-// Use the generated schema directly (no extension needed as schema changed)
-export const RecordDieExportRequestSchema = GenRecordDieExportRequestSchema;
+export const RecordDieExportRequestSchema = GenRecordDieExportRequestSchema.extend({
+  dieSizes: z.record(z.string(), z.array(z.string())).optional(),
+}).passthrough();
 export type RecordDieExportRequest = z.infer<
   typeof RecordDieExportRequestSchema
 >;

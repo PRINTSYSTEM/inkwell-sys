@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { format, addDays, startOfMonth, endOfMonth } from "date-fns";
+import { format, addDays, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { vi } from "date-fns/locale";
 import {
   RefreshCw,
@@ -180,6 +180,46 @@ export default function MaterialHistoryPage() {
       to: endOfMonth(today),
     };
   });
+  const [selectedMonthPreset, setSelectedMonthPreset] = useState<string>("this_month");
+
+  const monthOptions = useMemo(() => {
+    const options = [];
+    const today = new Date();
+
+    // Current Month
+    options.push({
+      value: "this_month",
+      label: `Tháng ${format(today, "M/yyyy")} (Tháng này)`,
+      range: { from: startOfMonth(today), to: endOfMonth(today) },
+    });
+
+    // Previous 11 Months
+    for (let i = 1; i <= 11; i++) {
+      const monthDate = subMonths(today, i);
+      options.push({
+        value: `month_${i}`,
+        label: `Tháng ${format(monthDate, "M/yyyy")}${i === 1 ? " (Tháng trước)" : ""}`,
+        range: { from: startOfMonth(monthDate), to: endOfMonth(monthDate) },
+      });
+    }
+
+    options.push({
+      value: "all",
+      label: "Tất cả thời gian",
+      range: undefined,
+    });
+
+    return options;
+  }, []);
+
+  const handleMonthPresetChange = (val: string) => {
+    setSelectedMonthPreset(val);
+    if (val === "custom") return;
+    const found = monthOptions.find((opt) => opt.value === val);
+    setDateRange(found ? found.range : undefined);
+    setCurrentPage(1);
+  };
+
   const [searchQuery, setSearchQuery] = useState("");
   const [transactionType, setTransactionType] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
@@ -343,8 +383,8 @@ export default function MaterialHistoryPage() {
     {
       pageNumber: 1,
       pageSize: 10000,
-      fromDate: dateRange?.from ? dateRange.from.toISOString() : undefined,
-      toDate: dateRange?.to ? dateRange.to.toISOString() : undefined,
+      fromDate: undefined,
+      toDate: undefined,
       transactionType: transactionType === "all" ? undefined : transactionType,
     },
     isNumericId
@@ -438,8 +478,10 @@ export default function MaterialHistoryPage() {
 
   const handleOpeningBalanceSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!materialDetail?.code) {
-      toast.error("Không tìm thấy mã vật tư!");
+    const parsedMaterialId = materialId ? Number(materialId) : (materialDetail?.id ? Number(materialDetail.id) : undefined);
+    const effectiveItemCode = materialDetail?.code || undefined;
+    if (!parsedMaterialId && !effectiveItemCode) {
+      toast.error("Không xác định được thông tin vật tư!");
       return;
     }
     if (openingBalanceQty < 0) {
@@ -453,21 +495,24 @@ export default function MaterialHistoryPage() {
 
     try {
       await createOpeningBalanceMutation.mutateAsync({
-        itemCode: materialDetail.code,
+        materialId: parsedMaterialId,
+        itemCode: effectiveItemCode,
         itemType: "material",
         quantity: openingBalanceQty,
         effectiveDate: `${openingBalanceDate}T00:00:00.000Z`,
       });
       setIsOpeningBalanceOpen(false);
-      refetchAll();
-    } catch {
-      // Handled in mutation hook toast
+      await refetchAll();
+    } catch (err: any) {
+      console.error("Error creating opening balance:", err);
     }
   };
 
   const handleDeleteOpeningBalance = async () => {
-    if (!materialDetail?.code) {
-      toast.error("Không tìm thấy mã vật tư!");
+    const parsedMaterialId = materialId ? Number(materialId) : (materialDetail?.id ? Number(materialDetail.id) : undefined);
+    const effectiveItemCode = materialDetail?.code || undefined;
+    if (!parsedMaterialId && !effectiveItemCode) {
+      toast.error("Không xác định được thông tin vật tư!");
       return;
     }
     if (!confirm("Bạn có chắc chắn muốn xóa số dư đầu kỳ của vật tư này?")) {
@@ -475,13 +520,14 @@ export default function MaterialHistoryPage() {
     }
     try {
       await deleteOpeningBalanceMutation.mutateAsync({
-        itemCode: materialDetail.code,
+        materialId: parsedMaterialId,
+        itemCode: effectiveItemCode,
         itemType: "material",
       });
       setIsOpeningBalanceOpen(false);
-      refetchAll();
-    } catch {
-      // Handled in mutation hook toast
+      await refetchAll();
+    } catch (err: any) {
+      console.error("Error deleting opening balance:", err);
     }
   };
 
@@ -678,6 +724,9 @@ export default function MaterialHistoryPage() {
     await queryClient.invalidateQueries({ queryKey: ["stock-ins"] });
     await queryClient.invalidateQueries({ queryKey: ["stock-outs"] });
     await queryClient.invalidateQueries({ queryKey: ["materials"] });
+    await queryClient.invalidateQueries({ queryKey: ["inventory-balance"] });
+    await queryClient.invalidateQueries({ queryKey: ["inventory-transactions"] });
+    await queryClient.invalidateQueries({ queryKey: ["inventory-reports"] });
 
     await Promise.all([
       refetchHistory(),
@@ -807,8 +856,8 @@ export default function MaterialHistoryPage() {
       );
     }
 
-    // 2. Group and filter completed historical transactions
-    if (!historyData?.items) {
+    // 2. Group completed historical transactions into a complete chronological timeline and compute running balances
+    if (!historyData?.items || historyData.items.length === 0) {
       return currentPage === 1 ? pendingList : [];
     }
 
@@ -873,6 +922,7 @@ export default function MaterialHistoryPage() {
       }
     });
 
+    // Sort chronologically ascending (oldest date first)
     grouped.sort((a, b) => {
       const dateA = new Date(a.createdAt || 0).getTime();
       const dateB = new Date(b.createdAt || 0).getTime();
@@ -882,7 +932,40 @@ export default function MaterialHistoryPage() {
       return (a.id || 0) - (b.id || 0);
     });
 
-    let result = grouped;
+    // Compute exact running balances chronologically from day 1
+    let runningBalance = 0;
+    const computedTimeline = grouped.map((item) => {
+      let netChange = 0;
+      const qty = item.quantity || 0;
+      if (isImport(item.transactionType)) {
+        netChange = qty;
+      } else if (isExport(item.transactionType)) {
+        netChange = -qty;
+      } else if (isWaste(item.transactionType)) {
+        netChange = -qty;
+      }
+
+      const previousQuantity = runningBalance;
+      runningBalance += netChange;
+      const newQuantity = runningBalance;
+
+      return {
+        ...item,
+        previousQuantity,
+        newQuantity,
+      };
+    });
+
+    // Filter timeline by date range
+    const fromTime = dateRange?.from ? new Date(dateRange.from).getTime() : null;
+    const toTime = dateRange?.to ? new Date(dateRange.to).getTime() : null;
+
+    let result = computedTimeline.filter((entry) => {
+      const itemTime = new Date(entry.createdAt || 0).getTime();
+      if (fromTime && itemTime < fromTime) return false;
+      if (toTime && itemTime > toTime) return false;
+      return true;
+    });
 
     if (transactionType !== "all") {
       result = result.filter((entry) => {
@@ -910,10 +993,10 @@ export default function MaterialHistoryPage() {
 
     // Prepend pending transactions on the first page only to keep it clean
     if (currentPage === 1) {
-      return [...pendingList.map(item => ({ ...item, isPending: true })), ...result];
+      return [...pendingList.map((item) => ({ ...item, isPending: true })), ...result];
     }
     return result;
-  }, [historyData?.items, searchQuery, transactionType, combinedPendingItems, currentPage]);
+  }, [historyData?.items, dateRange, searchQuery, transactionType, combinedPendingItems, currentPage]);
 
   // Local Client-side Sorting (Sorting by Time only)
   const sortedItems = useMemo(() => {
@@ -926,7 +1009,7 @@ export default function MaterialHistoryPage() {
     });
   }, [filteredItems, sortKey, sortOrder]);
 
-  // Total summary statistics computed from returned data
+  // Total summary statistics computed from calculated timeline and filtered date range
   const summaryStats = useMemo(() => {
     const defaultStats = {
       openingBalance: materialDetail?.quantity || 0,
@@ -940,26 +1023,118 @@ export default function MaterialHistoryPage() {
       return defaultStats;
     }
 
-    // Sort items chronologically (oldest first) to find opening and closing balances
-    const sortedItems = [...historyData.items].sort((a, b) => {
-      return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+    // Re-group and compute full chronological timeline to get exact running balances
+    const items = historyData.items;
+    const grouped: any[] = [];
+    const cutGroupsMap = new Map<number, any[]>();
+
+    items.forEach((item) => {
+      if (item.referenceType === "material_cut" && item.referenceId) {
+        if (!cutGroupsMap.has(item.referenceId)) {
+          cutGroupsMap.set(item.referenceId, []);
+        }
+        cutGroupsMap.get(item.referenceId)!.push(item);
+      } else {
+        grouped.push({ ...item });
+      }
     });
 
-    const oldestTxn = sortedItems[0];
-    const newestTxn = sortedItems[sortedItems.length - 1];
+    cutGroupsMap.forEach((groupItems) => {
+      if (groupItems.length === 1) {
+        const item = groupItems[0];
+        grouped.push({
+          ...item,
+          quantityOut: item.transactionType === "cut_out" ? item.quantity : undefined,
+          quantityWaste: item.transactionType === "waste" ? item.quantity : undefined,
+        });
+      } else {
+        const sorted = [...groupItems].sort((a, b) => {
+          const timeA = new Date(a.createdAt || 0).getTime();
+          const timeB = new Date(b.createdAt || 0).getTime();
+          if (timeA !== timeB) return timeA - timeB;
+          return (a.id || 0) - (b.id || 0);
+        });
+        const oldest = sorted[0];
+        const newest = sorted[sorted.length - 1];
+        const cutOutEntry = groupItems.find((i) => i.transactionType === "cut_out");
+        const wasteEntry = groupItems.find((i) => i.transactionType === "waste");
+        const notes = groupItems
+          .map((i) => i.note)
+          .filter((n): n is string => typeof n === "string" && n.trim() !== "")
+          .filter((v, i, a) => a.indexOf(v) === i)
+          .join("; ");
 
-    const openingBalance = oldestTxn.previousQuantity !== undefined && oldestTxn.previousQuantity !== null
-      ? oldestTxn.previousQuantity
-      : 0;
-    const closingBalance = newestTxn.newQuantity !== undefined && newestTxn.newQuantity !== null
-      ? newestTxn.newQuantity
-      : 0;
+        grouped.push({
+          ...wasteEntry,
+          ...cutOutEntry,
+          id: cutOutEntry?.id || oldest.id,
+          previousQuantity: oldest.previousQuantity,
+          newQuantity: newest.newQuantity,
+          quantityOut: cutOutEntry?.quantity || 0,
+          quantityWaste: wasteEntry?.quantity || 0,
+          note: notes || cutOutEntry?.note || wasteEntry?.note || null,
+          isMerged: true,
+          transactionType: "cut_out",
+        });
+      }
+    });
+
+    grouped.sort((a, b) => {
+      const dateA = new Date(a.createdAt || 0).getTime();
+      const dateB = new Date(b.createdAt || 0).getTime();
+      if (dateA !== dateB) return dateA - dateB;
+      return (a.id || 0) - (b.id || 0);
+    });
+
+    let runningBalance = 0;
+    const computedTimeline = grouped.map((item) => {
+      let netChange = 0;
+      const qty = item.quantity || 0;
+      if (isImport(item.transactionType)) {
+        netChange = qty;
+      } else if (isExport(item.transactionType)) {
+        netChange = -qty;
+      } else if (isWaste(item.transactionType)) {
+        netChange = -qty;
+      }
+
+      const previousQuantity = runningBalance;
+      runningBalance += netChange;
+      const newQuantity = runningBalance;
+
+      return {
+        ...item,
+        previousQuantity,
+        newQuantity,
+      };
+    });
+
+    const fromTime = dateRange?.from ? new Date(dateRange.from).getTime() : null;
+    const toTime = dateRange?.to ? new Date(dateRange.to).getTime() : null;
+
+    // Items before the start of date range
+    const itemsBefore = fromTime
+      ? computedTimeline.filter((item) => new Date(item.createdAt || 0).getTime() < fromTime)
+      : [];
+
+    // Opening balance at start of period = closing balance of the last item before dateRange.from
+    const openingBalance = itemsBefore.length > 0
+      ? itemsBefore[itemsBefore.length - 1].newQuantity
+      : (computedTimeline[0]?.previousQuantity || 0);
+
+    // Items within date range
+    const itemsInPeriod = computedTimeline.filter((item) => {
+      const itemTime = new Date(item.createdAt || 0).getTime();
+      if (fromTime && itemTime < fromTime) return false;
+      if (toTime && itemTime > toTime) return false;
+      return true;
+    });
 
     let totalIn = 0;
     let totalOut = 0;
     let totalWaste = 0;
 
-    historyData.items.forEach((item) => {
+    itemsInPeriod.forEach((item) => {
       const qty = item.quantity || 0;
       if (isImport(item.transactionType)) {
         totalIn += qty;
@@ -970,6 +1145,10 @@ export default function MaterialHistoryPage() {
       }
     });
 
+    const closingBalance = itemsInPeriod.length > 0
+      ? itemsInPeriod[itemsInPeriod.length - 1].newQuantity
+      : (itemsBefore.length > 0 ? itemsBefore[itemsBefore.length - 1].newQuantity : openingBalance);
+
     return {
       openingBalance,
       totalIn,
@@ -977,7 +1156,7 @@ export default function MaterialHistoryPage() {
       totalWaste,
       closingBalance,
     };
-  }, [historyData?.items, materialDetail?.quantity]);
+  }, [historyData?.items, dateRange, materialDetail?.quantity]);
 
   // Client-side calculations for Cut Dialog & Actionable Pending List
   const vendorRolls = useMemo(() => {
@@ -1068,14 +1247,31 @@ export default function MaterialHistoryPage() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={selectedMonthPreset} onValueChange={handleMonthPresetChange}>
+              <SelectTrigger className="w-[190px] h-9 text-xs font-semibold bg-white border-slate-200 rounded-xl cursor-pointer">
+                <SelectValue placeholder="Chọn tháng..." />
+              </SelectTrigger>
+              <SelectContent>
+                {monthOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value} className="text-xs font-medium cursor-pointer">
+                    {opt.label}
+                  </SelectItem>
+                ))}
+                <SelectItem value="custom" className="text-xs font-medium cursor-pointer italic text-slate-500">
+                  Tùy chỉnh ngày...
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
             <DateRangePicker
               value={dateRange}
               onValueChange={(val) => {
                 setDateRange(val);
+                setSelectedMonthPreset("custom");
                 setCurrentPage(1);
               }}
-              className="w-[280px]"
+              className="w-[260px]"
             />
             <Button
               variant="outline"

@@ -4,9 +4,10 @@ import { Helmet } from "react-helmet-async";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { useCustomer, useCustomerOrders } from "@/hooks/use-customer";
+import { useCustomer, useRecalculateCustomerDebt } from "@/hooks/use-customer";
 import { useAuth } from "@/hooks";
 import { ROLE } from "@/constants";
+import { toast } from "sonner";
 import {
   CustomerHeader,
   CustomerProfile,
@@ -48,6 +49,20 @@ export default function CustomerDetail() {
     isLoading,
     error,
   } = useCustomer(customerId, !!customerId);
+
+  const recalculateDebtMutation = useRecalculateCustomerDebt();
+  const isAdminOrLead = userRole === ROLE.ADMIN || userRole === ROLE.ACCOUNTING_LEAD;
+
+  const handleRecalculateDebt = async () => {
+    if (!customerId) return;
+    try {
+      const res = await recalculateDebtMutation.mutateAsync(customerId);
+      const debtStr = (res.currentDebt ?? 0).toLocaleString("vi-VN");
+      toast.success(`Đã đồng bộ công nợ thành công! Công nợ hiện tại: ${debtStr} ₫`);
+    } catch (err: any) {
+      toast.error("Không thể đồng bộ công nợ: " + (err?.message || "Lỗi không xác định"));
+    }
+  };
 
   if (isLoading) {
     return (
@@ -113,6 +128,8 @@ export default function CustomerDetail() {
               ? () => setCashReceiptModalOpen(true)
               : undefined
           }
+          onRecalculateDebt={isAdminOrLead ? handleRecalculateDebt : undefined}
+          isRecalculatingDebt={recalculateDebtMutation.isPending}
           canViewFinancialInfo={canViewFinancialInfo}
         />
 

@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import type { DesignItem } from "@/types/proofing";
+import { type DesignItem, checkIsDecalSet } from "@/types/proofing";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -198,7 +198,7 @@ export function DesignTable({
                 null;
               const isDecal = (design.designTypeName || "").toLowerCase().includes("decal") || 
                               (design.materialTypeName || "").toLowerCase().includes("decal");
-              const isBo = isDecal && design.sidesClassification === "two_side";
+              const isBo = checkIsDecalSet(design);
 
               // Build full info for tooltip
               const fullInfo = (
@@ -300,32 +300,30 @@ export function DesignTable({
                             <span
                               className={cn(
                                 "font-bold text-right whitespace-nowrap",
-                                design.availableQuantity !== undefined &&
-                                  design.availableQuantity > 0
+                                (design.availableQuantity !== undefined && design.availableQuantity > 0) ||
+                                  (design.availableFrontQty != null && design.availableFrontQty > 0) ||
+                                  (design.availableBackQty != null && design.availableBackQty > 0)
                                   ? "text-green-600"
                                   : "text-red-600",
                               )}
                             >
                               {(() => {
-                                 const isDecal = (design.designTypeName || "").toLowerCase().includes("decal") || 
-                                                 (design.materialTypeName || "").toLowerCase().includes("decal");
-                                 const isBo = isDecal && design.sidesClassification === "two_side";
+                                 const isDecalBo = checkIsDecalSet(design);
                                  const piecesVal = design.availableQuantity !== undefined && design.availableQuantity !== null
                                    ? design.availableQuantity
                                    : design.quantity;
-                                 
-                                 const baseQtyStr = design.quantity.toLocaleString("vi-VN");
 
-                                 if (isDecal) {
-                                   if (isBo) {
-                                     const setsVal = Math.floor(piecesVal / 2);
-                                     return `${piecesVal.toLocaleString("vi-VN")} cái / ${setsVal.toLocaleString("vi-VN")} bộ`;
-                                   } else {
-                                     return piecesVal.toLocaleString("vi-VN");
+                                 if (isDecalBo) {
+                                   const frontAvail = design.availableFrontQty;
+                                   const backAvail = design.availableBackQty;
+                                   if (frontAvail != null || backAvail != null) {
+                                     return `${(frontAvail ?? 0).toLocaleString("vi-VN")} trước / ${(backAvail ?? 0).toLocaleString("vi-VN")} sau`;
                                    }
+                                   const setsVal = Math.floor(piecesVal / 2);
+                                   return `${piecesVal.toLocaleString("vi-VN")} / ${setsVal.toLocaleString("vi-VN")} bộ`;
                                  }
-                                 
-                                 return `${piecesVal.toLocaleString("vi-VN")} / ${baseQtyStr}`;
+
+                                 return `${piecesVal.toLocaleString("vi-VN")}`;
                                })()}
                             </span>
                           </div>
@@ -612,15 +610,27 @@ export function DesignTable({
                         >
                           <span>
                             {(() => {
-                              const piecesVal = design.availableQuantity !== undefined && design.availableQuantity !== null
-                                ? design.availableQuantity
-                                : design.quantity;
-
                               if (isBo) {
+                                const frontAvail = design.availableFrontQty;
+                                const backAvail = design.availableBackQty;
+                                if (frontAvail != null || backAvail != null) {
+                                  const f = frontAvail ?? 0;
+                                  const b = backAvail ?? 0;
+                                  if (f === b) {
+                                    return `${(f * 2).toLocaleString("vi-VN")} / ${f.toLocaleString("vi-VN")} bộ`;
+                                  }
+                                  return `${f.toLocaleString("vi-VN")} trước / ${b.toLocaleString("vi-VN")} sau`;
+                                }
+                                const piecesVal = design.availableQuantity !== undefined && design.availableQuantity !== null
+                                  ? design.availableQuantity
+                                  : design.quantity;
                                 const setsVal = Math.floor(piecesVal / 2);
                                 return `${piecesVal.toLocaleString("vi-VN")} / ${setsVal.toLocaleString("vi-VN")} bộ`;
                               }
-                              
+
+                              const piecesVal = design.availableQuantity !== undefined && design.availableQuantity !== null
+                                ? design.availableQuantity
+                                : design.quantity;
                               return piecesVal.toLocaleString("vi-VN");
                             })()}
                           </span>
@@ -633,34 +643,50 @@ export function DesignTable({
                       )}
                       {design.proofingAllocations && design.proofingAllocations.length > 0 && (
                         <div className="mt-1.5 space-y-1 border-t border-dashed pt-1.5 text-[11.5px] text-muted-foreground">
-                          {design.proofingAllocations.map((alloc, idx) => (
-                            <div key={idx} className="flex justify-between gap-2.5 whitespace-nowrap">
-                              <span
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (alloc.proofingOrderId) {
-                                    navigate(`/proofing/${alloc.proofingOrderId}?highlightDesignId=${design.designId || design.id}`);
-                                  }
-                                }}
-                                className="font-mono text-blue-600 dark:text-blue-400 font-medium hover:underline cursor-pointer"
-                              >
-                                {alloc.proofingOrderCode || `Bài #${alloc.proofingOrderId}`}
-                              </span>
-                              <span className={cn(
-                                "font-semibold text-[11.5px]",
-                                isBo ? "text-green-600 dark:text-green-400 font-bold" : "text-foreground"
-                              )}>
-                                {(() => {
-                                  const qty = alloc.quantityTaken ?? 0;
-                                  if (isBo) {
-                                    const pieces = qty * 2;
-                                    return `${pieces.toLocaleString("vi-VN")} / ${qty.toLocaleString("vi-VN")} bộ`;
-                                  }
-                                  return qty.toLocaleString("vi-VN");
-                                })()}
-                              </span>
-                            </div>
-                          ))}
+                          {design.proofingAllocations.map((alloc, idx) => {
+                            const side = alloc.side || "both";
+                            const qtyInSheets = alloc.quantityInSheets ?? (alloc.quantityTaken ?? 0);
+                            const qtyTaken = alloc.quantityTaken ?? 0;
+
+                            let allocText = "";
+                            if (side === "front") {
+                              allocText = `${qtyInSheets.toLocaleString("vi-VN")} mặt trước`;
+                            } else if (side === "back") {
+                              allocText = `${qtyInSheets.toLocaleString("vi-VN")} mặt sau`;
+                            } else if (isBo) {
+                              allocText = `${qtyTaken.toLocaleString("vi-VN")} bộ`;
+                            } else {
+                              allocText = qtyTaken.toLocaleString("vi-VN");
+                            }
+
+                            return (
+                              <div key={idx} className="flex justify-between gap-2.5 whitespace-nowrap">
+                                <span
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (alloc.proofingOrderId) {
+                                      navigate(`/proofing/${alloc.proofingOrderId}?highlightDesignId=${design.designId || design.id}`);
+                                    }
+                                  }}
+                                  className="font-mono text-blue-600 dark:text-blue-400 font-medium hover:underline cursor-pointer"
+                                >
+                                  {alloc.proofingOrderCode || `Bài #${alloc.proofingOrderId}`}
+                                </span>
+                                <span className={cn(
+                                  "font-semibold text-[11.5px]",
+                                  side === "front"
+                                    ? "text-blue-600 dark:text-blue-400 font-bold"
+                                    : side === "back"
+                                      ? "text-purple-600 dark:text-purple-400 font-bold"
+                                      : isBo
+                                        ? "text-green-600 dark:text-green-400 font-bold"
+                                        : "text-foreground"
+                                )}>
+                                  {allocText}
+                                </span>
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </TableCell>

@@ -8,6 +8,25 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Formats relative image URLs returned by the API (e.g. /storage/... or uploads/...)
+ * into absolute URLs pointing to the backend API host.
+ */
+export function formatImageUrl(url: string | null | undefined): string | null {
+  if (!url) return null;
+  if (
+    url.startsWith("http://") ||
+    url.startsWith("https://") ||
+    url.startsWith("data:") ||
+    url.startsWith("blob:")
+  ) {
+    return url;
+  }
+  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "");
+  const cleanPath = url.startsWith("/") ? url : `/${url}`;
+  return apiBaseUrl ? `${apiBaseUrl}${cleanPath}` : cleanPath;
+}
+
 // Utility functions cho quản lý công nợ khách hàng
 export function checkDebtStatus(customer: Customer): {
   status: "good" | "warning" | "blocked";

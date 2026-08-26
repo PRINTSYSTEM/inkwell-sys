@@ -23,12 +23,18 @@ import {
   Box,
 } from "lucide-react";
 
+import { cn } from "@/lib/utils";
+import { checkIsDecalSet } from "@/types/proofing";
+import { getMaxAvailableQtyForSide } from "@/components/proofing/AddDesignToProofingDialog";
+
 interface DetailEmptyOrderViewProps {
   selectedDesigns: any[];
   selectedCount: number;
   materialTypeName: string | null;
   designQuantities: Record<number, number>;
   setDesignQuantities: (val: (prev: any) => any) => void;
+  designSides?: Record<number, "both" | "front" | "back">;
+  setDesignSides?: (val: (prev: any) => any) => void;
   toggleSelection: (design: any) => void;
   proofingSheetQuantity: number;
   setProofingSheetQuantity: (val: number) => void;
@@ -54,6 +60,8 @@ export function DetailEmptyOrderView({
   materialTypeName,
   designQuantities,
   setDesignQuantities,
+  designSides,
+  setDesignSides,
   toggleSelection,
   proofingSheetQuantity,
   setProofingSheetQuantity,
@@ -117,90 +125,125 @@ export function DetailEmptyOrderView({
                 {/* List of selected designs */}
                 <div className="space-y-2">
                   <div className="space-y-1.5">
-                    {selectedDesigns.map((design, index) => (
-                      <div
-                        key={design.id}
-                        className="group relative flex items-center gap-2 p-1.5 border rounded-lg bg-card/50 hover:border-primary/50 transition-all shadow-sm min-w-0 w-full"
-                      >
-                        <div className="w-5 h-5 shrink-0 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] font-extrabold shadow-sm">
-                          {index + 1}
-                        </div>
-                        <div className="h-9 w-9 rounded border bg-muted overflow-hidden shrink-0">
-                          {design.thumbnailUrl ? (
-                            <img
-                              src={design.thumbnailUrl}
-                              alt={design.code}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <div className="h-full w-full flex items-center justify-center">
-                              <Box className="h-4 w-4 text-muted-foreground/30" />
+                    {selectedDesigns.map((design, index) => {
+                      const isDecalBo = checkIsDecalSet(design);
+                      const currentSide = designSides?.[design.id] || "both";
+                      const { maxAvailable, label: availLabel } = getMaxAvailableQtyForSide(design, currentSide);
+
+                      return (
+                        <div
+                          key={design.id}
+                          className="group relative flex items-center gap-2 p-1.5 border rounded-lg bg-card/50 hover:border-primary/50 transition-all shadow-sm min-w-0 w-full"
+                        >
+                          <div className="w-5 h-5 shrink-0 bg-blue-600 text-white rounded-full flex items-center justify-center text-[10px] font-extrabold shadow-sm">
+                            {index + 1}
+                          </div>
+                          <div className="h-9 w-9 rounded border bg-muted overflow-hidden shrink-0">
+                            {design.thumbnailUrl ? (
+                              <img
+                                src={design.thumbnailUrl}
+                                alt={design.code}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="h-full w-full flex items-center justify-center">
+                                <Box className="h-4 w-4 text-muted-foreground/30" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-1.5">
+                              <div className="flex items-center gap-1 min-w-0">
+                                <span className="font-bold text-xs block truncate max-w-[100px]" title={design.code}>
+                                  {design.code}
+                                </span>
+                              </div>
+                              <span className="text-[11px] text-muted-foreground font-medium shrink-0">
+                                Còn:{" "}
+                                <span className={cn(
+                                  "font-bold text-[10px]",
+                                  maxAvailable > 0
+                                    ? currentSide === "front"
+                                      ? "text-blue-600 dark:text-blue-400"
+                                      : currentSide === "back"
+                                        ? "text-purple-600 dark:text-purple-400"
+                                        : "text-red-600 dark:text-red-400"
+                                    : "text-red-600"
+                                )}>
+                                  {availLabel}
+                                </span>
+                              </span>
                             </div>
+                            <div className="flex items-center justify-between gap-1 mt-0.5">
+                              <p className="text-[11px] text-muted-foreground font-medium leading-tight truncate max-w-[120px]" title={design.name}>
+                                {design.name && design.name.length > 60 ? design.name.slice(0, 57) + "..." : design.name}
+                              </p>
+                              {isDecalBo && (
+                                <Select
+                                  value={currentSide}
+                                  onValueChange={(val: "both" | "front" | "back") => {
+                                    setDesignSides?.((prev: any) => ({
+                                      ...prev,
+                                      [design.id]: val,
+                                    }));
+                                    const { maxAvailable: newMax } = getMaxAvailableQtyForSide(design, val);
+                                    setDesignQuantities((prev: any) => ({
+                                      ...prev,
+                                      [design.id]: newMax,
+                                    }));
+                                  }}
+                                  disabled={!isProofer}
+                                >
+                                  <SelectTrigger className="h-5 text-[10px] font-bold px-1 bg-white border-slate-200 min-w-[80px] shrink-0">
+                                    <SelectValue placeholder="Mặt in" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="both" className="text-xs font-medium">Cả 2 mặt</SelectItem>
+                                    <SelectItem value="front" className="text-xs font-semibold text-blue-600">Mặt trước</SelectItem>
+                                    <SelectItem value="back" className="text-xs font-semibold text-purple-600">Mặt sau</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            </div>
+                          </div>
+                          <div className="w-16 shrink-0">
+                            <Label
+                              htmlFor={`qty-${design.id}`}
+                              className="sr-only"
+                            >
+                              Số lượng
+                            </Label>
+                            <Input
+                              id={`qty-${design.id}`}
+                              type="number"
+                              placeholder="SL"
+                              className="h-7 text-xs font-bold text-center px-1"
+                              value={designQuantities[design.id] || ""}
+                              max={maxAvailable}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                setDesignQuantities((prev: any) => ({
+                                  ...prev,
+                                  [design.id]:
+                                    val === "" ? 0 : parseInt(val, 10),
+                                }));
+                              }}
+                              disabled={!isProofer}
+                            />
+                          </div>
+                          {isProofer && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
+                              onClick={() => toggleSelection(design)}
+                            >
+                              <Plus className="h-3.5 w-3.5 rotate-45" />
+                            </Button>
                           )}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-1.5">
-                            <div className="flex items-center gap-1 min-w-0">
-                              <span className="font-bold text-xs block truncate max-w-[100px]" title={design.code}>
-                                {design.code}
-                              </span>
-                            </div>
-                            <span className="text-[11px] text-muted-foreground font-medium shrink-0">
-                              Còn:{" "}
-                              <span className="text-red-600 dark:text-red-400 font-bold text-[10px]">
-                                {(() => {
-                                  const avail = design.availableQuantity !== undefined ? design.availableQuantity : design.quantity;
-                                  const isDecal = (design.designTypeName || "").toLowerCase().includes("decal") || (design.materialTypeName || "").toLowerCase().includes("decal");
-                                  const isBo = isDecal && design.sidesClassification === "two_side";
-                                  if (isBo) {
-                                    const sets = Math.floor(avail / 2);
-                                    return `${avail.toLocaleString("vi-VN")} / ${sets.toLocaleString("vi-VN")} bộ`;
-                                  }
-                                  return avail.toLocaleString("vi-VN");
-                                })()}
-                              </span>
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-muted-foreground font-medium leading-tight truncate max-w-[140px] sm:max-w-[180px]" title={design.name}>
-                            {design.name && design.name.length > 80 ? design.name.slice(0, 77) + "..." : design.name}
-                          </p>
-                        </div>
-                        <div className="w-20 shrink-0">
-                          <Label
-                            htmlFor={`qty-${design.id}`}
-                            className="sr-only"
-                          >
-                            Số lượng
-                          </Label>
-                          <Input
-                            id={`qty-${design.id}`}
-                            type="number"
-                            placeholder="SL"
-                            className="h-7 text-xs font-bold text-center px-1"
-                            value={designQuantities[design.id] || ""}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setDesignQuantities((prev) => ({
-                                ...prev,
-                                [design.id]:
-                                  val === "" ? 0 : parseInt(val, 10),
-                              }));
-                            }}
-                            disabled={!isProofer}
-                          />
-                        </div>
-                        {isProofer && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
-                            onClick={() => toggleSelection(design)}
-                          >
-                            <Plus className="h-3.5 w-3.5 rotate-45" />
-                          </Button>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
 
