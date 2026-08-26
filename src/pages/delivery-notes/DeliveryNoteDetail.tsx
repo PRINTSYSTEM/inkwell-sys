@@ -175,7 +175,7 @@ export default function DeliveryNoteDetailPage() {
   const [failureReason, setFailureReason] = useState("");
   const [failureType, setFailureType] = useState<string>("");
   const [affectsDebt, setAffectsDebt] = useState(false);
-  const [viewingProofingOrderId, setViewingProofingOrderId] = useState<number | null>(null);
+  const [viewingProofingOrderId, setViewingProofingOrderId] = useState<number | string | null>(null);
   const [notes, setNotes] = useState("");
   const [isRecreateDialogOpen, setIsRecreateDialogOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);

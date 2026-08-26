@@ -498,23 +498,32 @@ export function DetailDesignsListCard({
                          </TableCell>
                         <TableCell className="px-2 py-1">
                           {(() => {
-                            const rawDesignImg =
+                            const rawDesignThumb =
                               pod.design?.thumbnailUrl ||
-                              pod.design?.imageUrl ||
                               pod.design?.designThumbnailUrl ||
+                              pod.design?.images?.[0]?.thumbnailUrl ||
+                              pod.design?.imageUrl ||
+                              pod.design?.designImageUrl ||
+                              pod.design?.images?.[0]?.imageUrl;
+                            const designThumb = formatImageUrl(rawDesignThumb);
+
+                            const rawFullDesignImg =
+                              pod.design?.imageUrl ||
                               pod.design?.designImageUrl ||
                               pod.design?.images?.[0]?.imageUrl ||
+                              pod.design?.thumbnailUrl ||
+                              pod.design?.designThumbnailUrl ||
                               pod.design?.images?.[0]?.thumbnailUrl;
-                            const designImg = formatImageUrl(rawDesignImg);
+                            const fullDesignImg = formatImageUrl(rawFullDesignImg) || designThumb;
 
-                            return designImg ? (
+                            return designThumb ? (
                               <img
-                                src={designImg}
+                                src={designThumb}
                                 alt={pod.design?.code || pod.design?.designName || "Mã hàng"}
                                 className="w-10 h-10 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setViewingImageUrl(designImg);
+                                  setViewingImageUrl(fullDesignImg);
                                   setImageViewerOpen(true);
                                 }}
                               />

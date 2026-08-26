@@ -90,7 +90,7 @@ export default function AddItemsToDeliveryNoteDialog({
   const [searchQuery, setSearchQuery] = useState("");
   const [confirmTransitOpen, setConfirmTransitOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [viewingProofingOrderId, setViewingProofingOrderId] = useState<number | null>(null);
+  const [viewingProofingOrderId, setViewingProofingOrderId] = useState<number | string | null>(null);
 
   // Reset selection on dialog open/close
   React.useEffect(() => {
@@ -408,7 +408,7 @@ export default function AddItemsToDeliveryNoteDialog({
                               <div className="flex flex-wrap gap-1">
                                 {item.proofingOrderCodes.map((c) => {
                                   const match = c.match(/\d+/);
-                                  const pId = match ? parseInt(match[0], 10) : null;
+                                  const pId = c || (match ? parseInt(match[0], 10) : null);
                                   return (
                                     <Badge
                                       key={c}

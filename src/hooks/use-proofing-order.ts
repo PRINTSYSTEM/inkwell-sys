@@ -79,8 +79,95 @@ const {
 export const useProofingOrders = (params?: ProofingOrderListParams) =>
   useProofingOrderListBase(params ?? ({} as ProofingOrderListParams));
 
-export const useProofingOrder = (id: number | null, enabled = true) =>
-  useProofingOrderDetailBase(id, enabled);
+export const useProofingOrder = (id: number | string | null, enabled = true) => {
+  return useQuery({
+    queryKey: ["proofing-orders", "detail-by-id-or-code", id],
+    queryFn: async () => {
+      if (!id && id !== 0) return null;
+
+      // 1. Try direct ID lookup if id is a positive number or numeric string
+      const numId = typeof id === "number" ? id : Number(id);
+      const isNumeric = !isNaN(numId) && numId > 0;
+
+      if (isNumeric) {
+        try {
+          const directRes = await apiRequest.get<ProofingOrderResponse>(
+            `${API_SUFFIX.PROOFING_ORDERS}/${numId}`
+          );
+          if (directRes?.data && (directRes.data.id || directRes.data.code)) {
+            return directRes.data;
+          }
+        } catch (err: any) {
+          // Direct ID lookup failed (e.g. 404 because numId is a code), fallback to code lookup
+        }
+      }
+
+      // 2. Lookup by code parameter
+      const cleanStr = String(id).trim();
+      const codePart = cleanStr.replace(/^bài\s*/i, "").trim();
+
+      if (!codePart) return null;
+
+      try {
+        const listRes = await apiRequest.get<ProofingOrderResponsePaginate>(
+          API_SUFFIX.PROOFING_ORDERS,
+          { params: { code: codePart, pageSize: 20 } }
+        );
+        const items = listRes?.data?.items ?? [];
+        let found = items.find(
+          (item) =>
+            item.code?.toUpperCase() === codePart.toUpperCase() ||
+            item.code?.toUpperCase() === cleanStr.toUpperCase() ||
+            item.code?.toUpperCase() === `BÀI ${codePart}`.toUpperCase()
+        );
+
+        if (!found && items.length > 0) {
+          found = items[0];
+        }
+
+        if (found?.id) {
+          const detailRes = await apiRequest.get<ProofingOrderResponse>(
+            `${API_SUFFIX.PROOFING_ORDERS}/${found.id}`
+          );
+          return detailRes.data;
+        }
+      } catch (err: any) {
+        // Fallback to search
+      }
+
+      // 3. Fallback search by string query
+      try {
+        const searchRes = await apiRequest.get<ProofingOrderResponsePaginate>(
+          API_SUFFIX.PROOFING_ORDERS,
+          { params: { search: codePart, pageSize: 20 } }
+        );
+        const searchItems = searchRes?.data?.items ?? [];
+        let searchFound = searchItems.find(
+          (item) =>
+            item.code?.toUpperCase() === codePart.toUpperCase() ||
+            item.code?.toUpperCase() === cleanStr.toUpperCase() ||
+            item.code?.toUpperCase().includes(codePart.toUpperCase())
+        );
+
+        if (!searchFound && searchItems.length > 0) {
+          searchFound = searchItems[0];
+        }
+
+        if (searchFound?.id) {
+          const detailRes = await apiRequest.get<ProofingOrderResponse>(
+            `${API_SUFFIX.PROOFING_ORDERS}/${searchFound.id}`
+          );
+          return detailRes.data;
+        }
+      } catch (err: any) {
+        // Ignore
+      }
+
+      return null;
+    },
+    enabled: Boolean(enabled && id !== null && id !== undefined && id !== ""),
+  });
+};
 
 export const useCreateProofingOrder = () => useCreateProofingOrderBase();
 export const useUpdateProofingOrder = () => useUpdateProofingOrderBase();

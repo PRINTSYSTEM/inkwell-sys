@@ -72,15 +72,16 @@ import { ReadOnlyProofingDetailModal } from "@/components/proofing/ReadOnlyProof
 
 interface ProofingCodeProps {
   code: string;
-  onOpenDetail?: (id: number) => void;
+  onOpenDetail?: (id: number | string) => void;
 }
 
 function ProofingCodeWithProductions({ code, onOpenDetail }: ProofingCodeProps) {
   const match = code.match(/\d+/);
-  const proofingOrderId = match ? parseInt(match[0], 10) : null;
+  const proofingOrderId = code || (match ? parseInt(match[0], 10) : null);
+  const numericId = match ? parseInt(match[0], 10) : undefined;
 
   const { data: productionsResp, isLoading } = useProductionOrders(
-    proofingOrderId ? { proofingOrderId, pageSize: 50 } : undefined
+    numericId ? { proofingOrderId: numericId, pageSize: 50 } : undefined
   );
 
   const productions = useMemo(() => {
@@ -255,7 +256,7 @@ export default function DeliveryLineRow({
   const [failureReasonId, setFailureReasonId] = useState<number | null>(null);
   const [failureNotes, setFailureNotes] = useState("");
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
-  const [viewingProofingOrderId, setViewingProofingOrderId] = useState<number | null>(null);
+  const [viewingProofingOrderId, setViewingProofingOrderId] = useState<number | string | null>(null);
 
   // Mutations
   const updateLineResultMutation = useUpdateDeliveryLineResult();
