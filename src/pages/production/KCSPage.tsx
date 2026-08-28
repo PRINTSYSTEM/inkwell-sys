@@ -779,8 +779,7 @@ const KcsItemRow = React.memo(function KcsItemRow({
       return qty.toLocaleString("vi-VN");
     }
     if (isBoBoth) {
-      const sets = Math.floor(qty / 2);
-      return `${sets.toLocaleString("vi-VN")} bộ`;
+      return `${qty.toLocaleString("vi-VN")} bộ`;
     }
     return qty.toLocaleString("vi-VN");
   };
