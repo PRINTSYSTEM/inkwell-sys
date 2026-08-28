@@ -44,7 +44,7 @@ import {
   Eye,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { cn, formatImageUrl } from "@/lib/utils";
+import { cn, formatImageUrl, getThumbnailAndFullUrl } from "@/lib/utils";
 import { toast } from "sonner";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { ReadOnlyProofingDetailModal } from "@/components/proofing/ReadOnlyProofingDetailModal";
@@ -57,6 +57,54 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PrintLabelDialog } from "./components/PrintLabelDialog";
+
+interface SafeImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+  src?: string | null;
+  fallbackSrc?: string | null;
+  alt: string;
+  fallbackNode?: React.ReactNode;
+}
+
+function SafeImage({
+  src,
+  fallbackSrc,
+  alt,
+  fallbackNode,
+  className,
+  onClick,
+  ...props
+}: SafeImageProps) {
+  const [currentSrc, setCurrentSrc] = useState<string | null>(src || fallbackSrc || null);
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setCurrentSrc(src || fallbackSrc || null);
+    setHasError(false);
+  }, [src, fallbackSrc]);
+
+  const handleError = () => {
+    if (currentSrc === src && fallbackSrc && fallbackSrc !== src) {
+      setCurrentSrc(fallbackSrc);
+    } else {
+      setHasError(true);
+    }
+  };
+
+  if (!currentSrc || hasError) {
+    return fallbackNode ? <>{fallbackNode}</> : null;
+  }
+
+  return (
+    <img
+      src={currentSrc}
+      alt={alt}
+      onError={handleError}
+      className={className}
+      onClick={onClick}
+      {...props}
+    />
+  );
+}
 
 export default function KCSPage() {
   const queryClient = useQueryClient();
@@ -662,13 +710,20 @@ function YieldComparisonTable({
                 <TableCell className="font-mono font-bold text-slate-900">
                   <div className="flex items-center gap-2">
                     {(() => {
-                      const rawThumb = row.item.designThumbnailUrl || row.item.designImageUrl;
-                      const thumbUrl = formatImageUrl(rawThumb);
-                      const fullUrl = formatImageUrl(row.item.designImageUrl || row.item.designThumbnailUrl) || thumbUrl;
-                      if (!thumbUrl) return null;
+                      const rawMain =
+                        row.item.designImageUrl ||
+                        (row.item as any).imageUrl;
+
+                      const rawThumb =
+                        row.item.designThumbnailUrl ||
+                        (row.item as any).thumbnailUrl;
+
+                      const { thumbUrl, fullUrl } = getThumbnailAndFullUrl(rawMain, rawThumb);
+                      if (!thumbUrl && !fullUrl) return null;
                       return (
-                        <img
+                        <SafeImage
                           src={thumbUrl}
+                          fallbackSrc={fullUrl}
                           alt="design"
                           className="w-8 h-8 rounded border object-cover shrink-0 cursor-pointer"
                           onClick={() => fullUrl && onOpenImageViewer(fullUrl)}
@@ -804,37 +859,28 @@ const KcsItemRow = React.memo(function KcsItemRow({
       {/* Left part: item image & text details */}
       <div className="flex gap-2 min-w-0">
         {(() => {
-          const rawThumb =
-            item.designThumbnailUrl ||
+          const rawMain =
             item.designImageUrl ||
-            (item as any).thumbnailUrl ||
             (item as any).imageUrl ||
-            design?.designThumbnailUrl ||
+            (item as any).design?.designImageUrl ||
+            (item as any).design?.imageUrl ||
             design?.designImageUrl;
 
-          const rawFull =
-            item.designImageUrl ||
+          const rawThumb =
             item.designThumbnailUrl ||
-            (item as any).imageUrl ||
             (item as any).thumbnailUrl ||
-            design?.designImageUrl ||
-            design?.designThumbnailUrl;
+            (item as any).design?.designThumbnailUrl ||
+            (item as any).design?.thumbnailUrl ||
+            design?.designThumbnailUrl ||
+            design?.thumbnailUrl;
 
-          const thumbUrl = formatImageUrl(rawThumb);
-          const fullUrl = formatImageUrl(rawFull) || thumbUrl;
-
-          if (!thumbUrl) {
-            return (
-              <div className="w-10 h-10 border rounded bg-slate-100 flex items-center justify-center shrink-0 text-slate-400">
-                <FileImage className="w-4 h-4 opacity-40" />
-              </div>
-            );
-          }
+          const { thumbUrl, fullUrl } = getThumbnailAndFullUrl(rawMain, rawThumb);
 
           return (
             <div className="w-10 h-10 border rounded bg-white overflow-hidden flex items-center justify-center shrink-0 cursor-zoom-in hover:ring-1 hover:ring-primary/20">
-              <img
+              <SafeImage
                 src={thumbUrl}
+                fallbackSrc={fullUrl}
                 alt={item.designCode || "design"}
                 loading="lazy"
                 decoding="async"
@@ -844,6 +890,11 @@ const KcsItemRow = React.memo(function KcsItemRow({
                 onClick={() => {
                   if (fullUrl) onOpenImageViewer(fullUrl);
                 }}
+                fallbackNode={
+                  <div className="w-10 h-10 border rounded bg-slate-100 flex items-center justify-center shrink-0 text-slate-400">
+                    <FileImage className="w-4 h-4 opacity-40" />
+                  </div>
+                }
               />
             </div>
           );
@@ -1275,34 +1326,25 @@ const KcsOrderRow = React.memo(function KcsOrderRow({
     }
   };
 
-  // Get layout image URL
-  const layoutImageUrl = useMemo(() => {
+  // Get layout image and thumbnail URLs
+  const { layoutImageUrl, layoutImageThumbnailUrl } = useMemo(() => {
     const images = prod.proofingOrderImages || (prod as any).proofingOrder?.images || [];
-    if (images.length > 0) {
-      const img = images[0];
-      const url = img.imageUrl || img.thumbnailUrl;
-      if (url) return formatImageUrl(url);
-    }
-    const singleUrl = (prod as any).proofingOrderImageUrl || (prod as any).proofingOrder?.imageUrl;
-    if (singleUrl) return formatImageUrl(singleUrl);
-    return null;
-  }, [prod]);
+    let rawMain: string | null = null;
+    let rawThumb: string | null = null;
 
-  // Get layout thumbnail URL
-  const layoutImageThumbnailUrl = useMemo(() => {
-    const images = prod.proofingOrderImages || (prod as any).proofingOrder?.images || [];
     if (images.length > 0) {
       const img = images[0];
-      const url = img.thumbnailUrl || img.imageUrl;
-      if (url) return formatImageUrl(url);
+      rawMain = img.imageUrl || img.thumbnailUrl;
+      rawThumb = img.thumbnailUrl || img.imageUrl;
+    } else {
+      rawMain = (prod as any).proofingOrderImageUrl || (prod as any).proofingOrder?.imageUrl;
+      rawThumb =
+        (prod as any).proofingOrderThumbnailUrl ||
+        (prod as any).proofingOrder?.thumbnailUrl;
     }
-    const singleUrl =
-      (prod as any).proofingOrderThumbnailUrl ||
-      (prod as any).proofingOrderImageUrl ||
-      (prod as any).proofingOrder?.thumbnailUrl ||
-      (prod as any).proofingOrder?.imageUrl;
-    if (singleUrl) return formatImageUrl(singleUrl);
-    return null;
+
+    const { thumbUrl, fullUrl } = getThumbnailAndFullUrl(rawMain, rawThumb);
+    return { layoutImageUrl: fullUrl, layoutImageThumbnailUrl: thumbUrl };
   }, [prod]);
 
   // Check if KCS has been completely finished for this row
@@ -1318,25 +1360,28 @@ const KcsOrderRow = React.memo(function KcsOrderRow({
 
       {/* Flat layout image */}
       <TableCell className="align-top py-3">
-        {layoutImageUrl ? (
-          <div className="w-20 h-20 border rounded bg-white overflow-hidden flex items-center justify-center cursor-zoom-in hover:ring-2 hover:ring-primary/40 transition-colors shadow-sm">
-            <img
-              src={layoutImageThumbnailUrl || layoutImageUrl}
-              alt={prod.proofingOrderCode || "Flat layout"}
-              loading="lazy"
-              decoding="async"
-              width={80}
-              height={80}
-              className="w-full h-full object-contain"
-              onClick={() => onOpenImageViewer(layoutImageUrl)}
-            />
-          </div>
-        ) : (
-          <div className="w-20 h-20 rounded bg-slate-100 dark:bg-slate-800 flex flex-col items-center justify-center text-muted-foreground border">
-            <FileImage className="w-5 h-5 mb-1 opacity-50" />
-            <span className="text-[10px]">Không ảnh</span>
-          </div>
-        )}
+        <div className="w-20 h-20 border rounded bg-white overflow-hidden flex items-center justify-center cursor-zoom-in hover:ring-2 hover:ring-primary/40 transition-colors shadow-sm">
+          <SafeImage
+            src={layoutImageThumbnailUrl}
+            fallbackSrc={layoutImageUrl}
+            alt={prod.proofingOrderCode || "Flat layout"}
+            loading="lazy"
+            decoding="async"
+            width={80}
+            height={80}
+            className="w-full h-full object-contain"
+            onClick={() => {
+              const targetUrl = layoutImageUrl || layoutImageThumbnailUrl;
+              if (targetUrl) onOpenImageViewer(targetUrl);
+            }}
+            fallbackNode={
+              <div className="w-20 h-20 rounded bg-slate-100 dark:bg-slate-800 flex flex-col items-center justify-center text-muted-foreground border">
+                <FileImage className="w-5 h-5 mb-1 opacity-50" />
+                <span className="text-[10px]">Không ảnh</span>
+              </div>
+            }
+          />
+        </div>
       </TableCell>
 
       {/* Code & Proofing Details */}
