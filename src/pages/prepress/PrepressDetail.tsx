@@ -2215,16 +2215,9 @@ export default function ProofingOrderDetailPage() {
         proofingOrderDesignId: removeDesignTarget.proofingOrderDesignId,
       },
       {
-        onSuccess: (data) => {
-          if (data === null) {
-            toast.success("Thành công", {
-              description: "Bình bài đã bị xóa",
-            });
-            navigate("/proofing");
-          } else {
-            setIsConfirmRemoveDesignDialogOpen(false);
-            setRemoveDesignTarget(null);
-          }
+        onSuccess: () => {
+          setIsConfirmRemoveDesignDialogOpen(false);
+          setRemoveDesignTarget(null);
         },
       },
     );

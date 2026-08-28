@@ -187,18 +187,24 @@ export function DetailDieExportCard({
                                 }
                               }}
                             >
-                              {dieExport.die?.imageUrl ? (
-                                <>
-                                  <img
-                                    src={dieExport.die.imageUrl}
-                                    alt={dieExport.die?.code || "Khuôn bế"}
-                                    className="w-full h-full object-cover transition-transform duration-300 group-hover/img:scale-110"
-                                  />
-                                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
-                                    <Maximize2 className="h-3.5 w-3.5 text-white" />
-                                  </div>
-                                </>
-                              ) : (
+                              {(() => {
+                                const thumbUrl = dieExport.die?.thumbnailUrl || dieExport.die?.imageUrl;
+                                return thumbUrl ? (
+                                  <>
+                                    <img
+                                      src={thumbUrl}
+                                      alt={dieExport.die?.code || "Khuôn bế"}
+                                      loading="lazy"
+                                      decoding="async"
+                                      className="w-full h-full object-cover transition-transform duration-300 group-hover/img:scale-110"
+                                    />
+                                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                                      <Maximize2 className="h-3.5 w-3.5 text-white" />
+                                    </div>
+                                  </>
+                                ) : null;
+                              })()}
+                              {!dieExport.die?.thumbnailUrl && !dieExport.die?.imageUrl && (
                                 <FileImage className="h-4.5 w-4.5 text-muted-foreground/40" />
                               )}
                             </div>

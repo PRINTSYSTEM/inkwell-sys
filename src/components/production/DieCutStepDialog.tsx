@@ -473,22 +473,27 @@ export function DieCutStepDialog({
                             >
                               <div className="flex items-start gap-4">
                                 {/* Die Image */}
-                                {die.imageUrl && (
-                                  <div
-                                    className="relative w-20 h-20 rounded-lg border bg-muted overflow-hidden shrink-0 cursor-pointer group/image"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setViewingImageUrl(die.imageUrl!);
-                                      setImageViewerOpen(true);
-                                    }}
-                                  >
-                                    <img
-                                      src={die.imageUrl}
-                                      alt={die.code || `Die ${die.id}`}
-                                      className="w-full h-full object-contain"
-                                    />
-                                  </div>
-                                )}
+                                {(() => {
+                                  const thumbUrl = die.thumbnailUrl || die.imageUrl;
+                                  return thumbUrl ? (
+                                    <div
+                                      className="relative w-20 h-20 rounded-lg border bg-muted overflow-hidden shrink-0 cursor-pointer group/image"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setViewingImageUrl(die.imageUrl || die.thumbnailUrl || "");
+                                        setImageViewerOpen(true);
+                                      }}
+                                    >
+                                      <img
+                                        src={thumbUrl}
+                                        alt={die.code || `Die ${die.id}`}
+                                        loading="lazy"
+                                        decoding="async"
+                                        className="w-full h-full object-contain"
+                                      />
+                                    </div>
+                                  ) : null;
+                                })()}
 
                                 {/* Die Info */}
                                 <div className="flex-1 min-w-0 space-y-2">
