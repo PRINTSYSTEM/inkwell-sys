@@ -1129,22 +1129,27 @@ function RelatedDiesContent({
             }
           }}
         >
-          {die.imageUrl ? (
-            <>
-              <img
-                src={die.imageUrl}
-                alt={die.code || `Die ${die.id}`}
-                className="w-full h-full object-contain"
-              />
-              <div className="absolute inset-0 bg-black/0 group-hover/image:bg-black/10 transition-colors flex items-center justify-center">
-                <Eye className="h-4 w-4 text-white opacity-0 group-hover/image:opacity-100 transition-opacity" />
+          {(() => {
+            const thumbUrl = die.thumbnailUrl || die.imageUrl;
+            return thumbUrl ? (
+              <>
+                <img
+                  src={thumbUrl}
+                  alt={die.code || `Die ${die.id}`}
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full h-full object-contain"
+                />
+                <div className="absolute inset-0 bg-black/0 group-hover/image:bg-black/10 transition-colors flex items-center justify-center">
+                  <Eye className="h-4 w-4 text-white opacity-0 group-hover/image:opacity-100 transition-opacity" />
+                </div>
+              </>
+            ) : (
+              <div className="w-full h-full flex items-center justify-center">
+                <Package className="h-8 w-8 text-muted-foreground" />
               </div>
-            </>
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <Package className="h-8 w-8 text-muted-foreground" />
-            </div>
-          )}
+            );
+          })()}
         </div>
 
         <div className="flex-1 min-w-0 space-y-2">

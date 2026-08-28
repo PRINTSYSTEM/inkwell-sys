@@ -177,6 +177,22 @@ export function DieListDialog({
     setCategoryFilter("all");
   };
 
+  const [visibleCount, setVisibleCount] = useState(30);
+
+  // Reset progressive rendering batch when filters or dialog state change
+  useEffect(() => {
+    if (open) {
+      setVisibleCount(30);
+    }
+  }, [open, searchParams, activeTab, viewMode]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollHeight - scrollTop - clientHeight < 250) {
+      setVisibleCount((prev) => prev + 30);
+    }
+  };
+
   // Compact High-Density Card Item (Fits 20 cards on 1 screen)
   const renderDieCard = (die: DieResponse) => {
     const isBox = die.category === "box" || !die.category;
@@ -192,7 +208,7 @@ export function DieListDialog({
     return (
       <div
         key={die.id}
-        className="group relative rounded-xl border border-slate-200 bg-white p-2.5 transition-all duration-200 hover:border-primary hover:shadow-md cursor-pointer flex flex-col justify-between"
+        className="group relative rounded-xl border border-slate-200 bg-white p-2.5 transition-all duration-200 hover:border-primary hover:shadow-md cursor-pointer flex flex-col justify-between [content-visibility:auto] [contain-intrinsic-size:1px_120px]"
         onClick={() => {
           if (die.isUsable && onUseDie) {
             onOpenChange(false);
@@ -240,17 +256,22 @@ export function DieListDialog({
                 }
               }}
             >
-              {die.imageUrl ? (
-                <img
-                  src={die.imageUrl}
-                  alt={die.code || `Die ${die.id}`}
-                  className="w-full h-full object-contain"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-slate-300">
-                  <Package className="h-5 w-5" />
-                </div>
-              )}
+              {(() => {
+                const thumbUrl = die.thumbnailUrl || die.imageUrl;
+                return thumbUrl ? (
+                  <img
+                    src={thumbUrl}
+                    alt={die.code || `Die ${die.id}`}
+                    loading="lazy"
+                    decoding="async"
+                    className="w-full h-full object-contain"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-300">
+                    <Package className="h-5 w-5" />
+                  </div>
+                );
+              })()}
             </div>
 
             <div className="flex-1 min-w-0 text-xs">
@@ -349,22 +370,27 @@ export function DieListDialog({
                 </TableCell>
                 <TableCell className="py-2">
                   <div className="flex items-center gap-2">
-                    {die.imageUrl ? (
-                      <img
-                        src={die.imageUrl}
-                        alt={die.code || `Die ${die.id}`}
-                        className="w-6 h-6 object-cover rounded border border-slate-200 shrink-0 cursor-pointer"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setViewingImageUrl(die.imageUrl || null);
-                          setImageViewerOpen(true);
-                        }}
-                      />
-                    ) : (
-                      <div className="w-6 h-6 rounded bg-slate-100 flex items-center justify-center text-slate-400 shrink-0">
-                        <Package className="h-3.5 w-3.5" />
-                      </div>
-                    )}
+                    {(() => {
+                      const thumbUrl = die.thumbnailUrl || die.imageUrl;
+                      return thumbUrl ? (
+                        <img
+                          src={thumbUrl}
+                          alt={die.code || `Die ${die.id}`}
+                          loading="lazy"
+                          decoding="async"
+                          className="w-6 h-6 object-cover rounded border border-slate-200 shrink-0 cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setViewingImageUrl(die.imageUrl || die.thumbnailUrl || null);
+                            setImageViewerOpen(true);
+                          }}
+                        />
+                      ) : (
+                        <div className="w-6 h-6 rounded bg-slate-100 flex items-center justify-center text-slate-400 shrink-0">
+                          <Package className="h-3.5 w-3.5" />
+                        </div>
+                      );
+                    })()}
                     <span className="font-mono font-bold text-slate-900 group-hover:text-primary">
                       {die.code || `Khuôn #${die.id}`}
                     </span>
@@ -597,13 +623,18 @@ export function DieListDialog({
                 </TabsList>
 
                 <TabsContent value="list" className="mt-0 flex-1 min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
-                  <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+                  <div className="flex-1 min-h-0 overflow-y-auto pr-1" onScroll={handleScroll}>
                     {viewMode === "card" ? (
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 pb-4">
-                        {dies.map((die: DieResponse) => renderDieCard(die))}
+                        {dies.slice(0, visibleCount).map((die: DieResponse) => renderDieCard(die))}
                       </div>
                     ) : (
-                      renderDenseTable(dies)
+                      renderDenseTable(dies.slice(0, visibleCount))
+                    )}
+                    {visibleCount < dies.length && (
+                      <div className="py-3 text-center text-xs text-slate-400 font-medium">
+                        Đã hiển thị {Math.min(visibleCount, dies.length)} / {dies.length} khuôn (cuộn xuống để xem thêm)
+                      </div>
                     )}
                   </div>
                 </TabsContent>
@@ -619,13 +650,18 @@ export function DieListDialog({
                       Không tìm thấy khuôn liên quan
                     </div>
                   ) : (
-                    <div className="flex-1 min-h-0 overflow-y-auto pr-1">
+                    <div className="flex-1 min-h-0 overflow-y-auto pr-1" onScroll={handleScroll}>
                       {viewMode === "card" ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 pb-4">
-                          {relatedDies.map((die: DieResponse) => renderDieCard(die))}
+                          {relatedDies.slice(0, visibleCount).map((die: DieResponse) => renderDieCard(die))}
                         </div>
                       ) : (
-                        renderDenseTable(relatedDies)
+                        renderDenseTable(relatedDies.slice(0, visibleCount))
+                      )}
+                      {visibleCount < relatedDies.length && (
+                        <div className="py-3 text-center text-xs text-slate-400 font-medium">
+                          Đã hiển thị {Math.min(visibleCount, relatedDies.length)} / {relatedDies.length} khuôn (cuộn xuống để xem thêm)
+                        </div>
                       )}
                     </div>
                   )}

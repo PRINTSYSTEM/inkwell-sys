@@ -158,6 +158,22 @@ export function DieExportDialog({
   const [selectedDecalDieSizes, setSelectedDecalDieSizes] = useState<string[]>([]);
   const [isReusable, setIsReusable] = useState<boolean>(true);
 
+  const [visibleCount, setVisibleCount] = useState(30);
+
+  // Reset progressive rendering batch when filters or dialog state change
+  useEffect(() => {
+    if (open) {
+      setVisibleCount(30);
+    }
+  }, [open, debouncedDesignCode, debouncedCustomerName, debouncedSize, debouncedProofingOrderCode, categoryFilter]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+    if (scrollHeight - scrollTop - clientHeight < 250) {
+      setVisibleCount((prev) => prev + 30);
+    }
+  };
+
   const queryClient = useQueryClient();
   const { data: vendors, isLoading: loadingVendors } = useActiveDieVendors();
   const { data: supplierTypesResp } = useSupplierTypes({ page: 1, size: 1000 });
@@ -1344,7 +1360,7 @@ export function DieExportDialog({
               </div>
 
               {/* Die cards list */}
-              <div className="flex-1 min-h-0 overflow-y-auto p-3">
+              <div className="flex-1 min-h-0 overflow-y-auto p-3" onScroll={handleScroll}>
                 {isLoadingDies ? (
                   <div className="flex h-full items-center justify-center py-12">
                     <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
@@ -1369,91 +1385,101 @@ export function DieExportDialog({
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-                    {availableDies.map((die) => {
-                      const isSelected = die.id ? selectedDieIds.includes(die.id) : false;
-                      const isBox = (die as any).category === "box" || !(die as any).category;
-                      const matchesDim = designDimensions.length > 0 ? matchesDimensions(die.size, designDimensions) : false;
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                      {availableDies.slice(0, visibleCount).map((die) => {
+                        const isSelected = die.id ? selectedDieIds.includes(die.id) : false;
+                        const isBox = (die as any).category === "box" || !(die as any).category;
+                        const matchesDim = designDimensions.length > 0 ? matchesDimensions(die.size, designDimensions) : false;
+                        const thumbUrl = die.thumbnailUrl || die.imageUrl;
 
-                      return (
-                        <div
-                          key={die.id}
-                          className={cn(
-                            "relative flex items-center gap-2.5 p-2.5 rounded-xl border transition-all cursor-pointer group",
-                            isSelected
-                              ? "border-primary bg-primary/5 shadow-sm"
-                              : matchesDim
-                                ? "border-amber-300 bg-amber-50/50 hover:border-amber-400"
-                                : "border-slate-200 bg-white hover:border-primary/50 hover:bg-slate-50/50"
-                          )}
-                          onClick={() => {
-                            if (die.id) toggleDieSelection(die.id);
-                          }}
-                        >
-                          {/* Image */}
-                          <div className="relative w-12 h-12 rounded-lg border border-slate-200 bg-slate-50 overflow-hidden shrink-0">
-                            {die.imageUrl ? (
-                              <img
-                                src={die.imageUrl}
-                                alt={die.code || "Khuôn bế"}
-                                className="w-full h-full object-contain cursor-zoom-in"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setPreviewImageUrl(die.imageUrl || null);
-                                }}
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-slate-300">
-                                <Package className="h-5 w-5" />
-                              </div>
+                        return (
+                          <div
+                            key={die.id}
+                            className={cn(
+                              "relative flex items-center gap-2.5 p-2.5 rounded-xl border transition-all cursor-pointer group [content-visibility:auto] [contain-intrinsic-size:1px_70px]",
+                              isSelected
+                                ? "border-primary bg-primary/5 shadow-sm"
+                                : matchesDim
+                                  ? "border-amber-300 bg-amber-50/50 hover:border-amber-400"
+                                  : "border-slate-200 bg-white hover:border-primary/50 hover:bg-slate-50/50"
                             )}
-                          </div>
-
-                          {/* Info */}
-                          <div className="flex-1 min-w-0 text-xs">
-                            <div className="flex items-center gap-1.5 mb-0.5">
-                              <span className="font-mono font-bold text-slate-900 truncate">
-                                {die.code || `Khuôn #${die.id}`}
-                              </span>
-                              {isBox ? (
-                                <Badge variant="outline" className="bg-slate-100 text-slate-700 text-[9px] px-1 py-0 font-medium shrink-0">
-                                  Hộp
-                                </Badge>
+                            onClick={() => {
+                              if (die.id) toggleDieSelection(die.id);
+                            }}
+                          >
+                            {/* Image */}
+                            <div className="relative w-12 h-12 rounded-lg border border-slate-200 bg-slate-50 overflow-hidden shrink-0">
+                              {thumbUrl ? (
+                                <img
+                                  src={thumbUrl}
+                                  alt={die.code || "Khuôn bế"}
+                                  loading="lazy"
+                                  decoding="async"
+                                  className="w-full h-full object-contain cursor-zoom-in"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPreviewImageUrl(die.imageUrl || die.thumbnailUrl || null);
+                                  }}
+                                />
                               ) : (
-                                <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 text-[9px] px-1 py-0 font-bold shrink-0">
-                                  Decal
-                                </Badge>
-                              )}
-                              {matchesDim && (
-                                <Badge className="bg-amber-500 text-white text-[9px] px-1 py-0 shrink-0">
-                                  Gợi ý
-                                </Badge>
+                                <div className="w-full h-full flex items-center justify-center text-slate-300">
+                                  <Package className="h-5 w-5" />
+                                </div>
                               )}
                             </div>
 
-                            <div className="font-semibold text-slate-800 text-[11px] truncate">
-                              Kích thước: {formatDieSize(die) || "—"}
-                            </div>
-                            <div className="text-[10px] text-slate-500 truncate mt-0.5">
-                              {die.vendorName ? `NCC: ${die.vendorName}` : "Nội bộ"}
-                            </div>
-                          </div>
+                            {/* Info */}
+                            <div className="flex-1 min-w-0 text-xs">
+                              <div className="flex items-center gap-1.5 mb-0.5">
+                                <span className="font-mono font-bold text-slate-900 truncate">
+                                  {die.code || `Khuôn #${die.id}`}
+                                </span>
+                                {isBox ? (
+                                  <Badge variant="outline" className="bg-slate-100 text-slate-700 text-[9px] px-1 py-0 font-medium shrink-0">
+                                    Hộp
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 text-[9px] px-1 py-0 font-bold shrink-0">
+                                    Decal
+                                  </Badge>
+                                )}
+                                {matchesDim && (
+                                  <Badge className="bg-amber-500 text-white text-[9px] px-1 py-0 shrink-0">
+                                    Gợi ý
+                                  </Badge>
+                                )}
+                              </div>
 
-                          {/* Checkbox */}
-                          <div className="shrink-0">
-                            <div
-                              className={cn(
-                                "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors",
-                                isSelected ? "bg-primary border-primary" : "border-slate-300 group-hover:border-primary/50"
-                              )}
-                            >
-                              {isSelected && <Check className="h-3.5 w-3.5 text-white" />}
+                              <div className="font-semibold text-slate-800 text-[11px] truncate">
+                                Kích thước: {formatDieSize(die) || "—"}
+                              </div>
+                              <div className="text-[10px] text-slate-500 truncate mt-0.5">
+                                {die.vendorName ? `NCC: ${die.vendorName}` : "Nội bộ"}
+                              </div>
+                            </div>
+
+                            {/* Checkbox */}
+                            <div className="shrink-0">
+                              <div
+                                className={cn(
+                                  "w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors",
+                                  isSelected ? "bg-primary border-primary" : "border-slate-300 group-hover:border-primary/50"
+                                )}
+                              >
+                                {isSelected && <Check className="h-3.5 w-3.5 text-white" />}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                    {visibleCount < availableDies.length && (
+                      <div className="py-3 text-center text-xs text-slate-400 font-medium">
+                        Đã hiển thị {Math.min(visibleCount, availableDies.length)} / {availableDies.length} khuôn (cuộn xuống để xem thêm)
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -1487,14 +1513,17 @@ export function DieExportDialog({
                 ) : (
                   selectedDieIds.map((dieId) => {
                     const die = allDies.find((d) => d.id === dieId);
+                    const selectedThumbUrl = die?.thumbnailUrl || die?.imageUrl;
                     return (
                       <div key={dieId} className="p-3 rounded-xl border border-slate-200 bg-white shadow-xs space-y-2">
                         <div className="flex items-center justify-between gap-2">
                           <div className="flex items-center gap-2 min-w-0">
-                            {die?.imageUrl ? (
+                            {selectedThumbUrl ? (
                               <img
-                                src={die.imageUrl}
-                                alt={die.code || "Die"}
+                                src={selectedThumbUrl}
+                                alt={die?.code || "Die"}
+                                loading="lazy"
+                                decoding="async"
                                 className="w-8 h-8 rounded border object-contain shrink-0"
                               />
                             ) : (
