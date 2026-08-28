@@ -178,6 +178,7 @@ export function DesignCard({
           </Badge>
           <Badge variant="outline" className="text-xs">
             {design.materialTypeName}
+            {design.basisWeight && design.basisWeight > 0 ? ` (${design.basisWeight} gsm)` : ""}
           </Badge>
         </div>
 

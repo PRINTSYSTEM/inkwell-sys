@@ -316,10 +316,23 @@ export function DetailDesignsListCard({
                           Chất liệu:
                         </span>
                         <span className="ml-2">
-                          {pod.design?.materialType?.name || "—"}
+                          {(() => {
+                            const matName = pod.design?.materialType?.name || "—";
+                            const bw = pod.design?.basisWeight || pod.basisWeight;
+                            return matName !== "—"
+                              ? `${matName}${bw && bw > 0 ? ` (${bw} gsm)` : ""}`
+                              : "—";
+                          })()}
                         </span>
                         {pod.design?.materialType?.name && (
-                          <HoverInfoCopy value={pod.design.materialType.name} label="Chất liệu" />
+                          <HoverInfoCopy
+                            value={(() => {
+                              const matName = pod.design.materialType.name;
+                              const bw = pod.design?.basisWeight || pod.basisWeight;
+                              return `${matName}${bw && bw > 0 ? ` (${bw} gsm)` : ""}`;
+                            })()}
+                            label="Chất liệu"
+                          />
                         )}
                       </div>
 
