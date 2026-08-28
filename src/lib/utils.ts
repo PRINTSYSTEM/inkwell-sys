@@ -27,6 +27,43 @@ export function formatImageUrl(url: string | null | undefined): string | null {
   return apiBaseUrl ? `${apiBaseUrl}${cleanPath}` : cleanPath;
 }
 
+/**
+ * Returns formatted thumbnail and full image URLs.
+ * If explicitThumbUrl is provided, it will be used.
+ * Otherwise, if mainUrl contains an /images/ path, it automatically derives the candidate /images/thumbs/ path
+ * according to system storage conventions (e.g. /uploads/designs/images/thumbs/<filename>).
+ */
+export function getThumbnailAndFullUrl(
+  mainUrl: string | null | undefined,
+  explicitThumbUrl?: string | null | undefined
+): { thumbUrl: string | null; fullUrl: string | null } {
+  const fullUrl = formatImageUrl(mainUrl);
+
+  if (explicitThumbUrl) {
+    const formattedExplicit = formatImageUrl(explicitThumbUrl);
+    if (formattedExplicit) {
+      return { thumbUrl: formattedExplicit, fullUrl: fullUrl || formattedExplicit };
+    }
+  }
+
+  if (mainUrl) {
+    if (mainUrl.includes("/images/thumbs/")) {
+      const thumbUrl = formatImageUrl(mainUrl);
+      const derivedFull = formatImageUrl(mainUrl.replace("/images/thumbs/", "/images/"));
+      return { thumbUrl, fullUrl: derivedFull || thumbUrl };
+    }
+
+    if (mainUrl.includes("/images/")) {
+      // System convention: /uploads/designs/images/ -> /uploads/designs/images/thumbs/
+      const derivedPath = mainUrl.replace("/images/", "/images/thumbs/");
+      const thumbUrl = formatImageUrl(derivedPath);
+      return { thumbUrl, fullUrl };
+    }
+  }
+
+  return { thumbUrl: fullUrl, fullUrl };
+}
+
 // Utility functions cho quản lý công nợ khách hàng
 export function checkDebtStatus(customer: Customer): {
   status: "good" | "warning" | "blocked";

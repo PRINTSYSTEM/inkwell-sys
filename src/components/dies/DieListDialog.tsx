@@ -208,7 +208,7 @@ export function DieListDialog({
     return (
       <div
         key={die.id}
-        className="group relative rounded-xl border border-slate-200 bg-white p-2.5 transition-all duration-200 hover:border-primary hover:shadow-md cursor-pointer flex flex-col justify-between [content-visibility:auto] [contain-intrinsic-size:1px_120px]"
+        className="group relative rounded-xl border border-slate-200 bg-white p-2.5 transition-all duration-200 hover:border-primary hover:shadow-md cursor-pointer flex flex-col justify-between"
         onClick={() => {
           if (die.isUsable && onUseDie) {
             onOpenChange(false);
@@ -622,8 +622,8 @@ export function DieListDialog({
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="list" className="mt-0 flex-1 min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
-                  <div className="flex-1 min-h-0 overflow-y-auto pr-1" onScroll={handleScroll}>
+                <TabsContent value="list" className="mt-0 flex-1 min-h-0 overflow-hidden data-[state=active]:flex data-[state=active]:flex-col">
+                  <div className="flex-1 min-h-0 overflow-y-auto pr-2 custom-scrollbar" onScroll={handleScroll}>
                     {viewMode === "card" ? (
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 pb-4">
                         {dies.slice(0, visibleCount).map((die: DieResponse) => renderDieCard(die))}
@@ -639,7 +639,7 @@ export function DieListDialog({
                   </div>
                 </TabsContent>
 
-                <TabsContent value="related" className="mt-0 flex-1 min-h-0 data-[state=active]:flex data-[state=active]:flex-col">
+                <TabsContent value="related" className="mt-0 flex-1 min-h-0 overflow-hidden data-[state=active]:flex data-[state=active]:flex-col">
                   {isLoadingRelatedDies ? (
                     <div className="flex-1 flex items-center justify-center py-8">
                       <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
@@ -650,7 +650,7 @@ export function DieListDialog({
                       Không tìm thấy khuôn liên quan
                     </div>
                   ) : (
-                    <div className="flex-1 min-h-0 overflow-y-auto pr-1" onScroll={handleScroll}>
+                    <div className="flex-1 min-h-0 overflow-y-auto pr-2 custom-scrollbar" onScroll={handleScroll}>
                       {viewMode === "card" ? (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 pb-4">
                           {relatedDies.slice(0, visibleCount).map((die: DieResponse) => renderDieCard(die))}
