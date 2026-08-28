@@ -44,7 +44,7 @@ import {
   Eye,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+import { cn, formatImageUrl } from "@/lib/utils";
 import { toast } from "sonner";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { ReadOnlyProofingDetailModal } from "@/components/proofing/ReadOnlyProofingDetailModal";
@@ -563,13 +563,12 @@ function YieldComparisonTable({
 
     productions.forEach((prod) => {
       let layoutUrl: string | null = null;
-      if (prod.proofingOrderImages && prod.proofingOrderImages.length > 0) {
-        const img = prod.proofingOrderImages[0];
+      const images = prod.proofingOrderImages || (prod as any).proofingOrder?.images || [];
+      if (images.length > 0) {
+        const img = images[0];
         const url = img.thumbnailUrl || img.imageUrl;
         if (url) {
-          layoutUrl = url.startsWith("http")
-            ? url
-            : `${(import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "")}/${url.replace(/^\//, "")}`;
+          layoutUrl = formatImageUrl(url);
         }
       }
 
@@ -662,18 +661,20 @@ function YieldComparisonTable({
 
                 <TableCell className="font-mono font-bold text-slate-900">
                   <div className="flex items-center gap-2">
-                    {row.item.designImageUrl || row.item.designThumbnailUrl ? (
-                      <img
-                        src={row.item.designThumbnailUrl || row.item.designImageUrl || ""}
-                        alt="design"
-                        className="w-8 h-8 rounded border object-cover shrink-0 cursor-pointer"
-                        onClick={() =>
-                          onOpenImageViewer(
-                            row.item.designImageUrl || row.item.designThumbnailUrl || ""
-                          )
-                        }
-                      />
-                    ) : null}
+                    {(() => {
+                      const rawThumb = row.item.designThumbnailUrl || row.item.designImageUrl;
+                      const thumbUrl = formatImageUrl(rawThumb);
+                      const fullUrl = formatImageUrl(row.item.designImageUrl || row.item.designThumbnailUrl) || thumbUrl;
+                      if (!thumbUrl) return null;
+                      return (
+                        <img
+                          src={thumbUrl}
+                          alt="design"
+                          className="w-8 h-8 rounded border object-cover shrink-0 cursor-pointer"
+                          onClick={() => fullUrl && onOpenImageViewer(fullUrl)}
+                        />
+                      );
+                    })()}
                     <div className="flex flex-col">
                       <span className="text-blue-600 font-mono font-bold">{row.item.designCode || "—"}</span>
                       {row.item.designName && (
@@ -802,37 +803,51 @@ const KcsItemRow = React.memo(function KcsItemRow({
     >
       {/* Left part: item image & text details */}
       <div className="flex gap-2 min-w-0">
-        {item.designImageUrl || item.designThumbnailUrl ? (
-          <div className="w-10 h-10 border rounded bg-white overflow-hidden flex items-center justify-center shrink-0 cursor-zoom-in hover:ring-1 hover:ring-primary/20">
-            <img
-              src={
-                (() => {
-                  const url = item.designThumbnailUrl || item.designImageUrl || "";
-                  if (url.startsWith("http")) return url;
-                  return `${(import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "")}/${url.replace(/^\//, "")}`;
-                })()
-              }
-              alt={item.designCode || "design"}
-              loading="lazy"
-              decoding="async"
-              width={40}
-              height={40}
-              className="w-full h-full object-contain"
-              onClick={() => {
-                const url = item.designImageUrl || item.designThumbnailUrl || "";
-                onOpenImageViewer(
-                  url.startsWith("http")
-                    ? url
-                    : `${(import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "")}/${url.replace(/^\//, "")}`
-                );
-              }}
-            />
-          </div>
-        ) : (
-          <div className="w-10 h-10 border rounded bg-slate-100 flex items-center justify-center shrink-0 text-slate-400">
-            <FileImage className="w-4 h-4 opacity-40" />
-          </div>
-        )}
+        {(() => {
+          const rawThumb =
+            item.designThumbnailUrl ||
+            item.designImageUrl ||
+            (item as any).thumbnailUrl ||
+            (item as any).imageUrl ||
+            design?.designThumbnailUrl ||
+            design?.designImageUrl;
+
+          const rawFull =
+            item.designImageUrl ||
+            item.designThumbnailUrl ||
+            (item as any).imageUrl ||
+            (item as any).thumbnailUrl ||
+            design?.designImageUrl ||
+            design?.designThumbnailUrl;
+
+          const thumbUrl = formatImageUrl(rawThumb);
+          const fullUrl = formatImageUrl(rawFull) || thumbUrl;
+
+          if (!thumbUrl) {
+            return (
+              <div className="w-10 h-10 border rounded bg-slate-100 flex items-center justify-center shrink-0 text-slate-400">
+                <FileImage className="w-4 h-4 opacity-40" />
+              </div>
+            );
+          }
+
+          return (
+            <div className="w-10 h-10 border rounded bg-white overflow-hidden flex items-center justify-center shrink-0 cursor-zoom-in hover:ring-1 hover:ring-primary/20">
+              <img
+                src={thumbUrl}
+                alt={item.designCode || "design"}
+                loading="lazy"
+                decoding="async"
+                width={40}
+                height={40}
+                className="w-full h-full object-contain"
+                onClick={() => {
+                  if (fullUrl) onOpenImageViewer(fullUrl);
+                }}
+              />
+            </div>
+          );
+        })()}
         <div className="min-w-0 text-xs leading-normal">
           <div className="flex items-center gap-1.5 flex-wrap">
             <p className="text-sm font-black text-slate-900 dark:text-slate-100 truncate" title={item.designName || ""}>
@@ -1262,30 +1277,33 @@ const KcsOrderRow = React.memo(function KcsOrderRow({
 
   // Get layout image URL
   const layoutImageUrl = useMemo(() => {
-    if (prod.proofingOrderImages && prod.proofingOrderImages.length > 0) {
-      const img = prod.proofingOrderImages[0];
-      if (img.imageUrl) {
-        if (img.imageUrl.startsWith("http")) return img.imageUrl;
-        const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "");
-        return `${baseUrl}/${img.imageUrl.replace(/^\//, "")}`;
-      }
+    const images = prod.proofingOrderImages || (prod as any).proofingOrder?.images || [];
+    if (images.length > 0) {
+      const img = images[0];
+      const url = img.imageUrl || img.thumbnailUrl;
+      if (url) return formatImageUrl(url);
     }
+    const singleUrl = (prod as any).proofingOrderImageUrl || (prod as any).proofingOrder?.imageUrl;
+    if (singleUrl) return formatImageUrl(singleUrl);
     return null;
-  }, [prod.proofingOrderImages]);
+  }, [prod]);
 
   // Get layout thumbnail URL
   const layoutImageThumbnailUrl = useMemo(() => {
-    if (prod.proofingOrderImages && prod.proofingOrderImages.length > 0) {
-      const img = prod.proofingOrderImages[0];
+    const images = prod.proofingOrderImages || (prod as any).proofingOrder?.images || [];
+    if (images.length > 0) {
+      const img = images[0];
       const url = img.thumbnailUrl || img.imageUrl;
-      if (url) {
-        if (url.startsWith("http")) return url;
-        const baseUrl = (import.meta.env.VITE_API_BASE_URL || "").replace(/\/api\/?$/, "");
-        return `${baseUrl}/${url.replace(/^\//, "")}`;
-      }
+      if (url) return formatImageUrl(url);
     }
+    const singleUrl =
+      (prod as any).proofingOrderThumbnailUrl ||
+      (prod as any).proofingOrderImageUrl ||
+      (prod as any).proofingOrder?.thumbnailUrl ||
+      (prod as any).proofingOrder?.imageUrl;
+    if (singleUrl) return formatImageUrl(singleUrl);
     return null;
-  }, [prod.proofingOrderImages]);
+  }, [prod]);
 
   // Check if KCS has been completely finished for this row
   const isChecked = prod.items && prod.items.length > 0 && prod.items.every((i) => (i.outputQty ?? 0) > 0);
