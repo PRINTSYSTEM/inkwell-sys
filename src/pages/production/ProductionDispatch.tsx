@@ -322,19 +322,28 @@ export default function ProductionDispatch() {
 
   const handleOpenReturnToProofing = (item: PrintOrderResponse) => {
     setReturnToProofingItem(item);
-    setReturnToProofingReason("");
+    // Tận dụng lý do trả về trước đó từ Lệnh in/Bình bài (nếu có) để người dùng đỡ phải nhập lại
+    const existingReason =
+      item.returnReason ||
+      item.productionOrder?.returnReason ||
+      (item as any)?.lastReturnReason ||
+      "";
+    setReturnToProofingReason(existingReason);
     setReturnToProofingOpen(true);
   };
 
   const handleConfirmReturnToProofing = () => {
     if (!returnToProofingItem) return;
-    const isReturnedFromPrint = returnToProofingItem.status === "returned" || !!returnToProofingItem.returnedAt;
-    if (!isReturnedFromPrint && !returnToProofingReason.trim()) return;
+    const trimmedReason = returnToProofingReason.trim();
+    if (!trimmedReason) {
+      toast.error("Vui lòng nhập lý do trả về bộ phận Bình bài!");
+      return;
+    }
 
     returnToProofingMutation.mutate(
       {
         id: returnToProofingItem.id,
-        data: { reason: returnToProofingReason.trim() },
+        data: { reason: trimmedReason },
       },
       {
         onSuccess: () => {
@@ -1815,17 +1824,13 @@ export default function ProductionDispatch() {
 
           <div className="space-y-3 py-2">
             <label htmlFor="returnToProofingReason" className="text-xs font-bold text-slate-700 block">
-              Lý do trả về bình bài {!returnToProofingItem?.returnedAt && <span className="text-rose-500">*</span>}
+              Lý do trả về bình bài <span className="text-rose-500">*</span>
             </label>
             <Textarea
               id="returnToProofingReason"
               rows={4}
               maxLength={1000}
-              placeholder={
-                returnToProofingItem?.returnedAt
-                  ? "Có thể bỏ trống để giữ nguyên lý do của thợ in (hoặc bổ sung lý do mới)..."
-                  : "Nhập chi tiết lý do trả về cho Bình bài (vd: Sai thông số file, cần chỉnh lại quy cách...)"
-              }
+              placeholder="Nhập chi tiết lý do trả về cho Bình bài (vd: Sai thông số file, cần chỉnh lại quy cách...)"
               value={returnToProofingReason}
               onChange={(e) => setReturnToProofingReason(e.target.value)}
               className="text-xs bg-white"
@@ -1842,7 +1847,7 @@ export default function ProductionDispatch() {
             <Button
               size="sm"
               onClick={handleConfirmReturnToProofing}
-              disabled={(!returnToProofingItem?.returnedAt && !returnToProofingReason.trim()) || returnToProofingMutation.isPending}
+              disabled={!returnToProofingReason.trim() || returnToProofingMutation.isPending}
               className="bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs"
             >
               {returnToProofingMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
