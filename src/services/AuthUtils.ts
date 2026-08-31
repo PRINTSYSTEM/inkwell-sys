@@ -111,6 +111,10 @@ export class AuthUtils {
 
     // ===== KCS =====
     kcs: this.STAFF_ROUTES,
+
+    // ===== Delivery & Printer =====
+    delivery: this.STAFF_ROUTES,
+    printer: this.STAFF_ROUTES,
   } as const;
 
   /** Kiểm tra xem user có quyền truy cập route không */

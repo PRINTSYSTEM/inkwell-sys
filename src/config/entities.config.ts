@@ -16,6 +16,10 @@ export const ENTITY_CONFIG = {
       production: "Nhân viên sản xuất",
       production_lead: "Trưởng phòng sản xuất",
       kcs: "Nhân viên KCS",
+      warehouse: "Thủ kho",
+      warehouse_lead: "Trưởng kho",
+      delivery: "Nhân viên giao hàng",
+      printer: "Quản lý in ấn",
     },
   },
   orderStatuses: {

@@ -174,6 +174,43 @@ export default function StockCardPage() {
     });
   }, [historyData?.items, stockCardData]);
 
+  // Robustly compute summary In and Out quantities
+  const summaryInQty = useMemo(() => {
+    if (stockCardData?.entries && stockCardData.entries.length > 0) {
+      const sum = stockCardData.entries.reduce((acc, e: any) => {
+        const typeLower = e.transactionType?.toLowerCase() || e.voucherType?.toLowerCase() || "";
+        const isStockIn = typeLower === "in" || typeLower === "stockin" || typeLower === "opening_balance";
+        const q = e.inQuantity ?? (isStockIn ? (e.quantity || 0) : 0);
+        return acc + q;
+      }, 0);
+      if (sum > 0) return sum;
+    }
+    return computedItems.reduce((acc, item: any) => {
+      const typeLower = item.transactionType?.toLowerCase() || item.voucherType?.toLowerCase() || "";
+      const isStockIn = typeLower === "in" || typeLower === "stockin" || typeLower === "opening_balance";
+      const q = item.inQuantity ?? (isStockIn ? (item.quantity || 0) : 0);
+      return acc + q;
+    }, 0);
+  }, [stockCardData, computedItems]);
+
+  const summaryOutQty = useMemo(() => {
+    if (stockCardData?.entries && stockCardData.entries.length > 0) {
+      const sum = stockCardData.entries.reduce((acc, e: any) => {
+        const typeLower = e.transactionType?.toLowerCase() || e.voucherType?.toLowerCase() || "";
+        const isStockOut = typeLower === "out" || typeLower === "stockout";
+        const q = e.outQuantity ?? (isStockOut ? (e.quantity || 0) : 0);
+        return acc + q;
+      }, 0);
+      if (sum > 0) return sum;
+    }
+    return computedItems.reduce((acc, item: any) => {
+      const typeLower = item.transactionType?.toLowerCase() || item.voucherType?.toLowerCase() || "";
+      const isStockOut = typeLower === "out" || typeLower === "stockout";
+      const q = item.outQuantity ?? (isStockOut ? (item.quantity || 0) : 0);
+      return acc + q;
+    }, 0);
+  }, [stockCardData, computedItems]);
+
   const exportMutation = useExportStockCard();
 
   const handleExportExcel = async () => {
@@ -392,13 +429,13 @@ export default function StockCardPage() {
             <div className="bg-green-50 dark:bg-green-950/20 p-3 rounded-lg border border-green-100 dark:border-green-900/30">
               <p className="text-xs font-medium text-green-600 dark:text-green-400 uppercase">Tổng nhập</p>
               <p className="text-lg font-bold text-green-700 dark:text-green-300">
-                {stockCardData.entries?.reduce((sum, e) => sum + (e.inQuantity || 0), 0).toLocaleString() || "0"}
+                {summaryInQty.toLocaleString("vi-VN")}
               </p>
             </div>
             <div className="bg-red-50 dark:bg-red-950/20 p-3 rounded-lg border border-red-100 dark:border-red-900/30">
               <p className="text-xs font-medium text-red-600 dark:text-red-400 uppercase">Tổng xuất</p>
               <p className="text-lg font-bold text-red-700 dark:text-red-300">
-                {stockCardData.entries?.reduce((sum, e) => sum + (e.outQuantity || 0), 0).toLocaleString() || "0"}
+                {summaryOutQty.toLocaleString("vi-VN")}
               </p>
             </div>
             <div className="bg-primary/5 p-3 rounded-lg border border-primary/10">

@@ -542,7 +542,12 @@ export default function PrintOrdersPage() {
 
   const handleOpenReturnDialog = (item: PrintOrderResponse) => {
     setReturningItem(item);
-    setReturnReason("");
+    const existingReason =
+      item.returnReason ||
+      item.productionOrder?.returnReason ||
+      (item as any)?.lastReturnReason ||
+      "";
+    setReturnReason(existingReason);
     setReturnDialogOpen(true);
   };
 

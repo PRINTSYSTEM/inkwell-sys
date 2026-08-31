@@ -13,6 +13,10 @@ export const ROLE = {
   ACCOUNTING_LEAD: "accounting_lead",
   PROOFER: "proofer",
   KCS: "kcs",
+  WAREHOUSE: "warehouse",
+  WAREHOUSE_LEAD: "warehouse_lead",
+  DELIVERY: "delivery",
+  PRINTER: "printer",
 } as const;
 
 export const REDIRECT_ROLE = {
@@ -27,6 +31,10 @@ export const REDIRECT_ROLE = {
   [ROLE.PROOFER]: ROUTE_PATHS.PROOFING.ROOT,
   [ROLE.PRODUCTION_LEAD]: ROUTE_PATHS.PRODUCTION.ROOT,
   [ROLE.KCS]: ROUTE_PATHS.PRODUCTION.KCS,
+  [ROLE.WAREHOUSE]: ROUTE_PATHS.STOCK.SUMMARY,
+  [ROLE.WAREHOUSE_LEAD]: ROUTE_PATHS.STOCK.SUMMARY,
+  [ROLE.DELIVERY]: ROUTE_PATHS.DELIVERY_NOTES.ROOT,
+  [ROLE.PRINTER]: ROUTE_PATHS.PRODUCTION.PRINT_ORDERS,
 } as const;
 
 export const ROLE_LABELS: Record<string, string> = ENTITY_CONFIG.roles.values;
