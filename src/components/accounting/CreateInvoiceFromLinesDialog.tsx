@@ -358,7 +358,8 @@ export function CreateInvoiceFromLinesDialog({
         (item.customerName || "").toLowerCase().includes(query) ||
         (item.designName || "").toLowerCase().includes(query) ||
         (item.designCode || "").toLowerCase().includes(query) ||
-        (item.orderCode || "").toLowerCase().includes(query)
+        (item.orderCode || "").toLowerCase().includes(query) ||
+        (item.deliveryNoteCode || "").toLowerCase().includes(query)
       );
     });
   }, [billableItems, searchQuery]);
@@ -535,7 +536,7 @@ export function CreateInvoiceFromLinesDialog({
               <div className="relative mb-2.5">
                 <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
-                  placeholder="Tìm khách hàng, sản phẩm, mã đơn..."
+                  placeholder="Tìm khách hàng, sản phẩm, mã đơn, mã phiếu (PGH)..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-8 h-9 text-sm bg-white"
@@ -647,12 +648,24 @@ export function CreateInvoiceFromLinesDialog({
                                 )}
                               </div>
 
-                              <Badge
-                                variant="secondary"
-                                className="shrink-0 text-[10px] font-semibold"
-                              >
-                                {item.orderCode}
-                              </Badge>
+                              <div className="flex flex-col items-end gap-1 shrink-0">
+                                {item.deliveryNoteCode && (
+                                  <Badge
+                                    variant="outline"
+                                    className="shrink-0 text-[10px] font-bold bg-emerald-50 text-emerald-700 border-emerald-300"
+                                  >
+                                    {item.deliveryNoteCode}
+                                  </Badge>
+                                )}
+                                {item.orderCode && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="shrink-0 text-[10px] font-semibold"
+                                  >
+                                    {item.orderCode}
+                                  </Badge>
+                                )}
+                              </div>
                             </div>
 
                             <div className="mt-2 grid grid-cols-3 gap-2 text-xs">

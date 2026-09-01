@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   Dialog,
   DialogContent,
@@ -36,6 +35,7 @@ import { useCreateCashReceipt } from "@/hooks/use-cash";
 import { usePaymentMethods } from "@/hooks/use-expense";
 import { useBankAccounts } from "@/hooks/use-bank";
 import { useCustomers } from "@/hooks/use-customer";
+import { CashReceiptDetailDialog } from "@/components/accounting/CashReceiptDetailDialog";
 import type { CreateCashReceiptRequest } from "@/Schema/accounting.schema";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -45,6 +45,7 @@ interface CreateCashReceiptDialogProps {
   onOpenChange: (open: boolean) => void;
   customerId?: number;
   customerName?: string;
+  onSuccess?: (receiptId: number) => void;
 }
 
 export function CreateCashReceiptDialog({
@@ -52,8 +53,8 @@ export function CreateCashReceiptDialog({
   onOpenChange,
   customerId,
   customerName,
+  onSuccess,
 }: CreateCashReceiptDialogProps) {
-  const navigate = useNavigate();
   const [amount, setAmount] = useState<string>("");
   const [paymentMethodId, setPaymentMethodId] = useState<string>("");
   const [bankAccountId, setBankAccountId] = useState<string>("");
@@ -61,6 +62,8 @@ export function CreateCashReceiptDialog({
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [payerName, setPayerName] = useState<string>(customerName || "");
   const [reason, setReason] = useState<string>("");
+  const [createdReceiptId, setCreatedReceiptId] = useState<number | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [customerSearchOpen, setCustomerSearchOpen] = useState(false);
 
   const { mutateAsync: createCashReceipt, isPending } = useCreateCashReceipt();
@@ -176,9 +179,12 @@ export function CreateCashReceiptDialog({
     try {
       const response = await createCashReceipt(request);
       onOpenChange(false);
-      // Navigate to cash receipt detail page
       if (response?.id) {
-        navigate(`/accounting/cash-receipts/${response.id}`);
+        if (onSuccess) {
+          onSuccess(response.id);
+        }
+        setCreatedReceiptId(response.id);
+        setDetailDialogOpen(true);
       }
     } catch (error) {
       // Error is handled by the hook
@@ -186,16 +192,20 @@ export function CreateCashReceiptDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle>Tạo phiếu thu</DialogTitle>
-          <DialogDescription>
-            {customerId ? `Tạo phiếu thu cho khách hàng ${customerName}` : "Tạo phiếu thu mới trong hệ thống"}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col p-6">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+              <DollarSign className="h-5 w-5 text-emerald-600 shrink-0" />
+              Tạo phiếu thu
+            </DialogTitle>
+            <DialogDescription>
+              {customerId ? `Tạo phiếu thu cho khách hàng ${customerName}` : "Tạo phiếu thu mới trong hệ thống"}
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto pr-1 py-1 space-y-4">
+          <div className="flex-1 overflow-y-auto px-1 py-2 space-y-4">
           {/* Customer Selection - Optional */}
           {!customerId && (
             <div className="space-y-2">
@@ -412,5 +422,14 @@ export function CreateCashReceiptDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {createdReceiptId && (
+      <CashReceiptDetailDialog
+        receiptId={createdReceiptId}
+        open={detailDialogOpen}
+        onOpenChange={setDetailDialogOpen}
+      />
+    )}
+  </>
   );
 }

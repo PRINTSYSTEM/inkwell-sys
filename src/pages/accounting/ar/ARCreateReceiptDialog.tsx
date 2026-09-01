@@ -25,6 +25,7 @@ import { usePaymentMethods, useExpenseCategories } from "@/hooks/use-expense";
 import { useBankAccounts } from "@/hooks/use-bank";
 import { formatCurrency } from "@/lib/status-utils";
 import { toast } from "sonner";
+import { CashReceiptDetailDialog } from "@/components/accounting/CashReceiptDetailDialog";
 import type { CreateCashReceiptRequest } from "@/Schema/accounting.schema";
 
 interface ARCreateReceiptDialogProps {
@@ -43,6 +44,8 @@ export function ARCreateReceiptDialog({
   const orders = Array.from(selectedOrders.values());
   const firstOrder = orders[0];
   const totalAmount = orders.reduce((sum, order) => sum + (order.outstanding || 0), 0);
+  const [createdReceiptId, setCreatedReceiptId] = useState<number | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
   const [formValues, setFormValues] = useState<any>({
     voucherDate: new Date().toISOString().split("T")[0],
@@ -137,15 +140,20 @@ export function ARCreateReceiptDialog({
     }
 
     createMutation.mutate(payload, {
-      onSuccess: () => {
+      onSuccess: (data) => {
         onOpenChange(false);
         if (onSuccess) onSuccess();
+        if (data?.id) {
+          setCreatedReceiptId(data.id);
+          setDetailDialogOpen(true);
+        }
       },
     });
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -390,5 +398,14 @@ export function ARCreateReceiptDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {createdReceiptId && (
+      <CashReceiptDetailDialog
+        receiptId={createdReceiptId}
+        open={detailDialogOpen}
+        onOpenChange={setDetailDialogOpen}
+      />
+    )}
+  </>
   );
 }

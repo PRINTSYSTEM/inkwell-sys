@@ -15,6 +15,7 @@ import {
   OrdersTab,
   FavoritesTab,
   InvoicesTab,
+  CashReceiptsTab,
   AddressesTab,
   EditCustomerModal,
   ExportDebtModal,
@@ -178,6 +179,12 @@ export default function CustomerDetail() {
                 >
                   Ưa thích
                 </TabsTrigger>
+                <TabsTrigger
+                  value="receipts"
+                  className="text-sm data-[state=active]:bg-emerald-600 data-[state=active]:text-white transition-colors"
+                >
+                  Phiếu thu
+                </TabsTrigger>
               </TabsList>
 
               {/* Tab Contents */}
@@ -242,6 +249,16 @@ export default function CustomerDetail() {
                     <FavoritesTab
                       customerId={customerId}
                       isActive={activeTab === "favorites"}
+                    />
+                  </TabsContent>
+
+                  <TabsContent
+                    value="receipts"
+                    className="flex-1 mt-0 min-w-0 overflow-hidden h-full"
+                  >
+                    <CashReceiptsTab
+                      customerId={customerId}
+                      isActive={activeTab === "receipts"}
                     />
                   </TabsContent>
                 </div>

@@ -831,6 +831,7 @@ export default function DeliveryNoteListPage() {
     }
     return 1;
   });
+  const [sortMode, setSortMode] = useState<"code_desc" | "code_asc" | "date_desc" | "date_asc">("code_desc");
 
   useEffect(() => {
     sessionStorage.setItem("delivery_note_view_mode", viewMode);
@@ -895,6 +896,8 @@ export default function DeliveryNoteListPage() {
     status: deliveryNoteStatusFilter !== "all" ? deliveryNoteStatusFilter : undefined,
     startDate,
     endDate,
+    sortColumn: sortMode.startsWith("code") ? "Code" : "ExpectedDeliveryDate",
+    sortOrder: sortMode.endsWith("desc") ? "desc" : "asc",
   });
 
   // Query delivery notes stats from backend
@@ -1742,6 +1745,8 @@ export default function DeliveryNoteListPage() {
             refetchStats={refetchStats}
             deliveryNotePage={deliveryNotePage}
             setDeliveryNotePage={setDeliveryNotePage}
+            sortMode={sortMode}
+            setSortMode={setSortMode}
             handleViewDeliveryNote={handleViewDeliveryNote}
             handleOpenRecreate={handleOpenRecreate}
             selectedNoteIds={selectedNoteIds}
@@ -2346,6 +2351,8 @@ interface DeliveryNotesViewProps {
   refetchStats: () => void;
   deliveryNotePage: number;
   setDeliveryNotePage: (page: number) => void;
+  sortMode: "code_desc" | "code_asc" | "date_desc" | "date_asc";
+  setSortMode: (mode: "code_desc" | "code_asc" | "date_desc" | "date_asc") => void;
   handleViewDeliveryNote: (id: number | undefined) => void;
   handleOpenRecreate: (id: number) => void;
   selectedNoteIds: Set<number>;
@@ -2379,6 +2386,8 @@ function DeliveryNotesView({
   refetchStats,
   deliveryNotePage,
   setDeliveryNotePage,
+  sortMode,
+  setSortMode,
   deliveryNotesData,
   handleViewDeliveryNote,
   handleOpenRecreate,
@@ -2400,6 +2409,11 @@ function DeliveryNotesView({
   useEffect(() => {
     setNoteInputPage(String(deliveryNotePage));
   }, [deliveryNotePage]);
+
+  const handleSortChange = (newSortMode: "code_desc" | "code_asc" | "date_desc" | "date_asc") => {
+    setSortMode(newSortMode);
+    setDeliveryNotePage(1);
+  };
 
   const handleNotePageInputSubmit = () => {
     const totalPages = deliveryNotesDataTyped?.totalPages || 1;
@@ -2443,22 +2457,61 @@ function DeliveryNotesView({
     };
   }, [deliveryNotesDataTyped]);
 
-  // Sort delivery notes: purely chronologically by expectedDeliveryDate ?? createdAt (newer first), falling back to id desc
+  // Parse trailing number from delivery note code (e.g. PGH2608-56 -> prefix: "PGH2608-", num: 56)
+  const parseDeliveryNoteCodeNumber = (code?: string | null): { prefix: string; num: number } => {
+    if (!code) return { prefix: "", num: 0 };
+    const match = code.match(/^(.*?)[^\d]?(\d+)$/);
+    if (match) {
+      return { prefix: match[1], num: parseInt(match[2], 10) };
+    }
+    return { prefix: code, num: 0 };
+  };
+
+  const compareDeliveryNoteCodes = (codeA?: string | null, codeB?: string | null, asc: boolean = true) => {
+    if (!codeA && !codeB) return 0;
+    if (!codeA) return asc ? 1 : -1;
+    if (!codeB) return asc ? -1 : 1;
+
+    const parsedA = parseDeliveryNoteCodeNumber(codeA);
+    const parsedB = parseDeliveryNoteCodeNumber(codeB);
+
+    if (parsedA.prefix !== parsedB.prefix) {
+      return asc ? parsedA.prefix.localeCompare(parsedB.prefix) : parsedB.prefix.localeCompare(parsedA.prefix);
+    }
+
+    return asc ? parsedA.num - parsedB.num : parsedB.num - parsedA.num;
+  };
+
+  // Sort delivery notes: supports natural code sorting (large->small, small->large) and date sorting
   const sortedDeliveryNotes = useMemo(() => {
     const items = searchedNotes.slice();
     items.sort((a: any, b: any) => {
+      const codeA = a?.deliveryNoteCode || a?.code || "";
+      const codeB = b?.deliveryNoteCode || b?.code || "";
+
+      if (sortMode === "code_desc") {
+        return compareDeliveryNoteCodes(codeA, codeB, false);
+      }
+      if (sortMode === "code_asc") {
+        return compareDeliveryNoteCodes(codeA, codeB, true);
+      }
+
       const dateA = a?.expectedDeliveryDate ?? a?.createdAt;
       const dateB = b?.expectedDeliveryDate ?? b?.createdAt;
       const da = dateA ? new Date(dateA).getTime() : 0;
       const db = dateB ? new Date(dateB).getTime() : 0;
-      if (da !== db) return db - da; // newer first
 
-      const idA = a?.id ?? 0;
-      const idB = b?.id ?? 0;
-      return idB - idA; // larger ID first (fallback)
+      if (sortMode === "date_asc") {
+        if (da !== db) return da - db;
+        return compareDeliveryNoteCodes(codeA, codeB, true);
+      }
+
+      // date_desc (newer first)
+      if (da !== db) return db - da;
+      return compareDeliveryNoteCodes(codeA, codeB, false);
     });
     return items;
-  }, [searchedNotes]);
+  }, [searchedNotes, sortMode]);
 
   useEffect(() => {
     if (deliveryNoteSearchQuery.trim()) {
@@ -2789,9 +2842,19 @@ function DeliveryNotesView({
             Chọn tất cả phiếu trên trang
           </Button>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5 text-xs text-stone-600 dark:text-stone-400">
           <span>Sắp xếp:</span>
-          <span className="font-bold text-stone-850 dark:text-stone-200">Mới nhất</span>
+          <Select value={sortMode} onValueChange={(val: any) => handleSortChange(val)}>
+            <SelectTrigger className="h-7 w-[190px] text-xs font-semibold bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-800">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="code_desc">Mã phiếu (Lớn → Nhỏ)</SelectItem>
+              <SelectItem value="code_asc">Mã phiếu (Nhỏ → Lớn)</SelectItem>
+              <SelectItem value="date_desc">Mới nhất</SelectItem>
+              <SelectItem value="date_asc">Cũ nhất</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -2837,8 +2900,23 @@ function DeliveryNotesView({
                     />
                   )}
                 </TableHead>
-                <TableHead className="w-[150px] font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">
-                  Mã phiếu
+                <TableHead
+                  className="w-[160px] font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider cursor-pointer hover:bg-stone-100/50 dark:hover:bg-stone-800/50 transition-colors select-none"
+                  onClick={() => {
+                    handleSortChange(sortMode === "code_desc" ? "code_asc" : "code_desc");
+                  }}
+                  title="Bấm để chuyển đổi sắp xếp Mã phiếu (Lớn ↔ Nhỏ)"
+                >
+                  <div className="flex items-center gap-1">
+                    <span>Mã phiếu</span>
+                    {sortMode === "code_desc" ? (
+                      <span className="text-emerald-600 font-bold text-xs">▼</span>
+                    ) : sortMode === "code_asc" ? (
+                      <span className="text-emerald-600 font-bold text-xs">▲</span>
+                    ) : (
+                      <span className="text-stone-400 text-xs">↕</span>
+                    )}
+                  </div>
                 </TableHead>
                 <TableHead className="font-bold text-stone-600 dark:text-stone-300 text-xs uppercase tracking-wider">
                   Số lượng mã hàng

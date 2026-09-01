@@ -8,3 +8,4 @@ export * from "./DeliveryList";
 export * from "./CreateInvoiceFromLinesDialog";
 export * from "./IssueInvoiceDialog";
 export * from "./UpdateEInvoiceDialog";
+export * from "./CashReceiptDetailDialog";

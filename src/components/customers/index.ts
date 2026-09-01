@@ -6,5 +6,6 @@ export { DebtTab } from './tabs/DebtTab';
 export { OrdersTab } from './tabs/OrdersTab';
 export { FavoritesTab } from './tabs/FavoritesTab';
 export { InvoicesTab } from './tabs/InvoicesTab';
+export { CashReceiptsTab } from './tabs/CashReceiptsTab';
 export { EditCustomerModal } from './modals/EditCustomerModal';
 export { ExportDebtModal } from './modals/ExportDebtModal';

@@ -286,6 +286,22 @@ export default function CashReceiptDetailPage() {
     });
   };
 
+  const [isProcessingAction, setIsProcessingAction] = useState(false);
+
+  const handleApproveAndPost = async () => {
+    if (!receipt?.id) return;
+    setIsProcessingAction(true);
+    try {
+      await approveMutation.mutateAsync(receipt.id);
+      await postMutation.mutateAsync(receipt.id);
+      refetch();
+    } catch (error) {
+      // Error handled by mutations
+    } finally {
+      setIsProcessingAction(false);
+    }
+  };
+
   const handleDelete = () => {
     if (!receipt?.id) return;
     deleteMutation.mutate(receipt.id, {
@@ -677,10 +693,33 @@ export default function CashReceiptDetailPage() {
               </>
             )}
             {canApprove && (
-              <Button variant="default" onClick={handleApprove}>
-                <CheckCircle2 className="h-4 w-4 mr-2" />
-                Duyệt
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  onClick={handleApprove}
+                  disabled={approveMutation.isPending || isProcessingAction}
+                >
+                  {approveMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4 mr-2 text-emerald-600" />
+                  )}
+                  Chỉ duyệt
+                </Button>
+                <Button
+                  variant="default"
+                  onClick={handleApproveAndPost}
+                  disabled={approveMutation.isPending || postMutation.isPending || isProcessingAction}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                >
+                  {isProcessingAction || approveMutation.isPending || postMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                  )}
+                  Duyệt & Ghi sổ
+                </Button>
+              </>
             )}
             {canPost && (
               <Button variant="default" onClick={handlePost}>
