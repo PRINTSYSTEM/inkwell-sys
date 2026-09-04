@@ -38,93 +38,89 @@ export function MaterialTypeList({
   }
 
   return (
-    <div className="border rounded-lg overflow-hidden">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-muted/50">
-            <TableHead className="w-[80px] text-center">Thứ tự</TableHead>
-            <TableHead className="w-[140px]">Mã chất liệu</TableHead>
-            <TableHead className="min-w-[200px]">Tên chất liệu</TableHead>
-            <TableHead className="w-[150px] text-right">Giá/m²</TableHead>
-            <TableHead className="w-[130px] text-right">SL tối thiểu</TableHead>
-            <TableHead className="w-[110px] text-center">Trạng thái</TableHead>
-            <TableHead className="w-[100px] text-center">Thao tác</TableHead>
+    <div className="w-full">
+      <Table className="min-w-full">
+        <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-950 z-10 border-b border-slate-200 dark:border-slate-800">
+          <TableRow className="bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-700 dark:text-slate-300">
+            <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 w-[70px] text-center">Thứ tự</TableHead>
+            <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 w-[120px]">Mã chất liệu</TableHead>
+            <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 min-w-[180px]">Tên chất liệu</TableHead>
+            <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 w-[130px] text-right">Giá/m²</TableHead>
+            <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 w-[110px] text-right">SL tối thiểu</TableHead>
+            <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 w-[100px] text-center">Trạng thái</TableHead>
+            <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 w-[90px] text-center pr-3">Thao tác</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {materials.map((material) => (
-            <TableRow key={material.id} className="hover:bg-muted/30">
-              <TableCell className="text-center">
-                <Badge variant="outline" className="font-mono text-xs">
-                  #{material.displayOrder}
-                </Badge>
+            <TableRow key={material.id} className="h-9 text-xs border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/80 transition-colors">
+              <TableCell className="text-center py-1.5 font-mono font-medium text-slate-500">
+                #{material.displayOrder}
               </TableCell>
-              <TableCell>
-                <Badge variant="secondary" className="font-mono text-xs">
+              <TableCell className="py-1.5">
+                <Badge variant="outline" className="font-mono text-[11px] font-bold">
                   {material.code}
                 </Badge>
               </TableCell>
-              <TableCell>
+              <TableCell className="py-1.5">
                 <div className="min-w-0">
-                  <TruncatedText text={material.name} className="font-medium" />
+                  <TruncatedText text={material.name} className="font-bold text-slate-800 dark:text-slate-200" />
                   {material.description && (
                     <TruncatedText
                       text={material.description}
-                      className="text-xs text-muted-foreground mt-0.5"
+                      className="text-[11px] text-slate-400 mt-0.5"
                     />
                   )}
                 </div>
               </TableCell>
-              <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-1">
-                  <span className="font-semibold text-sm">
+              <TableCell className="text-right py-1.5">
+                <div className="flex items-center justify-end gap-1 font-bold text-slate-900 dark:text-slate-100">
+                  <span>
                     {material.pricePerM2
                       ? material.pricePerM2.toLocaleString("vi-VN")
                       : "0"}
                   </span>
-                  <span className="text-xs text-muted-foreground">đ/m²</span>
+                  <span className="text-[11px] font-normal text-slate-400">đ/m²</span>
                 </div>
               </TableCell>
-              <TableCell className="text-right">
-                <span className="font-semibold text-sm">
-                  {material.minimumQuantity != null
-                    ? material.minimumQuantity.toLocaleString("vi-VN")
-                    : "-"}
-                </span>
+              <TableCell className="text-right py-1.5 font-semibold text-slate-700 dark:text-slate-300">
+                {material.minimumQuantity != null
+                  ? material.minimumQuantity.toLocaleString("vi-VN")
+                  : "-"}
               </TableCell>
-              <TableCell className="text-center">
+              <TableCell className="text-center py-1.5">
                 <Badge
                   variant={
                     material.status === "active" ? "default" : "secondary"
                   }
                   className={
                     material.status === "active"
-                      ? "bg-green-100 text-green-700 hover:bg-green-100 dark:bg-green-950 dark:text-green-400"
-                      : ""
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 text-[10px]"
+                      : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 text-[10px]"
                   }
                 >
                   {material.status === "active" ? "Hoạt động" : "Tạm dừng"}
                 </Badge>
               </TableCell>
-              <TableCell>
+              <TableCell className="py-1.5 pr-3">
                 <div className="flex items-center gap-1 justify-center">
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon"
                     onClick={() => onEdit(material)}
-                    className="h-8 w-8 p-0"
+                    className="h-7 w-7 text-slate-500 hover:text-slate-900 cursor-pointer"
                     title="Chỉnh sửa"
                   >
-                    <Edit className="h-4 w-4" />
+                    <Edit className="h-3.5 w-3.5" />
                   </Button>
                   <Button
                     variant="ghost"
-                    size="sm"
+                    size="icon"
                     onClick={() => onDelete(material)}
-                    className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950"
+                    className="h-7 w-7 text-rose-500 hover:text-rose-700 cursor-pointer"
                     title="Xóa"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
               </TableCell>

@@ -286,6 +286,8 @@ export const DebtStatementItemSchema = z.object({
   decreaseAmount: z.number().optional(),
   runningBalance: z.number().optional(),
   notes: z.string().nullable().optional(),
+  cashReceiptId: z.number().nullable().optional(),
+  voucherCode: z.string().nullable().optional(),
 });
 export type DebtStatementItem = z.infer<typeof DebtStatementItemSchema>;
 

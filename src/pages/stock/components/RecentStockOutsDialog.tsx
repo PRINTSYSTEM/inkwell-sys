@@ -20,6 +20,9 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 
+import { stockOutPurposeLabels, stockOutStatusLabels } from "@/lib/status-utils";
+import { StatusBadge } from "@/components/ui/status-badge";
+
 interface RecentStockOutsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -33,9 +36,18 @@ interface RecentStockOutsDialogProps {
   totalCount: number;
   onViewDetails: (id: number) => void;
   onViewAll: () => void;
-  translatePurpose: (purpose: string | null | undefined) => string;
-  getStatusBadge: (status: string | null | undefined) => React.ReactNode;
+  translatePurpose?: (purpose: string | null | undefined) => string;
+  getStatusBadge?: (status: string | null | undefined) => React.ReactNode;
 }
+
+const defaultTranslatePurpose = (purpose: string | null | undefined) => {
+  if (!purpose) return "Khác";
+  return stockOutPurposeLabels[purpose] || purpose;
+};
+
+const defaultGetStatusBadge = (status: string | null | undefined) => {
+  return <StatusBadge status={status} label={stockOutStatusLabels[status || ""] || status || "—"} />;
+};
 
 export function RecentStockOutsDialog({
   open,
@@ -50,8 +62,8 @@ export function RecentStockOutsDialog({
   totalCount,
   onViewDetails,
   onViewAll,
-  translatePurpose,
-  getStatusBadge,
+  translatePurpose = defaultTranslatePurpose,
+  getStatusBadge = defaultGetStatusBadge,
 }: RecentStockOutsDialogProps) {
   
   const formatDate = (dateStr: string) => {

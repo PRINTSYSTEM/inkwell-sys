@@ -48,7 +48,7 @@ import { useCreateStockOutForDelivery } from "@/hooks/use-stock";
 import { apiRequest } from "@/lib/http";
 import { CreateDeliveryNoteDialog, getDefaultLineNote, SelectedOrderDetail } from "@/pages/delivery-notes/DeliveryNoteList";
 
-export default function InventorySummaryPage() {
+export default function InventorySummaryPage({ embedded = false }: { embedded?: boolean } = {}) {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch] = useDebounce(searchQuery, 300);
@@ -400,27 +400,30 @@ export default function InventorySummaryPage() {
 
   return (
     <>
-      <Helmet>
-        <title>Tồn kho thành phẩm | Print Production ERP</title>
-        <meta
-          name="description"
-          content="Tồn kho thành phẩm theo nhóm vật tư"
-        />
-      </Helmet>
+      {!embedded && (
+        <Helmet>
+          <title>Tồn kho sản xuất | Print Production ERP</title>
+          <meta
+            name="description"
+            content="Tồn kho sản xuất theo nhóm vật tư"
+          />
+        </Helmet>
+      )}
 
-      <div className="pt-0 -mt-4 space-y-4">
+      <div className={embedded ? "space-y-4" : "pt-0 -mt-4 space-y-4"}>
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              Tồn kho thành phẩm
-            </h1>
-            <p className="text-muted-foreground">
-              Tồn kho thành phẩm theo nhóm vật tư
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {selectedItemCodes.size > 0 && (
+        {!embedded && (
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">
+                Tồn kho sản xuất
+              </h1>
+              <p className="text-muted-foreground">
+                Tồn kho sản xuất theo nhóm vật tư
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {selectedItemCodes.size > 0 && (
               <Button
                 onClick={handleOpenCreateDialog}
                 className="gap-2 font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -459,6 +462,7 @@ export default function InventorySummaryPage() {
             </Button>
           </div>
         </div>
+        )}
 
         {/* Error Alert */}
         {isError && (

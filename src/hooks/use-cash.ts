@@ -391,6 +391,22 @@ export const useCashReceipt = (id: number | null, enabled: boolean = true) => {
   });
 };
 
+const invalidateReceiptRelatedQueries = (queryClient: any, id?: number) => {
+  if (id) {
+    queryClient.invalidateQueries({ queryKey: ["cash-receipt", id] });
+  }
+  queryClient.invalidateQueries({ queryKey: ["cash-receipts"] });
+  queryClient.invalidateQueries({ queryKey: ["cash-book"] });
+  queryClient.invalidateQueries({ queryKey: ["customers"] });
+  queryClient.invalidateQueries({ queryKey: ["customer"] });
+  queryClient.invalidateQueries({ queryKey: ["ar-summary"] });
+  queryClient.invalidateQueries({ queryKey: ["ar-detail"] });
+  queryClient.invalidateQueries({ queryKey: ["ar-aging"] });
+  queryClient.invalidateQueries({ queryKey: ["ar-ledger-list"] });
+  queryClient.invalidateQueries({ queryKey: ["ar-ledger-summary"] });
+  queryClient.invalidateQueries({ queryKey: ["ar-detail-ledger"] });
+};
+
 export const useCreateCashReceipt = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -401,9 +417,8 @@ export const useCreateCashReceipt = () => {
       );
       return res.data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cash-receipts"] });
-      queryClient.invalidateQueries({ queryKey: ["cash-book"] });
+    onSuccess: (data) => {
+      invalidateReceiptRelatedQueries(queryClient, data?.id);
       toast.success("Tạo phiếu thu thành công");
     },
     onError: (error: Error) => {
@@ -429,11 +444,7 @@ export const useUpdateCashReceipt = () => {
       return res.data;
     },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["cash-receipt", variables.id],
-      });
-      queryClient.invalidateQueries({ queryKey: ["cash-receipts"] });
-      queryClient.invalidateQueries({ queryKey: ["cash-book"] });
+      invalidateReceiptRelatedQueries(queryClient, variables.id);
       toast.success("Cập nhật phiếu thu thành công");
     },
     onError: (error: Error) => {
@@ -448,9 +459,8 @@ export const useDeleteCashReceipt = () => {
     mutationFn: async (id: number) => {
       await apiRequest.delete(API_SUFFIX.CASH_RECEIPT_BY_ID(id));
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["cash-receipts"] });
-      queryClient.invalidateQueries({ queryKey: ["cash-book"] });
+    onSuccess: (_, id) => {
+      invalidateReceiptRelatedQueries(queryClient, id);
       toast.success("Xóa phiếu thu thành công");
     },
     onError: (error: Error) => {
@@ -469,8 +479,7 @@ export const useApproveCashReceipt = () => {
       return res.data;
     },
     onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: ["cash-receipt", id] });
-      queryClient.invalidateQueries({ queryKey: ["cash-receipts"] });
+      invalidateReceiptRelatedQueries(queryClient, id);
       toast.success("Duyệt phiếu thu thành công");
     },
     onError: (error: Error) => {
@@ -489,8 +498,7 @@ export const useCancelCashReceipt = () => {
       return res.data;
     },
     onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: ["cash-receipt", id] });
-      queryClient.invalidateQueries({ queryKey: ["cash-receipts"] });
+      invalidateReceiptRelatedQueries(queryClient, id);
       toast.success("Hủy phiếu thu thành công");
     },
     onError: (error: Error) => {
@@ -509,9 +517,7 @@ export const usePostCashReceipt = () => {
       return res.data;
     },
     onSuccess: (_, id) => {
-      queryClient.invalidateQueries({ queryKey: ["cash-receipt", id] });
-      queryClient.invalidateQueries({ queryKey: ["cash-receipts"] });
-      queryClient.invalidateQueries({ queryKey: ["cash-book"] });
+      invalidateReceiptRelatedQueries(queryClient, id);
       toast.success("Hạch toán phiếu thu thành công");
     },
     onError: (error: Error) => {

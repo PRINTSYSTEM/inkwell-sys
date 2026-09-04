@@ -261,7 +261,42 @@ export const useApproveDebt = () => {
     void,
     [number]
   >(async (orderId: number) => {
-    await apiRequest.post(API_SUFFIX.ACCOUNTING_APPROVE_DEBT(orderId));
+    try {
+      // Primary official endpoint created by BE: POST /api/v1/orders/{id}/approve-quote
+      await apiRequest.post(API_SUFFIX.ORDER_APPROVE_QUOTE(orderId));
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { status?: number } };
+      if (errorObj?.response?.status === 404) {
+        try {
+          await apiRequest.put(API_SUFFIX.ORDER_UPDATE_FOR_SALE(orderId), {
+            isDebtApproved: true,
+          });
+        } catch (err2: unknown) {
+          const errorObj2 = err2 as { response?: { status?: number } };
+          if (errorObj2?.response?.status === 404) {
+            try {
+              await apiRequest.put(
+                API_SUFFIX.ORDER_UPDATE_FOR_ACCOUNTING(orderId),
+                { isDebtApproved: true }
+              );
+            } catch (err3: unknown) {
+              const errorObj3 = err3 as { response?: { status?: number } };
+              if (errorObj3?.response?.status === 404) {
+                await apiRequest.post(
+                  API_SUFFIX.ACCOUNTING_APPROVE_DEBT(orderId)
+                );
+              } else {
+                throw err3;
+              }
+            }
+          } else {
+            throw err2;
+          }
+        }
+      } else {
+        throw err;
+      }
+    }
   });
 
   const mutate = async (orderId: number) => {

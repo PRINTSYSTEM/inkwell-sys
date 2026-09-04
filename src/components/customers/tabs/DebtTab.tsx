@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -127,7 +127,41 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
   const totalIncrease = statementData?.totalIncrease ?? 0;
   const totalDecrease = statementData?.totalDecrease ?? 0;
   const endingBalance = beginningBalance + totalIncrease - totalDecrease;
-  const items = statementData?.items || [];
+  const items = useMemo(() => {
+    const rawItems = statementData?.items || [];
+    if (!rawItems.length) return [];
+
+    const result: typeof rawItems = [];
+
+    for (const item of rawItems) {
+      const dec = item.decreaseAmount && item.decreaseAmount > 0 ? item.decreaseAmount : 0;
+
+      const itemReceiptId = item.cashReceiptId ?? (item as any).receiptId ?? null;
+      const voucherCode = item.voucherCode ?? (item as any).receiptCode ?? null;
+
+      const prevItem = result.length > 0 ? result[result.length - 1] : null;
+      const prevReceiptId = prevItem ? (prevItem.cashReceiptId ?? (prevItem as any).receiptId ?? null) : null;
+      const prevVoucherCode = prevItem ? (prevItem.voucherCode ?? (prevItem as any).receiptCode ?? null) : null;
+
+      // Group payment lines if they belong to the same cash receipt (by cashReceiptId or voucherCode)
+      const isSameReceiptGroup =
+        prevItem &&
+        ((itemReceiptId !== null && prevReceiptId !== null && itemReceiptId === prevReceiptId) ||
+         (voucherCode !== null && prevVoucherCode !== null && voucherCode === prevVoucherCode));
+
+      if (isSameReceiptGroup && prevItem) {
+        const lastIdx = result.length - 1;
+        result[lastIdx] = {
+          ...prevItem,
+          decreaseAmount: (prevItem.decreaseAmount || 0) + dec,
+        };
+      } else {
+        result.push({ ...item });
+      }
+    }
+
+    return result;
+  }, [statementData?.items]);
 
   const handleExport = () => {
     if (viewMode === "monthly") {
@@ -446,7 +480,14 @@ export function DebtTab({ customerId, isActive = true }: DebtTabProps) {
                                 {item.invoiceCode || "—"}
                               </TableCell>
                               <TableCell className="border border-slate-200 dark:border-stone-800 py-2.5 text-xs text-slate-800 dark:text-stone-200">
-                                {item.description || "—"}
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span>{item.description || "—"}</span>
+                                  {item.voucherCode && (
+                                    <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                      {item.voucherCode}
+                                    </span>
+                                  )}
+                                </div>
                               </TableCell>
                               <TableCell className="border border-slate-200 dark:border-stone-800 text-right py-2.5 text-xs font-mono text-slate-750 dark:text-stone-350">
                                 {qtyStr}

@@ -19,6 +19,12 @@ import {
 } from "@/components/ui/select";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { EditDesignNotesDialog } from "@/components/design/EditDesignNotesDialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function SaleDesignSearch() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -441,8 +447,8 @@ export default function SaleDesignSearch() {
                     <th className="px-3 py-3 font-semibold text-slate-700 dark:text-slate-200 text-right whitespace-nowrap leading-tight">
                       Số lượng<br />đặt
                     </th>
-                    <th className="px-3 py-3 font-semibold text-slate-700 dark:text-slate-200 text-center whitespace-nowrap">Ngày tạo</th>
                     <th className="px-3 py-3 font-semibold text-slate-700 dark:text-slate-200 text-right whitespace-nowrap">Giá</th>
+                    <th className="px-3 py-3 font-semibold text-slate-700 dark:text-slate-200 text-center whitespace-nowrap">Ngày tạo</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -490,25 +496,53 @@ export default function SaleDesignSearch() {
                       <td className="px-3 py-3 align-middle font-mono font-medium text-slate-800 dark:text-slate-200 w-[110px] max-w-[115px]">
                         {(() => {
                           const code = design.code || `DES-${design.id}`;
+                          const priceStr = design.latestUnitPrice
+                            ? formatCurrency(design.latestUnitPrice)
+                            : "Chưa có giá";
+
+                          let codeNode;
                           if (code.includes(" (Hủy mã)")) {
                             const [mainCode] = code.split(" (Hủy mã)");
-                            return (
+                            codeNode = (
                               <div className="flex flex-col leading-tight">
                                 <span>{mainCode}</span>
                                 <span className="text-red-500 dark:text-red-400 text-xs font-sans">(Hủy mã)</span>
                               </div>
                             );
-                          }
-                          if (code.includes("(Hủy mã)")) {
+                          } else if (code.includes("(Hủy mã)")) {
                             const [mainCode] = code.split("(Hủy mã)");
-                            return (
+                            codeNode = (
                               <div className="flex flex-col leading-tight">
                                 <span>{mainCode.trim()}</span>
                                 <span className="text-red-500 dark:text-red-400 text-xs font-sans">(Hủy mã)</span>
                               </div>
                             );
+                          } else {
+                            codeNode = <span className="break-all">{code}</span>;
                           }
-                          return <span className="break-all">{code}</span>;
+
+                          return (
+                            <TooltipProvider delayDuration={150}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div
+                                    className="cursor-help hover:text-amber-600 dark:hover:text-amber-400 transition-colors w-fit underline decoration-dotted underline-offset-2 decoration-slate-300 dark:decoration-slate-600 hover:decoration-amber-500"
+                                    title={`Mã: ${code} | Đơn giá: ${priceStr}`}
+                                  >
+                                    {codeNode}
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="bg-slate-900 text-white font-bold text-xs py-1.5 px-3 rounded-lg shadow-lg border border-slate-700">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-slate-300 font-normal">Đơn giá:</span>
+                                    <span className="text-amber-300 font-bold text-sm">
+                                      {priceStr}
+                                    </span>
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
                         })()}
                       </td>
                       <td className="px-3 py-3 align-middle">
@@ -604,16 +638,16 @@ export default function SaleDesignSearch() {
                           return `${Number(qty).toLocaleString("vi-VN")}${isBo ? " bộ" : ""}`;
                         })()}
                       </td>
+                      <td className="px-3 py-3 align-middle font-bold text-primary text-[15px] text-right whitespace-nowrap">
+                        {design.latestUnitPrice
+                          ? formatCurrency(design.latestUnitPrice)
+                          : "—"}
+                      </td>
                       <td className="px-3 py-3 align-middle text-slate-500 text-[13px] text-center whitespace-nowrap">
                         {design.createdAt
                           ? new Date(design.createdAt).toLocaleDateString(
                             "vi-VN",
                           )
-                          : "—"}
-                      </td>
-                      <td className="px-3 py-3 align-middle font-bold text-primary text-[15px] text-right whitespace-nowrap">
-                        {design.latestUnitPrice
-                          ? formatCurrency(design.latestUnitPrice)
                           : "—"}
                       </td>
                     </tr>

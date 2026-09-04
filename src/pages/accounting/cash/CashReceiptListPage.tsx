@@ -59,6 +59,7 @@ import { useCustomers } from "@/hooks/use-customer";
 import { formatCurrency, getPaymentMethodLabel } from "@/lib/status-utils";
 import { toast } from "sonner";
 import { CreateCashReceiptDialog } from "@/components/customers/CreateCashReceiptDialog";
+import { CashReceiptDetailDialog } from "@/components/accounting/CashReceiptDetailDialog";
 
 const formatDate = (dateStr: string | null | undefined) => {
   if (!dateStr) return "—";
@@ -94,6 +95,10 @@ export default function CashReceiptListPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+
+  // Detail dialog popup state
+  const [selectedReceiptId, setSelectedReceiptId] = useState<number | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
   const { data: paymentMethodsData } = usePaymentMethods({
     pageNumber: 1,
@@ -157,7 +162,8 @@ export default function CashReceiptListPage() {
       e.stopPropagation();
     }
     if (id) {
-      navigate(`/accounting/cash-receipts/${id}`);
+      setSelectedReceiptId(id);
+      setDetailDialogOpen(true);
     }
   };
 
@@ -541,6 +547,12 @@ export default function CashReceiptListPage() {
       <CreateCashReceiptDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
+      />
+      <CashReceiptDetailDialog
+        receiptId={selectedReceiptId}
+        open={detailDialogOpen}
+        onOpenChange={setDetailDialogOpen}
+        onReceiptUpdated={refetch}
       />
     </>
   );

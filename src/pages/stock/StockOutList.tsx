@@ -38,6 +38,7 @@ import {
   Filter,
   Loader2,
 } from "lucide-react";
+import { StockOutDetailDialog } from "./components/StockOutDetailDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -208,9 +209,13 @@ export default function StockOutListPage() {
 
 
 
+  const [selectedStockOutId, setSelectedStockOutId] = useState<number | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+
   const handleViewDetails = (id: number | undefined) => {
     if (id) {
-      navigate(`/stock/stock-outs/${id}`);
+      setSelectedStockOutId(id);
+      setIsDetailOpen(true);
     }
   };
 
@@ -239,18 +244,16 @@ export default function StockOutListPage() {
         <meta name="description" content="Quản lý phiếu xuất kho" />
       </Helmet>
 
-      <div className="min-h-screen bg-background">
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 pt-0 pb-6 -mt-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">Quản lý xuất kho</h1>
-              <p className="text-sm text-muted-foreground mt-1">Quản lý các phiếu xuất kho Chất liệu</p>
-            </div>
+      <div className="h-full flex flex-col space-y-2.5 overflow-hidden">
+        <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-bold text-foreground">Xuất Kho</h1>
+            <p className="text-muted-foreground text-xs">Danh sách các phiếu xuất kho nguyên vật liệu và thành phẩm</p>
           </div>
+        </div>
 
-          <div className="space-y-4">
-          {/* COMPACT TOOLBAR FILTERS ROW */}
-          <div className="flex flex-col xl:flex-row items-center justify-between gap-2.5 bg-slate-50/60 p-2.5 rounded-xl border border-slate-200/50 shadow-sm mb-4">
+        {/* COMPACT TOOLBAR FILTERS ROW */}
+        <div className="shrink-0 flex flex-col xl:flex-row items-center justify-between gap-2.5 bg-slate-50/60 p-2 rounded-xl border border-slate-200/50 shadow-sm">
             <div className="flex flex-col sm:flex-row items-center gap-2 w-full xl:w-auto flex-1">
               {/* Search Text */}
               <div className="relative w-full sm:w-[260px]">
@@ -349,8 +352,8 @@ export default function StockOutListPage() {
           </div>
 
           {/* Table Card */}
-          <Card className="border-slate-200/60 shadow-lg shadow-slate-200/50 overflow-hidden">
-            <CardContent className="p-0">
+          <Card className="flex-1 min-h-0 flex flex-col border-slate-200/60 shadow-md rounded-xl overflow-hidden bg-white">
+            <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
               {isLoading ? (
                 <div className="flex items-center justify-center py-16">
                   <Loader2 className="h-8 w-8 animate-spin text-[#93631F]" />
@@ -368,9 +371,9 @@ export default function StockOutListPage() {
                 </div>
               ) : (
                 <>
-                  <div className="overflow-x-auto">
+                  <div className="flex-1 min-h-0 overflow-auto">
                     <Table>
-                      <TableHeader>
+                      <TableHeader className="sticky top-0 bg-slate-100/90 backdrop-blur-sm z-10">
                         <TableRow className="bg-[#93631F]/5 border-b border-slate-200/60">
                           <TableHead className="w-[140px] font-semibold text-slate-700">
                             Số phiếu
@@ -522,7 +525,7 @@ export default function StockOutListPage() {
                       </TableBody>
                     </Table>
                   </div>
-                  <div className="flex items-center justify-between p-4 border-t border-slate-200/60 bg-slate-50/50">
+                  <div className="shrink-0 flex items-center justify-between p-2.5 border-t border-slate-200/60 bg-slate-50/50">
                     <div className="text-sm text-slate-600">
                       Trang <span className="font-semibold">{page}</span> /{" "}
                       <span className="font-semibold">{totalPages}</span>
@@ -554,9 +557,7 @@ export default function StockOutListPage() {
               )}
             </CardContent>
           </Card>
-        </div>
       </div>
-    </div>
       {/* Confirm Dialog */}
       <Dialog open={confirmDialog.open} onOpenChange={(open) => setConfirmDialog({ ...confirmDialog, open })}>
         <DialogContent className="max-w-md">
@@ -605,6 +606,13 @@ export default function StockOutListPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Stock Out Detail Popup Dialog */}
+      <StockOutDetailDialog
+        stockOutId={selectedStockOutId}
+        open={isDetailOpen}
+        onOpenChange={setIsDetailOpen}
+      />
     </>
   );
 }

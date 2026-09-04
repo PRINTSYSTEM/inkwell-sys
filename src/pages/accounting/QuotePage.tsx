@@ -21,64 +21,61 @@ export default function QuotePage() {
       </Helmet>
 
       <div className="h-full flex flex-col overflow-hidden">
-        <div className="max-w-7xl mx-auto w-full h-full flex flex-col">
-          {/* Header */}
-          <div className="mb-3 shrink-0">
-            <h1 className="text-2xl font-bold tracking-tight">{pageTitle}</h1>
-            <p className="text-muted-foreground text-sm">
-              Quản lý {pageTitle.toLowerCase()} cho đơn hàng
-            </p>
-          </div>
+        <div className="w-full h-full flex flex-col min-h-0 space-y-2.5">
+          {/* Header & Inline Stats */}
+          <div className="shrink-0 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div>
+              <h1 className="text-xl font-bold tracking-tight">{pageTitle}</h1>
+              <p className="text-muted-foreground text-xs">
+                Quản lý {pageTitle.toLowerCase()} cho đơn hàng
+              </p>
+            </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3 shrink-0">
-            <div className="rounded-lg border bg-card p-3">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-info/10">
-                  <Layers className="h-4 w-4 text-info" />
+            {/* Inline Stats Badges */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="rounded-lg border bg-card px-3 py-1.5 shadow-sm flex items-center gap-2">
+                <div className="p-1 rounded-md bg-info/10">
+                  <Layers className="h-3.5 w-3.5 text-info" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground font-semibold">Tổng đơn đang xử lý</p>
-                  <p className="text-xl font-bold">{dashboardData?.totalProcessing ?? 0}</p>
+                  <p className="text-[11px] text-muted-foreground font-semibold leading-none">Đang xử lý</p>
+                  <p className="text-sm font-bold leading-tight mt-0.5">{dashboardData?.totalProcessing ?? 0}</p>
                 </div>
               </div>
-            </div>
-            <div className="rounded-lg border bg-card p-3">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-primary/10">
-                  <TrendingUp className="h-4 w-4 text-primary" />
+
+              <div className="rounded-lg border bg-card px-3 py-1.5 shadow-sm flex items-center gap-2">
+                <div className="p-1 rounded-md bg-primary/10">
+                  <TrendingUp className="h-3.5 w-3.5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground font-semibold">Đơn tạo hôm nay</p>
-                  <p className="text-xl font-bold">{dashboardData?.createdToday ?? 0}</p>
+                  <p className="text-[11px] text-muted-foreground font-semibold leading-none">Tạo hôm nay</p>
+                  <p className="text-sm font-bold leading-tight mt-0.5">{dashboardData?.createdToday ?? 0}</p>
                 </div>
               </div>
-            </div>
-            <div className="rounded-lg border bg-card p-3">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-warning/10">
-                  <CreditCard className="h-4 w-4 text-warning" />
+
+              <div className="rounded-lg border bg-card px-3 py-1.5 shadow-sm flex items-center gap-2">
+                <div className="p-1 rounded-md bg-warning/10">
+                  <CreditCard className="h-3.5 w-3.5 text-warning" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground font-semibold">Đơn chờ đặt cọc</p>
-                  <p className="text-xl font-bold">{dashboardData?.awaitingDeposit ?? 0}</p>
+                  <p className="text-[11px] text-muted-foreground font-semibold leading-none">Chờ đặt cọc</p>
+                  <p className="text-sm font-bold leading-tight mt-0.5">{dashboardData?.awaitingDeposit ?? 0}</p>
                 </div>
               </div>
-            </div>
-            <div className="rounded-lg border bg-card p-3">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-success/10">
-                  <Clock className="h-4 w-4 text-success" />
+
+              <div className="rounded-lg border bg-card px-3 py-1.5 shadow-sm flex items-center gap-2">
+                <div className="p-1 rounded-md bg-success/10">
+                  <Clock className="h-3.5 w-3.5 text-success" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground font-semibold">Tổng đơn hoàn thành</p>
-                  <p className="text-xl font-bold">{dashboardData?.completed ?? 0}</p>
+                  <p className="text-[11px] text-muted-foreground font-semibold leading-none">Hoàn thành</p>
+                  <p className="text-sm font-bold leading-tight mt-0.5">{(dashboardData as any)?.completed ?? 0}</p>
                 </div>
               </div>
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
             <PaymentList listFilterType="" />
           </div>
         </div>

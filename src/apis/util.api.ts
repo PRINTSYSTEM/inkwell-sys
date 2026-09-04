@@ -58,6 +58,7 @@ export const API_SUFFIX = {
     `/orders/${orderId}/designs/${orderDetailId}`,
   ORDER_UPDATE_FOR_ACCOUNTING: (id: number) => `/orders/${id}/accounting`,
   ORDER_UPDATE_FOR_SALE: (id: number) => `/orders/${id}/sale`,
+  ORDER_APPROVE_QUOTE: (id: number) => `/orders/${id}/approve-quote`,
   ORDER_EXPORT_INVOICE: (id: number) => `/orders/${id}/export-invoice`,
   ORDER_EXPORT_DELIVERY_NOTE: (id: number) =>
     `/orders/${id}/export-delivery-note`,
@@ -147,6 +148,7 @@ export const API_SUFFIX = {
   // ========== MATERIAL SPECS ==========
   MATERIAL_SPECS: (typeId: number) => `/material-types/${typeId}/specs`,
   MATERIAL_SPEC_PAGINATED: (typeId: number) => `/material-types/${typeId}/specs/paginated`,
+  MATERIAL_SPECS_GLOBAL_PAGINATED: "/material-specs/paginated",
   MATERIAL_SPEC_BY_ID: (typeId: number, id: number) => `/material-types/${typeId}/specs/${id}`,
 
   // ========== MATERIAL 8-LAYER MANAGEMENT SYSTEM ==========
@@ -328,6 +330,10 @@ export const API_SUFFIX = {
   // ========== PRODUCTIONS ==========
   PRODUCTION_ORDERS: "/production-orders",
   PRODUCTION_ORDER_BY_ID: (id: number) => `/production-orders/${id}`,
+  PRODUCTION_ORDER_SCHEDULE: (id: number) => `/production-orders/${id}/schedule`,
+  PRODUCTION_CONFIG: "/system-settings/production-config",
+  PRODUCTION_DELAY_REPORT: "/production-orders/delay-report",
+  PRODUCTION_DELAY_SUMMARY: "/production-orders/delay-summary",
   PRODUCTION_ORDERS_BY_ORDER: (orderId: number) =>
     `/production-orders/by-order/${orderId}`,
   PRODUCTION_STEP_ASSIGN: (id: number) =>

@@ -1,16 +1,9 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   useSystemSettings,
   useUpdateSystemSetting,
 } from "@/hooks/use-system-setting";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  Button,
-} from "@/components/ui";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -29,12 +22,12 @@ import {
   Calendar,
   User,
   RefreshCw,
-  Building2,
-  Percent,
   Sliders,
 } from "lucide-react";
 import { SystemSettingFormDialog } from "./components/SystemSettingFormDialog";
 import type { SystemSettingResponse } from "@/Schema";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
 export default function AdminSettings() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -46,7 +39,6 @@ export default function AdminSettings() {
 
   // Handle Search and Tab Filters
   const filteredSettings = settings.filter((s) => {
-    // 1. Search term match (Key, Description, Value)
     const matchesSearch =
       s.key.toLowerCase().includes(searchTerm.toLowerCase()) ||
       s.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -54,7 +46,6 @@ export default function AdminSettings() {
 
     if (!matchesSearch) return false;
 
-    // 2. Category Tab match
     if (selectedTab === "all") return true;
     if (selectedTab === "finance") {
       return s.key.toLowerCase().includes("vat") || s.key.toLowerCase().includes("price") || s.key.toLowerCase().includes("tax");
@@ -74,7 +65,7 @@ export default function AdminSettings() {
   const handleUpdate = async (key: string, value: string, description: string) => {
     try {
       await updateSetting({ key, payload: { value, description } });
-    } catch (error) {
+    } catch {
       // Hook handles showing toast error
     }
   };
@@ -86,24 +77,23 @@ export default function AdminSettings() {
       if (!isNaN(val)) {
         return (
           <div className="flex items-center gap-1.5 font-mono">
-            <span className="font-semibold text-foreground bg-slate-100 px-2 py-0.5 rounded border border-slate-200 dark:bg-slate-800 dark:border-slate-700">
+            <span className="font-bold text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
               {setting.value}
             </span>
-            <span className="text-xs text-green-600 font-semibold bg-green-50 px-1.5 py-0.5 rounded border border-green-200 dark:bg-green-950/20 dark:text-green-400 dark:border-green-900">
-              {(val * 100).toFixed(0)}%
+            <span className="text-xs text-emerald-700 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-900/60">
+              {(val * 100).toFixed(0)}% VAT
             </span>
           </div>
         );
       }
     }
     return (
-      <span className="font-mono bg-slate-100 px-2 py-0.5 rounded border border-slate-200 dark:bg-slate-800 dark:border-slate-700 font-semibold text-foreground text-sm">
-        {setting.value}
+      <span className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700 font-bold text-slate-900 dark:text-slate-100 text-xs">
+        {setting.value || "—"}
       </span>
     );
   };
 
-  // Format date helper
   const formatDate = (dateStr?: string | null) => {
     if (!dateStr) return "";
     try {
@@ -120,7 +110,6 @@ export default function AdminSettings() {
     }
   };
 
-  // Helper to get audit modifier name
   const getModifierName = (modifier: any) => {
     if (!modifier) return "";
     if (typeof modifier === "string") return modifier;
@@ -130,214 +119,214 @@ export default function AdminSettings() {
     return "";
   };
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto py-6 space-y-6">
-        <div className="flex items-center justify-between border-b pb-4">
-          <div className="h-10 w-64 bg-slate-200 animate-pulse rounded" />
-          <div className="h-10 w-24 bg-slate-200 animate-pulse rounded" />
-        </div>
-        <div className="grid grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-20 bg-slate-100 animate-pulse rounded-lg border" />
-          ))}
-        </div>
-        <div className="h-96 bg-slate-100 animate-pulse rounded-lg border" />
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="container mx-auto py-12 text-center space-y-4">
-        <h2 className="text-xl font-bold text-destructive">Lỗi tải thiết lập hệ thống</h2>
-        <p className="text-muted-foreground text-sm">Không thể kết nối với máy chủ. Vui lòng tải lại trang.</p>
-        <Button onClick={() => refetch()} className="mx-auto flex items-center gap-2">
-          <RefreshCw className="h-4 w-4" /> Tải lại
-        </Button>
-      </div>
-    );
-  }
-
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border/60 pb-5">
+    <div className="h-full flex flex-col justify-between overflow-hidden bg-slate-50/50 dark:bg-slate-950 p-4 sm:p-5 gap-3.5 text-xs">
+      {/* Header Bar */}
+      <div className="flex items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3.5 px-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs shrink-0">
         <div>
-          <h1 className="text-3xl font-extrabold text-foreground flex items-center gap-2">
-            <Settings className="h-8 w-8 text-primary" /> Thiết lập hệ thống
+          <h1 className="text-lg font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <Settings className="h-5 w-5 text-[#93631F]" />
+            Thiết Lập Hệ Thống
           </h1>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Quản lý các thông số cấu hình hoạt động của toàn bộ hệ thống in ấn và đơn hàng.
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Quản lý các thông số cấu hình hoạt động của toàn bộ hệ thống in ấn và đơn hàng
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => refetch()}
-          className="flex items-center gap-1.5 self-start sm:self-center"
-        >
-          <RefreshCw className="h-4 w-4" /> Làm mới
-        </Button>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            className="h-8 text-xs font-bold px-3 border-slate-200 cursor-pointer"
+          >
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+            Làm mới
+          </Button>
+        </div>
       </div>
 
-      {/* Tabs / Filtering categories */}
-      <div className="flex flex-wrap gap-2 border-b border-border pb-px">
-        <button
-          onClick={() => setSelectedTab("all")}
-          className={`px-4 py-2 text-sm font-semibold border-b-2 transition-all ${
-            selectedTab === "all"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          Tất cả ({settings.length})
-        </button>
-        <button
-          onClick={() => setSelectedTab("finance")}
-          className={`px-4 py-2 text-sm font-semibold border-b-2 transition-all ${
-            selectedTab === "finance"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          Tài chính & Thuế
-        </button>
-        <button
-          onClick={() => setSelectedTab("prefix")}
-          className={`px-4 py-2 text-sm font-semibold border-b-2 transition-all ${
-            selectedTab === "prefix"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          Định dạng mã số
-        </button>
-        <button
-          onClick={() => setSelectedTab("other")}
-          className={`px-4 py-2 text-sm font-semibold border-b-2 transition-all ${
-            selectedTab === "other"
-              ? "border-primary text-primary"
-              : "border-transparent text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          Thiết lập khác
-        </button>
+      {/* Toolbar & Category Tabs */}
+      <div className="flex items-center justify-between gap-3 bg-white dark:bg-slate-900 p-2.5 px-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs shrink-0">
+        {/* Category Filter Tabs */}
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setSelectedTab("all")}
+            className={cn(
+              "px-3 py-1.5 rounded-lg font-bold text-xs transition-colors cursor-pointer",
+              selectedTab === "all"
+                ? "bg-[#93631F] text-white shadow-2xs"
+                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            )}
+          >
+            Tất cả ({settings.length})
+          </button>
+          <button
+            onClick={() => setSelectedTab("finance")}
+            className={cn(
+              "px-3 py-1.5 rounded-lg font-bold text-xs transition-colors cursor-pointer",
+              selectedTab === "finance"
+                ? "bg-[#93631F] text-white shadow-2xs"
+                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            )}
+          >
+            Tài chính & Thuế
+          </button>
+          <button
+            onClick={() => setSelectedTab("prefix")}
+            className={cn(
+              "px-3 py-1.5 rounded-lg font-bold text-xs transition-colors cursor-pointer",
+              selectedTab === "prefix"
+                ? "bg-[#93631F] text-white shadow-2xs"
+                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            )}
+          >
+            Định dạng mã số
+          </button>
+          <button
+            onClick={() => setSelectedTab("other")}
+            className={cn(
+              "px-3 py-1.5 rounded-lg font-bold text-xs transition-colors cursor-pointer",
+              selectedTab === "other"
+                ? "bg-[#93631F] text-white shadow-2xs"
+                : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+            )}
+          >
+            Thiết lập khác
+          </button>
+        </div>
+
+        {/* Search Bar */}
+        <div className="relative w-full max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+          <Input
+            placeholder="Tìm theo Key, Value hoặc Mô tả..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9 h-8 text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800"
+          />
+        </div>
       </div>
 
-      {/* Main Settings Panel */}
-      <Card className="border border-border/80 bg-card shadow-sm rounded-xl overflow-hidden">
-        <CardHeader className="bg-slate-50/50 dark:bg-slate-900/10 border-b border-border/60">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <CardTitle className="text-lg font-bold text-foreground">Danh sách tham số cấu hình</CardTitle>
-              <CardDescription className="text-xs">
-                Tìm kiếm và thay đổi các cấu hình động.
-              </CardDescription>
-            </div>
-            <div className="relative w-full md:w-80">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Tìm theo Key, Value hoặc Mô tả..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 h-9 text-sm"
-              />
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-50/70 hover:bg-slate-50/70">
-                  <TableHead className="font-bold text-foreground py-3">Mã tham số (Key)</TableHead>
-                  <TableHead className="font-bold text-foreground py-3">Mô tả chi tiết</TableHead>
-                  <TableHead className="font-bold text-foreground py-3 min-w-[150px]">Giá trị cấu hình</TableHead>
-                  <TableHead className="font-bold text-foreground py-3">Chế độ quản lý</TableHead>
-                  <TableHead className="font-bold text-foreground py-3 text-right pr-6">Thao tác</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredSettings.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-32 text-center text-muted-foreground text-sm font-medium">
-                      Không tìm thấy thiết lập nào phù hợp.
+      {/* Settings Table Area (Single-Screen Fit) */}
+      <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xs overflow-hidden flex flex-col">
+        <div className="flex-1 overflow-auto">
+          <Table className="min-w-full">
+            <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-950 z-10 border-b border-slate-200 dark:border-slate-800">
+              <TableRow className="bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-700 dark:text-slate-300">
+                <TableHead className="h-10 font-bold text-slate-700 dark:text-slate-300 w-[200px]">Mã tham số (Key)</TableHead>
+                <TableHead className="h-10 font-bold text-slate-700 dark:text-slate-300 w-[260px]">Mô tả chi tiết</TableHead>
+                <TableHead className="h-10 font-bold text-slate-700 dark:text-slate-300 min-w-[380px]">Giá trị cấu hình</TableHead>
+                <TableHead className="h-10 font-bold text-slate-700 dark:text-slate-300 w-[130px]">Chế độ quản lý</TableHead>
+                <TableHead className="h-10 font-bold text-slate-700 dark:text-slate-300 text-right w-[90px] pr-4">Thao tác</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                Array.from({ length: 8 }).map((_, i) => (
+                  <TableRow key={i} className="h-11">
+                    <TableCell colSpan={5} className="py-2">
+                      <Skeleton className="h-6 w-full" />
                     </TableCell>
                   </TableRow>
-                ) : (
-                  filteredSettings.map((setting) => (
-                    <TableRow key={setting.key} className="hover:bg-slate-50/40 border-b border-border/40">
-                      {/* KEY */}
-                      <TableCell className="font-mono text-xs font-bold text-primary select-all py-4">
-                        {setting.key}
-                      </TableCell>
+                ))
+              ) : isError ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-12 text-rose-500 font-medium">
+                    Không thể tải thiết lập hệ thống. Vui lòng thử lại.
+                  </TableCell>
+                </TableRow>
+              ) : filteredSettings.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-12 text-slate-400">
+                    <Settings className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                    <p className="text-xs">Không tìm thấy tham số cấu hình nào phù hợp.</p>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredSettings.map((setting) => (
+                  <TableRow
+                    key={setting.key}
+                    className="hover:bg-slate-50/80 dark:hover:bg-slate-800/60 cursor-pointer transition-colors text-xs py-2.5 border-b border-slate-100 dark:border-slate-800/60"
+                    onClick={() => setting.isEditable && setEditingSetting(setting)}
+                  >
+                    {/* KEY */}
+                    <TableCell className="py-2.5 font-mono font-bold text-[#93631F] dark:text-amber-400 text-[13px] select-all">
+                      {setting.key}
+                    </TableCell>
 
-                      {/* DESCRIPTION */}
-                      <TableCell className="text-sm text-foreground/80 max-w-sm py-4">
-                        <div className="font-medium text-foreground">{setting.description || "—"}</div>
-                        {/* Audit Details nested subtext */}
-                        {(setting.lastModifiedAt || setting.lastModifiedBy) && (
-                          <div className="flex items-center gap-3 mt-1.5 text-[10px] text-muted-foreground">
-                            {setting.lastModifiedAt && (
-                              <span className="flex items-center gap-1">
-                                <Calendar className="h-3 w-3 text-muted-foreground/60" />
-                                {formatDate(setting.lastModifiedAt)}
-                              </span>
-                            )}
-                            {setting.lastModifiedBy && (
-                              <span className="flex items-center gap-1">
-                                <User className="h-3 w-3 text-muted-foreground/60" />
-                                {getModifierName(setting.lastModifiedBy)}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </TableCell>
+                    {/* DESCRIPTION & AUDIT */}
+                    <TableCell className="py-2.5 text-slate-800 dark:text-slate-200">
+                      <div className="font-semibold text-[13px]">{setting.description || "—"}</div>
+                      {(setting.lastModifiedAt || setting.lastModifiedBy) && (
+                        <div className="flex items-center gap-3 mt-0.5 text-[10px] text-slate-400">
+                          {setting.lastModifiedAt && (
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {formatDate(setting.lastModifiedAt)}
+                            </span>
+                          )}
+                          {setting.lastModifiedBy && (
+                            <span className="flex items-center gap-1">
+                              <User className="h-3 w-3" />
+                              {getModifierName(setting.lastModifiedBy)}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </TableCell>
 
-                      {/* VALUE */}
-                      <TableCell className="py-4">
-                        {formatValueDisplay(setting)}
-                      </TableCell>
+                    {/* VALUE */}
+                    <TableCell className="py-2.5">
+                      {formatValueDisplay(setting)}
+                    </TableCell>
 
-                      {/* MODE STATE */}
-                      <TableCell className="py-4">
-                        {setting.isEditable ? (
-                          <Badge variant="outline" className="bg-blue-50/50 text-blue-700 border-blue-200 dark:bg-blue-950/20 dark:text-blue-400 dark:border-blue-900 font-semibold flex items-center gap-1 w-fit">
-                            <Sliders className="h-3 w-3" /> Tùy chỉnh
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="bg-slate-100 text-slate-500 border-slate-200 font-semibold flex items-center gap-1 w-fit">
-                            <Lock className="h-3 w-3" /> System Managed
-                          </Badge>
-                        )}
-                      </TableCell>
+                    {/* MODE */}
+                    <TableCell className="py-2.5">
+                      {setting.isEditable ? (
+                        <Badge
+                          variant="outline"
+                          className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 font-bold text-[10px] px-2 py-0.5 rounded-md shadow-2xs"
+                        >
+                          <Sliders className="h-3 w-3 mr-1" />
+                          Tùy chỉnh
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="secondary"
+                          className="bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400 font-bold text-[10px] px-2 py-0.5 rounded-md"
+                        >
+                          <Lock className="h-3 w-3 mr-1" />
+                          Hệ thống
+                        </Badge>
+                      )}
+                    </TableCell>
 
-                      {/* ACTIONS */}
-                      <TableCell className="text-right pr-6 py-4">
-                        {setting.isEditable ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setEditingSetting(setting)}
-                            className="hover:bg-primary/5 hover:text-primary hover:border-primary/40 flex items-center gap-1.5 ml-auto text-xs"
-                          >
-                            <Edit2 className="h-3.5 w-3.5" /> Chỉnh sửa
-                          </Button>
-                        ) : (
-                          <span className="text-xs text-muted-foreground/60 italic font-medium">Chỉ xem</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+                    {/* ACTIONS */}
+                    <TableCell className="py-2.5 text-right pr-4" onClick={(e) => e.stopPropagation()}>
+                      {setting.isEditable ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEditingSetting(setting)}
+                          className="h-7 text-xs font-bold border-slate-200 hover:bg-[#93631F] hover:text-white transition-colors px-2.5"
+                        >
+                          <Edit2 className="h-3 w-3 mr-1" />
+                          Sửa
+                        </Button>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 italic">Chỉ xem</span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
 
-      {/* Editing Form Modal */}
+      {/* Editing Form Modal Popup */}
       {editingSetting && (
         <SystemSettingFormDialog
           open={!!editingSetting}

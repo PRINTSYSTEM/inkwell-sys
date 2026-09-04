@@ -1,6 +1,7 @@
 import React from "react";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Search, AlertCircle } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -20,6 +21,7 @@ interface ProductionListFilterProps {
   onSortColumnChange: (value: string) => void;
   onSortOrderChange: (value: SortOrder) => void;
   onClearSort: () => void;
+  onOpenDelayReport?: () => void;
 }
 
 export function ProductionListFilter({
@@ -32,6 +34,7 @@ export function ProductionListFilter({
   onSortColumnChange,
   onSortOrderChange,
   onClearSort,
+  onOpenDelayReport,
 }: ProductionListFilterProps) {
   return (
     <div className="flex flex-col lg:flex-row lg:items-center gap-2 flex-1 min-w-0 w-full justify-end">
@@ -79,6 +82,18 @@ export function ProductionListFilter({
             className="gap-1.5 [&_button]:h-9 [&_select]:h-9"
           />
         </div>
+
+        {onOpenDelayReport && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onOpenDelayReport}
+            className="h-9 text-xs font-bold border-amber-400 text-amber-900 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-700 shadow-2xs gap-1.5 shrink-0"
+          >
+            <AlertCircle className="w-4 h-4 text-red-600 animate-pulse" />
+            <span>Báo cáo trễ</span>
+          </Button>
+        )}
       </div>
     </div>
   );
