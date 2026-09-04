@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { ProductionListHeader } from "./components/ProductionListHeader";
 import { ProductionListFilter } from "./components/ProductionListFilter";
 import { ProductionListTable } from "./components/ProductionListTable";
+import { ProductionDelayReportModal } from "@/components/production";
 
 import { useListState } from "@/hooks/use-list-state";
 
@@ -46,6 +47,7 @@ export default function ProductionListPage() {
   } = useListState();
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isDelayReportModalOpen, setIsDelayReportModalOpen] = useState(false);
   const [pageInput, setPageInput] = useState<string>("1");
   const [dateFilterType, setDateFilterType] = useState<string>("all");
   const [customFromDate, setCustomFromDate] = useState<string>("");
@@ -555,6 +557,7 @@ export default function ProductionListPage() {
                   setSortColumn("");
                   setSortOrder("desc");
                 }}
+                onOpenDelayReport={() => setIsDelayReportModalOpen(true)}
               />
             </div>
 
@@ -769,6 +772,11 @@ export default function ProductionListPage() {
           />
         </div>
       </div>
+
+      <ProductionDelayReportModal
+        open={isDelayReportModalOpen}
+        onOpenChange={setIsDelayReportModalOpen}
+      />
     </div>
   );
 }

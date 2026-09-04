@@ -79,6 +79,12 @@ const KCSPage = lazy(() => import("@/pages/production/KCSPage"));
 const DefectRecordListPage = lazy(
   () => import("@/pages/production/DefectRecordListPage")
 );
+const ProductionConfigPage = lazy(
+  () => import("@/pages/production/ProductionConfigPage")
+);
+const ProductionDelayReportPage = lazy(
+  () => import("@/pages/production/ProductionDelayReportPage")
+);
 
 
 // Inventory / Materials
@@ -612,6 +618,22 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            path: "config",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <ProductionConfigPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "delay-report",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <ProductionDelayReportPage />
+              </Suspense>
+            ),
+          },
+          {
             path: lastSegment(ROUTE_PATHS.PRODUCTION.DETAIL), // "detail"
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
@@ -642,6 +664,22 @@ export const router = createBrowserRouter([
         element: (
           <Suspense fallback={<PageLoadingFallback />}>
             <DefectRecordListPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "production/config",
+        element: (
+          <Suspense fallback={<PageLoadingFallback />}>
+            <ProductionConfigPage />
+          </Suspense>
+        ),
+      },
+      {
+        path: "production/delay-report",
+        element: (
+          <Suspense fallback={<PageLoadingFallback />}>
+            <ProductionDelayReportPage />
           </Suspense>
         ),
       },

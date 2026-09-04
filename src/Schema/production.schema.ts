@@ -17,9 +17,30 @@ export const ProductionResponseSchema =
   GenProductionResponseSchema.passthrough();
 export type ProductionResponse = z.infer<typeof ProductionResponseSchema>;
 
+
+
+// ===== ProductionTiming Status Type =====
+export type ProductionTimingStatus = "ok" | "warning" | "late" | "inactive" | "done";
+
+// ===== ProductionStepResponse =====
+export const ProductionStepResponseSchema = GenProductionStepResponseSchema.extend({
+  timingStatus: z.string().nullish(),
+  referenceAt: z.string().nullish(),
+  dueAt: z.string().nullish(),
+  elapsedHours: z.number().nullish(),
+  remainingHours: z.number().nullish(),
+  lateHours: z.number().nullish(),
+}).passthrough();
+export type ProductionStepResponse = z.infer<
+  typeof ProductionStepResponseSchema
+>;
+
 // ===== ProductionOrderResponse =====
 export const ProductionOrderResponseSchema = GenProductionOrderResponseSchema.extend({
   isUrgent: z.boolean().nullish(),
+  timingStatus: z.string().nullish(),
+  mostLateStepType: z.string().nullish(),
+  steps: z.array(ProductionStepResponseSchema).nullish(),
   proofingOrder: z.object({
     id: z.number(),
     code: z.string().nullable().optional(),
@@ -134,11 +155,42 @@ export type ProductionOrderResponsePaginate = z.infer<
   typeof ProductionOrderResponsePaginateSchema
 >;
 
-// ===== ProductionStepResponse =====
-export const ProductionStepResponseSchema =
-  GenProductionStepResponseSchema.passthrough();
-export type ProductionStepResponse = z.infer<
-  typeof ProductionStepResponseSchema
+// ===== ProductionMilestoneResponse =====
+export const ProductionMilestoneResponseSchema = z.object({
+  stepType: z.string(),
+  stepTypeName: z.string().nullish(),
+  stepId: z.number().nullable().optional(),
+  timingStatus: z.string().nullish(),
+  referenceAt: z.string().nullable().optional(),
+  dueAt: z.string().nullable().optional(),
+  elapsedHours: z.number().nullable().optional(),
+  remainingHours: z.number().nullable().optional(),
+  lateHours: z.number().nullable().optional(),
+}).passthrough();
+export type ProductionMilestoneResponse = z.infer<
+  typeof ProductionMilestoneResponseSchema
+>;
+
+// ===== ProductionOrderScheduleResponse =====
+export const ProductionOrderScheduleResponseSchema = z.object({
+  productionOrderId: z.number(),
+  timingStatus: z.string().nullish(),
+  mostLateStepType: z.string().nullish(),
+  milestones: z.array(ProductionMilestoneResponseSchema).default([]),
+}).passthrough();
+export type ProductionOrderScheduleResponse = z.infer<
+  typeof ProductionOrderScheduleResponseSchema
+>;
+
+// ===== ProductionConfigItem =====
+export const ProductionConfigItemSchema = z.object({
+  key: z.string(),
+  value: z.string(),
+  description: z.string().nullable().optional(),
+  isEditable: z.boolean().optional(),
+}).passthrough();
+export type ProductionConfigItem = z.infer<
+  typeof ProductionConfigItemSchema
 >;
 
 // ===== ProductionStepHistoryResponse =====
@@ -154,6 +206,57 @@ export const ProductionStepHistoryResponseSchema = z.object({
 }).passthrough();
 export type ProductionStepHistoryResponse = z.infer<
   typeof ProductionStepHistoryResponseSchema
+>;
+
+// ===== ProductionDelayReportResponse =====
+export const ProductionDelayReportResponseSchema = z.object({
+  id: z.number(),
+  productionOrderId: z.number(),
+  proofingOrderCode: z.string().nullish(),
+  stepType: z.string(),
+  stepTypeName: z.string().nullish(),
+  level: z.string(),
+  referenceAt: z.string().nullish(),
+  dueAt: z.string().nullish(),
+  elapsedHours: z.number().nullish(),
+  firstSeenAt: z.string().nullish(),
+  lastSeenAt: z.string().nullish(),
+  resolvedAt: z.string().nullable().optional(),
+  isNotified: z.boolean().optional(),
+}).passthrough();
+export type ProductionDelayReportResponse = z.infer<
+  typeof ProductionDelayReportResponseSchema
+>;
+
+export const ProductionDelayReportPaginateSchema = createPagedResponseSchema(
+  ProductionDelayReportResponseSchema
+);
+export type ProductionDelayReportPaginate = z.infer<
+  typeof ProductionDelayReportPaginateSchema
+>;
+
+// ===== ProductionDelaySummaryResponse =====
+export const ProductionDelaySummaryResponseSchema = z.object({
+  warningCount: z.number().default(0),
+  lateCount: z.number().default(0),
+  resolvedCount: z.number().default(0),
+  averageLateHours: z.number().default(0),
+  maxLateHours: z.number().default(0),
+  byStage: z.array(z.object({
+    stepType: z.string(),
+    stepTypeName: z.string().nullish(),
+    count: z.number(),
+    lateCount: z.number().optional(),
+    warningCount: z.number().optional(),
+  })).default([]),
+  byDate: z.array(z.object({
+    date: z.string(),
+    warningCount: z.number().default(0),
+    lateCount: z.number().default(0),
+  })).default([]),
+}).passthrough();
+export type ProductionDelaySummaryResponse = z.infer<
+  typeof ProductionDelaySummaryResponseSchema
 >;
 
 // ===== CreateProductionOrderRequest =====
@@ -193,3 +296,4 @@ export const ProductionResponsePagedResponseSchema = createPagedResponseSchema(
 export type ProductionResponsePagedResponse = z.infer<
   typeof ProductionResponsePagedResponseSchema
 >;
+

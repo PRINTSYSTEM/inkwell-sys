@@ -330,6 +330,10 @@ export const API_SUFFIX = {
   // ========== PRODUCTIONS ==========
   PRODUCTION_ORDERS: "/production-orders",
   PRODUCTION_ORDER_BY_ID: (id: number) => `/production-orders/${id}`,
+  PRODUCTION_ORDER_SCHEDULE: (id: number) => `/production-orders/${id}/schedule`,
+  PRODUCTION_CONFIG: "/system-settings/production-config",
+  PRODUCTION_DELAY_REPORT: "/production-orders/delay-report",
+  PRODUCTION_DELAY_SUMMARY: "/production-orders/delay-summary",
   PRODUCTION_ORDERS_BY_ORDER: (orderId: number) =>
     `/production-orders/by-order/${orderId}`,
   PRODUCTION_STEP_ASSIGN: (id: number) =>

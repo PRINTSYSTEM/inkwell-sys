@@ -59,6 +59,8 @@ export const ROUTE_PATHS = {
     KCS: "/productions/kcs" as const,
     PRINT_ORDERS: "/production/print-orders" as const,
     POST_PRINT: "/production/post-print" as const,
+    CONFIG: "/production/config" as const,
+    DELAY_REPORT: "/production/delay-report" as const,
   },
 
 

@@ -35,6 +35,10 @@ import {
   ClipboardList,
 } from "lucide-react";
 import {
+  ProductionTimingBadge,
+  ProductionScheduleTimeline,
+} from "@/components/production";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -659,6 +663,19 @@ function InlineStepStatus({
         </SelectContent>
       </Select>
 
+      {step.timingStatus && step.timingStatus !== "ok" && step.timingStatus !== "inactive" && (
+        <ProductionTimingBadge
+          timingStatus={step.timingStatus}
+          referenceAt={step.referenceAt}
+          dueAt={step.dueAt}
+          elapsedHours={step.elapsedHours}
+          remainingHours={step.remainingHours}
+          lateHours={step.lateHours}
+          stepTypeName={step.stepTypeName || step.stepType}
+          variant="icon"
+        />
+      )}
+
       {step.id && onOpenHistory && (
         <Button
           variant="ghost"
@@ -1108,6 +1125,7 @@ const ProductionTableRow = React.memo(
     const queryClient = useQueryClient();
     const [openDiePopover, setOpenDiePopover] = useState(false);
     const [openPlatePopover, setOpenPlatePopover] = useState(false);
+    const [openScheduleModal, setOpenScheduleModal] = useState(false);
     const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
     const [activeImageIdx, setActiveImageIdx] = useState(0);
     const imageContainerRef = React.useRef<HTMLDivElement>(null);
@@ -1324,11 +1342,22 @@ const ProductionTableRow = React.memo(
                   {prod.proofingOrderCode || (proofingOrder as any)?.code || `BB${prod.proofingOrderId}`}
                 </button>
 
-                {isOrderUrgent && (
-                  <Badge className="bg-red-500 text-white font-bold text-[8px] px-1 py-0 animate-pulse">
-                    <Flame className="h-2 w-2 mr-0.5" /> GẤP
-                  </Badge>
-                )}
+                <div className="flex flex-wrap items-center gap-1">
+                  {isOrderUrgent && (
+                    <Badge className="bg-red-500 text-white font-bold text-[8px] px-1 py-0 animate-pulse">
+                      <Flame className="h-2 w-2 mr-0.5" /> GẤP
+                    </Badge>
+                  )}
+                  {prod.timingStatus && (
+                    <div onClick={(e) => { e.stopPropagation(); setOpenScheduleModal(true); }} className="cursor-pointer">
+                      <ProductionTimingBadge
+                        timingStatus={prod.timingStatus}
+                        mostLateStepType={prod.mostLateStepType}
+                        variant="pill"
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </TableCell>
@@ -1454,6 +1483,17 @@ const ProductionTableRow = React.memo(
             }}
           />
         )}
+
+        <Dialog open={openScheduleModal} onOpenChange={setOpenScheduleModal}>
+          <DialogContent className="max-w-2xl bg-white border-slate-200 p-4 rounded-xl">
+            <DialogHeader className="pb-2">
+              <DialogTitle className="text-base font-bold">
+                Tiến độ chi tiết các khâu sản xuất
+              </DialogTitle>
+            </DialogHeader>
+            {prod.id && <ProductionScheduleTimeline productionOrderId={prod.id} />}
+          </DialogContent>
+        </Dialog>
       </>
     );
   },
@@ -1466,6 +1506,8 @@ const ProductionTableRow = React.memo(
 
     if (p.id !== n.id) return false;
     if (p.status !== n.status) return false;
+    if (p.timingStatus !== n.timingStatus) return false;
+    if (p.mostLateStepType !== n.mostLateStepType) return false;
     if (p.progressPercent !== n.progressPercent) return false;
     if (p.proofingOrderId !== n.proofingOrderId) return false;
     if (p.proofingOrderCode !== n.proofingOrderCode) return false;
@@ -1476,6 +1518,7 @@ const ProductionTableRow = React.memo(
     for (let i = 0; i < pSteps.length; i++) {
       if (pSteps[i].id !== nSteps[i].id) return false;
       if (pSteps[i].status !== nSteps[i].status) return false;
+      if (pSteps[i].timingStatus !== nSteps[i].timingStatus) return false;
       if (pSteps[i].outputQty !== nSteps[i].outputQty) return false;
       if (pSteps[i].defectQty !== nSteps[i].defectQty) return false;
     }
