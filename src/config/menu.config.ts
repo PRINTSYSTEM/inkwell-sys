@@ -196,7 +196,6 @@ export const MENU_ITEMS: MenuItem[] = [
       ROLE.SALE,
     ],
   },
-
   // ==== Bình bài ====
   {
     id: "proofing",
@@ -217,6 +216,8 @@ export const MENU_ITEMS: MenuItem[] = [
       ROLE.SALE,
     ],
   },
+
+  // ==== Sản xuất ====
   {
     id: "production-group",
     title: "Sản xuất",
@@ -230,6 +231,8 @@ export const MENU_ITEMS: MenuItem[] = [
       ROLE.WAREHOUSE,
       ROLE.WAREHOUSE_LEAD,
       ROLE.KCS,
+      ROLE.ACCOUNTING,
+      ROLE.ACCOUNTING_LEAD,
     ],
     children: [
       {
@@ -245,6 +248,8 @@ export const MENU_ITEMS: MenuItem[] = [
           ROLE.WAREHOUSE,
           ROLE.WAREHOUSE_LEAD,
           ROLE.PROOFER,
+          ROLE.ACCOUNTING,
+          ROLE.ACCOUNTING_LEAD,
         ],
       },
       {
@@ -262,6 +267,8 @@ export const MENU_ITEMS: MenuItem[] = [
           ROLE.WAREHOUSE_LEAD,
           ROLE.PROOFER,
           ROLE.KCS,
+          ROLE.ACCOUNTING,
+          ROLE.ACCOUNTING_LEAD,
         ],
       },
       {
@@ -274,6 +281,8 @@ export const MENU_ITEMS: MenuItem[] = [
           ROLE.MANAGER,
           ROLE.PRODUCTION,
           ROLE.PRODUCTION_LEAD,
+          ROLE.ACCOUNTING,
+          ROLE.ACCOUNTING_LEAD,
         ],
       },
       {
@@ -287,6 +296,8 @@ export const MENU_ITEMS: MenuItem[] = [
           ROLE.PRODUCTION,
           ROLE.PRODUCTION_LEAD,
           ROLE.KCS,
+          ROLE.ACCOUNTING,
+          ROLE.ACCOUNTING_LEAD,
         ],
       },
       {
@@ -299,6 +310,8 @@ export const MENU_ITEMS: MenuItem[] = [
           ROLE.MANAGER,
           ROLE.PRODUCTION,
           ROLE.PRODUCTION_LEAD,
+          ROLE.ACCOUNTING,
+          ROLE.ACCOUNTING_LEAD,
         ],
       },
       {
@@ -311,6 +324,8 @@ export const MENU_ITEMS: MenuItem[] = [
           ROLE.MANAGER,
           ROLE.PRODUCTION_LEAD,
           ROLE.PRODUCTION,
+          ROLE.ACCOUNTING,
+          ROLE.ACCOUNTING_LEAD,
         ],
       },
     ],
