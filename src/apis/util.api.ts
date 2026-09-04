@@ -58,6 +58,7 @@ export const API_SUFFIX = {
     `/orders/${orderId}/designs/${orderDetailId}`,
   ORDER_UPDATE_FOR_ACCOUNTING: (id: number) => `/orders/${id}/accounting`,
   ORDER_UPDATE_FOR_SALE: (id: number) => `/orders/${id}/sale`,
+  ORDER_APPROVE_QUOTE: (id: number) => `/orders/${id}/approve-quote`,
   ORDER_EXPORT_INVOICE: (id: number) => `/orders/${id}/export-invoice`,
   ORDER_EXPORT_DELIVERY_NOTE: (id: number) =>
     `/orders/${id}/export-delivery-note`,
@@ -147,6 +148,7 @@ export const API_SUFFIX = {
   // ========== MATERIAL SPECS ==========
   MATERIAL_SPECS: (typeId: number) => `/material-types/${typeId}/specs`,
   MATERIAL_SPEC_PAGINATED: (typeId: number) => `/material-types/${typeId}/specs/paginated`,
+  MATERIAL_SPECS_GLOBAL_PAGINATED: "/material-specs/paginated",
   MATERIAL_SPEC_BY_ID: (typeId: number, id: number) => `/material-types/${typeId}/specs/${id}`,
 
   // ========== MATERIAL 8-LAYER MANAGEMENT SYSTEM ==========

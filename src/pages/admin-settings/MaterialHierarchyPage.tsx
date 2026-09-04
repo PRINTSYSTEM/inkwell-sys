@@ -104,78 +104,81 @@ export default function MaterialHierarchyPage() {
   return (
     <>
       <Helmet>
-        <title>Cấu hình  Vật tư </title>
+        <title>Cấu hình Vật tư</title>
       </Helmet>
 
-      <div className="h-full flex flex-col space-y-4 p-6 bg-slate-50/50 min-h-screen">
+      <div className="flex flex-col space-y-3 p-4 sm:p-5 bg-slate-50/50 dark:bg-slate-950 text-xs min-h-screen">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between shrink-0 gap-3 border-b border-slate-100 pb-4">
+        <div className="flex items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3 px-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs shrink-0">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-800 flex items-center gap-2">
-              <Layers className="h-6 w-6 text-indigo-600" />
-              Cấu hình  Vật tư
+            <h1 className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <Layers className="h-5 w-5 text-[#93631F]" />
+              Cấu Hình Vật Tư
             </h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Phân loại nhà cung cấp, nhóm vật tư, định mức chất liệu và từ điển thông số
+            </p>
           </div>
         </div>
 
         {/* Tabs */}
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex-1 flex flex-col space-y-4">
-          <TabsList className="bg-white border border-slate-200 p-1 w-full justify-start overflow-x-auto flex h-auto md:w-max">
-            <TabsTrigger value="supplier-types" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col gap-3">
+          <TabsList className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 w-full justify-start overflow-x-auto flex h-9 shrink-0 text-xs rounded-xl shadow-2xs">
+            <TabsTrigger value="supplier-types" className="h-7 text-xs font-bold px-3 py-1 data-[state=active]:bg-[#93631F] data-[state=active]:text-white rounded-lg transition-colors">
               Loại nhà cung cấp (T1)
             </TabsTrigger>
-            <TabsTrigger value="vendors" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">
+            <TabsTrigger value="vendors" className="h-7 text-xs font-bold px-3 py-1 data-[state=active]:bg-[#93631F] data-[state=active]:text-white rounded-lg transition-colors">
               Nhà cung cấp (T2)
             </TabsTrigger>
-            <TabsTrigger value="material-families" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">
+            <TabsTrigger value="material-families" className="h-7 text-xs font-bold px-3 py-1 data-[state=active]:bg-[#93631F] data-[state=active]:text-white rounded-lg transition-colors">
               Nhóm vật tư (T3)
             </TabsTrigger>
-            <TabsTrigger value="material-templates" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">
+            <TabsTrigger value="material-templates" className="h-7 text-xs font-bold px-3 py-1 data-[state=active]:bg-[#93631F] data-[state=active]:text-white rounded-lg transition-colors">
               Định mức chất liệu (T4)
             </TabsTrigger>
-            <TabsTrigger value="spec-templates" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">
+            <TabsTrigger value="spec-templates" className="h-7 text-xs font-bold px-3 py-1 data-[state=active]:bg-[#93631F] data-[state=active]:text-white rounded-lg transition-colors">
               Thuộc tính (T5)
             </TabsTrigger>
-            <TabsTrigger value="spec-values" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">
+            <TabsTrigger value="spec-values" className="h-7 text-xs font-bold px-3 py-1 data-[state=active]:bg-[#93631F] data-[state=active]:text-white rounded-lg transition-colors">
               Từ điển thông số (T6)
             </TabsTrigger>
-            <TabsTrigger value="supplier-catalogs" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">
+            <TabsTrigger value="supplier-catalogs" className="h-7 text-xs font-bold px-3 py-1 data-[state=active]:bg-[#93631F] data-[state=active]:text-white rounded-lg transition-colors">
               Danh mục NCC (T7)
             </TabsTrigger>
-            <TabsTrigger value="materials" className="data-[state=active]:bg-indigo-50 data-[state=active]:text-indigo-700">
+            <TabsTrigger value="materials" className="h-7 text-xs font-bold px-3 py-1 data-[state=active]:bg-[#93631F] data-[state=active]:text-white rounded-lg transition-colors">
               Vật tư SKU (T8)
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="supplier-types" className="flex-1 mt-0 outline-none">
+          <TabsContent value="supplier-types" className="mt-0 outline-none data-[state=inactive]:hidden data-[state=active]:block w-full">
             <SupplierTypesTab />
           </TabsContent>
 
-          <TabsContent value="vendors" className="flex-1 mt-0 outline-none">
+          <TabsContent value="vendors" className="mt-0 outline-none data-[state=inactive]:hidden data-[state=active]:block w-full">
             <VendorsTab />
           </TabsContent>
 
-          <TabsContent value="material-families" className="flex-1 mt-0 outline-none">
+          <TabsContent value="material-families" className="mt-0 outline-none data-[state=inactive]:hidden data-[state=active]:block w-full">
             <MaterialFamiliesTab />
           </TabsContent>
 
-          <TabsContent value="material-templates" className="flex-1 mt-0 outline-none">
+          <TabsContent value="material-templates" className="mt-0 outline-none data-[state=inactive]:hidden data-[state=active]:block w-full">
             <MaterialTemplatesTab />
           </TabsContent>
 
-          <TabsContent value="spec-templates" className="flex-1 mt-0 outline-none">
+          <TabsContent value="spec-templates" className="mt-0 outline-none data-[state=inactive]:hidden data-[state=active]:block w-full">
             <SpecTemplatesTab />
           </TabsContent>
 
-          <TabsContent value="spec-values" className="flex-1 mt-0 outline-none">
+          <TabsContent value="spec-values" className="mt-0 outline-none data-[state=inactive]:hidden data-[state=active]:block w-full">
             <SpecValuesTab />
           </TabsContent>
 
-          <TabsContent value="supplier-catalogs" className="flex-1 mt-0 outline-none">
+          <TabsContent value="supplier-catalogs" className="mt-0 outline-none data-[state=inactive]:hidden data-[state=active]:block w-full">
             <SupplierCatalogsTab />
           </TabsContent>
 
-          <TabsContent value="materials" className="flex-1 mt-0 outline-none">
+          <TabsContent value="materials" className="mt-0 outline-none data-[state=inactive]:hidden data-[state=active]:block w-full">
             <MaterialsTab />
           </TabsContent>
         </Tabs>
@@ -243,46 +246,46 @@ function SupplierTypesTab() {
   };
 
   return (
-    <Card className="shadow-sm border border-slate-200">
-      <CardHeader className="flex flex-row items-center justify-between py-4 border-b border-slate-100">
+    <Card className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xs overflow-hidden flex flex-col">
+      <CardHeader className="flex flex-row items-center justify-between py-2.5 px-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
         <div>
-          <CardTitle className="text-lg">Loại nhà cung cấp (Supplier Types)</CardTitle>
+          <CardTitle className="text-base font-bold text-slate-900 dark:text-slate-100">Loại nhà cung cấp (Supplier Types)</CardTitle>
         </div>
-        <Button size="sm" onClick={() => handleOpen()} className="bg-indigo-600 hover:bg-indigo-700 gap-1.5 rounded-lg">
-          <Plus className="h-4 w-4" /> Thêm loại
+        <Button size="sm" onClick={() => handleOpen()} className="h-8 text-xs font-bold px-3 bg-[#93631F] hover:bg-[#7a521a] text-white shadow-2xs gap-1.5 cursor-pointer">
+          <Plus className="h-3.5 w-3.5" /> Thêm loại
         </Button>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0 flex flex-col overflow-hidden">
         {isLoading ? (
-          <div className="py-6 text-center text-slate-500">Đang tải...</div>
+          <div className="py-8 text-center text-slate-500">Đang tải...</div>
         ) : (
-          <div className="border border-slate-100 rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader className="bg-slate-50">
-                <TableRow>
-                  <TableHead>Mã định danh</TableHead>
-                  <TableHead>Tên loại nhà cung cấp</TableHead>
-                  <TableHead className="w-24 text-right">Thao tác</TableHead>
+          <div className="overflow-auto min-h-[360px] max-h-[calc(100vh-16rem)]">
+            <Table className="min-w-full">
+              <TableHeader className="bg-slate-50 dark:bg-slate-950 sticky top-0 z-10 border-b border-slate-200 dark:border-slate-800">
+                <TableRow className="h-9 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 w-[200px]">Mã định danh</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Tên loại nhà cung cấp</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 w-24 text-right pr-4">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center py-6 text-slate-400">
+                    <TableCell colSpan={3} className="text-center py-8 text-slate-400">
                       Không có loại nhà cung cấp nào.
                     </TableCell>
                   </TableRow>
                 ) : (
                   items.map((item: any) => (
-                    <TableRow key={item.id}>
-                      <TableCell><Badge variant="secondary" className="font-mono text-[11px]">{item.code}</Badge></TableCell>
-                      <TableCell className="font-semibold text-slate-700">{item.description || item.name || item.code || "—"}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button variant="ghost" size="icon" onClick={() => handleOpen(item)} className="h-8 w-8 hover:text-indigo-600">
+                    <TableRow key={item.id} className="h-9 text-xs border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/80">
+                      <TableCell className="py-1.5"><Badge variant="secondary" className="font-mono text-[11px] font-bold">{item.code}</Badge></TableCell>
+                      <TableCell className="py-1.5 font-semibold text-slate-800 dark:text-slate-200">{item.description || item.name || item.code || "—"}</TableCell>
+                      <TableCell className="py-1.5 text-right pr-4">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => handleOpen(item)} className="h-7 w-7 text-slate-500 hover:text-slate-900 cursor-pointer">
                             <Edit2 className="h-3.5 w-3.5" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="h-8 w-8 hover:text-rose-600">
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="h-7 w-7 text-rose-500 hover:text-rose-700 cursor-pointer">
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
@@ -295,14 +298,16 @@ function SupplierTypesTab() {
           </div>
         )}
         {!isLoading && items.length > 0 && (
-          <SimplePagination
-            currentPage={page}
-            totalPages={resp?.totalPages || 1}
-            totalItems={resp?.total || 0}
-            itemsPerPage={10}
-            onPageChange={setPage}
-            itemType="loại nhà cung cấp"
-          />
+          <div className="shrink-0 p-2 px-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950">
+            <SimplePagination
+              currentPage={page}
+              totalPages={resp?.totalPages || 1}
+              totalItems={resp?.total || 0}
+              itemsPerPage={10}
+              onPageChange={setPage}
+              itemType="loại nhà cung cấp"
+            />
+          </div>
         )}
       </CardContent>
 
@@ -473,64 +478,64 @@ function MaterialFamiliesTab() {
   };
 
   return (
-    <Card className="shadow-sm border border-slate-200">
-      <CardHeader className="flex flex-row items-center justify-between py-4 border-b border-slate-100">
+    <Card className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xs overflow-hidden flex flex-col">
+      <CardHeader className="flex flex-row items-center justify-between py-2.5 px-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
         <div>
-          <CardTitle className="text-lg">Nhóm vật tư (Material Families)</CardTitle>
+          <CardTitle className="text-base font-bold text-slate-900 dark:text-slate-100">Nhóm vật tư (Material Families)</CardTitle>
         </div>
-        <Button size="sm" onClick={() => handleOpen()} className="bg-indigo-600 hover:bg-indigo-700 gap-1.5 rounded-lg">
-          <Plus className="h-4 w-4" /> Thêm nhóm
+        <Button size="sm" onClick={() => handleOpen()} className="h-8 text-xs font-bold px-3 bg-[#93631F] hover:bg-[#7a521a] text-white shadow-2xs gap-1.5 cursor-pointer">
+          <Plus className="h-3.5 w-3.5" /> Thêm nhóm
         </Button>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0 flex flex-col overflow-hidden">
         {isLoading ? (
-          <div className="py-6 text-center text-slate-500">Đang tải...</div>
+          <div className="py-8 text-center text-slate-500">Đang tải...</div>
         ) : (
-          <div className="border border-slate-100 rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader className="bg-slate-50">
-                <TableRow>
-                  <TableHead className="w-16">ID</TableHead>
-                  <TableHead>Mã định danh</TableHead>
-                  <TableHead>Tên nhóm vật tư</TableHead>
-                  <TableHead>Đơn vị cho phép</TableHead>
-                  <TableHead>Đơn vị mặc định</TableHead>
-                  <TableHead>Cho phép cắt?</TableHead>
-                  <TableHead className="w-24 text-right">Thao tác</TableHead>
+          <div className="overflow-auto min-h-[360px] max-h-[calc(100vh-16rem)]">
+            <Table className="min-w-full">
+              <TableHeader className="bg-slate-50 dark:bg-slate-950 sticky top-0 z-10 border-b border-slate-200 dark:border-slate-800">
+                <TableRow className="h-9 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 w-16">ID</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Mã định danh</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Tên nhóm vật tư</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Đơn vị cho phép</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Đơn vị mặc định</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Cho phép cắt?</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 w-24 text-right pr-4">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-6 text-slate-400">
+                    <TableCell colSpan={7} className="text-center py-8 text-slate-400">
                       Không có nhóm vật tư nào.
                     </TableCell>
                   </TableRow>
                 ) : (
                   items.map((item: any) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-mono text-xs">{item.id}</TableCell>
-                      <TableCell><Badge variant="secondary" className="font-mono text-[11px]">{item.code}</Badge></TableCell>
-                      <TableCell className="font-semibold text-slate-700">{item.name}</TableCell>
-                      <TableCell className="text-slate-500 font-mono text-xs">
+                    <TableRow key={item.id} className="h-9 text-xs border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/80">
+                      <TableCell className="py-1.5 font-mono text-xs">{item.id}</TableCell>
+                      <TableCell className="py-1.5"><Badge variant="secondary" className="font-mono text-[11px] font-bold">{item.code}</Badge></TableCell>
+                      <TableCell className="py-1.5 font-semibold text-slate-800 dark:text-slate-200">{item.name}</TableCell>
+                      <TableCell className="py-1.5 text-slate-500 font-mono text-xs">
                         {Array.isArray(item.allowedUnits) ? item.allowedUnits.join(", ") : item.allowedUnits || "—"}
                       </TableCell>
-                      <TableCell className="text-slate-700 font-medium">
+                      <TableCell className="py-1.5 text-slate-700 font-medium">
                         {item.defaultUnitName || `ID: ${item.defaultUnitId}`}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-1.5">
                         {item.allowCutting ? (
-                          <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200">Được phép cắt</Badge>
+                          <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px]">Được phép cắt</Badge>
                         ) : (
-                          <Badge variant="outline" className="text-slate-400 border-slate-200">Không cắt</Badge>
+                          <Badge variant="outline" className="text-slate-400 border-slate-200 text-[10px]">Không cắt</Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button variant="ghost" size="icon" onClick={() => handleOpen(item)} className="h-8 w-8 hover:text-indigo-600">
+                      <TableCell className="py-1.5 text-right pr-4">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => handleOpen(item)} className="h-7 w-7 text-slate-500 hover:text-slate-900 cursor-pointer">
                             <Edit2 className="h-3.5 w-3.5" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="h-8 w-8 hover:text-rose-600">
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="h-7 w-7 text-rose-500 hover:text-rose-700 cursor-pointer">
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
@@ -543,14 +548,16 @@ function MaterialFamiliesTab() {
           </div>
         )}
         {!isLoading && items.length > 0 && (
-          <SimplePagination
-            currentPage={page}
-            totalPages={resp?.totalPages || 1}
-            totalItems={resp?.total || 0}
-            itemsPerPage={10}
-            onPageChange={setPage}
-            itemType="nhóm vật tư"
-          />
+          <div className="shrink-0 p-2 px-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950">
+            <SimplePagination
+              currentPage={page}
+              totalPages={resp?.totalPages || 1}
+              totalItems={resp?.total || 0}
+              itemsPerPage={10}
+              onPageChange={setPage}
+              itemType="nhóm vật tư"
+            />
+          </div>
         )}
       </CardContent>
 
@@ -733,70 +740,70 @@ function MaterialTemplatesTab() {
   };
 
   return (
-    <Card className="shadow-sm border border-slate-200">
-      <CardHeader className="flex flex-row items-center justify-between py-4 border-b border-slate-100">
+    <Card className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xs overflow-hidden flex flex-col">
+      <CardHeader className="flex flex-row items-center justify-between py-2.5 px-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
         <div>
-          <CardTitle className="text-lg">Định mức chất liệu (Material Templates)</CardTitle>
+          <CardTitle className="text-base font-bold text-slate-900 dark:text-slate-100">Định mức chất liệu (Material Templates)</CardTitle>
         </div>
-        <Button size="sm" onClick={() => handleOpen()} className="bg-indigo-600 hover:bg-indigo-700 gap-1.5 rounded-lg">
-          <Plus className="h-4 w-4" /> Thêm chất liệu
+        <Button size="sm" onClick={() => handleOpen()} className="h-8 text-xs font-bold px-3 bg-[#93631F] hover:bg-[#7a521a] text-white shadow-2xs gap-1.5 cursor-pointer">
+          <Plus className="h-3.5 w-3.5" /> Thêm chất liệu
         </Button>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0 flex flex-col overflow-hidden">
         {isLoading ? (
-          <div className="py-6 text-center text-slate-500">Đang tải...</div>
+          <div className="py-8 text-center text-slate-500">Đang tải...</div>
         ) : (
-          <div className="border border-slate-100 rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader className="bg-slate-50">
-                <TableRow>
-                  <TableHead className="w-16">ID</TableHead>
-                  <TableHead>Mã</TableHead>
-                  <TableHead>Tên chất liệu (Template)</TableHead>
-                  <TableHead>Nhóm vật tư (Family)</TableHead>
-                  <TableHead className="text-right">Đơn giá định mức / m²</TableHead>
-                  <TableHead>Trạng thái</TableHead>
-                  <TableHead className="w-24 text-right">Thao tác</TableHead>
+          <div className="overflow-auto min-h-[360px] max-h-[calc(100vh-16rem)]">
+            <Table className="min-w-full">
+              <TableHeader className="bg-slate-50 dark:bg-slate-950 sticky top-0 z-10 border-b border-slate-200 dark:border-slate-800">
+                <TableRow className="h-9 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 w-16">ID</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Mã</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Tên chất liệu (Template)</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Nhóm vật tư (Family)</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 text-right">Đơn giá định mức / m²</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Trạng thái</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 w-24 text-right pr-4">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-6 text-slate-400">
+                    <TableCell colSpan={7} className="text-center py-8 text-slate-400">
                       Không có chất liệu nào.
                     </TableCell>
                   </TableRow>
                 ) : (
                   items.map((item: any) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-mono text-xs">{item.id}</TableCell>
-                      <TableCell><Badge variant="secondary" className="font-mono text-[11px]">{item.code}</Badge></TableCell>
-                      <TableCell className="font-semibold text-slate-700">{item.name}</TableCell>
-                      <TableCell>
+                    <TableRow key={item.id} className="h-9 text-xs border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/80">
+                      <TableCell className="py-1.5 font-mono text-xs">{item.id}</TableCell>
+                      <TableCell className="py-1.5"><Badge variant="secondary" className="font-mono text-[11px] font-bold">{item.code}</Badge></TableCell>
+                      <TableCell className="py-1.5 font-semibold text-slate-800 dark:text-slate-200">{item.name}</TableCell>
+                      <TableCell className="py-1.5">
                         {item.materialFamilyName ? (
-                          <Badge variant="outline" className="text-indigo-600 border-indigo-200 bg-indigo-50/10">
+                          <Badge variant="outline" className="text-indigo-600 border-indigo-200 bg-indigo-50/10 text-[10px]">
                             {item.materialFamilyName}
                           </Badge>
                         ) : (
                           <span className="text-slate-400 text-xs">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-slate-600">
+                      <TableCell className="py-1.5 text-right font-mono text-slate-600 font-bold">
                         {item.pricePerM2 ? item.pricePerM2.toLocaleString("vi-VN") + " đ" : "0 đ"}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-1.5">
                         {item.status === "active" ? (
-                          <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200">Đang chạy</Badge>
+                          <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px]">Đang chạy</Badge>
                         ) : (
-                          <Badge variant="outline" className="text-slate-400 border-slate-200">Tắt</Badge>
+                          <Badge variant="outline" className="text-slate-400 border-slate-200 text-[10px]">Tắt</Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button variant="ghost" size="icon" onClick={() => handleOpen(item)} className="h-8 w-8 hover:text-indigo-600">
+                      <TableCell className="py-1.5 text-right pr-4">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => handleOpen(item)} className="h-7 w-7 text-slate-500 hover:text-slate-900 cursor-pointer">
                             <Edit2 className="h-3.5 w-3.5" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="h-8 w-8 hover:text-rose-600">
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="h-7 w-7 text-rose-500 hover:text-rose-700 cursor-pointer">
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
@@ -809,14 +816,16 @@ function MaterialTemplatesTab() {
           </div>
         )}
         {!isLoading && items.length > 0 && (
-          <SimplePagination
-            currentPage={page}
-            totalPages={resp?.totalPages || 1}
-            totalItems={resp?.total || 0}
-            itemsPerPage={10}
-            onPageChange={setPage}
-            itemType="chất liệu"
-          />
+          <div className="shrink-0 p-2 px-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950">
+            <SimplePagination
+              currentPage={page}
+              totalPages={resp?.totalPages || 1}
+              totalItems={resp?.total || 0}
+              itemsPerPage={10}
+              onPageChange={setPage}
+              itemType="chất liệu"
+            />
+          </div>
         )}
       </CardContent>
 
@@ -960,10 +969,10 @@ function SpecTemplatesTab() {
   };
 
   return (
-    <Card className="shadow-sm border border-slate-200">
-      <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-4 border-b border-slate-100">
+    <Card className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xs overflow-hidden flex flex-col">
+      <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-3 py-2.5 px-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
         <div>
-          <CardTitle className="text-lg">Thuộc tính tùy biến (Specification Templates)</CardTitle>
+          <CardTitle className="text-base font-bold text-slate-900 dark:text-slate-100">Thuộc tính tùy biến (Specification Templates)</CardTitle>
         </div>
         <div className="flex items-center gap-3">
           <SearchableSelect
@@ -978,62 +987,62 @@ function SpecTemplatesTab() {
             ]}
             placeholder="Lọc theo nhóm vật tư..."
             searchPlaceholder="Tìm nhóm vật tư..."
-            className="w-56"
+            className="w-56 h-8 text-xs"
           />
-          <Button size="sm" onClick={() => handleOpen()} className="bg-indigo-600 hover:bg-indigo-700 gap-1.5 rounded-lg whitespace-nowrap">
-            <Plus className="h-4 w-4" /> Thêm thuộc tính
+          <Button size="sm" onClick={() => handleOpen()} className="h-8 text-xs font-bold px-3 bg-[#93631F] hover:bg-[#7a521a] text-white shadow-2xs gap-1.5 cursor-pointer whitespace-nowrap">
+            <Plus className="h-3.5 w-3.5" /> Thêm thuộc tính
           </Button>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0 flex flex-col overflow-hidden">
         {isLoading ? (
-          <div className="py-6 text-center text-slate-500">Đang tải...</div>
+          <div className="py-8 text-center text-slate-500">Đang tải...</div>
         ) : (
-          <div className="border border-slate-100 rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader className="bg-slate-50">
-                <TableRow>
-                  <TableHead className="w-16">ID</TableHead>
-                  <TableHead>Tên thuộc tính</TableHead>
-                  <TableHead>Key định danh (Code)</TableHead>
-                  <TableHead>Nhóm vật tư</TableHead>
-                  <TableHead>Kiểu dữ liệu</TableHead>
-                  <TableHead>Bắt buộc?</TableHead>
-                  <TableHead className="w-24 text-right">Thao tác</TableHead>
+          <div className="overflow-auto min-h-[360px] max-h-[calc(100vh-16rem)]">
+            <Table className="min-w-full">
+              <TableHeader className="bg-slate-50 dark:bg-slate-950 sticky top-0 z-10 border-b border-slate-200 dark:border-slate-800">
+                <TableRow className="h-9 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 w-16">ID</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Tên thuộc tính</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Key định danh (Code)</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Nhóm vật tư</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Kiểu dữ liệu</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Bắt buộc?</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 w-24 text-right pr-4">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {!items || items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-6 text-slate-400">
+                    <TableCell colSpan={7} className="text-center py-8 text-slate-400">
                       Không có cấu hình thuộc tính nào.
                     </TableCell>
                   </TableRow>
                 ) : (
                   items.map((item: any) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-mono text-xs">{item.id}</TableCell>
-                      <TableCell className="font-semibold text-slate-700">{item.name}</TableCell>
-                      <TableCell><Badge variant="outline" className="font-mono text-xs bg-slate-50/50">{item.key}</Badge></TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-indigo-600 border-indigo-200 bg-indigo-50/10">
+                    <TableRow key={item.id} className="h-9 text-xs border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/80">
+                      <TableCell className="py-1.5 font-mono text-xs">{item.id}</TableCell>
+                      <TableCell className="py-1.5 font-semibold text-slate-800 dark:text-slate-200">{item.name}</TableCell>
+                      <TableCell className="py-1.5"><Badge variant="outline" className="font-mono text-xs bg-slate-50/50">{item.key}</Badge></TableCell>
+                      <TableCell className="py-1.5">
+                        <Badge variant="outline" className="text-indigo-600 border-indigo-200 bg-indigo-50/10 text-[10px]">
                           {item.materialFamilyName || `Nhóm #${item.materialFamilyId}`}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-slate-500 font-mono text-xs">{item.dataType}</TableCell>
-                      <TableCell>
+                      <TableCell className="py-1.5 text-slate-500 font-mono text-xs">{item.dataType}</TableCell>
+                      <TableCell className="py-1.5">
                         {item.isRequired ? (
-                          <Badge className="bg-rose-50 text-rose-700 border border-rose-200">Bắt buộc</Badge>
+                          <Badge className="bg-rose-50 text-rose-700 border border-rose-200 text-[10px]">Bắt buộc</Badge>
                         ) : (
-                          <Badge variant="outline" className="text-slate-400 border-slate-200">Tùy chọn</Badge>
+                          <Badge variant="outline" className="text-slate-400 border-slate-200 text-[10px]">Tùy chọn</Badge>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button variant="ghost" size="icon" onClick={() => handleOpen(item)} className="h-8 w-8 hover:text-indigo-600">
+                      <TableCell className="py-1.5 text-right pr-4">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => handleOpen(item)} className="h-7 w-7 text-slate-500 hover:text-slate-900 cursor-pointer">
                             <Edit2 className="h-3.5 w-3.5" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="h-8 w-8 hover:text-rose-600">
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="h-7 w-7 text-rose-500 hover:text-rose-700 cursor-pointer">
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
@@ -1186,10 +1195,10 @@ function SpecValuesTab() {
   };
 
   return (
-    <Card className="shadow-sm border border-slate-200">
-      <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-4 border-b border-slate-100">
+    <Card className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xs overflow-hidden flex flex-col">
+      <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-3 py-2.5 px-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
         <div>
-          <CardTitle className="text-lg">Từ điển thông số (Value Dictionary)</CardTitle>
+          <CardTitle className="text-base font-bold text-slate-900 dark:text-slate-100">Từ điển thông số (Value Dictionary)</CardTitle>
         </div>
         <div className="flex items-center gap-3">
           <SearchableSelect
@@ -1207,7 +1216,7 @@ function SpecValuesTab() {
             ]}
             placeholder="Chọn nhóm vật tư..."
             searchPlaceholder="Tìm nhóm..."
-            className="w-48"
+            className="w-48 h-8 text-xs"
           />
 
           <SearchableSelect
@@ -1223,55 +1232,55 @@ function SpecValuesTab() {
             placeholder="Lọc theo thuộc tính..."
             searchPlaceholder="Tìm thuộc tính..."
             disabled={templates.length === 0}
-            className="w-48"
+            className="w-48 h-8 text-xs"
           />
 
-          <Button size="sm" onClick={() => handleOpen()} className="bg-indigo-600 hover:bg-indigo-700 gap-1.5 rounded-lg whitespace-nowrap" disabled={templates.length === 0 && selectedTemplateId === "all"}>
-            <Plus className="h-4 w-4" /> Thêm giá trị
+          <Button size="sm" onClick={() => handleOpen()} className="h-8 text-xs font-bold px-3 bg-[#93631F] hover:bg-[#7a521a] text-white shadow-2xs gap-1.5 cursor-pointer whitespace-nowrap" disabled={templates.length === 0 && selectedTemplateId === "all"}>
+            <Plus className="h-3.5 w-3.5" /> Thêm giá trị
           </Button>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0 flex flex-col overflow-hidden">
         {isLoading ? (
-          <div className="py-6 text-center text-slate-500">Đang tải...</div>
+          <div className="py-8 text-center text-slate-500">Đang tải...</div>
         ) : (
-          <div className="border border-slate-100 rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader className="bg-slate-50">
-                <TableRow>
-                  <TableHead className="w-16">ID</TableHead>
-                  <TableHead>Thuộc tính tùy biến</TableHead>
-                  <TableHead>Nhóm vật tư</TableHead>
-                  <TableHead>Giá trị từ điển</TableHead>
-                  <TableHead className="text-center w-28">Thứ tự hiển thị</TableHead>
-                  <TableHead className="w-24 text-right">Thao tác</TableHead>
+          <div className="overflow-auto min-h-[360px] max-h-[calc(100vh-16rem)]">
+            <Table className="min-w-full">
+              <TableHeader className="bg-slate-50 dark:bg-slate-950 sticky top-0 z-10 border-b border-slate-200 dark:border-slate-800">
+                <TableRow className="h-9 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 w-16">ID</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Thuộc tính tùy biến</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Nhóm vật tư</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Giá trị từ điển</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 text-center w-28">Thứ tự hiển thị</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 w-24 text-right pr-4">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {!items || items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-6 text-slate-400">
+                    <TableCell colSpan={6} className="text-center py-8 text-slate-400">
                       Không tìm thấy giá trị từ điển nào.
                     </TableCell>
                   </TableRow>
                 ) : (
                   items.map((item: any) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-mono text-xs">{item.id}</TableCell>
-                      <TableCell className="font-semibold text-slate-700">{item.specTemplateName}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-indigo-600 border-indigo-200 bg-indigo-50/10">
+                    <TableRow key={item.id} className="h-9 text-xs border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/80">
+                      <TableCell className="py-1.5 font-mono text-xs">{item.id}</TableCell>
+                      <TableCell className="py-1.5 font-semibold text-slate-800 dark:text-slate-200">{item.specTemplateName}</TableCell>
+                      <TableCell className="py-1.5">
+                        <Badge variant="outline" className="text-indigo-600 border-indigo-200 bg-indigo-50/10 text-[10px]">
                           {item.materialFamilyName || "—"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="font-semibold text-slate-900 font-mono">{item.value}</TableCell>
-                      <TableCell className="text-center font-mono text-slate-500">{item.displayOrder}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button variant="ghost" size="icon" onClick={() => handleOpen(item)} className="h-8 w-8 hover:text-indigo-600">
+                      <TableCell className="py-1.5 font-semibold text-slate-900 dark:text-slate-100 font-mono">{item.value}</TableCell>
+                      <TableCell className="py-1.5 text-center font-mono text-slate-500">{item.displayOrder}</TableCell>
+                      <TableCell className="py-1.5 text-right pr-4">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => handleOpen(item)} className="h-7 w-7 text-slate-500 hover:text-slate-900 cursor-pointer">
                             <Edit2 className="h-3.5 w-3.5" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="h-8 w-8 hover:text-rose-600">
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="h-7 w-7 text-rose-500 hover:text-rose-700 cursor-pointer">
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
@@ -1418,10 +1427,10 @@ function SupplierCatalogsTab() {
   };
 
   return (
-    <Card className="shadow-sm border border-slate-200">
-      <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-4 border-b border-slate-100">
+    <Card className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xs overflow-hidden flex flex-col">
+      <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-3 py-2.5 px-4 border-b border-slate-100 dark:border-slate-800 shrink-0">
         <div>
-          <CardTitle className="text-lg">Danh mục chất liệu nhà cung cấp (Supplier Catalog)</CardTitle>
+          <CardTitle className="text-base font-bold text-slate-900 dark:text-slate-100">Danh mục chất liệu nhà cung cấp (Supplier Catalog)</CardTitle>
         </div>
         <div className="flex items-center gap-3">
           <SearchableSelect
@@ -1433,48 +1442,48 @@ function SupplierCatalogsTab() {
             }))}
             placeholder="Lọc theo nhà cung cấp..."
             searchPlaceholder="Tìm nhà cung cấp..."
-            className="w-64"
+            className="w-64 h-8 text-xs"
           />
-          <Button size="sm" onClick={handleOpen} className="bg-indigo-600 hover:bg-indigo-700 gap-1.5 rounded-lg whitespace-nowrap">
-            <LinkIcon className="h-4 w-4" /> Liên kết danh mục
+          <Button size="sm" onClick={handleOpen} className="h-8 text-xs font-bold px-3 bg-[#93631F] hover:bg-[#7a521a] text-white shadow-2xs gap-1.5 cursor-pointer whitespace-nowrap">
+            <LinkIcon className="h-3.5 w-3.5" /> Liên kết danh mục
           </Button>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0 flex flex-col overflow-hidden">
         {isLoading ? (
-          <div className="py-6 text-center text-slate-500">Đang tải...</div>
+          <div className="py-8 text-center text-slate-500">Đang tải...</div>
         ) : (
-          <div className="border border-slate-100 rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader className="bg-slate-50">
-                <TableRow>
-                  <TableHead className="w-16">ID</TableHead>
-                  <TableHead>Nhà cung cấp (Supplier)</TableHead>
-                  <TableHead>Chất liệu được bán (Template)</TableHead>
-                  <TableHead>Thuộc tính được phân phối</TableHead>
-                  <TableHead className="w-24 text-right">Gỡ liên kết</TableHead>
+          <div className="overflow-auto min-h-[360px] max-h-[calc(100vh-16rem)]">
+            <Table className="min-w-full">
+              <TableHeader className="bg-slate-50 dark:bg-slate-950 sticky top-0 z-10 border-b border-slate-200 dark:border-slate-800">
+                <TableRow className="h-9 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 w-16">ID</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Nhà cung cấp (Supplier)</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Chất liệu được bán (Template)</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Thuộc tính được phân phối</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 w-24 text-right pr-4">Gỡ liên kết</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {!items || items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-6 text-slate-400">
+                    <TableCell colSpan={5} className="text-center py-8 text-slate-400">
                       Không có bản ghi liên kết nào. Vui lòng liên kết chất liệu vào NCC.
                     </TableCell>
                   </TableRow>
                 ) : (
                   items.map((item: any) => (
-                    <TableRow key={item.id}>
-                      <TableCell className="font-mono text-xs">{item.id}</TableCell>
-                      <TableCell className="font-semibold text-slate-700">{item.vendorName || `NCC #${item.vendorId}`}</TableCell>
-                      <TableCell className="font-semibold text-indigo-700">{item.materialTypeName || `Chất liệu #${item.materialTypeId}`}</TableCell>
-                      <TableCell>
+                    <TableRow key={item.id} className="h-9 text-xs border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/80">
+                      <TableCell className="py-1.5 font-mono text-xs">{item.id}</TableCell>
+                      <TableCell className="py-1.5 font-semibold text-slate-800 dark:text-slate-200">{item.vendorName || `NCC #${item.vendorId}`}</TableCell>
+                      <TableCell className="py-1.5 font-semibold text-[#93631F] dark:text-amber-400">{item.materialTypeName || `Chất liệu #${item.materialTypeId}`}</TableCell>
+                      <TableCell className="py-1.5">
                         <div className="space-y-0.5">
                           {renderAllowedSpecs(item)}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="h-8 w-8 hover:text-rose-600">
+                      <TableCell className="py-1.5 text-right pr-4">
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="h-7 w-7 text-rose-500 hover:text-rose-700 cursor-pointer">
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </TableCell>
@@ -1679,66 +1688,66 @@ function VendorsTab() {
   };
 
   return (
-    <Card className="shadow-sm border-slate-200">
-      <CardHeader className="flex flex-row items-center justify-between py-4 border-b border-slate-100 gap-4 flex-wrap">
+    <Card className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xs overflow-hidden flex flex-col">
+      <CardHeader className="flex flex-row items-center justify-between py-2.5 px-4 border-b border-slate-100 dark:border-slate-800 shrink-0 gap-4 flex-wrap">
         <div>
-          <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-indigo-600" />
+          <CardTitle className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-[#93631F]" />
             Nhà cung cấp (Vendors / Suppliers)
           </CardTitle>
         </div>
-        <Button size="sm" onClick={() => handleOpen()} className="bg-indigo-600 hover:bg-indigo-700 gap-1.5 rounded-lg">
-          <Plus className="h-4 w-4" /> Thêm NCC
+        <Button size="sm" onClick={() => handleOpen()} className="h-8 text-xs font-bold px-3 bg-[#93631F] hover:bg-[#7a521a] text-white shadow-2xs gap-1.5 cursor-pointer">
+          <Plus className="h-3.5 w-3.5" /> Thêm NCC
         </Button>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0 flex flex-col overflow-hidden">
         {isLoading ? (
-          <div className="py-6 text-center text-slate-500">Đang tải...</div>
+          <div className="py-8 text-center text-slate-500">Đang tải...</div>
         ) : (
-          <div className="border border-slate-100 rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader className="bg-slate-50">
-                <TableRow>
-                  <TableHead className="w-16">ID</TableHead>
-                  <TableHead>Tên NCC</TableHead>
-                  <TableHead>Mã NCC / Code</TableHead>
-                  <TableHead>Phân loại (T1)</TableHead>
-                  <TableHead>Liên hệ</TableHead>
-                  <TableHead>Địa chỉ</TableHead>
-                  <TableHead className="w-24 text-right">Thao tác</TableHead>
+          <div className="overflow-auto min-h-[360px] max-h-[calc(100vh-16rem)]">
+            <Table className="min-w-full">
+              <TableHeader className="bg-slate-50 dark:bg-slate-950 sticky top-0 z-10 border-b border-slate-200 dark:border-slate-800">
+                <TableRow className="h-9 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 w-16">ID</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Tên NCC</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Mã NCC / Code</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Phân loại (T1)</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Liên hệ</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Địa chỉ</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 w-24 text-right pr-4">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {vendors.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-6 text-slate-400">
+                    <TableCell colSpan={7} className="text-center py-8 text-slate-400">
                       Chưa có nhà cung cấp nào.
                     </TableCell>
                   </TableRow>
                 ) : (
                   vendors.map((v: any) => (
-                    <TableRow key={v.id}>
-                      <TableCell className="font-mono text-xs">{v.id}</TableCell>
-                      <TableCell className="font-semibold text-slate-700">{v.name}</TableCell>
-                      <TableCell className="font-mono text-xs">{v.code || v.vendorType || "—"}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-none">
+                    <TableRow key={v.id} className="h-9 text-xs border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/80">
+                      <TableCell className="py-1.5 font-mono text-xs">{v.id}</TableCell>
+                      <TableCell className="py-1.5 font-semibold text-slate-800 dark:text-slate-200">{v.name}</TableCell>
+                      <TableCell className="py-1.5 font-mono text-xs">{v.code || v.vendorType || "—"}</TableCell>
+                      <TableCell className="py-1.5">
+                        <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-none text-[10px]">
                           {getSupplierTypeName(v.supplierTypeId)}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-slate-600">
+                      <TableCell className="py-1.5 text-slate-600 dark:text-slate-300">
                         <div className="text-xs">
                           {v.phone && <div>SĐT: {v.phone}</div>}
                           {v.email && <div>Email: {v.email}</div>}
                         </div>
                       </TableCell>
-                      <TableCell className="text-slate-500 max-w-[200px] truncate">{v.address || "—"}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1.5">
-                          <Button variant="ghost" size="icon" onClick={() => handleOpen(v)} className="h-8 w-8 hover:text-indigo-600">
+                      <TableCell className="py-1.5 text-slate-500 max-w-[200px] truncate">{v.address || "—"}</TableCell>
+                      <TableCell className="py-1.5 text-right pr-4">
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => handleOpen(v)} className="h-7 w-7 text-slate-500 hover:text-slate-900 cursor-pointer">
                             <Edit2 className="h-3.5 w-3.5" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete(v.id)} className="h-8 w-8 hover:text-rose-600">
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(v.id)} className="h-7 w-7 text-rose-500 hover:text-rose-700 cursor-pointer">
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
@@ -1751,14 +1760,16 @@ function VendorsTab() {
           </div>
         )}
         {!isLoading && vendors.length > 0 && (
-          <SimplePagination
-            currentPage={page}
-            totalPages={vendorsResp?.totalPages || 1}
-            totalItems={vendorsResp?.total || 0}
-            itemsPerPage={10}
-            onPageChange={setPage}
-            itemType="nhà cung cấp"
-          />
+          <div className="shrink-0 p-2 px-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950">
+            <SimplePagination
+              currentPage={page}
+              totalPages={vendorsResp?.totalPages || 1}
+              totalItems={vendorsResp?.total || 0}
+              itemsPerPage={10}
+              onPageChange={setPage}
+              itemType="nhà cung cấp"
+            />
+          </div>
         )}
       </CardContent>
 
@@ -1842,67 +1853,67 @@ function MaterialsTab() {
   };
 
   return (
-    <Card className="shadow-sm border-slate-200">
-      <CardHeader className="flex flex-row items-center justify-between py-4 border-b border-slate-100 gap-4 flex-wrap">
+    <Card className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xs overflow-hidden flex flex-col">
+      <CardHeader className="flex flex-row items-center justify-between py-2.5 px-4 border-b border-slate-100 dark:border-slate-800 shrink-0 gap-4 flex-wrap">
         <div>
-          <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
-            <Package className="h-5 w-5 text-indigo-600" />
+          <CardTitle className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <Package className="h-4 w-4 text-[#93631F]" />
             Vật tư SKU (Material SKUs)
           </CardTitle>
         </div>
-        <Button size="sm" onClick={() => setIsOpen(true)} className="bg-indigo-600 hover:bg-indigo-700 gap-1.5 rounded-lg">
-          <Plus className="h-4 w-4" /> Tạo vật tư SKU
+        <Button size="sm" onClick={() => setIsOpen(true)} className="h-8 text-xs font-bold px-3 bg-[#93631F] hover:bg-[#7a521a] text-white shadow-2xs gap-1.5 cursor-pointer">
+          <Plus className="h-3.5 w-3.5" /> Tạo vật tư SKU
         </Button>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0 flex flex-col overflow-hidden">
         {isLoading ? (
-          <div className="py-6 text-center text-slate-500">Đang tải...</div>
+          <div className="py-8 text-center text-slate-500">Đang tải...</div>
         ) : (
-          <div className="border border-slate-100 rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader className="bg-slate-50">
-                <TableRow>
-                  <TableHead className="w-16">ID</TableHead>
-                  <TableHead>Tên SKU Vật tư</TableHead>
-                  <TableHead>Mã SKU</TableHead>
-                  <TableHead>Loại</TableHead>
-                  <TableHead>Kích thước</TableHead>
-                  <TableHead>Tồn kho</TableHead>
-                  <TableHead>Đơn giá</TableHead>
-                  <TableHead className="w-24 text-right">Thao tác</TableHead>
+          <div className="overflow-auto min-h-[360px] max-h-[calc(100vh-16rem)]">
+            <Table className="min-w-full">
+              <TableHeader className="bg-slate-50 dark:bg-slate-950 sticky top-0 z-10 border-b border-slate-200 dark:border-slate-800">
+                <TableRow className="h-9 text-xs font-bold text-slate-700 dark:text-slate-300">
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 w-16">ID</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Tên SKU Vật tư</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Mã SKU</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Loại</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Kích thước</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Tồn kho</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300">Đơn giá</TableHead>
+                  <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 w-24 text-right pr-4">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {materials.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-6 text-slate-400">
+                    <TableCell colSpan={8} className="text-center py-8 text-slate-400">
                       Chưa có vật tư SKU nào.
                     </TableCell>
                   </TableRow>
                 ) : (
                   materials.map((m: any) => (
-                    <TableRow key={m.id}>
-                      <TableCell className="font-mono text-xs">{m.id}</TableCell>
-                      <TableCell className="font-semibold text-slate-700">{m.name}</TableCell>
-                      <TableCell className="font-mono text-xs">{m.code || "—"}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={m.type === "cuon" ? "bg-amber-50 text-amber-700 border-amber-200" : "bg-blue-50 text-blue-700 border-blue-200"}>
+                    <TableRow key={m.id} className="h-9 text-xs border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/80">
+                      <TableCell className="py-1.5 font-mono text-xs">{m.id}</TableCell>
+                      <TableCell className="py-1.5 font-semibold text-slate-800 dark:text-slate-200">{m.name}</TableCell>
+                      <TableCell className="py-1.5 font-mono text-xs">{m.code || "—"}</TableCell>
+                      <TableCell className="py-1.5">
+                        <Badge variant="outline" className={m.type === "cuon" ? "bg-amber-50 text-amber-700 border-amber-200 text-[10px]" : "bg-blue-50 text-blue-700 border-blue-200 text-[10px]"}>
                           {m.type === "cuon" ? "Cuộn" : "Tờ"}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-slate-600">
+                      <TableCell className="py-1.5 text-slate-600 dark:text-slate-300">
                         {m.type === "cuon"
                           ? `Khổ ${m.width || 0} cm`
                           : `${m.width || 0} x ${m.length || 0} cm`}
                       </TableCell>
-                      <TableCell className="font-semibold text-slate-700">
+                      <TableCell className="py-1.5 font-semibold text-slate-800 dark:text-slate-200">
                         {m.currentStock?.toLocaleString() || 0} <span className="text-xs text-slate-400 font-normal">{m.unit}</span>
                       </TableCell>
-                      <TableCell className="font-mono text-slate-600">
+                      <TableCell className="py-1.5 font-mono text-slate-600 font-bold">
                         {m.unitPrice ? `${m.unitPrice.toLocaleString()} đ` : "0 đ"}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(m.id)} className="h-8 w-8 hover:text-rose-600">
+                      <TableCell className="py-1.5 text-right pr-4">
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(m.id)} className="h-7 w-7 text-rose-500 hover:text-rose-700 cursor-pointer">
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </TableCell>
@@ -1914,14 +1925,16 @@ function MaterialsTab() {
           </div>
         )}
         {!isLoading && materials.length > 0 && (
-          <SimplePagination
-            currentPage={page}
-            totalPages={materialsResp?.totalPages || 1}
-            totalItems={materialsResp?.total || 0}
-            itemsPerPage={10}
-            onPageChange={setPage}
-            itemType="vật tư SKU"
-          />
+          <div className="shrink-0 p-2 px-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950">
+            <SimplePagination
+              currentPage={page}
+              totalPages={materialsResp?.totalPages || 1}
+              totalItems={materialsResp?.total || 0}
+              itemsPerPage={10}
+              onPageChange={setPage}
+              itemType="vật tư SKU"
+            />
+          </div>
         )}
       </CardContent>
 

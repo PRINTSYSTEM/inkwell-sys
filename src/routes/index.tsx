@@ -1105,11 +1105,7 @@ export const router = createBrowserRouter([
           },
           {
             path: "collection-schedule",
-            element: (
-              <Suspense fallback={<PageLoadingFallback />}>
-                <CollectionSchedule />
-              </Suspense>
-            ),
+            element: <Navigate to={ROUTE_PATHS.ACCOUNTING.AR} replace />,
           },
           {
             path: "opening-balances",

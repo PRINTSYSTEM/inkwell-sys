@@ -34,6 +34,7 @@ import {
   History,
   CheckSquare,
   Eye,
+  Boxes,
 } from "lucide-react";
 
 import {
@@ -43,6 +44,7 @@ import {
 } from "@/components/ui/hover-card";
 import { useProductionOrders } from "@/hooks/use-production";
 import { ReadOnlyProofingDetailModal } from "@/components/proofing/ReadOnlyProofingDetailModal";
+import InventorySummaryPage from "@/pages/reports/inventory/InventorySummaryPage";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1684,23 +1686,37 @@ export default function DeliveryNoteListPage() {
       <Tabs
         value={viewMode}
         onValueChange={(value) => setViewMode(value as any)}
+        className="w-full"
       >
-        <TabsList className="flex gap-2.5 bg-transparent p-0 w-fit mb-2.5">
-          <TabsTrigger
-            value="delivery-notes"
-            className="rounded-full px-5 py-2 text-xs sm:text-sm font-bold transition-all border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-850 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:border-emerald-600 shadow-xs"
-          >
-            <FileText className="h-4 w-4 mr-1.5" />
-            Phiếu đã tạo
-          </TabsTrigger>
-          <TabsTrigger
-            value="orders"
-            className="rounded-full px-5 py-2 text-xs sm:text-sm font-bold transition-all border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-850 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:border-emerald-600 shadow-xs"
-          >
-            <Plus className="h-4 w-4 mr-1.5" />
-            Tạo phiếu
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex items-center justify-between gap-2.5 mb-2.5 flex-wrap sm:flex-nowrap">
+          <TabsList className="flex gap-2.5 bg-transparent p-0 w-fit">
+            <TabsTrigger
+              value="delivery-notes"
+              className="rounded-full px-5 py-2 text-xs sm:text-sm font-bold transition-all border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-850 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:border-emerald-600 shadow-xs cursor-pointer"
+            >
+              <FileText className="h-4 w-4 mr-1.5" />
+              Phiếu đã tạo
+            </TabsTrigger>
+            <TabsTrigger
+              value="orders"
+              className="rounded-full px-5 py-2 text-xs sm:text-sm font-bold transition-all border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-850 data-[state=active]:bg-emerald-600 data-[state=active]:text-white data-[state=active]:border-emerald-600 shadow-xs cursor-pointer"
+            >
+              <Plus className="h-4 w-4 mr-1.5" />
+              Tạo phiếu
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Right-aligned Tab for Production Stock to avoid accidental clicks */}
+          <TabsList className="flex gap-2.5 bg-transparent p-0 w-fit">
+            <TabsTrigger
+              value="production-stock"
+              className="rounded-full px-5 py-2 text-xs sm:text-sm font-bold transition-all border border-amber-300 dark:border-amber-700/60 bg-amber-50/70 dark:bg-amber-950/30 text-amber-900 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 data-[state=active]:bg-amber-600 data-[state=active]:text-white data-[state=active]:border-amber-600 shadow-xs cursor-pointer"
+            >
+              <Boxes className="h-4 w-4 mr-1.5 text-amber-600 data-[state=active]:text-white" />
+              Tồn kho sản xuất
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="orders" className="mt-2.5">
           <OrdersView
@@ -1761,6 +1777,10 @@ export default function DeliveryNoteListPage() {
             allNotesForStats={allNotesData}
             onOpenProofingDetail={(id) => setViewingProofingOrderId(id)}
           />
+        </TabsContent>
+
+        <TabsContent value="production-stock" className="mt-2.5">
+          <InventorySummaryPage embedded={true} />
         </TabsContent>
 
         <TabsContent value="pending-qc" className="mt-6">

@@ -101,7 +101,7 @@ export function SystemSettingFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] border border-border bg-card shadow-lg rounded-xl">
+      <DialogContent className="sm:max-w-[680px] border border-border bg-card shadow-lg rounded-xl">
         <DialogHeader className="space-y-1.5">
           <DialogTitle className="text-xl font-bold flex items-center gap-2 text-foreground">
             Cập nhật thiết lập
@@ -132,7 +132,7 @@ export function SystemSettingFormDialog({
             {/* Display setting key (disabled) */}
             <div className="space-y-1.5">
               <Label className="text-sm font-semibold text-muted-foreground">Mã cấu hình (Key)</Label>
-              <div className="font-mono text-xs bg-muted border border-border px-3 py-2 rounded-md select-all text-foreground/80">
+              <div className="font-mono text-xs bg-muted border border-border px-3 py-2 rounded-md select-all text-foreground/80 font-bold">
                 {setting.key}
               </div>
             </div>
@@ -149,23 +149,38 @@ export function SystemSettingFormDialog({
                   </span>
                 )}
               </div>
-              <Input
-                id="value"
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                placeholder={
-                  isVatRate
-                    ? "Ví dụ: 0.08 cho 8%"
-                    : isPrefix
-                    ? "Ví dụ: DH, BB"
-                    : "Nhập giá trị cấu hình..."
-                }
-                className={`focus:ring-primary ${
-                  error ? "border-destructive focus-visible:ring-destructive" : ""
-                }`}
-                disabled={isPending}
-                autoFocus
-              />
+              {value.length > 40 || setting.key.includes("Address") || setting.key.includes("Name") ? (
+                <Textarea
+                  id="value"
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                  placeholder="Nhập giá trị cấu hình..."
+                  rows={3}
+                  className={`focus:ring-primary text-sm font-medium ${
+                    error ? "border-destructive focus-visible:ring-destructive" : ""
+                  }`}
+                  disabled={isPending}
+                  autoFocus
+                />
+              ) : (
+                <Input
+                  id="value"
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                  placeholder={
+                    isVatRate
+                      ? "Ví dụ: 0.08 cho 8%"
+                      : isPrefix
+                      ? "Ví dụ: DH, BB"
+                      : "Nhập giá trị cấu hình..."
+                  }
+                  className={`focus:ring-primary text-sm font-medium ${
+                    error ? "border-destructive focus-visible:ring-destructive" : ""
+                  }`}
+                  disabled={isPending}
+                  autoFocus
+                />
+              )}
               {isPrefix && (
                 <p className="text-[11px] text-muted-foreground leading-tight">
                   * Chỉ chứa chữ in hoa và số (A-Z0-9), tối đa 10 ký tự.

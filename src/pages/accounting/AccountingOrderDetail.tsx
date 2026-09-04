@@ -70,6 +70,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { ROLE } from "@/constants/role.constant";
 import {
   useCreateAccountingForOrder,
+  useApproveDebt,
 } from "@/hooks/use-accounting";
 import { useCustomerAddresses } from "@/hooks/use-customer";
 import { useCreateDebtNotification } from "@/hooks/use-debt-notification";
@@ -237,6 +238,8 @@ export default function AccountingOrderDetail() {
     error,
     refetch: refetchOrder,
   } = useOrder(id ? Number(id) : null);
+
+  const { mutate: approveDebt, loading: isApprovingDebt } = useApproveDebt();
 
   // Fetch invoices for this order
   const { data: invoicesData } = useInvoicesByOrder(
@@ -1142,6 +1145,26 @@ export default function AccountingOrderDetail() {
                   )}
                   Xuất PDF Đơn Hàng
                 </Button>
+                {!order?.isDebtApproved ? (
+                  <Button
+                    size="sm"
+                    onClick={() => order?.id && approveDebt(order.id)}
+                    disabled={isApprovingDebt}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold gap-1.5 cursor-pointer shadow-sm"
+                  >
+                    {isApprovingDebt ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4" />
+                    )}
+                    Đã báo giá
+                  </Button>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 rounded-md border border-emerald-200">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    Đã báo giá
+                  </span>
+                )}
                 {(user?.role === ROLE.ADMIN ||
                   user?.role === ROLE.SALE ||
                   user?.role === ROLE.ACCOUNTING ||

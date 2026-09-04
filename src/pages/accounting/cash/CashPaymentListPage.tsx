@@ -62,6 +62,7 @@ import {
 } from "@/lib/status-utils";
 import { toast } from "sonner";
 import { CreateCashPaymentDialog } from "@/components/vendors/CreateCashPaymentDialog";
+import { CashPaymentDetailDialog } from "@/components/accounting/CashPaymentDetailDialog";
 
 
 const formatDate = (dateStr: string | null | undefined) => {
@@ -103,6 +104,10 @@ export default function CashPaymentListPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const itemsPerPage = 10;
+
+  // Detail dialog popup state
+  const [selectedPaymentId, setSelectedPaymentId] = useState<number | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
   const { data: paymentMethodsData } = usePaymentMethods({
     pageNumber: 1,
@@ -168,9 +173,13 @@ export default function CashPaymentListPage() {
     });
   };
 
-  const handleViewDetails = (id: number | undefined) => {
+  const handleViewDetails = (id: number | undefined, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
     if (id) {
-      navigate(`/accounting/cash-payments/${id}`);
+      setSelectedPaymentId(id);
+      setDetailDialogOpen(true);
     }
   };
 
@@ -548,6 +557,12 @@ export default function CashPaymentListPage() {
       <CreateCashPaymentDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
+      />
+      <CashPaymentDetailDialog
+        paymentId={selectedPaymentId}
+        open={detailDialogOpen}
+        onOpenChange={setDetailDialogOpen}
+        onPaymentUpdated={refetch}
       />
     </>
   );

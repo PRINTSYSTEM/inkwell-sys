@@ -137,23 +137,23 @@ export function MaterialTypeDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-        <DialogContent className="max-w-6xl max-h-[85vh] flex flex-col">
-          <DialogHeader>
+        <DialogContent className="max-w-4xl max-h-[80vh] flex flex-col p-5 gap-3">
+          <DialogHeader className="shrink-0">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg">
-                  <Package className="h-5 w-5 text-white" />
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 bg-gradient-to-br from-[#93631F] to-amber-700 rounded-lg text-white">
+                  <Package className="h-4 w-4" />
                 </div>
                 <div>
-                  <DialogTitle className="text-xl font-semibold">
-                    Quản lý chất liệu
+                  <DialogTitle className="text-base font-extrabold text-slate-900 dark:text-slate-100">
+                    Quản Lý Chất Liệu
                   </DialogTitle>
-                  <DialogDescription className="flex items-center gap-2 mt-1">
+                  <DialogDescription className="flex items-center gap-2 text-xs mt-0.5">
                     Loại thiết kế:{" "}
-                    <Badge variant="outline" className="font-mono">
+                    <Badge variant="outline" className="font-mono text-[11px] font-bold">
                       {designType.code}
                     </Badge>
-                    <span className="text-foreground font-medium">
+                    <span className="text-slate-900 dark:text-slate-200 font-bold">
                       {designType.name}
                     </span>
                   </DialogDescription>
@@ -162,77 +162,84 @@ export function MaterialTypeDialog({
             </div>
           </DialogHeader>
 
-          <div className="flex items-center gap-3 py-4 border-b">
+          {/* Search bar & Add Button */}
+          <div className="flex items-center gap-2.5 pb-2 border-b border-slate-100 dark:border-slate-800 shrink-0">
             <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
               <Input
                 placeholder="Tìm kiếm chất liệu theo tên hoặc mã..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
+                className="pl-9 h-8 text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800"
               />
             </div>
-            <Button onClick={() => setShowFormDialog(true)} className="gap-2">
-              <Plus className="h-4 w-4" />
+            <Button
+              size="sm"
+              onClick={() => setShowFormDialog(true)}
+              className="h-8 text-xs font-bold px-3 bg-[#93631F] hover:bg-[#7a521a] text-white shadow-2xs gap-1.5 cursor-pointer"
+            >
+              <Plus className="h-3.5 w-3.5" />
               Thêm chất liệu
             </Button>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 py-3">
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/20">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded">
-                <Package className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          {/* Compact Stat Cards */}
+          <div className="grid grid-cols-3 gap-2.5 shrink-0">
+            <div className="flex items-center gap-2.5 p-2 px-3 rounded-lg bg-blue-50/70 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/60">
+              <div className="p-1.5 bg-blue-100 dark:bg-blue-900/40 rounded">
+                <Package className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Tổng chất liệu</p>
-                <p className="text-lg font-semibold">{materials.length}</p>
+                <p className="text-[11px] text-blue-700 dark:text-blue-400 font-medium">Tổng chất liệu</p>
+                <p className="text-sm font-extrabold text-blue-950 dark:text-blue-200">{materials.length}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50 dark:bg-green-950/20">
-              <div className="p-2 bg-green-100 dark:bg-green-900/40 rounded">
-                <div className="h-4 w-4 rounded-full bg-green-600 dark:bg-green-400" />
+            <div className="flex items-center gap-2.5 p-2 px-3 rounded-lg bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/60">
+              <div className="p-1.5 bg-emerald-100 dark:bg-emerald-900/40 rounded">
+                <div className="h-3 w-3 rounded-full bg-emerald-600 dark:bg-emerald-400" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Đang hoạt động</p>
-                <p className="text-lg font-semibold">
+                <p className="text-[11px] text-emerald-700 dark:text-emerald-400 font-medium">Đang hoạt động</p>
+                <p className="text-sm font-extrabold text-emerald-950 dark:text-emerald-200">
                   {materials.filter((m) => m.status === "active").length}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-950/20">
-              <div className="p-2 bg-gray-100 dark:bg-gray-900/40 rounded">
-                <div className="h-4 w-4 rounded-full bg-gray-400" />
+            <div className="flex items-center gap-2.5 p-2 px-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800">
+              <div className="p-1.5 bg-slate-200 dark:bg-slate-800 rounded">
+                <div className="h-3 w-3 rounded-full bg-slate-500" />
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Tạm dừng</p>
-                <p className="text-lg font-semibold">
+                <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium">Tạm dừng</p>
+                <p className="text-sm font-extrabold text-slate-900 dark:text-slate-100">
                   {materials.filter((m) => m.status === "inactive").length}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto -mx-6 px-6">
+          {/* Table Container */}
+          <div className="flex-1 min-h-0 overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-xl">
             {isLoadingMaterials ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" />
-                <p className="text-sm text-muted-foreground">
+              <div className="flex flex-col items-center justify-center py-10">
+                <Loader2 className="h-6 w-6 animate-spin text-[#93631F] mb-2" />
+                <p className="text-xs text-slate-500">
                   Đang tải danh sách chất liệu...
                 </p>
               </div>
             ) : isErrorMaterials ? (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <p className="text-red-500 mb-2">
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <p className="text-rose-500 text-xs font-medium mb-2">
                   Không thể tải danh sách chất liệu
                 </p>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    // Retry by closing and reopening
                     handleDialogOpenChange(false);
                     setTimeout(() => handleDialogOpenChange(true), 100);
                   }}
+                  className="h-7 text-xs"
                 >
                   Thử lại
                 </Button>

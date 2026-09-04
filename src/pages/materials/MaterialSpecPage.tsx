@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Helmet } from "react-helmet-async";
 import {
   Plus,
@@ -55,25 +55,59 @@ import { useMaterialTypeList } from "@/hooks/use-material-type";
 import { toast } from "sonner";
 import type { MaterialSpecResponse } from "@/Schema";
 
+const isBasisWeightApplicable = (type: { code?: string; name?: string; description?: string }) => {
+  const name = (type.name || "").toLowerCase();
+  const code = (type.code || "").toLowerCase();
+  const desc = (type.description || "").toLowerCase();
+  const text = `${code} ${name} ${desc}`;
+
+  // Explicit exclude keywords for non-paper/non-sheet materials (Kẽm, CTP, Mực, Khuôn, Dung môi, Keo, etc.)
+  const excludeKeywords = [
+    "kẽm", "ctp", "plate",
+    "mực", "ink",
+    "khuôn", "die",
+    "keo", "glue", "băng",
+    "dung môi", "solvent", "ipa", "cồn", "xăng", "chemical", "hóa chất",
+    "găng tay", "dao gạt", "phụ kiện", "accessory", "vật tư tiêu hao", "lõi",
+    "màng pet", "pet film", "lõi giấy cuộn", "màng pvc", "foam", "vải", "canvas",
+    "xi bóng", "xi mờ", "nhũ", "foil"
+  ];
+
+  for (const kw of excludeKeywords) {
+    if (text.includes(kw)) return false;
+  }
+
+  // Explicit include keywords for valid paper / board / label materials
+  const includeKeywords = [
+    "duplex", "couche", "coschue", "ivory", "carton", "metaline", "metalized",
+    "thẻ treo", "bao thư", "tờ rơi", "giấy", "paper", "hộp", "nhãn",
+    "kraft", "fort", "ford", "bristol", "decal", "sóng", "card", "sheet"
+  ];
+
+  for (const kw of includeKeywords) {
+    if (text.includes(kw)) return true;
+  }
+
+  return false;
+};
+
 export default function MaterialSpecPage() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedMaterialTypeId, setSelectedMaterialTypeId] = useState<string>("");
+  const [selectedMaterialTypeId, setSelectedMaterialTypeId] = useState<string>("all");
 
-  // Fetch material types for dropdown
+  // Fetch material types for dropdown (filtered by BE parameter requiresBasisWeight=true)
   const { data: materialTypesData, isLoading: isLoadingTypes } = useMaterialTypeList({
     pageSize: 100,
     pageNumber: 1,
+    requiresBasisWeight: true,
   });
 
-  // Material types list
+  // Material types list (filtered by BE query + double-checked with FE helper)
   const materialTypes = materialTypesData?.items || [];
+  const filteredMaterialTypes = useMemo(() => {
+    return materialTypes.filter(isBasisWeightApplicable);
+  }, [materialTypes]);
 
-  // Automatically select first material type if none selected
-  useEffect(() => {
-    if (!selectedMaterialTypeId && materialTypes.length > 0) {
-      setSelectedMaterialTypeId(materialTypes[0].id.toString());
-    }
-  }, [materialTypes, selectedMaterialTypeId]);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -99,7 +133,9 @@ export default function MaterialSpecPage() {
     error,
     refetch,
   } = useMaterialSpecs(
-    selectedMaterialTypeId ? Number(selectedMaterialTypeId) : null,
+    selectedMaterialTypeId !== "all" && selectedMaterialTypeId !== ""
+      ? Number(selectedMaterialTypeId)
+      : null,
     {
       pageNumber: currentPage,
       pageSize: itemsPerPage,
@@ -261,12 +297,11 @@ export default function MaterialSpecPage() {
                   <SelectValue placeholder="Chọn chất liệu" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="all">Tất cả các chất liệu</SelectItem>
                   {isLoadingTypes ? (
                     <SelectItem value="loading" disabled>Đang tải chất liệu...</SelectItem>
-                  ) : materialTypes.length === 0 ? (
-                    <SelectItem value="none" disabled>Không có chất liệu nào</SelectItem>
                   ) : (
-                    materialTypes.map((type) => (
+                    filteredMaterialTypes.map((type) => (
                       <SelectItem key={type.id} value={type.id.toString()}>
                         {type.name} {(type as any).isSystem ? "(Hệ thống)" : ""}
                       </SelectItem>
@@ -475,7 +510,7 @@ export default function MaterialSpecPage() {
                       <SelectValue placeholder={isLoadingTypes ? "Đang tải..." : "Chọn chất liệu"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {materialTypes.map((type) => (
+                      {filteredMaterialTypes.map((type) => (
                         <SelectItem key={type.id} value={type.id.toString()}>
                           {type.name}
                         </SelectItem>
@@ -497,38 +532,14 @@ export default function MaterialSpecPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="length">Chiều dài mặc định</Label>
-                  <Input
-                    id="length"
-                    type="number"
-                    value={defaultLength}
-                    onChange={(e) => setDefaultLength(e.target.value)}
-                    placeholder="VD: 790"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="width">Chiều rộng mặc định</Label>
-                  <Input
-                    id="width"
-                    type="number"
-                    value={defaultWidth}
-                    onChange={(e) => setDefaultWidth(e.target.value)}
-                    placeholder="VD: 1090"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="unit">Đơn vị mặc định</Label>
-                  <Input
-                    id="unit"
-                    value={defaultUnit}
-                    onChange={(e) => setDefaultUnit(e.target.value)}
-                    placeholder="VD: gsm"
-                  />
-                </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="unit">Đơn vị mặc định</Label>
+                <Input
+                  id="unit"
+                  value={defaultUnit}
+                  onChange={(e) => setDefaultUnit(e.target.value)}
+                  placeholder="VD: gsm"
+                />
               </div>
 
               {isEditing && (

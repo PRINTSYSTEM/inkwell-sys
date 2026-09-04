@@ -372,278 +372,216 @@ export default function DesignTypesPage() {
 
   // ====== UI ======
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="h-full flex flex-col justify-between overflow-hidden bg-slate-50/50 dark:bg-slate-950 p-4 sm:p-5 gap-3.5 text-xs">
+      {/* Top Header & Add Button */}
+      <div className="flex items-center justify-between gap-3 bg-white dark:bg-slate-900 p-3 px-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs shrink-0">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">
-            Quản lý loại thiết kế & chất liệu
+          <h1 className="text-lg font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <Package className="h-5 w-5 text-[#93631F]" />
+            Quản Lý Loại Thiết Kế & Chất Liệu
           </h1>
-          <p className="text-gray-600 mt-1">
-            Quản lý các loại thiết kế và chất liệu tương ứng trong hệ thống
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Quản lý danh mục các loại thiết kế và bảng định mức chất liệu tương ứng
           </p>
         </div>
         <Button
-          className="flex items-center gap-2"
+          size="sm"
+          className="h-8 text-xs font-bold px-3 bg-[#93631F] hover:bg-[#7a521a] text-white shadow-2xs gap-1.5 cursor-pointer"
           onClick={() => setIsDesignTypeDialogOpen(true)}
         >
-          <Plus className="h-4 w-4" /> Thêm loại thiết kế
+          <Plus className="h-3.5 w-3.5" /> Thêm loại thiết kế
         </Button>
       </div>
 
-      {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-blue-700">
-              Tổng loại thiết kế
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-900">
-              {stats.total}
-            </div>
-            <p className="text-xs text-blue-600 mt-1">
-              {stats.active} đang hoạt động (trong trang hiện tại)
-            </p>
-          </CardContent>
-        </Card>
+      {/* Compact Stat Cards Row */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 shrink-0">
+        <div className="flex items-center justify-between bg-blue-50/70 dark:bg-blue-950/30 p-2.5 px-4 rounded-xl border border-blue-200/80 dark:border-blue-900/60 shadow-2xs">
+          <div>
+            <p className="text-xs text-blue-700 dark:text-blue-400 font-medium">Tổng loại thiết kế</p>
+            <p className="text-lg font-extrabold text-blue-900 dark:text-blue-200 mt-0.5">{stats.total}</p>
+          </div>
+          <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200 text-[10px]">
+            {stats.active} hoạt động
+          </Badge>
+        </div>
 
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-purple-700">
-              Tổng chất liệu
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-purple-900">
-              {stats.totalMaterials}
-            </div>
-            <p className="text-xs text-purple-600 mt-1">
-              Trên tất cả loại thiết kế (theo backend)
-            </p>
-          </CardContent>
-        </Card>
+        <div className="flex items-center justify-between bg-purple-50/70 dark:bg-purple-950/30 p-2.5 px-4 rounded-xl border border-purple-200/80 dark:border-purple-900/60 shadow-2xs">
+          <div>
+            <p className="text-xs text-purple-700 dark:text-purple-400 font-medium">Tổng chất liệu</p>
+            <p className="text-lg font-extrabold text-purple-900 dark:text-purple-200 mt-0.5">{stats.totalMaterials}</p>
+          </div>
+          <span className="text-[11px] text-purple-600 dark:text-purple-400">Trên hệ thống</span>
+        </div>
 
-        <Card className="bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-amber-700">
-              Trung bình
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-amber-900">
-              {stats.total > 0
-                ? Math.round(stats.totalMaterials / stats.total)
-                : 0}
-            </div>
-            <p className="text-xs text-amber-600 mt-1">
-              chất liệu/loại thiết kế
+        <div className="flex items-center justify-between bg-amber-50/70 dark:bg-amber-950/30 p-2.5 px-4 rounded-xl border border-amber-200/80 dark:border-amber-900/60 shadow-2xs">
+          <div>
+            <p className="text-xs text-amber-700 dark:text-amber-400 font-medium">Trung bình</p>
+            <p className="text-lg font-extrabold text-amber-900 dark:text-amber-200 mt-0.5">
+              {stats.total > 0 ? Math.round(stats.totalMaterials / stats.total) : 0}
             </p>
-          </CardContent>
-        </Card>
+          </div>
+          <span className="text-[11px] text-amber-600 dark:text-amber-400">Chất liệu / loại</span>
+        </div>
       </div>
 
-      {/* Main table + pagination */}
-      <Card>
-        <CardHeader>
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+      {/* Main Table Container (Single-Screen Fit) */}
+      <div className="flex-1 min-h-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xs overflow-hidden flex flex-col">
+        {/* Search Bar Toolbar */}
+        <div className="p-2.5 px-4 border-b border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
+          <div className="relative w-full max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
             <Input
               placeholder="Tìm kiếm theo tên hoặc mã loại thiết kế..."
               value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                // có thể setPageNumber(1) nếu muốn reset về trang đầu khi search
-              }}
-              className="pl-10"
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 h-8 text-xs bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800"
             />
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-lg border border-slate-200 bg-white overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-slate-50 hover:bg-slate-50">
-                  <TableHead className="w-[180px] font-semibold text-slate-700">
-                    Mã / Tên
-                  </TableHead>
-                  <TableHead className="font-semibold text-slate-700">
-                    Thứ tự
-                  </TableHead>
+        </div>
 
-                  <TableHead className="font-semibold text-slate-700">
-                    Trạng thái
-                  </TableHead>
-                  <TableHead className="font-semibold text-slate-700">
-                    Người tạo
-                  </TableHead>
-                  <TableHead className="font-semibold text-slate-700 text-right">
-                    Thao tác
-                  </TableHead>
+        {/* Table Body Area */}
+        <div className="flex-1 overflow-auto">
+          <Table className="min-w-full">
+            <TableHeader className="sticky top-0 bg-slate-50 dark:bg-slate-950 z-10 border-b border-slate-200 dark:border-slate-800">
+              <TableRow className="bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-700 dark:text-slate-300">
+                <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 w-[200px]">Mã / Tên loại thiết kế</TableHead>
+                <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 text-center w-[80px]">Thứ tự</TableHead>
+                <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 text-center w-[120px]">Trạng thái</TableHead>
+                <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 w-[180px]">Người tạo</TableHead>
+                <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 text-right w-[180px] pr-4">Thao tác</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredDesignTypes.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-24 text-center text-slate-400">
+                    Không tìm thấy loại thiết kế nào.
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredDesignTypes.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
-                      <p className="text-sm text-slate-500">
-                        Không tìm thấy loại thiết kế nào.
-                      </p>
+              ) : (
+                filteredDesignTypes.map((designType) => (
+                  <TableRow
+                    key={designType.id}
+                    className="h-10 text-xs border-b border-slate-100 dark:border-slate-800/60 hover:bg-slate-50/80 transition-colors"
+                  >
+                    <TableCell className="py-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="font-mono text-[11px] font-bold shrink-0">
+                          {designType.code}
+                        </Badge>
+                        <TruncatedText
+                          text={designType.name}
+                          className="font-bold text-slate-800 dark:text-slate-200"
+                        />
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-2 text-center font-mono font-medium text-slate-600">
+                      {designType.displayOrder}
+                    </TableCell>
+
+                    <TableCell className="py-2 text-center">
+                      <Badge
+                        variant={designType.status === "active" ? "default" : "secondary"}
+                        className={
+                          designType.status === "active"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 text-[10px]"
+                            : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400 text-[10px]"
+                        }
+                      >
+                        {designType.status === "active" ? "Hoạt động" : "Tạm dừng"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">
+                          {designType.createdBy.fullName}
+                        </span>
+                        <span className="text-[11px] text-slate-400">
+                          @{designType.createdBy.username}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-2 text-right pr-4">
+                      <div className="flex justify-end gap-1.5">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedDesignType(designType)}
+                          className="h-7 text-xs font-bold px-2.5 text-[#93631F] border-amber-200 hover:bg-amber-50 dark:hover:bg-amber-950/40 cursor-pointer gap-1"
+                          disabled={isCreatingMaterial}
+                        >
+                          <Package className="h-3.5 w-3.5" />
+                          <span>Chất liệu</span>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setEditingDesignType(designType);
+                            setIsDesignTypeDialogOpen(true);
+                          }}
+                          className="h-7 w-7 text-slate-500 hover:text-slate-900 cursor-pointer"
+                        >
+                          <Edit className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setDesignTypeToDelete(designType);
+                            setDeleteConfirmOpen(true);
+                          }}
+                          className="h-7 w-7 text-rose-500 hover:text-rose-700 cursor-pointer"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
-                ) : (
-                  filteredDesignTypes.map((designType) => (
-                    <TableRow
-                      key={designType.id}
-                      className="hover:bg-blue-50/40"
-                    >
-                      <TableCell>
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-2">
-                            <Badge
-                              variant="outline"
-                              className="font-mono text-xs"
-                            >
-                              {designType.code}
-                            </Badge>
-                          </div>
-                          <TruncatedText
-                            text={designType.name}
-                            className="font-medium text-slate-900"
-                          />
-                          {designType.description && (
-                            <TruncatedText
-                              text={designType.description}
-                              className="text-xs text-slate-500"
-                            />
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-medium">
-                          {designType.displayOrder}
-                        </span>
-                      </TableCell>
-
-                      <TableCell>
-                        <Badge
-                          variant={
-                            designType.status === "active"
-                              ? "default"
-                              : "secondary"
-                          }
-                          className={
-                            designType.status === "active"
-                              ? "bg-green-100 text-green-700 hover:bg-green-200"
-                              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                          }
-                        >
-                          {designType.status === "active"
-                            ? "Hoạt động"
-                            : "Tạm dừng"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium text-slate-900">
-                            {designType.createdBy.fullName}
-                          </span>
-                          <span className="text-xs text-slate-500">
-                            @{designType.createdBy.username}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setSelectedDesignType(designType)}
-                            className="flex items-center gap-1.5 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300 transition-colors"
-                            disabled={isCreatingMaterial}
-                          >
-                            <Package className="h-4 w-4" />
-                            <span className="text-xs font-medium">
-                              Chất liệu
-                            </span>
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setEditingDesignType(designType);
-                              setIsDesignTypeDialogOpen(true);
-                            }}
-                            className="hover:bg-slate-50 transition-colors"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setDesignTypeToDelete(designType);
-                              setDeleteConfirmOpen(true);
-                            }}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-300 transition-colors"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-
-          {/* Pagination UI */}
-          <div className="flex items-center justify-between mt-4 text-sm text-slate-600">
-            <div>
-              {stats.total > 0 ? (
-                <span>
-                  Hiển thị{" "}
-                  <span className="font-semibold">
-                    {startIndex}-{endIndex}
-                  </span>{" "}
-                  trên{" "}
-                  <span className="font-semibold">
-                    {designTypesPaged.total}
-                  </span>{" "}
-                  loại thiết kế
-                </span>
-              ) : (
-                <span>Không có dữ liệu.</span>
+                ))
               )}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!hasPreviousPage}
-                onClick={() => handlePageChange(pageNumber - 1)}
-              >
-                Trước
-              </Button>
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Pagination Footer */}
+        <div className="shrink-0 p-2.5 px-4 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 flex items-center justify-between text-xs text-slate-500">
+          <div>
+            {stats.total > 0 ? (
               <span>
-                Trang{" "}
-                <span className="font-semibold">{designTypesPaged.page}</span> /{" "}
-                {designTypesPaged.totalPages || 1}
+                Hiển thị <span className="font-semibold text-slate-700 dark:text-slate-300">{startIndex}-{endIndex}</span> trên{" "}
+                <span className="font-semibold text-slate-700 dark:text-slate-300">{designTypesPaged.total}</span> loại thiết kế
               </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!hasNextPage}
-                onClick={() => handlePageChange(pageNumber + 1)}
-              >
-                Sau
-              </Button>
-            </div>
+            ) : (
+              <span>Không có dữ liệu.</span>
+            )}
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs font-medium px-2.5 cursor-pointer"
+              disabled={!hasPreviousPage}
+              onClick={() => handlePageChange(pageNumber - 1)}
+            >
+              Trước
+            </Button>
+            <span>
+              Trang <span className="font-bold text-slate-800 dark:text-slate-200">{designTypesPaged.page}</span> /{" "}
+              {designTypesPaged.totalPages || 1}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs font-medium px-2.5 cursor-pointer"
+              disabled={!hasNextPage}
+              onClick={() => handlePageChange(pageNumber + 1)}
+            >
+              Sau
+            </Button>
+          </div>
+        </div>
+      </div>
 
       {/* Dialog Loại thiết kế */}
       <Suspense fallback={<div>Đang tải...</div>}>

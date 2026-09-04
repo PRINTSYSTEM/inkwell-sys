@@ -41,15 +41,20 @@ export const useMaterialSpecs = (
   return useQuery<MaterialSpecResponseIPaginate>({
     queryKey: [...materialSpecKeys.all, "paginated", materialTypeId, params],
     queryFn: async () => {
+      const queryParams = {
+        ...params,
+        ...(materialTypeId ? { materialTypeId } : {}),
+      };
+
       const response = await apiRequest.get<MaterialSpecResponseIPaginate>(
-        API_SUFFIX.MATERIAL_SPEC_PAGINATED(materialTypeId!),
+        API_SUFFIX.MATERIAL_SPECS_GLOBAL_PAGINATED,
         {
-          params: normalizeParams(params || {}),
+          params: normalizeParams(queryParams),
         }
       );
       return response.data;
     },
-    enabled: materialTypeId !== null,
+    enabled: true,
   });
 };
 

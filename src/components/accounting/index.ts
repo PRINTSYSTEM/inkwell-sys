@@ -9,3 +9,4 @@ export * from "./CreateInvoiceFromLinesDialog";
 export * from "./IssueInvoiceDialog";
 export * from "./UpdateEInvoiceDialog";
 export * from "./CashReceiptDetailDialog";
+export * from "./CashPaymentDetailDialog";

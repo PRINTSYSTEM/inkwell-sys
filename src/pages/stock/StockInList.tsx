@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
@@ -38,7 +38,10 @@ import {
   Package,
   Filter,
   Building2,
+  DollarSign,
 } from "lucide-react";
+import { StockInDetailDialog } from "./components/StockInDetailDialog";
+import { CreateOtherExpenseLiabilityDialog } from "./components/CreateOtherExpenseLiabilityDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -83,7 +86,7 @@ export default function StockInListPage() {
   } = useListState();
 
   const [pageSize] = useState(10);
-  const [typeFilter, setTypeFilter] = useState<string>("");
+  const [typeFilter, setTypeFilter] = useState<string>("purchase");
   const [itemTypeFilter, setItemTypeFilter] = useState<string>("");
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: addDays(new Date(), -30),
@@ -93,7 +96,7 @@ export default function StockInListPage() {
 
   const handleResetFilters = () => {
     setSearch("");
-    setTypeFilter("");
+    setTypeFilter("purchase");
     setItemTypeFilter("");
     setVendorFilter("");
     setStatusFilter("");
@@ -107,7 +110,7 @@ export default function StockInListPage() {
     pageNumber: page,
     pageSize,
     search: debouncedSearchTerm || undefined,
-    type: typeFilter || undefined,
+    type: typeFilter === "all" ? undefined : typeFilter || "purchase",
     status: statusFilter === "all" ? undefined : statusFilter || undefined,
     itemType: itemTypeFilter || undefined,
   });
@@ -116,7 +119,25 @@ export default function StockInListPage() {
   const { mutate: completeStockIn } = useCompleteStockIn();
   const { mutate: cancelStockIn } = useCancelStockIn();
 
-  const stockIns = data?.items || [];
+  const rawStockIns = data?.items || [];
+  const stockIns = useMemo(() => {
+    return rawStockIns.filter((stockIn: any) => {
+      if (typeFilter === "purchase" || typeFilter === "") {
+        const typeStr = (stockIn.type || stockIn.purpose || stockIn.typeCode || "").toLowerCase();
+        if (
+          typeStr === "production_completion" ||
+          typeStr === "production" ||
+          typeStr === "from_production" ||
+          typeStr === "from_lsx" ||
+          Boolean(stockIn.productionOrderId)
+        ) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [rawStockIns, typeFilter]);
+
   const totalPages = data?.totalPages || 1;
 
   // Confirm dialog state
@@ -189,13 +210,18 @@ export default function StockInListPage() {
     }
   };
 
+  const [selectedStockInId, setSelectedStockInId] = useState<number | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isCreateOtherExpenseOpen, setIsCreateOtherExpenseOpen] = useState(false);
+
   const handleExportExcel = async () => {
     toast.info("Chức năng xuất Excel đang được phát triển");
   };
 
   const handleViewDetails = (id: number | undefined) => {
     if (id) {
-      navigate(`/stock/stock-ins/${id}`);
+      setSelectedStockInId(id);
+      setIsDetailOpen(true);
     }
   };
 
@@ -224,18 +250,31 @@ export default function StockInListPage() {
         <meta name="description" content="Quản lý phiếu nhập kho" />
       </Helmet>
 
-      <div className="min-h-screen bg-background">
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Quản lý nhập kho</h1>
-              <p className="text-muted-foreground mt-1">Quản lý các phiếu nhập kho Chất liệu</p>
-            </div>
+      <div className="h-full flex flex-col space-y-2.5 overflow-hidden">
+        <div className="shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-bold text-foreground">Nhập Kho</h1>
+            <p className="text-muted-foreground text-xs">Danh sách phiếu nhập kho nguyên vật liệu và thành phẩm</p>
           </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              onClick={() => navigate("/stock/stock-ins/create")}
+              className="h-8 text-xs bg-amber-600 hover:bg-amber-700 text-white gap-1.5 font-semibold"
+            >
+              <Plus className="w-3.5 h-3.5" /> Tạo phiếu nhập kho
+            </Button>
+            <Button
+              onClick={() => setIsCreateOtherExpenseOpen(true)}
+              variant="outline"
+              className="h-8 text-xs border-amber-300 bg-amber-50/60 hover:bg-amber-100 text-amber-900 gap-1.5 font-semibold"
+            >
+              <DollarSign className="w-3.5 h-3.5 text-amber-600" /> Nhập công nợ chi phí khác
+            </Button>
+          </div>
+        </div>
 
-          <div className="space-y-6">
-          {/* COMPACT TOOLBAR FILTERS ROW */}
-          <div className="flex flex-col xl:flex-row items-center justify-between gap-2.5 bg-slate-50/60 p-2.5 rounded-xl border border-slate-200/50 shadow-sm mb-4">
+        {/* COMPACT TOOLBAR FILTERS ROW */}
+        <div className="shrink-0 flex flex-col xl:flex-row items-center justify-between gap-2.5 bg-slate-50/60 p-2.5 rounded-xl border border-slate-200/50 shadow-sm">
             <div className="flex flex-col sm:flex-row items-center gap-2 w-full xl:w-auto flex-1">
               {/* Search Text */}
               <div className="relative w-full sm:w-[260px]">
@@ -260,20 +299,20 @@ export default function StockInListPage() {
               </div>
 
               {/* Type Selector */}
-              <div className="w-full sm:w-[150px]">
+              <div className="w-full sm:w-[170px]">
                 <Select
-                  value={typeFilter || "all"}
+                  value={typeFilter || "purchase"}
                   onValueChange={(v) => {
-                    setTypeFilter(v === "all" ? "" : v);
+                    setTypeFilter(v);
                     setPage(1);
                   }}
                 >
-                  <SelectTrigger className="h-9 text-xs bg-white border-slate-200 rounded-lg cursor-pointer">
+                  <SelectTrigger className="h-9 text-xs bg-white border-slate-200 rounded-lg cursor-pointer font-medium">
                     <SelectValue placeholder="Loại phiếu" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="purchase">Nhập từ NCC (Mua hàng)</SelectItem>
                     <SelectItem value="all">Tất cả loại phiếu</SelectItem>
-                    <SelectItem value="purchase">Mua hàng</SelectItem>
                     <SelectItem value="production_completion">
                       Hoàn thành SX
                     </SelectItem>
@@ -388,8 +427,8 @@ export default function StockInListPage() {
           </div>
 
             {/* Table Card */}
-            <Card className="border-slate-200/60 shadow-lg shadow-slate-200/50 overflow-hidden">
-              <CardContent className="p-0">
+            <Card className="flex-1 min-h-0 flex flex-col border-slate-200/60 shadow-md rounded-xl overflow-hidden bg-white">
+              <CardContent className="p-0 flex-1 min-h-0 flex flex-col overflow-hidden">
                 {isLoading ? (
                   <div className="flex items-center justify-center py-16">
                     <Loader2 className="h-8 w-8 animate-spin text-[#93631F]" />
@@ -409,10 +448,10 @@ export default function StockInListPage() {
                   </div>
                 ) : (
                   <>
-                    <div className="overflow-x-auto">
+                    <div className="flex-1 min-h-0 overflow-auto">
                       <Table>
-                        <TableHeader>
-                          <TableRow className="bg-[#93631F]/5 border-b border-slate-200/60 whitespace-nowrap">
+                        <TableHeader className="sticky top-0 bg-slate-100/90 backdrop-blur-sm z-10">
+                          <TableRow className="border-b border-slate-200/60 whitespace-nowrap">
                             <TableHead className="w-[140px] font-semibold text-slate-700">
                               Số phiếu
                             </TableHead>
@@ -584,8 +623,8 @@ export default function StockInListPage() {
                         </TableBody>
                       </Table>
                     </div>
-                    <div className="flex items-center justify-between p-4 border-t border-slate-200/60 bg-slate-50/50">
-                      <div className="text-sm text-slate-600">
+                    <div className="shrink-0 flex items-center justify-between p-2.5 border-t border-slate-200/60 bg-slate-50/50">
+                      <div className="text-xs text-slate-600">
                         Trang <span className="font-semibold">{page}</span> /{" "}
                         <span className="font-semibold">{totalPages}</span>
                       </div>
@@ -595,7 +634,7 @@ export default function StockInListPage() {
                           size="sm"
                           onClick={() => setPage((p) => Math.max(1, p - 1))}
                           disabled={page === 1}
-                          className="cursor-pointer transition-colors duration-200"
+                          className="h-7 text-xs px-2.5 cursor-pointer"
                         >
                           Trước
                         </Button>
@@ -606,7 +645,7 @@ export default function StockInListPage() {
                             setPage((p) => Math.min(totalPages, p + 1))
                           }
                           disabled={page === totalPages}
-                          className="cursor-pointer transition-colors duration-200"
+                          className="h-7 text-xs px-2.5 cursor-pointer"
                         >
                           Sau
                         </Button>
@@ -616,8 +655,6 @@ export default function StockInListPage() {
                 )}
               </CardContent>
             </Card>
-          </div>
-        </div>
       </div>
 
       {/* Confirm Dialog */}
@@ -666,6 +703,19 @@ export default function StockInListPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Stock In Detail Popup Dialog */}
+      <StockInDetailDialog
+        stockInId={selectedStockInId}
+        open={isDetailOpen}
+        onOpenChange={setIsDetailOpen}
+      />
+
+      {/* Create Other Expense Liability Dialog */}
+      <CreateOtherExpenseLiabilityDialog
+        open={isCreateOtherExpenseOpen}
+        onOpenChange={setIsCreateOtherExpenseOpen}
+      />
     </>
   );
 }
