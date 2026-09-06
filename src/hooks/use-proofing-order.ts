@@ -17,6 +17,8 @@ import type {
   ProofingOrderResponsePaginate,
   AvailableBinResponse,
   CompletedProofingOrderListParams,
+  ProofingOrderHistoryParams,
+  ProofingOrderHistoryResponsePaginate,
 } from "@/Schema/proofing-order.schema";
 import { ProofingOrderResponseSchema } from "@/Schema/proofing-order.schema";
 import type {
@@ -1701,3 +1703,32 @@ export const useUpdateProofingDeliveryVisibility = () => {
     },
   });
 };
+
+// ================== GET PROOFING ORDER HISTORY ==================
+// GET /api/proofing-orders/{id}/history
+export const useProofingOrderHistory = (
+  id: number | null,
+  params?: ProofingOrderHistoryParams,
+  enabled: boolean = true
+) => {
+  return useQuery({
+    queryKey: [proofingKeys.all[0], "history", id, params],
+    queryFn: async () => {
+      if (!id) return null;
+      const res = await apiRequest.get<ProofingOrderHistoryResponsePaginate>(
+        API_SUFFIX.PROOFING_HISTORY(id),
+        {
+          params: {
+            pageNumber: params?.pageNumber ?? 1,
+            pageSize: params?.pageSize ?? 20,
+            sortColumn: params?.sortColumn ?? "createdAt",
+            sortOrder: params?.sortOrder ?? "desc",
+          },
+        }
+      );
+      return res.data;
+    },
+    enabled: Boolean(enabled && id),
+  });
+};
+

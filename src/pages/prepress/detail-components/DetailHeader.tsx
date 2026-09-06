@@ -2,7 +2,7 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Box, Edit, Upload, AlertCircle, Trash2 } from "lucide-react";
+import { ArrowLeft, Box, Edit, Upload, AlertCircle, Trash2, History } from "lucide-react";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -20,6 +20,7 @@ interface DetailHeaderProps {
   hasDieCutDesigns: boolean;
   onBack: () => void;
   onOpenDieList: () => void;
+  onOpenHistory?: () => void;
   onStatusChangeClick: () => void;
   onOldStatusChangeClick: () => void;
   onUploadClick: () => void;
@@ -55,6 +56,7 @@ export function DetailHeader({
   hasDieCutDesigns,
   onBack,
   onOpenDieList,
+  onOpenHistory,
   onStatusChangeClick,
   onOldStatusChangeClick,
   onUploadClick,
@@ -282,6 +284,18 @@ export function DetailHeader({
 
             {/* Action Buttons */}
             <div className="flex items-center gap-2">
+              {onOpenHistory && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 h-8 text-xs font-medium text-blue-700 dark:text-blue-400 bg-blue-50/50 hover:bg-blue-100/80 border-blue-200 dark:bg-blue-950/30 dark:border-blue-900"
+                  onClick={onOpenHistory}
+                >
+                  <History className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                  Lịch sử bài bình
+                </Button>
+              )}
+
               {nextStatusInfo && isProofer && (
                 <TooltipProvider>
                   <div className="flex items-center gap-2">

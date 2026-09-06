@@ -787,9 +787,10 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
         materialTypeName={order.materialType?.name}
         currentDesign={currentDesignForAdding}
         onSubmit={async (orderDetailItems) => {
-          if (!order?.materialTypeId) {
+          const matTypeId = order?.materialTypeId || order?.materialType?.id;
+          if (!matTypeId) {
             toast.error("Lỗi", {
-              description: "Không thể lấy thông tin Chất liệu",
+              description: "Không thể lấy thông tin Chất liệu của bài bình",
             });
             return;
           }
@@ -807,7 +808,7 @@ export function PrepressDetailDialogs(props: PrepressDetailDialogsProps) {
           }
           await addDesignsMutate({
             id: order.id,
-            request: { materialTypeId: order.materialTypeId, items: items },
+            request: { materialTypeId: matTypeId, items: items },
           });
         }}
         isSubmitting={isAddingDesigns}

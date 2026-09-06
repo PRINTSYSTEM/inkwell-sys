@@ -143,10 +143,11 @@ import type {
 } from "@/Schema";
 import { DieListDialog } from "@/components/dies/DieListDialog";
 
-// Extracted detail components
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { DetailHeader } from "./detail-components/DetailHeader";
 import { DetailOrderInfoCard } from "./detail-components/DetailOrderInfoCard";
 import { DetailDesignsListCard } from "./detail-components/DetailDesignsListCard";
+import { DetailHistoryCard } from "./detail-components/DetailHistoryCard";
 import { DetailPlateExportCard } from "./detail-components/DetailPlateExportCard";
 import { DetailDieExportCard } from "./detail-components/DetailDieExportCard";
 import { CartBanner } from "./detail-components/CartBanner";
@@ -410,6 +411,7 @@ export default function ProofingOrderDetailPage() {
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
   const [isAddDesignDialogOpen, setIsAddDesignDialogOpen] = useState(false);
+  const [isHistoryDialogOpen, setIsHistoryDialogOpen] = useState(false);
 
   // Replace die dialog state
   const [isReplaceDieDialogOpen, setIsReplaceDieDialogOpen] = useState(false);
@@ -790,41 +792,65 @@ export default function ProofingOrderDetailPage() {
 
   // Get current design (first design in proofing order) for filtering by specifications
   const currentDesignForAdding = useMemo((): DesignItem | null => {
-    if (!order?.proofingOrderDesigns || order.proofingOrderDesigns.length === 0)
-      return null;
-    const firstDesign = order.proofingOrderDesigns[0]?.design;
-    if (!firstDesign) return null;
-
-    // Convert ProofingOrderDesignResponse.design to DesignItem format
-    const pod = order.proofingOrderDesigns[0];
-    return {
-      id: pod.id || 0,
-      code: firstDesign.code || "",
-      name: firstDesign.designName || "",
-      designTypeId: firstDesign.designTypeId || 0,
-      designTypeName: firstDesign.designType?.name || "",
-      materialTypeId: firstDesign.materialTypeId || 0,
-      materialTypeName: firstDesign.materialType?.name || "",
-      length: firstDesign.length || 0,
-      width: firstDesign.width,
-      height: firstDesign.height || 0,
-      unit: "mm",
-      quantity: pod.quantity || 0,
-      unitPrice: 0,
-      orderId: "",
-      orderCode: "",
-      customerName: "",
-      thumbnailUrl: firstDesign.designImageUrl || "",
-      createdAt: firstDesign.createdAt || "",
-      designCreatedAt: firstDesign.createdAt || undefined,
-      designUpdatedAt: firstDesign.updatedAt || undefined,
-      designId: firstDesign.id,
-      laminationType: firstDesign.laminationType ?? undefined,
-      processClassificationOptionName:
-        firstDesign.processClassification ?? undefined,
-      sidesClassification: firstDesign.sidesClassification ?? undefined,
-    };
-  }, [order?.proofingOrderDesigns]);
+    if (order?.proofingOrderDesigns && order.proofingOrderDesigns.length > 0) {
+      const pod = order.proofingOrderDesigns[0];
+      const firstDesign = pod?.design;
+      if (firstDesign) {
+        return {
+          id: pod.id || 0,
+          code: firstDesign.code || "",
+          name: firstDesign.designName || "",
+          designTypeId: firstDesign.designTypeId || 0,
+          designTypeName: firstDesign.designType?.name || "",
+          materialTypeId: firstDesign.materialTypeId || 0,
+          materialTypeName: firstDesign.materialType?.name || "",
+          length: firstDesign.length || 0,
+          width: firstDesign.width,
+          height: firstDesign.height || 0,
+          unit: "mm",
+          quantity: pod.quantity || 0,
+          unitPrice: 0,
+          orderId: "",
+          orderCode: "",
+          customerName: "",
+          thumbnailUrl: firstDesign.designImageUrl || "",
+          createdAt: firstDesign.createdAt || "",
+          designCreatedAt: firstDesign.createdAt || undefined,
+          designUpdatedAt: firstDesign.updatedAt || undefined,
+          designId: firstDesign.id,
+          laminationType: firstDesign.laminationType ?? undefined,
+          processClassificationOptionName:
+            firstDesign.processClassification ?? undefined,
+          sidesClassification: firstDesign.sidesClassification ?? undefined,
+        };
+      }
+    }
+    // Fallback when proofing order has 0 designs: use proofing order's designType and materialType
+    if (order && (order.designTypeId || order.designType?.id)) {
+      return {
+        id: 0,
+        code: order.code || "",
+        name: "",
+        designTypeId: order.designTypeId || order.designType?.id || 0,
+        designTypeName: order.designType?.name || "",
+        materialTypeId: order.materialTypeId || order.materialType?.id || 0,
+        materialTypeName: order.materialType?.name || "",
+        length: 0,
+        width: 0,
+        height: 0,
+        unit: "mm",
+        quantity: 0,
+        unitPrice: 0,
+        orderId: "",
+        orderCode: "",
+        customerName: "",
+        thumbnailUrl: "",
+        createdAt: "",
+        designId: 0,
+      };
+    }
+    return null;
+  }, [order]);
 
   // Fetch design types
   const { data: designTypesData } = useDesignTypeList({
@@ -2332,6 +2358,7 @@ export default function ProofingOrderDetailPage() {
           }
         }}
         onOpenDieList={() => setIsDieListDialogOpen(true)}
+        onOpenHistory={() => setIsHistoryDialogOpen(true)}
         onUploadClick={() => setIsUploadDialogOpen(true)}
         onStatusChangeClick={handleStatusChangeClick}
         onOldStatusChangeClick={handleOldStatusChangeClick}
@@ -2352,247 +2379,106 @@ export default function ProofingOrderDetailPage() {
         onToggleDeliveryVisibility={handleToggleDeliveryVisibility}
       />
 
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        {isEmptyOrder ? (
-          <div className="flex-1 flex flex-row gap-4 overflow-hidden">
-            {/* Left: selectable designs */}
-            <div className="flex-1 min-w-0 flex flex-col">
-              <div className="flex-1 flex flex-col overflow-hidden border rounded-xl bg-card">
-                {/* Filters Header */}
-                <div className="shrink-0 p-4 border-b space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-sm font-semibold">
-                        Thiết kế chờ bình bài ({paginatedDesigns.length})
-                      </h3>
-                      <p className="text-xs text-muted-foreground">
-                        Đã chọn: {selectedCount}
-                      </p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setIsDieListDialogOpen(true)}
-                      className="gap-2"
-                    >
-                      <Search className="h-4 w-4" />
-                      Danh sách khuôn bế
-                    </Button>
-                  </div>
+      <div className="flex-1 flex flex-col min-h-0 overflow-y-auto pb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[0.7fr_2.3fr_0.5fr_0.5fr] gap-4 w-full">
+          <DetailOrderInfoCard
+            order={order}
+            editingField={editingField}
+            inlineTotalQuantity={inlineTotalQuantity}
+            setInlineTotalQuantity={setInlineTotalQuantity}
+            inlinePaperSizeId={inlinePaperSizeId}
+            setInlinePaperSizeId={setInlinePaperSizeId}
+            inlineCustomPaperSize={inlineCustomPaperSize}
+            setInlineCustomPaperSize={setInlineCustomPaperSize}
+            inlineNotes={inlineNotes}
+            setInlineNotes={setInlineNotes}
+            inlineBasisWeight={inlineBasisWeight}
+            setInlineBasisWeight={setInlineBasisWeight}
+            inlineRollWidth={inlineRollWidth}
+            setInlineRollWidth={setInlineRollWidth}
+            paperSizes={paperSizes}
+            uniqueProcessClassifications={uniqueProcessClassifications}
+            uniqueLaminationTypes={uniqueLaminationTypes}
+            uniqueSpecifications={uniqueSpecifications}
+            isUpdatingInfo={isUpdatingInfo}
+            handleStartEditField={handleStartEditField}
+            handleStartEditAllFields={handleStartEditAllFields}
+            handleCancelEditField={handleCancelEditField}
+            handleSaveField={handleSaveField}
+            setIsUploadDialogOpen={setIsUploadDialogOpen}
+            setImageViewerOpen={setImageViewerOpen}
+            setViewingImageUrl={setViewingImageUrl}
+            onDeleteImage={handleDeleteImage}
+            isProofer={isProofer}
+          />
 
-                  <FilterSection
-                    designTypeOptions={designTypeOptions}
-                    materialTypeOptions={(
-                      availableDesignsData?.materialTypeOptions || []
-                    ).map((m) => ({
-                      id: m.id,
-                      name: m.name || "",
-                      count: 0,
-                    }))}
-                    selectedDesignTypes={selectedDesignTypes}
-                    selectedMaterialTypes={selectedMaterialTypes}
-                    currentMaterialTypeId={currentMaterialTypeId}
-                    onDesignTypeChange={setSelectedDesignTypes}
-                    onMaterialTypeChange={setSelectedMaterialTypes}
-                    onClearFilters={handleClearFilters}
-                    hasActiveFilters={
-                      selectedDesignTypes.length > 0 ||
-                      selectedMaterialTypes.length > 0 ||
-                      searchTerm.trim().length > 0
-                    }
-                  />
-                </div>
-
-                {/* Table Area */}
-                <ScrollArea className="flex-1">
-                  <div className="p-0">
-                    <DesignTable
-                      designs={paginatedDesigns}
-                      selectedIds={selectedIds}
-                      onToggle={isProofer ? (design) => {
-                        toggleSelection(design);
-                        // Auto-filter by design type if selecting for the first time
-                        if (
-                          selectedIds.size === 0 &&
-                          typeof design.designTypeId === "number"
-                        ) {
-                          setSelectedDesignTypes([design.designTypeId]);
-                        }
-                      } : undefined}
-                      canSelect={isProofer ? canSelect : () => false}
-                      onFindDie={handleFindDie}
-                    />
-                  </div>
-                </ScrollArea>
-
-                {/* Pagination Footer */}
-                {totalPages > 1 && (
-                  <div className="shrink-0 p-3 border-t bg-muted/20 flex items-center justify-between">
-                    <p className="text-xs text-muted-foreground">
-                      Trang {currentPage} / {totalPages}
-                    </p>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        disabled={currentPage === 1}
-                        onClick={() =>
-                          setCurrentPage((prev) => Math.max(1, prev - 1))
-                        }
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        disabled={currentPage === totalPages}
-                        onClick={() =>
-                          setCurrentPage((prev) =>
-                            Math.min(totalPages, prev + 1),
-                          )
-                        }
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Right: configuration panel (existing) */}
-            <div className="w-1/3 min-w-[320px] shrink-0 h-full flex flex-col">
-              <DetailEmptyOrderView
-                toggleSelection={toggleSelection}
-                selectedDesigns={selectedDesigns}
-                selectedCount={selectedCount}
-                materialTypeName={materialTypeName}
-                designQuantities={designQuantities}
-                setDesignQuantities={setDesignQuantities}
-                paperSizes={paperSizes}
-                paperSizeId={paperSizeId}
-                setPaperSizeId={setPaperSizeId}
-                customPaperSize={customPaperSize}
-                setCustomPaperSize={setCustomPaperSize}
-                showCreateButton={showCreateButton}
-                handleCreatePaperSize={handleCreatePaperSize}
-                isCreatingPaperSize={isCreatingPaperSize}
-                proofingSheetQuantity={proofingSheetQuantity}
-                setProofingSheetQuantity={setProofingSheetQuantity}
-                notes={notes}
-                setNotes={setNotes}
-                handleSubmitDesigns={handleSubmitDesigns}
-                isAddingDesigns={isAddingDesigns}
-                isProofer={isProofer}
-                nextOrderId={order?.code || order?.id}
-              />
-            </div>
+          <div className="space-y-4">
+            {order && order.status !== "completed" && cartItems.length > 0 && (
+              <CartBanner proofingOrderId={order.id} />
+            )}
+            <DetailDesignsListCard
+              order={order}
+              orderDesigns={orderDesigns}
+              editingQuantityDesignId={editingQuantityDesignId}
+              setEditingQuantityDesignId={setEditingQuantityDesignId}
+              inlineQuantityValue={inlineQuantityValue}
+              setInlineQuantityValue={setInlineQuantityValue}
+              inlineItemsPerSheetValue={inlineItemsPerSheetValue}
+              setInlineItemsPerSheetValue={setInlineItemsPerSheetValue}
+              handleUpdateDesignQuantity={handleUpdateDesignQuantity}
+              updatingDesignId={updatingDesignId}
+              setIsAddDesignDialogOpen={setIsAddDesignDialogOpen}
+              setRemoveDesignTarget={setRemoveDesignTarget}
+              setIsConfirmRemoveDesignDialogOpen={
+                setIsConfirmRemoveDesignDialogOpen
+              }
+              isRemovingDesign={isRemovingDesign}
+              setImageViewerOpen={setImageViewerOpen}
+              setViewingImageUrl={setViewingImageUrl}
+              setSelectedDesignForRelatedDies={
+                setSelectedDesignForRelatedDies
+              }
+              setIsRelatedDiesDialogOpen={setIsRelatedDiesDialogOpen}
+              onReject={handleOpenRejectDialog}
+              isRejecting={isRejecting}
+              onFindDie={handleFindDie}
+              highlightSearchTerm={highlightSearchTerm}
+              isProofer={isProofer}
+              onUpdateSide={handleUpdateDesignSide}
+            />
           </div>
-        ) : (
-          <div className="flex-1 flex flex-col gap-4 overflow-y-auto pb-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[0.7fr_2.3fr_0.5fr_0.5fr] gap-4 w-full">
-              <DetailOrderInfoCard
-                order={order}
-                editingField={editingField}
-                inlineTotalQuantity={inlineTotalQuantity}
-                setInlineTotalQuantity={setInlineTotalQuantity}
-                inlinePaperSizeId={inlinePaperSizeId}
-                setInlinePaperSizeId={setInlinePaperSizeId}
-                inlineCustomPaperSize={inlineCustomPaperSize}
-                setInlineCustomPaperSize={setInlineCustomPaperSize}
-                inlineNotes={inlineNotes}
-                setInlineNotes={setInlineNotes}
-                inlineBasisWeight={inlineBasisWeight}
-                setInlineBasisWeight={setInlineBasisWeight}
-                inlineRollWidth={inlineRollWidth}
-                setInlineRollWidth={setInlineRollWidth}
-                paperSizes={paperSizes}
-                uniqueProcessClassifications={uniqueProcessClassifications}
-                uniqueLaminationTypes={uniqueLaminationTypes}
-                uniqueSpecifications={uniqueSpecifications}
-                isUpdatingInfo={isUpdatingInfo}
-                handleStartEditField={handleStartEditField}
-                handleStartEditAllFields={handleStartEditAllFields}
-                handleCancelEditField={handleCancelEditField}
-                handleSaveField={handleSaveField}
-                setIsUploadDialogOpen={setIsUploadDialogOpen}
-                setImageViewerOpen={setImageViewerOpen}
-                setViewingImageUrl={setViewingImageUrl}
-                onDeleteImage={handleDeleteImage}
-                isProofer={isProofer}
-              />
 
-              <div className="space-y-4">
-                {order && order.status !== "completed" && cartItems.length > 0 && (
-                  <CartBanner proofingOrderId={order.id} />
-                )}
-                <DetailDesignsListCard
-                  order={order}
-                  orderDesigns={orderDesigns}
-                  editingQuantityDesignId={editingQuantityDesignId}
-                  setEditingQuantityDesignId={setEditingQuantityDesignId}
-                  inlineQuantityValue={inlineQuantityValue}
-                  setInlineQuantityValue={setInlineQuantityValue}
-                  inlineItemsPerSheetValue={inlineItemsPerSheetValue}
-                  setInlineItemsPerSheetValue={setInlineItemsPerSheetValue}
-                  handleUpdateDesignQuantity={handleUpdateDesignQuantity}
-                  updatingDesignId={updatingDesignId}
-                  setIsAddDesignDialogOpen={setIsAddDesignDialogOpen}
-                  setRemoveDesignTarget={setRemoveDesignTarget}
-                  setIsConfirmRemoveDesignDialogOpen={
-                    setIsConfirmRemoveDesignDialogOpen
-                  }
-                  isRemovingDesign={isRemovingDesign}
-                  setImageViewerOpen={setImageViewerOpen}
-                  setViewingImageUrl={setViewingImageUrl}
-                  setSelectedDesignForRelatedDies={
-                    setSelectedDesignForRelatedDies
-                  }
-                  setIsRelatedDiesDialogOpen={setIsRelatedDiesDialogOpen}
-                  onReject={handleOpenRejectDialog}
-                  isRejecting={isRejecting}
-                  onFindDie={handleFindDie}
-                  highlightSearchTerm={highlightSearchTerm}
-                  isProofer={isProofer}
-                  onUpdateSide={handleUpdateDesignSide}
-                />
-              </div>
+          <DetailPlateExportCard
+            order={order}
+            setIsPlateExportDialogOpen={setIsPlateExportDialogOpen}
+            setEditingPlateExport={setEditingPlateExport}
+            handleHandToProduction={handleConfirmHandToProduction}
+            isHandingToProduction={isHandingToProduction}
+            isProofer={isProofer}
+          />
 
-              <DetailPlateExportCard
-                order={order}
-                setIsPlateExportDialogOpen={setIsPlateExportDialogOpen}
-                setEditingPlateExport={setEditingPlateExport}
-                handleHandToProduction={handleConfirmHandToProduction}
-                isHandingToProduction={isHandingToProduction}
-                isProofer={isProofer}
-              />
-
-              {hasDieCutDesigns ? (
-                <DetailDieExportCard
-                  order={order}
-                  hasDieCutDesigns={hasDieCutDesigns}
-                  isDieExported={isDieExported}
-                  setIsDieExportDialogOpen={setIsDieExportDialogOpen}
-                  handleOpenReplaceDieDialog={handleOpenReplaceDieDialog}
-                  handleRemoveDie={handleRemoveDie}
-                  isRemovingDie={isRemovingDie}
-                  onEditDie={(die) => {
-                    setEditingDie(die);
-                    setIsEditDieDialogOpen(true);
-                  }}
-                  setIsDieListDialogOpen={setIsDieListDialogOpen}
-                  setImageViewerOpen={setImageViewerOpen}
-                  setViewingImageUrl={setViewingImageUrl}
-                  isProofer={isProofer}
-                />
-              ) : (
-                <div /> /* Empty div to maintain grid if no die cut designs */
-              )}
-            </div>
-          </div>
-        )}
+          {hasDieCutDesigns ? (
+            <DetailDieExportCard
+              order={order}
+              hasDieCutDesigns={hasDieCutDesigns}
+              isDieExported={isDieExported}
+              setIsDieExportDialogOpen={setIsDieExportDialogOpen}
+              handleOpenReplaceDieDialog={handleOpenReplaceDieDialog}
+              handleRemoveDie={handleRemoveDie}
+              isRemovingDie={isRemovingDie}
+              onEditDie={(die) => {
+                setEditingDie(die);
+                setIsEditDieDialogOpen(true);
+              }}
+              setIsDieListDialogOpen={setIsDieListDialogOpen}
+              setImageViewerOpen={setImageViewerOpen}
+              setViewingImageUrl={setViewingImageUrl}
+              isProofer={isProofer}
+            />
+          ) : (
+            <div /> /* Empty div to maintain grid if no die cut designs */
+          )}
+        </div>
       </div>
 
       <PrepressDetailDialogs
@@ -2706,6 +2592,18 @@ export default function ProofingOrderDetailPage() {
         }}
         isRejecting={isRejecting || isRemovingDesign}
       />
+
+      {/* Proofing Order History Dialog */}
+      <Dialog open={isHistoryDialogOpen} onOpenChange={setIsHistoryDialogOpen}>
+        <DialogContent className="max-w-5xl max-h-[85vh] flex flex-col p-6 overflow-hidden">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Lịch sử thao tác bài bình</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden min-h-0">
+            {order && <DetailHistoryCard proofingOrderId={order.id} />}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
