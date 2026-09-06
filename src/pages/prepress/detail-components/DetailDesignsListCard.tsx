@@ -25,6 +25,7 @@ import {
   RotateCcw,
   Copy,
   Check,
+  Package,
 } from "lucide-react";
 import {
   Select,
@@ -263,102 +264,126 @@ export function DetailDesignsListCard({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {orderDesigns.map((pod, index) => {
-                const isHighlighted = pod.design?.id ? highlightDesignIds.includes(pod.design.id) : false;
-                const podIsDecal = pod.design?.designType?.name?.toLowerCase().includes("decal") ||
-                                   pod.design?.materialType?.name?.toLowerCase().includes("decal");
-                const isBo = podIsDecal && pod.design?.sidesClassification === "two_side";
-                const allocations = (pod.proofingAllocations || pod.design?.proofingAllocations || [])
-                  .filter((alloc: any) => alloc.proofingOrderId !== order?.id);
-                const fullInfo = (
-                  <div className="space-y-2 text-sm max-w-md">
-                    <div className="font-semibold text-base border-b pb-2 flex flex-col gap-1 w-full">
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="min-w-0 break-words flex-1 leading-snug">
-                          {pod.design?.designName}
-                        </div>
-                        {pod.isUrgent && (
-                          <span className="bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-400 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide border border-red-300 shrink-0">
-                            Gấp
-                          </span>
-                        )}
+              {!orderDesigns || orderDesigns.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={9} className="h-48 text-center">
+                    <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground">
+                      <div className="h-12 w-12 bg-muted/60 rounded-full flex items-center justify-center mb-1">
+                        <Package className="h-6 w-6 text-muted-foreground/50" />
                       </div>
-                      {pod.design?.customer && (
-                        <div className="text-muted-foreground font-normal text-sm break-words w-full">
-                          {pod.design.customer.companyName || pod.design.customer.name}
-                        </div>
+                      <p className="font-semibold text-foreground text-sm">Bài bình chưa có thiết kế nào</p>
+                      <p className="text-xs max-w-md text-muted-foreground">
+                        Tất cả thiết kế đã bị xóa hoặc chưa được thêm vào. Các thông số bài bình vẫn được giữ nguyên. Bạn có thể nhấn nút bên dưới để thêm mã hàng mới hoặc xem tab "Lịch sử" để đối chiếu.
+                      </p>
+                      {isProofer && order?.status !== "completed" && (
+                        <Button
+                          size="sm"
+                          className="mt-2 gap-1.5 font-medium"
+                          onClick={() => setIsAddDesignDialogOpen(true)}
+                        >
+                          <Plus className="h-4 w-4" />
+                          Thêm mã hàng ngay
+                        </Button>
                       )}
                     </div>
-
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
-                      <div className="flex items-center">
-                        <span className="text-muted-foreground">Mã hàng:</span>
-                        <span className="ml-2 font-mono">
-                          {pod.design?.code}
-                        </span>
-                        {pod.design?.code && (
-                          <HoverInfoCopy value={pod.design.code} label="Mã hàng" />
+                  </TableCell>
+                </TableRow>
+              ) : (
+                orderDesigns.map((pod, index) => {
+                  const isHighlighted = pod.design?.id ? highlightDesignIds.includes(pod.design.id) : false;
+                  const podIsDecal = pod.design?.designType?.name?.toLowerCase().includes("decal") ||
+                                     pod.design?.materialType?.name?.toLowerCase().includes("decal");
+                  const isBo = podIsDecal && pod.design?.sidesClassification === "two_side";
+                  const allocations = (pod.proofingAllocations || pod.design?.proofingAllocations || [])
+                    .filter((alloc: any) => alloc.proofingOrderId !== order?.id);
+                  const fullInfo = (
+                    <div className="space-y-2 text-sm max-w-md">
+                      <div className="font-semibold text-base border-b pb-2 flex flex-col gap-1 w-full">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="min-w-0 break-words flex-1 leading-snug">
+                            {pod.design?.designName}
+                          </div>
+                          {pod.isUrgent && (
+                            <span className="bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-400 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide border border-red-300 shrink-0">
+                              Gấp
+                            </span>
+                          )}
+                        </div>
+                        {pod.design?.customer && (
+                          <div className="text-muted-foreground font-normal text-sm break-words w-full">
+                            {pod.design.customer.companyName || pod.design.customer.name}
+                          </div>
                         )}
                       </div>
 
-                      <div className="flex items-center">
-                        <span className="text-muted-foreground">Loại:</span>
-                        <span className="ml-2">
-                          {pod.design?.designType?.name || "—"}
-                        </span>
-                        {pod.design?.designType?.name && (
-                          <HoverInfoCopy value={pod.design.designType.name} label="Loại" />
-                        )}
-                      </div>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                        <div className="flex items-center">
+                          <span className="text-muted-foreground">Mã hàng:</span>
+                          <span className="ml-2 font-mono">
+                            {pod.design?.code}
+                          </span>
+                          {pod.design?.code && (
+                            <HoverInfoCopy value={pod.design.code} label="Mã hàng" />
+                          )}
+                        </div>
 
-                      <div className="flex items-center">
-                        <span className="text-muted-foreground">
-                          Chất liệu:
-                        </span>
-                        <span className="ml-2">
-                          {(() => {
-                            const matName = pod.design?.materialType?.name || "—";
-                            const bw = pod.design?.basisWeight || pod.basisWeight;
-                            return matName !== "—"
-                              ? `${matName}${bw && bw > 0 ? ` (${bw} gsm)` : ""}`
-                              : "—";
-                          })()}
-                        </span>
-                        {pod.design?.materialType?.name && (
-                          <HoverInfoCopy
-                            value={(() => {
-                              const matName = pod.design.materialType.name;
+                        <div className="flex items-center">
+                          <span className="text-muted-foreground">Loại:</span>
+                          <span className="ml-2">
+                            {pod.design?.designType?.name || "—"}
+                          </span>
+                          {pod.design?.designType?.name && (
+                            <HoverInfoCopy value={pod.design.designType.name} label="Loại" />
+                          )}
+                        </div>
+
+                        <div className="flex items-center">
+                          <span className="text-muted-foreground">
+                            Chất liệu:
+                          </span>
+                          <span className="ml-2">
+                            {(() => {
+                              const matName = pod.design?.materialType?.name || "—";
                               const bw = pod.design?.basisWeight || pod.basisWeight;
-                              return `${matName}${bw && bw > 0 ? ` (${bw} gsm)` : ""}`;
+                              return matName !== "—"
+                                ? `${matName}${bw && bw > 0 ? ` (${bw} gsm)` : ""}`
+                                : "—";
                             })()}
-                            label="Chất liệu"
-                          />
-                        )}
-                      </div>
+                          </span>
+                          {pod.design?.materialType?.name && (
+                            <HoverInfoCopy
+                              value={(() => {
+                                const matName = pod.design.materialType.name;
+                                const bw = pod.design?.basisWeight || pod.basisWeight;
+                                return `${matName}${bw && bw > 0 ? ` (${bw} gsm)` : ""}`;
+                              })()}
+                              label="Chất liệu"
+                            />
+                          )}
+                        </div>
 
-                      <div className="flex items-center">
-                        <span className="text-muted-foreground">
-                          Kích thước:
-                        </span>
-                        <span className="ml-2">
-                          {formatDesignDimensions(
-                            pod.design?.length,
-                            pod.design?.width,
-                            pod.design?.height,
-                          )}{" "}
-
-                        </span>
-                        {pod.design?.length && (
-                          <HoverInfoCopy
-                            value={`${formatDesignDimensions(
+                        <div className="flex items-center">
+                          <span className="text-muted-foreground">
+                            Kích thước:
+                          </span>
+                          <span className="ml-2">
+                            {formatDesignDimensions(
                               pod.design?.length,
                               pod.design?.width,
                               pod.design?.height,
-                            )} mm`}
-                            label="Kích thước"
-                          />
-                        )}
-                      </div>
+                            )}
+                          </span>
+                          {pod.design?.length && (
+                            <HoverInfoCopy
+                              value={`${formatDesignDimensions(
+                                pod.design?.length,
+                                pod.design?.width,
+                                pod.design?.height,
+                              )} mm`}
+                              label="Kích thước"
+                            />
+                          )}
+                        </div>
 
                       <div>
                         <span className="text-muted-foreground">SL:</span>
@@ -831,7 +856,7 @@ export function DetailDesignsListCard({
                     </HoverCardContent>
                   </HoverCard>
                 );
-              })}
+              }))}
             </TableBody>
           </Table>
         </div>

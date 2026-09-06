@@ -237,6 +237,7 @@ export const API_SUFFIX = {
   PROOFING_ADD_DESIGNS: (id: number) => `/proofing-orders/${id}/designs`,
   PROOFING_REMOVE_DESIGN: (id: number, designId: number) =>
     `/proofing-orders/${id}/designs/${designId}`,
+  PROOFING_HISTORY: (id: number) => `/proofing-orders/${id}/history`,
   PROOFING_DESIGN_TYPE_SUMMARY:
     "/proofing-orders/available-order-details/design-type-summary",
   PROOFING_REJECT_DESIGN: "/proofing-orders/designs/reject",

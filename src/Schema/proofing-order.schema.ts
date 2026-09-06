@@ -151,3 +151,50 @@ export const AvailableQuantityResponseSchema = z.unknown();
 export type AvailableQuantityResponse = z.infer<
   typeof AvailableQuantityResponseSchema
 >;
+
+// ===== ProofingOrderHistory =====
+export const ProofingOrderHistoryUserSchema = z.object({
+  id: z.number().int(),
+  fullName: z.string().nullable().optional(),
+  userName: z.string().nullable().optional(),
+  email: z.string().nullable().optional(),
+}).passthrough();
+
+export const ProofingOrderHistoryResponseSchema = z.object({
+  id: z.number().int(),
+  proofingOrderId: z.number().int(),
+  designId: z.number().int().nullable().optional(),
+  designCode: z.string().nullable().optional(),
+  designName: z.string().nullable().optional(),
+  action: z.string(),
+  actionDisplayName: z.string().nullable().optional(),
+  quantity: z.number().nullable().optional(),
+  oldQuantity: z.number().nullable().optional(),
+  quantityTaken: z.number().nullable().optional(),
+  side: z.string().nullable().optional(),
+  itemsPerSheet: z.number().nullable().optional(),
+  notes: z.string().nullable().optional(),
+  createdById: z.number().int().nullable().optional(),
+  createdBy: ProofingOrderHistoryUserSchema.nullable().optional(),
+  createdAt: z.string(),
+}).passthrough();
+export type ProofingOrderHistoryResponse = z.infer<
+  typeof ProofingOrderHistoryResponseSchema
+>;
+
+export const ProofingOrderHistoryParamsSchema = z.object({
+  pageNumber: z.number().int().optional(),
+  pageSize: z.number().int().optional(),
+  sortColumn: z.string().optional(),
+  sortOrder: z.string().optional(),
+}).passthrough();
+export type ProofingOrderHistoryParams = z.infer<
+  typeof ProofingOrderHistoryParamsSchema
+>;
+
+export const ProofingOrderHistoryResponsePaginateSchema =
+  createPagedResponseSchema(ProofingOrderHistoryResponseSchema);
+export type ProofingOrderHistoryResponsePaginate = z.infer<
+  typeof ProofingOrderHistoryResponsePaginateSchema
+>;
+
