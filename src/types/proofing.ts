@@ -47,6 +47,7 @@ export interface DesignItem {
   availableFrontQty?: number | null; // Available quantity for front side (mặt trước) in sheets
   availableBackQty?: number | null; // Available quantity for back side (mặt sau) in sheets
   createdBy?: string;
+  side?: "both" | "front" | "back";
   proofingAllocations?: ProofingAllocation[];
 }
 
@@ -107,3 +108,99 @@ export function checkIsDecalSet(item: {
   const isTwoSide = item.sidesClassification === "two_side" || item.sidesClassification === "both";
   return isDecal && isTwoSide;
 }
+
+export function getMaxAvailableQtyForSide(
+  design: {
+    isDecalSet?: boolean;
+    unitName?: string;
+    designTypeName?: string;
+    materialTypeName?: string;
+    sidesClassification?: string;
+    availableQuantity?: number;
+    quantity: number | null;
+    availableFrontQty?: number | null;
+    availableBackQty?: number | null;
+  },
+  side: "both" | "front" | "back" = "both"
+) {
+  const isDecalBo = checkIsDecalSet(design);
+  const baseAvail =
+    design.availableQuantity !== undefined && design.availableQuantity !== null && design.availableQuantity >= 0
+      ? design.availableQuantity
+      : design.quantity ?? 0;
+
+  if (!isDecalBo) {
+    return {
+      maxAvailable: baseAvail,
+      label: `${baseAvail.toLocaleString("vi-VN")}`,
+      isSet: false,
+    };
+  }
+
+  const frontQty = design.availableFrontQty != null ? design.availableFrontQty : baseAvail;
+  const backQty = design.availableBackQty != null ? design.availableBackQty : baseAvail;
+
+  if (side === "front") {
+    return {
+      maxAvailable: frontQty,
+      label: `${frontQty.toLocaleString("vi-VN")} mặt trước`,
+      isSet: false,
+    };
+  }
+
+  if (side === "back") {
+    return {
+      maxAvailable: backQty,
+      label: `${backQty.toLocaleString("vi-VN")} mặt sau`,
+      isSet: false,
+    };
+  }
+
+  // side === "both"
+  const sheetsMax =
+    design.availableFrontQty != null && design.availableBackQty != null
+      ? Math.min(design.availableFrontQty, design.availableBackQty) * 2
+      : baseAvail;
+  const setsMax = Math.floor(sheetsMax / 2);
+
+  return {
+    maxAvailable: sheetsMax,
+    label: `${sheetsMax.toLocaleString("vi-VN")} (${setsMax.toLocaleString("vi-VN")} bộ)`,
+    isSet: true,
+  };
+}
+
+export function getDefaultSideForDesign(design: {
+  isDecalSet?: boolean;
+  unitName?: string;
+  designTypeName?: string;
+  materialTypeName?: string;
+  sidesClassification?: string;
+  availableQuantity?: number;
+  quantity?: number | null;
+  availableFrontQty?: number | null;
+  availableBackQty?: number | null;
+} | null | undefined): "both" | "front" | "back" {
+  if (!design || !checkIsDecalSet(design)) return "both";
+
+  const baseAvail =
+    design.availableQuantity !== undefined && design.availableQuantity !== null && design.availableQuantity >= 0
+      ? design.availableQuantity
+      : design.quantity ?? 0;
+
+  const frontQty = design.availableFrontQty != null ? design.availableFrontQty : baseAvail;
+  const backQty = design.availableBackQty != null ? design.availableBackQty : baseAvail;
+
+  const bothQty =
+    design.availableFrontQty != null && design.availableBackQty != null
+      ? Math.min(design.availableFrontQty, design.availableBackQty) * 2
+      : baseAvail;
+
+  if (bothQty > 0) return "both";
+  if (frontQty > 0 && backQty <= 0) return "front";
+  if (backQty > 0 && frontQty <= 0) return "back";
+
+  return "both";
+}
+
+

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useProofingCart } from "@/context/proofing-cart-context";
+import { checkIsDecalSet, getMaxAvailableQtyForSide, getDefaultSideForDesign } from "@/types/proofing";
 import {
   useAvailableBins,
   useProofingOrder,
@@ -16,6 +17,13 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -76,7 +84,7 @@ export function MergeProofingOrderWizard({
 }: MergeProofingOrderWizardProps) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { cartItems, removeFromCart, clearCart } = useProofingCart();
+  const { cartItems, removeFromCart, clearCart, updateSide } = useProofingCart();
   const { mutateAsync: addDesigns, isPending: isSubmitting } = useAddDesignsToProofingOrder();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -160,14 +168,39 @@ export function MergeProofingOrderWizard({
     return Array.from(binMap.values());
   }, [availableBins, existingOrders, selectedBinId, destinationDetail, activeDesignTypeId]);
 
-  // Initialize quantities for Step 3
+  // Auto-smart select optimal side for Decal sets if current side has 0 qty
+  useEffect(() => {
+    if (open && cartItems.length > 0) {
+      cartItems.forEach((item) => {
+        if (checkIsDecalSet(item)) {
+          const currentSide = item.side || "both";
+          const { maxAvailable } = getMaxAvailableQtyForSide(item, currentSide);
+          if (maxAvailable <= 0) {
+            const smartSide = getDefaultSideForDesign(item);
+            if (smartSide !== currentSide) {
+              updateSide(item.readyDesignId, smartSide);
+            }
+          }
+        }
+      });
+    }
+  }, [open, cartItems, updateSide]);
+
+  // Initialize quantities for Step 3 with smart pre-fill
   useEffect(() => {
     if (step === 3 && cartItems.length > 0) {
-      const initial: Record<number, string> = {};
-      cartItems.forEach((item) => {
-        initial[item.readyDesignId] = String(item.quantity ?? 1000);
+      setAddedQuantities((prev) => {
+        const next = { ...prev };
+        cartItems.forEach((item) => {
+          const effectiveSide = item.side || getDefaultSideForDesign(item);
+          const { maxAvailable } = getMaxAvailableQtyForSide(item, effectiveSide);
+          if (next[item.readyDesignId] === undefined || next[item.readyDesignId] === "" || next[item.readyDesignId] === "0") {
+            const defaultQty = maxAvailable;
+            next[item.readyDesignId] = String(defaultQty > 0 ? defaultQty : 0);
+          }
+        });
+        return next;
       });
-      setAddedQuantities(initial);
     }
   }, [step, cartItems]);
 
@@ -280,6 +313,7 @@ export function MergeProofingOrderWizard({
           designId: item.designId,
           orderDetailId: (item.orderDetailId && item.orderDetailId > 0) ? item.orderDetailId : null,
           quantity: qty,
+          side: item.side || "both",
         };
       })
       .filter((item) => item.quantity > 0);
@@ -416,6 +450,7 @@ export function MergeProofingOrderWizard({
                       <TableHead>Loại thiết kế</TableHead>
                       <TableHead>Kích thước</TableHead>
                       <TableHead>Chất liệu</TableHead>
+                      <TableHead className="w-32">Mặt in</TableHead>
                       <TableHead className="text-right">SL có sẵn</TableHead>
                       <TableHead className="w-12 text-center"></TableHead>
                     </TableRow>
@@ -423,6 +458,8 @@ export function MergeProofingOrderWizard({
                   <TableBody>
                     {cartItemsWithResolvedTypes.map((item) => {
                       const isMismatched = item.resolvedDesignTypeId !== activeDesignTypeId;
+                      const effectiveSide = item.side || getDefaultSideForDesign(item);
+                      const { maxAvailable, label } = getMaxAvailableQtyForSide(item, effectiveSide);
                       return (
                         <TableRow
                           key={item.readyDesignId}
@@ -456,8 +493,29 @@ export function MergeProofingOrderWizard({
                               : "—"}
                           </TableCell>
                           <TableCell className="text-xs">{item.materialTypeName || "—"}</TableCell>
+                          <TableCell className="text-xs py-1">
+                            {checkIsDecalSet(item) ? (
+                              <Select
+                                value={effectiveSide}
+                                onValueChange={(val: "both" | "front" | "back") => updateSide(item.readyDesignId, val)}
+                              >
+                                <SelectTrigger className="h-7 text-xs font-semibold bg-white border-slate-200 min-w-[95px]">
+                                  <SelectValue placeholder="Mặt in" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="both" className="text-xs font-medium">Cả 2 mặt</SelectItem>
+                                  <SelectItem value="front" className="text-xs font-semibold text-blue-600">Mặt trước</SelectItem>
+                                  <SelectItem value="back" className="text-xs font-semibold text-purple-600">Mặt sau</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
                           <TableCell className="text-right font-semibold text-xs tabular-nums">
-                            {item.availableQuantity?.toLocaleString("vi-VN") || "0"}
+                            <span className={maxAvailable > 0 ? "text-slate-700 font-semibold" : "text-red-500 font-bold"}>
+                              {label}
+                            </span>
                           </TableCell>
                           <TableCell className="text-center py-1">
                             <Button
@@ -629,8 +687,10 @@ export function MergeProofingOrderWizard({
                       <TableHead className="w-12 text-center">Ảnh</TableHead>
                       <TableHead>Mã hàng</TableHead>
                       <TableHead>Tên thiết kế</TableHead>
+                      <TableHead className="w-32">Mặt in</TableHead>
                       <TableHead className="text-center w-28">Trạng thái</TableHead>
                       <TableHead className="text-right w-24">Hiện tại</TableHead>
+                      <TableHead className="text-right w-24">SL có sẵn</TableHead>
                       <TableHead className="text-center w-36">Số lượng thêm</TableHead>
                       <TableHead className="text-right w-28">Tổng số mới</TableHead>
                     </TableRow>
@@ -639,6 +699,8 @@ export function MergeProofingOrderWizard({
                     {cartItems.map((item) => {
                       const isItemDuplicate = isDuplicate(item);
                       const currentQty = getExistingQuantity(item);
+                      const effectiveSide = item.side || getDefaultSideForDesign(item);
+                      const { maxAvailable, label: availLabel } = getMaxAvailableQtyForSide(item, effectiveSide);
                       const addQtyStr = addedQuantities[item.readyDesignId] || "";
                       const addQty = parseInt(addQtyStr || "0", 10);
                       const totalQty = currentQty + addQty;
@@ -670,6 +732,32 @@ export function MergeProofingOrderWizard({
                           <TableCell className="max-w-[200px] truncate text-xs" title={item.designName}>
                             {item.designName}
                           </TableCell>
+                          <TableCell className="text-xs py-1">
+                            {checkIsDecalSet(item) ? (
+                              <Select
+                                value={effectiveSide}
+                                onValueChange={(val: "both" | "front" | "back") => {
+                                  updateSide(item.readyDesignId, val);
+                                  const { maxAvailable: newMax } = getMaxAvailableQtyForSide(item, val);
+                                  setAddedQuantities((prev) => ({
+                                    ...prev,
+                                    [item.readyDesignId]: String(newMax > 0 ? newMax : 0),
+                                  }));
+                                }}
+                              >
+                                <SelectTrigger className="h-7 text-xs font-semibold bg-white border-slate-200 min-w-[95px]">
+                                  <SelectValue placeholder="Mặt in" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="both" className="text-xs font-medium">Cả 2 mặt</SelectItem>
+                                  <SelectItem value="front" className="text-xs font-semibold text-blue-600">Mặt trước</SelectItem>
+                                  <SelectItem value="back" className="text-xs font-semibold text-purple-600">Mặt sau</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
                           <TableCell className="text-center py-1.5">
                             {isItemDuplicate ? (
                               <Badge className="bg-amber-500 hover:bg-amber-600 text-white font-black text-[9px] uppercase tracking-wide">
@@ -684,6 +772,11 @@ export function MergeProofingOrderWizard({
                           <TableCell className="text-right font-medium text-xs tabular-nums text-slate-500">
                             {isItemDuplicate ? currentQty.toLocaleString("vi-VN") : "—"}
                           </TableCell>
+                          <TableCell className="text-right font-semibold text-xs tabular-nums text-slate-600">
+                            <span className={maxAvailable > 0 ? "text-slate-700" : "text-red-500 font-bold"}>
+                              {availLabel}
+                            </span>
+                          </TableCell>
                           <TableCell className="text-center py-1">
                             <Input
                               type="number"
@@ -693,6 +786,7 @@ export function MergeProofingOrderWizard({
                               className="h-8 text-xs font-bold tabular-nums w-28 mx-auto focus-visible:ring-blue-600"
                               placeholder="Số lượng..."
                               min="0"
+                              max={maxAvailable}
                             />
                           </TableCell>
                           <TableCell className="text-right font-bold text-xs tabular-nums text-blue-700">

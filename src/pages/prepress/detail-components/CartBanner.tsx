@@ -1,7 +1,15 @@
 import React from "react";
 import { useProofingCart } from "@/context/proofing-cart-context";
+import { checkIsDecalSet, getMaxAvailableQtyForSide, getDefaultSideForDesign } from "@/types/proofing";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -36,7 +44,7 @@ interface CartBannerProps {
 
 export function CartBanner({ proofingOrderId }: CartBannerProps) {
   const queryClient = useQueryClient();
-  const { cartItems, removeFromCart, updateQuantity, clearCart } = useProofingCart();
+  const { cartItems, removeFromCart, updateQuantity, updateSide, clearCart } = useProofingCart();
   const { mutateAsync: addDesigns, isPending: isSubmitting } = useAddDesignsToProofingOrder();
 
   const handleQtyChange = (readyDesignId: number, value: string, maxQty?: number) => {
@@ -69,6 +77,7 @@ export function CartBanner({ proofingOrderId }: CartBannerProps) {
               readyDesignId: item.readyDesignId ?? null,
               orderDetailId: item.orderDetailId ?? null,
               quantity: item.quantity ?? 0,
+              side: item.side || "both",
             }))
             .filter((item) => item.quantity > 0),
         },
@@ -126,7 +135,8 @@ export function CartBanner({ proofingOrderId }: CartBannerProps) {
                 <TableHead className="h-8 text-xs font-semibold text-blue-900 py-1">Kích thước</TableHead>
                 <TableHead className="h-8 text-xs font-semibold text-blue-900 py-1">Tên thiết kế / Loại</TableHead>
                 <TableHead className="h-8 text-xs font-semibold text-blue-900 py-1">Chất liệu</TableHead>
-                <TableHead className="h-8 text-xs font-semibold text-blue-900 py-1 text-right w-24">Số lượng</TableHead>
+                <TableHead className="h-8 text-xs font-semibold text-blue-900 py-1 w-28">Mặt in</TableHead>
+                <TableHead className="h-8 text-xs font-semibold text-blue-900 py-1 text-right w-24">SL có sẵn</TableHead>
                 <TableHead className="h-8 text-xs font-semibold text-blue-900 py-1 text-center w-28">Ngày thiết kế</TableHead>
                 <TableHead className="h-8 text-xs font-semibold text-blue-900 py-1 text-center w-28">SL thêm</TableHead>
                 <TableHead className="h-8 text-xs font-semibold text-blue-900 py-1 text-center w-12"></TableHead>
@@ -134,8 +144,9 @@ export function CartBanner({ proofingOrderId }: CartBannerProps) {
             </TableHeader>
             <TableBody>
               {cartItems.map((item) => {
-                const maxQty = item.availableQuantity ?? 1000;
-                const qtyVal = item.quantity === null ? "" : item.quantity;
+                const effectiveSide = item.side || getDefaultSideForDesign(item);
+                const { maxAvailable: maxQty, label: availLabel } = getMaxAvailableQtyForSide(item, effectiveSide);
+                const qtyVal = item.quantity === null ? maxQty : item.quantity;
                 return (
                   <TableRow key={item.readyDesignId} className="h-10 hover:bg-blue-50/10">
                     <TableCell className="py-1">
@@ -168,8 +179,33 @@ export function CartBanner({ proofingOrderId }: CartBannerProps) {
                     <TableCell className="py-1 text-xs text-muted-foreground max-w-[150px] truncate">
                       {item.materialTypeName || "—"}
                     </TableCell>
+                    <TableCell className="py-1 text-xs">
+                      {checkIsDecalSet(item) ? (
+                        <Select
+                          value={effectiveSide}
+                          onValueChange={(val: "both" | "front" | "back") => {
+                            updateSide(item.readyDesignId, val);
+                            const { maxAvailable: newMax } = getMaxAvailableQtyForSide(item, val);
+                            updateQuantity(item.readyDesignId, newMax);
+                          }}
+                        >
+                          <SelectTrigger className="h-7 text-xs font-semibold bg-white border-slate-200 min-w-[95px]">
+                            <SelectValue placeholder="Mặt in" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="both" className="text-xs font-medium">Cả 2 mặt</SelectItem>
+                            <SelectItem value="front" className="text-xs font-semibold text-blue-600">Mặt trước</SelectItem>
+                            <SelectItem value="back" className="text-xs font-semibold text-purple-600">Mặt sau</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell className="py-1 text-xs text-right font-medium">
-                      {maxQty.toLocaleString()}
+                      <span className={maxQty > 0 ? "text-slate-700" : "text-red-500 font-bold"}>
+                        {availLabel}
+                      </span>
                     </TableCell>
                     <TableCell className="py-1 text-xs text-center whitespace-nowrap">
                       {formatDesignCreatedDate(item.createdAt)}
@@ -229,3 +265,4 @@ export function CartBanner({ proofingOrderId }: CartBannerProps) {
     </Card>
   );
 }
+

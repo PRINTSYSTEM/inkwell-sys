@@ -15,6 +15,13 @@ export interface CartItem {
   width?: number;
   height?: number;
   createdAt?: string | null;
+  designTypeId?: number | null;
+  isDecalSet?: boolean;
+  unitName?: string;
+  sidesClassification?: string;
+  availableFrontQty?: number | null;
+  availableBackQty?: number | null;
+  side?: "both" | "front" | "back";
 }
 
 interface ProofingCartContextValue {
@@ -22,6 +29,7 @@ interface ProofingCartContextValue {
   addToCart: (items: CartItem[]) => void;
   removeFromCart: (readyDesignId: number) => void;
   updateQuantity: (readyDesignId: number, quantity: number | null) => void;
+  updateSide: (readyDesignId: number, side: "both" | "front" | "back") => void;
   clearCart: () => void;
   cartCount: number;
 }
@@ -79,18 +87,25 @@ export const ProofingCartProvider: React.FC<{ children: ReactNode }> = ({ childr
     );
   }, []);
 
+  const updateSide = useCallback((readyDesignId: number, side: "both" | "front" | "back") => {
+    setCartItems((prev) =>
+      prev.map((i) => (i.readyDesignId === readyDesignId ? { ...i, side } : i))
+    );
+  }, []);
+
   const clearCart = useCallback(() => {
     setCartItems([]);
   }, []);
 
   return (
     <ProofingCartContext.Provider
-      value={{ cartItems, addToCart, removeFromCart, updateQuantity, clearCart, cartCount: cartItems.length }}
+      value={{ cartItems, addToCart, removeFromCart, updateQuantity, updateSide, clearCart, cartCount: cartItems.length }}
     >
       {children}
     </ProofingCartContext.Provider>
   );
 };
+
 
 export function useProofingCart() {
   const ctx = useContext(ProofingCartContext);

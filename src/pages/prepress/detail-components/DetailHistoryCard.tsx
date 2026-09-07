@@ -101,7 +101,7 @@ export function DetailHistoryCard({ proofingOrderId }: DetailHistoryCardProps) {
 
   const historyItems = data?.items ?? [];
   const totalPages = data?.totalPages ?? 1;
-  const totalItems = data?.totalItems ?? 0;
+  const totalItems = data?.total ?? (data as any)?.totalItems ?? 0;
 
   return (
     <Card className="relative flex flex-col min-h-[400px]">

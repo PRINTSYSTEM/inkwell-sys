@@ -107,7 +107,7 @@ import { InventoryViewDialog } from "@/components/inventory/InventoryViewDialog"
 import { useProofingCart } from "@/context/proofing-cart-context";
 import { MergeProofingOrderWizard } from "./components/MergeProofingOrderWizard";
 
-import type { DesignItem } from "@/types/proofing";
+import { type DesignItem, getDefaultSideForDesign } from "@/types/proofing";
 import { useMaterialTypeList, useAuth } from "@/hooks";
 import { ROLE } from "@/constants";
 import type { UserRole } from "@/Schema";
@@ -1190,6 +1190,12 @@ export default function PrepressList() {
                               height: d.height,
                               createdAt: d.createdAt,
                               designTypeId: d.designTypeId || null,
+                              isDecalSet: d.isDecalSet,
+                              unitName: d.unitName,
+                              sidesClassification: d.sidesClassification,
+                              availableFrontQty: d.availableFrontQty,
+                              availableBackQty: d.availableBackQty,
+                              side: d.side || getDefaultSideForDesign(d),
                             }))
                           );
                           clearSelection();

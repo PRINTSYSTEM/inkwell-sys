@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { SearchableSelect } from "@/components/forms/SearchableSelect";
-import { type DesignItem, checkIsDecalSet } from "@/types/proofing";
+import { type DesignItem, checkIsDecalSet, getDefaultSideForDesign } from "@/types/proofing";
 import { getMaxAvailableQtyForSide } from "@/components/proofing/AddDesignToProofingDialog";
 import type { PaperSizeResponse } from "@/Schema/paper-size.schema";
 import type { AddProofingOrderDetailItem } from "@/Schema/proofing-order.schema";
@@ -97,8 +97,10 @@ export function CreateProofingOrderModal({
       const initialQuantities: Record<number, number> = {};
       const initialSides: Record<number, "both" | "front" | "back"> = {};
       selectedDesigns.forEach((design) => {
-        initialQuantities[design.id] = 0;
-        initialSides[design.id] = "both";
+        const smartSide = getDefaultSideForDesign(design);
+        initialSides[design.id] = smartSide;
+        const { maxAvailable } = getMaxAvailableQtyForSide(design, smartSide);
+        initialQuantities[design.id] = maxAvailable > 0 ? maxAvailable : 0;
       });
       setDesignQuantities(initialQuantities);
       setDesignSides(initialSides);
