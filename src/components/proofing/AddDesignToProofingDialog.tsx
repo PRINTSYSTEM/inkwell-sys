@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { type DesignItem, checkIsDecalSet } from "@/types/proofing";
+import { type DesignItem, checkIsDecalSet, getMaxAvailableQtyForSide, getDefaultSideForDesign } from "@/types/proofing";
 import {
   Dialog,
   DialogContent,
@@ -39,58 +39,10 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
-import { sidesClassificationLabels } from "@/lib/status-utils";
 
-export const getMaxAvailableQtyForSide = (
-  design: DesignItem,
-  side: "both" | "front" | "back" = "both"
-) => {
-  const isDecalBo = checkIsDecalSet(design);
-  const baseAvail =
-    design.availableQuantity !== undefined && design.availableQuantity >= 0
-      ? design.availableQuantity
-      : design.quantity;
+export { getMaxAvailableQtyForSide };
 
-  if (!isDecalBo) {
-    return {
-      maxAvailable: baseAvail,
-      label: `${baseAvail.toLocaleString("vi-VN")}`,
-      isSet: false,
-    };
-  }
 
-  const frontQty = design.availableFrontQty != null ? design.availableFrontQty : baseAvail;
-  const backQty = design.availableBackQty != null ? design.availableBackQty : baseAvail;
-
-  if (side === "front") {
-    return {
-      maxAvailable: frontQty,
-      label: `${frontQty.toLocaleString("vi-VN")} mặt trước`,
-      isSet: false,
-    };
-  }
-
-  if (side === "back") {
-    return {
-      maxAvailable: backQty,
-      label: `${backQty.toLocaleString("vi-VN")} mặt sau`,
-      isSet: false,
-    };
-  }
-
-  // side === "both"
-  const sheetsMax =
-    design.availableFrontQty != null && design.availableBackQty != null
-      ? Math.min(design.availableFrontQty, design.availableBackQty) * 2
-      : baseAvail;
-  const setsMax = Math.floor(sheetsMax / 2);
-
-  return {
-    maxAvailable: sheetsMax,
-    label: `${sheetsMax.toLocaleString("vi-VN")} (${setsMax.toLocaleString("vi-VN")} bộ)`,
-    isSet: true,
-  };
-};
 
 interface AddDesignToProofingDialogProps {
   open: boolean;
@@ -185,7 +137,7 @@ export function AddDesignToProofingDialog({
       const initialSelected = new Set<number>();
       filteredDesigns.forEach((design) => {
         initialQuantities[design.id] = 0;
-        initialSides[design.id] = "both";
+        initialSides[design.id] = getDefaultSideForDesign(design);
       });
       setDesignQuantities(initialQuantities);
       setDesignSides(initialSides);
@@ -200,10 +152,8 @@ export function AddDesignToProofingDialog({
   // Handle checkbox toggle - set quantity to max when checked, 0 when unchecked
   const handleToggleDesign = (design: DesignItem) => {
     const isSelected = selectedDesignIds.has(design.id);
-    const maxQty =
-      design.availableQuantity !== undefined && design.availableQuantity >= 0
-        ? design.availableQuantity
-        : design.quantity;
+    const side = designSides[design.id] || getDefaultSideForDesign(design);
+    const { maxAvailable } = getMaxAvailableQtyForSide(design, side);
 
     setSelectedDesignIds((prev) => {
       const next = new Set(prev);
@@ -212,7 +162,7 @@ export function AddDesignToProofingDialog({
         setDesignQuantities((qty) => ({ ...qty, [design.id]: 0 }));
       } else {
         next.add(design.id);
-        setDesignQuantities((qty) => ({ ...qty, [design.id]: maxQty }));
+        setDesignQuantities((qty) => ({ ...qty, [design.id]: maxAvailable }));
       }
       return next;
     });
