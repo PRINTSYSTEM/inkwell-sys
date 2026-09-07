@@ -153,8 +153,15 @@ export function AddDesignToProofingDialog({
     }
 
     return availableDesigns.filter((design) => {
-      // Chỉ ràng buộc cùng loại thiết kế (designTypeId), bỏ ràng buộc chất liệu (materialTypeId)
-      const hasSameDesignType = design.designTypeId === currentDesign.designTypeId;
+      // Chỉ ràng buộc cùng loại thiết kế (designTypeId hoặc designTypeName)
+      const hasSameDesignType =
+        !currentDesign.designTypeId ||
+        !design.designTypeId ||
+        Number(design.designTypeId) === Number(currentDesign.designTypeId) ||
+        (!!design.designTypeName &&
+          !!currentDesign.designTypeName &&
+          design.designTypeName.toLowerCase().trim() === currentDesign.designTypeName.toLowerCase().trim());
+
       if (!hasSameDesignType) return false;
 
       // Tìm kiếm theo mã hàng hoặc tên hàng

@@ -755,14 +755,16 @@ export default function ProofingOrderDetailPage() {
   const [paperSizeId, setPaperSizeId] = useState<string>("custom");
   const [customPaperSize, setCustomPaperSize] = useState<string>("");
   const [notes, setNotes] = useState<string>("");
-  const materialTypeId = isEmptyOrder
-    ? (currentMaterialTypeId ?? null)
-    : (order.materialTypeId ?? null);
-  // Get available designs for adding (when order is empty, no material type filter)
-  // Pass designTypeId from selectedDesignTypes (only first one if selected) to API filter
-  const selectedDesignTypeId = isEmptyOrder
-    ? (selectedDesignTypes.length > 0 ? selectedDesignTypes[0] : null)
-    : (order?.proofingOrderDesigns?.[0]?.design?.designTypeId ?? null);
+  const materialTypeId =
+    order?.materialTypeId ||
+    order?.materialType?.id ||
+    (isEmptyOrder ? (currentMaterialTypeId ?? null) : null);
+  // Get available designs for adding: prioritize order's designType and materialType
+  const selectedDesignTypeId =
+    order?.proofingOrderDesigns?.[0]?.design?.designTypeId ||
+    order?.designTypeId ||
+    order?.designType?.id ||
+    (isEmptyOrder && selectedDesignTypes.length > 0 ? selectedDesignTypes[0] : null);
   // Pass designCode (search term) to API filter when searching
   const designCodeForApi =
     isEmptyOrder && debouncedSearch.trim().length > 0
@@ -773,8 +775,8 @@ export default function ProofingOrderDetailPage() {
       materialTypeId,
       designTypeId: selectedDesignTypeId,
       designCode: designCodeForApi,
-      pageNumber: isEmptyOrder ? currentPage : 1,
-      pageSize: isEmptyOrder ? itemsPerPage : 1000,
+      pageNumber: 1,
+      pageSize: 1000,
     });
 
   // Get available designs for adding (same material type, exclude already added designs) - for non-empty orders
