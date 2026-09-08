@@ -180,6 +180,47 @@ export const useDeleteProofingOrder = () => useDeleteProofingOrderBase();
 // 1. Create proofing order with useCreateProofingOrder
 // 2. Add designs with useAddDesignsToProofingOrder
 
+export const isItemAvailableForProofing = (od: any): boolean => {
+  const design = od?.design;
+  if (!design) return false;
+
+  // 1. Filter out completed items
+  if (od.isCompleted === true || od.status === "completed" || od.orderDetailStatus === "completed") {
+    return false;
+  }
+
+  // 2. Check split front / back quantities (for 2-sided decal sets)
+  const frontQty = od.availableFrontQty ?? od.readyDesign?.availableFrontQty ?? null;
+  const backQty = od.availableBackQty ?? od.readyDesign?.availableBackQty ?? null;
+
+  if (frontQty !== null || backQty !== null) {
+    // For 2-sided items, keep ONLY if AT LEAST ONE side has remaining quantity > 0
+    const remainingFront = frontQty != null ? Number(frontQty) : 0;
+    const remainingBack = backQty != null ? Number(backQty) : 0;
+    return remainingFront > 0 || remainingBack > 0;
+  }
+
+  // 3. For single items (non-split items):
+  // Check availableQuantity / availableForProofing / availableQuantityForProofing
+  const avForProofing =
+    od.availableForProofing !== undefined && od.availableForProofing !== null
+      ? Number(od.availableForProofing)
+      : od.availableQuantityForProofing !== undefined && od.availableQuantityForProofing !== null
+        ? Number(od.availableQuantityForProofing)
+        : od.availableQuantity !== undefined && od.availableQuantity !== null
+          ? Number(od.availableQuantity)
+          : design.availableQuantityForProofing !== undefined && design.availableQuantityForProofing !== null
+            ? Number(design.availableQuantityForProofing)
+            : undefined;
+
+  // If available quantity is explicitly 0 or <= 0, filter out!
+  if (avForProofing !== undefined && avForProofing !== null && avForProofing <= 0) {
+    return false;
+  }
+
+  return true;
+};
+
 // GET /proofing-orders/available-order-details
 export const useAvailableOrderDetailsForProofing = (
   params?: ProofingOrderAvailableOrderDetailsParams,
@@ -213,10 +254,10 @@ export const useAvailableOrderDetailsForProofing = (
       // 2. Resolve parameters for backend
       const normalizedParams = normalizeParams(params ?? {});
       const reqDesignTypeId = params?.designTypeId;
-      
+
       let finalDesignTypeId = reqDesignTypeId;
       let needClientFiltering = false;
-      
+
       if (reqDesignTypeId === 999001) {
         finalDesignTypeId = nhanGiayId;
         needClientFiltering = true;
@@ -226,12 +267,12 @@ export const useAvailableOrderDetailsForProofing = (
       } else if (reqDesignTypeId === nhanGiayId || reqDesignTypeId === tuiId) {
         needClientFiltering = true;
       }
-      
+
       const apiParams = { ...normalizedParams };
       if (finalDesignTypeId !== undefined && finalDesignTypeId !== null) {
         apiParams.designTypeId = finalDesignTypeId;
       }
-      
+
       // If we are filtering client side, fetch a large list to do correct pagination
       if (needClientFiltering) {
         apiParams.pageSize = 1000;
@@ -253,8 +294,9 @@ export const useAvailableOrderDetailsForProofing = (
           const hasDesign = od.design != null;
           if (!hasDesign) {
             console.warn("⚠️ OrderDetail missing design:", od.id);
+            return false;
           }
-          return hasDesign;
+          return isItemAvailableForProofing(od);
         })
         .map((od, index) => {
           const design = od.design!;
@@ -265,7 +307,7 @@ export const useAvailableOrderDetailsForProofing = (
 
           let designTypeId = design.designTypeId ?? 0;
           let designTypeName = design.designType?.name || "";
-          
+
           const lowerDesignName = designTypeName.toLowerCase();
           const lowerMaterialName = (design.materialType?.name || "").toLowerCase();
           const isMetaline = lowerMaterialName.includes("metaline") || lowerMaterialName.includes("metalize");
@@ -309,7 +351,7 @@ export const useAvailableOrderDetailsForProofing = (
             designCreatedAt: design.createdAt || undefined,
             designUpdatedAt: design.updatedAt || undefined,
             designId: od.designId || design?.id, // Store designId for fallback fetching if needed
-             isUrgent: (od as any).isUrgent ?? (od as any).readyDesign?.isUrgent ?? (design as any).isUrgent ?? false,
+            isUrgent: (od as any).isUrgent ?? (od as any).readyDesign?.isUrgent ?? (design as any).isUrgent ?? false,
             orderCode: od.orderCode || undefined,
             customerName:
               (design as any).customer?.name ||
@@ -373,7 +415,7 @@ export const useAvailableOrderDetailsForProofing = (
       };
 
       const customerCodeMap = new Map<string, { name?: string; companyName?: string }>();
-      
+
       // Pre-populate with known common codes in database as a safety net
       customerCodeMap.set("YV", { companyName: "CÔNG TY TNHH SẢN XUẤT THƯƠNG MẠI YAMATO VN" });
       customerCodeMap.set("VG", { companyName: "VITA GREEN" });
@@ -527,8 +569,8 @@ export const useProofingAvailableOrderDetailsDesignTypeSummary = (
       counts[999002] = 0; // Túi Metaline
 
       orderDetails.forEach((od) => {
+        if (!isItemAvailableForProofing(od)) return;
         const design = od.design;
-        if (!design) return;
 
         let designTypeId = design.designTypeId;
         const designTypeName = design.designType?.name || "";
@@ -1599,7 +1641,7 @@ export const useAvailableBins = (designTypeId?: number | null, enabled: boolean 
         const designTypes = Array.isArray(designTypesRes.data)
           ? designTypesRes.data
           : (designTypesRes.data.items ?? []);
-        
+
         if (designTypeId === 999001) {
           const nhanGiayType = designTypes.find((dt: any) =>
             dt.name.toLowerCase().includes("nhãn") || dt.name.toLowerCase().includes("nhan")
@@ -1692,8 +1734,8 @@ export const useUpdateProofingDeliveryVisibility = () => {
       queryClient.invalidateQueries({ queryKey: proofingKeys.all });
       queryClient.invalidateQueries({ queryKey: ["deliveryNotes"] });
       toast.success(
-        variables.isHiddenFromDelivery 
-          ? "Đã ẩn bình bài khỏi màn hình tạo phiếu giao hàng" 
+        variables.isHiddenFromDelivery
+          ? "Đã ẩn bình bài khỏi màn hình tạo phiếu giao hàng"
           : "Đã hiện bình bài trên màn hình tạo phiếu giao hàng"
       );
     },
