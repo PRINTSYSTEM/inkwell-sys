@@ -268,16 +268,41 @@ export default function PrepressList() {
   const { data: productionReturnedOrdersResp, isLoading: loadingProductionReturnedOrders } =
     useProofingOrders(productionReturnedQueryParams);
 
+  const sortProofingOrdersByCodeDesc = (orders: ProofingOrder[]): ProofingOrder[] => {
+    return [...orders].sort((a, b) => {
+      const codeA = a.code ?? "";
+      const codeB = b.code ?? "";
+
+      const numA = parseInt(codeA.replace(/\D/g, ""), 10);
+      const numB = parseInt(codeB.replace(/\D/g, ""), 10);
+
+      const hasNumA = !isNaN(numA) && codeA.replace(/\D/g, "").length > 0;
+      const hasNumB = !isNaN(numB) && codeB.replace(/\D/g, "").length > 0;
+
+      if (hasNumA && hasNumB) {
+        if (numA !== numB) {
+          return numB - numA; // Descending order (larger code first)
+        }
+      } else if (hasNumA) {
+        return -1;
+      } else if (hasNumB) {
+        return 1;
+      }
+
+      return codeB.localeCompare(codeA, undefined, { numeric: true, sensitivity: "base" });
+    });
+  };
+
   const incompleteOrders = useMemo<ProofingOrder[]>(() => {
     const items = incompleteOrdersResp?.items;
     if (!items || !Array.isArray(items)) return [];
-    return items as unknown as ProofingOrder[];
+    return sortProofingOrdersByCodeDesc(items as unknown as ProofingOrder[]);
   }, [incompleteOrdersResp?.items]);
 
   const rawCompletedOrders = useMemo<ProofingOrder[]>(() => {
     const items = completedOrdersResp?.items;
     if (!items || !Array.isArray(items)) return [];
-    return items as unknown as ProofingOrder[];
+    return sortProofingOrdersByCodeDesc(items as unknown as ProofingOrder[]);
   }, [completedOrdersResp?.items]);
 
   const filteredCompletedOrders = useMemo(() => {
@@ -306,7 +331,7 @@ export default function PrepressList() {
   const productionReturnedOrders = useMemo<ProofingOrder[]>(() => {
     const items = productionReturnedOrdersResp?.items;
     if (!items || !Array.isArray(items)) return [];
-    return items as unknown as ProofingOrder[];
+    return sortProofingOrdersByCodeDesc(items as unknown as ProofingOrder[]);
   }, [productionReturnedOrdersResp?.items]);
 
   const { data: currentNumberSetting } = useSystemSetting("ProofingOrder_CurrentNumber");

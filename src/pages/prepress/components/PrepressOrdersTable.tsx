@@ -53,7 +53,7 @@ export function PrepressOrdersTable({
         <ScrollArea className="h-full">
           <div ref={tableRef} className="w-full">
             <div className="w-full overflow-x-auto p-4">
-              <Table className="min-w-[1200px]">
+              <Table className="min-w-[1450px]">
                 <TableHeader>
                   <TableRow>
                     {shouldShowExpand && (
@@ -62,38 +62,38 @@ export function PrepressOrdersTable({
                     <TableHead className="h-10 text-sm font-bold w-12">
                       Ảnh
                     </TableHead>
-                    <TableHead className="h-10 text-sm font-bold">
+                    <TableHead className="h-10 text-sm font-bold min-w-[120px] w-32">
                       Mã bài
                     </TableHead>
-                    <TableHead className="h-10 text-sm font-bold">
+                    <TableHead className="h-10 text-sm font-bold min-w-[100px] w-28">
                       Loại bài
                     </TableHead>
-                    <TableHead className="h-10 text-sm font-bold">
+                    <TableHead className="h-10 text-sm font-bold min-w-[140px] w-36">
                       Chất liệu
                     </TableHead>
-                    <TableHead className="h-10 text-sm font-bold">
+                    <TableHead className="h-10 text-sm font-bold min-w-[210px] w-56">
                       Mã hàng
                     </TableHead>
-                    <TableHead className="h-10 text-sm font-bold text-center">
+                    <TableHead className="h-10 text-sm font-bold text-center w-32">
                       Kích thước
                     </TableHead>
-                    <TableHead className="h-10 text-sm font-bold text-center">
+                    <TableHead className="h-10 text-sm font-bold text-center w-24">
                       Số lượng
                     </TableHead>
 
-                    <TableHead className="h-10 text-sm font-bold">
+                    <TableHead className="h-10 text-sm font-bold w-28">
                       Quy cách
                     </TableHead>
-                    <TableHead className="h-10 text-sm font-bold">
+                    <TableHead className="h-10 text-sm font-bold w-36">
                       Trạng thái
                     </TableHead>
-                    <TableHead className="h-10 text-sm font-bold">
+                    <TableHead className="h-10 text-sm font-bold w-24">
                       Xuất kẽm
                     </TableHead>
-                    <TableHead className="h-10 text-sm font-bold">
+                    <TableHead className="h-10 text-sm font-bold w-24">
                       Xuất khuôn
                     </TableHead>
-                    <TableHead className="h-10 text-sm font-bold">
+                    <TableHead className="h-10 text-sm font-bold w-44">
                       Thời gian hoàn thành
                     </TableHead>
                   </TableRow>
