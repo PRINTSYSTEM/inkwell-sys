@@ -106,8 +106,8 @@ function DesignCodeHoverCard({
   return (
     <HoverCard openDelay={300} onOpenChange={setIsOpen}>
       <HoverCardTrigger asChild>
-        <div className="flex items-center gap-1.5 min-h-5 flex-wrap cursor-help">
-          <span className="text-blue-600 dark:text-blue-400 hover:underline">
+        <div className="flex items-center gap-1.5 min-h-5 whitespace-nowrap cursor-help">
+          <span className="text-blue-600 dark:text-blue-400 hover:underline font-mono font-semibold whitespace-nowrap">
             {highlightText(code, debouncedSearchTerm.trim())}
           </span>
           {pod.isUrgent && (
@@ -286,26 +286,8 @@ export const PrepressOrderRow = React.memo(function PrepressOrderRow({
     if (order.paperSize?.name) return order.paperSize.name;
     if (order.customPaperSize) return order.customPaperSize;
     if (order.rollWidth) return `Cuộn (Rộng: ${order.rollWidth} mm)`;
-
-    const designSizes = designs
-      .map((pod: any) => {
-        const d = pod.design;
-        if (!d) return null;
-        if (d.dimensions) return d.dimensions;
-        if (d.length != null && d.height != null) {
-          return formatDesignDimensions(d.length, d.width, d.height);
-        }
-        return null;
-      })
-      .filter(Boolean);
-
-    const uniqueDesignSizes = Array.from(new Set(designSizes));
-    if (uniqueDesignSizes.length > 0) {
-      return uniqueDesignSizes.join(", ");
-    }
-
     return "—";
-  }, [order.paperSize, order.customPaperSize, order.rollWidth, designs]);
+  }, [order.paperSize, order.customPaperSize, order.rollWidth]);
 
   const specTexts = useMemo(() => {
     const set = new Set<string>();
@@ -372,13 +354,13 @@ export const PrepressOrderRow = React.memo(function PrepressOrderRow({
             )}
           </div>
         </TableCell>
-        <TableCell className="py-3 font-semibold align-top">
+        <TableCell className="py-3 font-semibold align-top min-w-[120px] w-32 whitespace-nowrap">
           {shouldShowExpand && orderCodeMatches
             ? highlightText(order.code || "", debouncedSearchTerm.trim())
             : order.code}
         </TableCell>
 
-        <TableCell className="py-3 font-semibold text-xs align-top">
+        <TableCell className="py-3 font-semibold text-xs align-top min-w-[100px] w-28 whitespace-nowrap">
           <div className="flex flex-col gap-1">
             {designTypeNames.map((text: string, idx: number) => (
               <span key={idx} className="block text-slate-800 dark:text-slate-200">
@@ -388,17 +370,17 @@ export const PrepressOrderRow = React.memo(function PrepressOrderRow({
           </div>
         </TableCell>
 
-        <TableCell className="py-3 font-medium text-xs align-top max-w-[200px] truncate">
+        <TableCell className="py-3 font-medium text-xs align-top min-w-[140px] w-36 break-words">
           <div className="flex flex-col gap-1">
             {materialTypeTexts.map((text: string, idx: number) => (
-              <span key={idx} className="block text-muted-foreground">
+              <span key={idx} className="block text-muted-foreground break-words leading-tight">
                 {text}
               </span>
             ))}
           </div>
         </TableCell>
 
-        <TableCell className="py-3 font-bold text-xs align-top text-slate-800 dark:text-slate-200">
+        <TableCell className="py-3 font-bold text-xs align-top min-w-[210px] w-56 text-slate-800 dark:text-slate-200">
           <div className="flex flex-col gap-1.5">
             {designs.length > 0 ? (
               (showAllDesigns ? designs : designs.slice(0, 1)).map((pod: any, idx: number) => (
