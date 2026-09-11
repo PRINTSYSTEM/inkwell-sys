@@ -252,6 +252,85 @@ export const PrepressOrderRow = React.memo(function PrepressOrderRow({
 
 
 
+  const designTypeNames = useMemo(() => {
+    const set = new Set<string>();
+    const orderTypeName = order.designType?.name || (order as any).designTypeName;
+    if (orderTypeName) set.add(orderTypeName);
+    designs.forEach((pod: any) => {
+      const name = pod.design?.designType?.name || (pod.design as any)?.designTypeName;
+      if (name) set.add(name);
+    });
+    const list = Array.from(set).filter((s) => s && s !== "—");
+    return list.length > 0 ? list : ["—"];
+  }, [order.designType, order.designTypeName, designs]);
+
+  const materialTypeTexts = useMemo(() => {
+    const set = new Set<string>();
+    const orderMatName = order.materialType?.name || (order as any).materialTypeName;
+    const orderBw = order.basisWeight;
+    if (orderMatName) {
+      set.add(`${orderMatName}${orderBw ? ` ${orderBw}gsm` : ""}`);
+    }
+    designs.forEach((pod: any) => {
+      const matName = pod.design?.materialType?.name || (pod.design as any)?.materialTypeName;
+      const bw = pod.design?.basisWeight || orderBw;
+      if (matName) {
+        set.add(`${matName}${bw ? ` ${bw}gsm` : ""}`);
+      }
+    });
+    const list = Array.from(set).filter((s) => s && s !== "—");
+    return list.length > 0 ? list : ["—"];
+  }, [order.materialType, order.materialTypeName, order.basisWeight, designs]);
+
+  const paperSizeDisplay = useMemo(() => {
+    if (order.paperSize?.name) return order.paperSize.name;
+    if (order.customPaperSize) return order.customPaperSize;
+    if (order.rollWidth) return `Cuộn (Rộng: ${order.rollWidth} mm)`;
+
+    const designSizes = designs
+      .map((pod: any) => {
+        const d = pod.design;
+        if (!d) return null;
+        if (d.dimensions) return d.dimensions;
+        if (d.length != null && d.height != null) {
+          return formatDesignDimensions(d.length, d.width, d.height);
+        }
+        return null;
+      })
+      .filter(Boolean);
+
+    const uniqueDesignSizes = Array.from(new Set(designSizes));
+    if (uniqueDesignSizes.length > 0) {
+      return uniqueDesignSizes.join(", ");
+    }
+
+    return "—";
+  }, [order.paperSize, order.customPaperSize, order.rollWidth, designs]);
+
+  const specTexts = useMemo(() => {
+    const set = new Set<string>();
+    if (order.laminationTypeName) set.add(order.laminationTypeName);
+    if (order.processClassification) {
+      set.add(processClassificationLabels[order.processClassification] || order.processClassification);
+    }
+    designs.forEach((pod: any) => {
+      const d = pod.design;
+      if (!d) return;
+      const specs = d.specification || (d as any).specifications;
+      if (Array.isArray(specs)) {
+        specs.forEach((s: string) => s && set.add(s));
+      } else if (typeof specs === "string" && specs.trim().length > 0) {
+        set.add(specs.trim());
+      } else if (d.processClassification) {
+        set.add(processClassificationLabels[d.processClassification] || d.processClassification);
+      } else if (d.length != null && d.height != null) {
+        set.add(`${d.length}x${d.height}mm`);
+      }
+    });
+    const list = Array.from(set).filter((s) => s && s !== "—");
+    return list.length > 0 ? list : ["—"];
+  }, [order.laminationTypeName, order.processClassification, designs]);
+
   return (
     <>
       <TableRow
@@ -301,11 +380,7 @@ export const PrepressOrderRow = React.memo(function PrepressOrderRow({
 
         <TableCell className="py-3 font-semibold text-xs align-top">
           <div className="flex flex-col gap-1">
-            {Array.from(
-              new Set(
-                designs.map((pod: any) => pod.design?.designType?.name || "—")
-              )
-            ).map((text: any, idx: number) => (
+            {designTypeNames.map((text: string, idx: number) => (
               <span key={idx} className="block text-slate-800 dark:text-slate-200">
                 {text}
               </span>
@@ -315,15 +390,7 @@ export const PrepressOrderRow = React.memo(function PrepressOrderRow({
 
         <TableCell className="py-3 font-medium text-xs align-top max-w-[200px] truncate">
           <div className="flex flex-col gap-1">
-            {Array.from(
-              new Set(
-                designs.map((pod: any) => {
-                  const materialName = pod.design?.materialType?.name || "—";
-                  const basisWeight = pod.design?.basisWeight;
-                  return `${materialName}${basisWeight ? ` ${basisWeight}gsm` : ""}`;
-                })
-              )
-            ).map((text: any, idx: number) => (
+            {materialTypeTexts.map((text: string, idx: number) => (
               <span key={idx} className="block text-muted-foreground">
                 {text}
               </span>
@@ -333,15 +400,19 @@ export const PrepressOrderRow = React.memo(function PrepressOrderRow({
 
         <TableCell className="py-3 font-bold text-xs align-top text-slate-800 dark:text-slate-200">
           <div className="flex flex-col gap-1.5">
-            {(showAllDesigns ? designs : designs.slice(0, 1)).map((pod: any, idx: number) => (
-              <DesignCodeHoverCard
-                key={pod.id || idx}
-                pod={pod}
-                idx={idx}
-                debouncedSearchTerm={debouncedSearchTerm}
-                highlightText={highlightText}
-              />
-            ))}
+            {designs.length > 0 ? (
+              (showAllDesigns ? designs : designs.slice(0, 1)).map((pod: any, idx: number) => (
+                <DesignCodeHoverCard
+                  key={pod.id || idx}
+                  pod={pod}
+                  idx={idx}
+                  debouncedSearchTerm={debouncedSearchTerm}
+                  highlightText={highlightText}
+                />
+              ))
+            ) : (
+              <span className="text-muted-foreground font-normal">—</span>
+            )}
             {!showAllDesigns && designs.length > 1 && (
               <button
                 type="button"
@@ -370,31 +441,14 @@ export const PrepressOrderRow = React.memo(function PrepressOrderRow({
         </TableCell>
 
         <TableCell className="py-3 font-medium text-xs align-top text-center">
-          {order.paperSize?.name || order.customPaperSize || (order.rollWidth ? `Cuộn (Rộng: ${order.rollWidth} mm)` : "—")}
+          {paperSizeDisplay}
         </TableCell>
         <TableCell className="py-3 font-bold text-sm align-top text-center text-rose-600 font-mono">
           {order.totalQuantity ? order.totalQuantity.toLocaleString("vi-VN") : "0"}
         </TableCell>
         <TableCell className="py-3 text-xs align-top">
           <div className="flex flex-col gap-1">
-            {Array.from(
-              new Set(
-                designs.map((pod: any) => {
-                  const d = pod.design;
-                  const specs = d?.specification || (d as any)?.specifications;
-                  return Array.isArray(specs)
-                    ? specs.join(", ")
-                    : typeof specs === "string" && specs.trim().length > 0
-                      ? specs
-                      : d?.processClassification
-                        ? processClassificationLabels[d.processClassification] ||
-                        d.processClassification
-                        : d?.length != null
-                          ? `${d.length}x${d.height}mm`
-                          : "—";
-                })
-              )
-            ).map((spec: any, idx: number) => (
+            {specTexts.map((spec: string, idx: number) => (
               <span key={idx} className="block">
                 {spec}
               </span>
