@@ -499,4 +499,17 @@ export const usePostPrintCounts = () => {
   });
 };
 
+export const useProductionFlows = () => {
+  return useQuery<Array<{ id: string; name: string; description?: string }>>({
+    queryKey: ["production-flows"],
+    queryFn: async () => {
+      const res = await apiRequest.get<Array<{ id: string; name: string; description?: string }>>(
+        API_SUFFIX.PRODUCTION_FLOWS
+      );
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
 export { productionOrderCrudApi, productionOrderKeys };

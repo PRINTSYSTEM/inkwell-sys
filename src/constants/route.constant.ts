@@ -51,16 +51,19 @@ export const ROUTE_PATHS = {
     DETAIL_BASE: "/plate-exports" as const, // prefix cho /plate-exports/:id
   },
   PRODUCTION: {
-    ROOT: "/productions" as const,
-    DETAIL: "/productions/:id" as const,
+    ROOT: "/production" as const,
+    DETAIL: "/production/:id" as const,
     DEFECT_RECORDS: "/production/defect-records" as const,
-    DISPATCH: "/productions/dispatch" as const,
-    PROOFING: "/productions/proofing" as const,
-    KCS: "/productions/kcs" as const,
+    DISPATCH: "/production/dispatch" as const,
+    PROOFING: "/production/proofing" as const,
+    KCS: "/production/kcs" as const,
     PRINT_ORDERS: "/production/print-orders" as const,
     POST_PRINT: "/production/post-print" as const,
     CONFIG: "/production/config" as const,
     DELAY_REPORT: "/production/delay-report" as const,
+    CAPACITY: "/production/capacity" as const,
+    DASHBOARD: "/production/dashboard" as const,
+    SLA_CONFIG: "/production/sla-config" as const,
   },
 
 

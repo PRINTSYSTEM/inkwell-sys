@@ -130,7 +130,7 @@ function useHasActiveProofingFilters(args: {
 export default function PrepressList() {
   const navigate = useNavigate();
   const location = useLocation();
-  const onlyCompleted = location.pathname.includes("/productions/proofing");
+  const onlyCompleted = location.pathname.includes("/production/proofing") || location.pathname.includes("/productions/proofing");
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const role = user?.role as UserRole | undefined;

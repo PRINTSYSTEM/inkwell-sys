@@ -471,7 +471,7 @@ export default function DefectRecordListPage() {
                         <div className="flex flex-col gap-1">
                           {record.productionOrderId ? (
                             <Link
-                              to={`/productions/${record.productionOrderId}`}
+                              to={`/production/${record.productionOrderId}`}
                               className="text-primary hover:underline font-semibold"
                             >
                               {record.productionOrderCode || `#${record.productionOrderId}`}

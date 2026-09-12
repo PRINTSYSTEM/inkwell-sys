@@ -328,11 +328,19 @@ export const API_SUFFIX = {
   MATERIAL_CUT_COMPLETE: (id: number) => `/material-cuts/${id}/complete`,
   MATERIAL_CUT_CANCEL: (id: number) => `/material-cuts/${id}/cancel`,
 
-  // ========== PRODUCTIONS ==========
+  // ========== PRODUCTIONS & CAPACITY ==========
+  CAPACITY_KPI_SUMMARY: "/capacity/kpi-summary",
+  CAPACITY_SUMMARY: "/capacity/summary",
+  CAPACITY_WEEKLY_HEATMAP: "/capacity/weekly-heatmap",
+  CAPACITY_STAGE_REALLOCATION: (stageId: number) =>
+    `/capacity/stages/${stageId}/reallocation-suggestions`,
+  CAPACITY_SIMULATE: "/capacity/simulate",
+
   PRODUCTION_ORDERS: "/production-orders",
   PRODUCTION_ORDER_BY_ID: (id: number) => `/production-orders/${id}`,
   PRODUCTION_ORDER_SCHEDULE: (id: number) => `/production-orders/${id}/schedule`,
   PRODUCTION_CONFIG: "/system-settings/production-config",
+  PRODUCTION_FLOWS: "/production/flows",
   PRODUCTION_DELAY_REPORT: "/production-orders/delay-report",
   PRODUCTION_DELAY_SUMMARY: "/production-orders/delay-summary",
   PRODUCTION_ORDERS_BY_ORDER: (orderId: number) =>

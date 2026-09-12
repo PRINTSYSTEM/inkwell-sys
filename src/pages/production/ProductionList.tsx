@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { ProductionListHeader } from "./components/ProductionListHeader";
 import { ProductionListFilter } from "./components/ProductionListFilter";
 import { ProductionListTable } from "./components/ProductionListTable";
+import { ProductionOrderDetailDrawer } from "./components/ProductionOrderDetailDrawer";
 import { ProductionDelayReportModal } from "@/components/production";
 
 import { useListState } from "@/hooks/use-list-state";
@@ -56,8 +57,9 @@ export default function ProductionListPage() {
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
   // View tab
-  type ProductionTab = "active" | "all" | "pending_material" | "in_production" | "pending_qc" | "completed";
+  type ProductionTab = "all" | "active" | "pending_material" | "in_production" | "pending_qc" | "completed" | "overdue";
   const [viewTab, setViewTab] = useState<ProductionTab>("active");
+  const [selectedDrawerOrder, setSelectedDrawerOrder] = useState<ProductionOrderResponse | null>(null);
 
   // Design Type Filter State & Data Fetching
   const [selectedDesignTypeId, setSelectedDesignTypeId] = useState<number | null>(null);
@@ -444,7 +446,7 @@ export default function ProductionListPage() {
   }, [pageInput, totalPages, currentPage]);
 
   const handleProductionClick = useCallback((productionId: number) => {
-    navigate(`/productions/${productionId}`);
+    navigate(`/production/${productionId}`);
   }, [navigate]);
 
   const stats = useMemo(
@@ -769,6 +771,7 @@ export default function ProductionListPage() {
             onNextPage={handleNextPage}
             onPageInputChange={handlePageInputChange}
             onPageInputBlur={handlePageInputBlur}
+            onSelectOrder={(order) => setSelectedDrawerOrder(order)}
           />
         </div>
       </div>
@@ -776,6 +779,12 @@ export default function ProductionListPage() {
       <ProductionDelayReportModal
         open={isDelayReportModalOpen}
         onOpenChange={setIsDelayReportModalOpen}
+      />
+
+      <ProductionOrderDetailDrawer
+        order={selectedDrawerOrder}
+        isOpen={!!selectedDrawerOrder}
+        onClose={() => setSelectedDrawerOrder(null)}
       />
     </div>
   );
