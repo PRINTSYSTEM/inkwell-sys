@@ -113,28 +113,61 @@ export default function MyWorkPage() {
   const reprintDesignMutation = useReprintDesign();
   const [viewingImage, setViewingImage] = useState<{ url: string; title?: string } | null>(null);
 
+  // Compute date range & month/year query parameters for API calls
+  const dateQueryParams = useMemo(() => {
+    if (dateRange?.from) {
+      const start = new Date(dateRange.from);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(dateRange.to || dateRange.from);
+      end.setHours(23, 59, 59, 999);
+      const startIso = start.toISOString();
+      const endIso = end.toISOString();
+      return {
+        startDate: startIso,
+        endDate: endIso,
+        fromDate: startIso,
+        toDate: endIso,
+      };
+    }
+
+    if (selectedMonth && selectedYear) {
+      const start = new Date(selectedYear, selectedMonth - 1, 1, 0, 0, 0, 0);
+      const end = new Date(selectedYear, selectedMonth, 0, 23, 59, 59, 999);
+      const startIso = start.toISOString();
+      const endIso = end.toISOString();
+      return {
+        month: selectedMonth,
+        year: selectedYear,
+        startDate: startIso,
+        endDate: endIso,
+        fromDate: startIso,
+        toDate: endIso,
+      };
+    }
+
+    if (selectedYear) {
+      const start = new Date(selectedYear, 0, 1, 0, 0, 0, 0);
+      const end = new Date(selectedYear, 11, 31, 23, 59, 59, 999);
+      const startIso = start.toISOString();
+      const endIso = end.toISOString();
+      return {
+        year: selectedYear,
+        startDate: startIso,
+        endDate: endIso,
+        fromDate: startIso,
+        toDate: endIso,
+      };
+    }
+
+    return {};
+  }, [dateRange, selectedMonth, selectedYear]);
+
   // API - paginated list for table
   const { data, isLoading, isError } = useMyDesigns({
     pageNumber: currentPage,
     pageSize,
     status: statusFilter === "all" ? "" : statusFilter,
-    ...(dateRange && dateRange.from
-      ? {
-        startDate: (() => {
-          const d = new Date(dateRange.from);
-          d.setHours(0, 0, 0, 0);
-          return d.toISOString();
-        })(),
-        endDate: (() => {
-          const d = new Date(dateRange.to || dateRange.from);
-          d.setHours(23, 59, 59, 999);
-          return d.toISOString();
-        })(),
-      }
-      : {
-        month: selectedMonth ?? undefined,
-        year: selectedYear ?? undefined,
-      }),
+    ...dateQueryParams,
   });
 
   // API - full list query for accurate status tab stats across all pages
@@ -142,23 +175,7 @@ export default function MyWorkPage() {
     pageNumber: 1,
     pageSize: 1000,
     status: "", // all statuses
-    ...(dateRange && dateRange.from
-      ? {
-        startDate: (() => {
-          const d = new Date(dateRange.from);
-          d.setHours(0, 0, 0, 0);
-          return d.toISOString();
-        })(),
-        endDate: (() => {
-          const d = new Date(dateRange.to || dateRange.from);
-          d.setHours(23, 59, 59, 999);
-          return d.toISOString();
-        })(),
-      }
-      : {
-        month: selectedMonth ?? undefined,
-        year: selectedYear ?? undefined,
-      }),
+    ...dateQueryParams,
   });
 
   const allMyDesigns = useMemo(() => allMyDesignsData?.items || [], [allMyDesignsData?.items]);

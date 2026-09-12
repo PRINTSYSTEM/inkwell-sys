@@ -165,6 +165,8 @@ export function DetailOrderInfoCard({
   }, [order?.basisWeight, order?.proofingOrderDesigns]);
 
   const hasGrammage = useMemo(() => {
+    if (order?.basisWeight != null && Number(order.basisWeight) > 0) return true;
+
     const familyName = order.materialType?.materialFamilyName?.toLowerCase() || "";
     const typeName = order.materialType?.name?.toLowerCase() || "";
     const typeCode = order.materialType?.code?.toLowerCase() || "";
@@ -181,6 +183,7 @@ export function DetailOrderInfoCard({
       typeName.includes("couche") ||
       typeName.includes("duplex") ||
       typeName.includes("kraft") ||
+      typeName.includes("metaline") ||
       typeName.includes("bao thư") ||
       typeName.includes("bao thu") ||
       typeName.includes("envelope") ||
@@ -191,12 +194,13 @@ export function DetailOrderInfoCard({
       typeName.includes("kẹp file") ||
       typeName.includes("kep file") ||
       typeCode.includes("paper") ||
+      typeCode.includes("metaline") ||
       typeCode.includes("bao-thu") ||
       typeCode.includes("to-roi") ||
       typeCode.includes("folder") ||
       typeCode.includes("kep-file")
     );
-  }, [order.materialType]);
+  }, [order.materialType, order.basisWeight]);
 
   return (
     <Card className="relative h-full flex flex-col">
@@ -430,7 +434,9 @@ export function DetailOrderInfoCard({
               </Label>
               <div className="text-right min-w-0">
                 <p className="font-bold text-[12px] leading-tight truncate">
-                  {order.materialType?.name || "—"}
+                  {order.materialType?.name
+                    ? `${order.materialType.name}${order.basisWeight ? ` ${order.basisWeight}gsm` : ""}`
+                    : "—"}
                 </p>
                 <p className="text-[10px] text-muted-foreground font-medium">
                   {order.materialType?.code || "—"}
