@@ -21,6 +21,7 @@ import type { SortOrder } from "@/components/ui/sort-controls";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { X } from "lucide-react";
 
 import { ProductionListHeader } from "./components/ProductionListHeader";
 import { ProductionListFilter } from "./components/ProductionListFilter";
@@ -109,7 +110,7 @@ export default function ProductionListPage() {
 
   // Compute fromDate/toDate ISO params based on dateFilterType & customFromDate/customToDate
   const dateParams = useMemo(() => {
-    if (dateFilterType === "all") {
+    if (dateFilterType === "all" && !customFromDate) {
       return { fromDate: undefined, toDate: undefined };
     }
     if (dateFilterType === "today") {
@@ -128,16 +129,29 @@ export default function ProductionListPage() {
       end.setHours(23, 59, 59, 999);
       return { fromDate: start.toISOString(), toDate: end.toISOString() };
     }
-    if (dateFilterType === "two_days_ago") {
+    if (dateFilterType === "7-days" || dateFilterType === "week") {
+      const end = new Date();
+      end.setHours(23, 59, 59, 999);
       const start = new Date();
-      start.setDate(start.getDate() - 2);
+      start.setDate(start.getDate() - 6);
+      start.setHours(0, 0, 0, 0);
+      return { fromDate: start.toISOString(), toDate: end.toISOString() };
+    }
+    if (dateFilterType === "month") {
+      const start = new Date();
+      start.setDate(1);
       start.setHours(0, 0, 0, 0);
       const end = new Date();
-      end.setDate(end.getDate() - 2);
       end.setHours(23, 59, 59, 999);
       return { fromDate: start.toISOString(), toDate: end.toISOString() };
     }
-    if (dateFilterType === "custom") {
+    if (dateFilterType === "last_month") {
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+      const end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+      return { fromDate: start.toISOString(), toDate: end.toISOString() };
+    }
+    if (dateFilterType === "custom" || customFromDate) {
       let fromDate: string | undefined = undefined;
       let toDate: string | undefined = undefined;
       
@@ -467,81 +481,47 @@ export default function ProductionListPage() {
         <div className="flex-1 flex flex-col min-h-0 overflow-hidden px-3 pb-3 pt-0">
           <ProductionListHeader stats={stats} />
 
-          <div className="flex flex-col gap-2 mb-3 shrink-0 bg-muted/20 p-2 rounded-lg border border-border/50">
-            {/* ROW 1: Status Tabs + Search & Filters */}
-            <div className="flex flex-wrap flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex flex-col gap-2 mb-2 shrink-0 bg-card p-2 rounded-xl border shadow-2xs">
+            {/* ROW 1: 2 Main Tabs ("Chưa hoàn thành" & "Hoàn thành") + Search & Filters */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2">
               <Tabs
-                value={viewTab}
+                value={viewTab === "completed" ? "completed" : viewTab === "all" ? "all" : "active"}
                 onValueChange={(val) => {
                   setViewTab(val as any);
                   setCurrentPage(1);
                 }}
-                className="w-fit shrink-0"
+                className="w-full lg:w-auto shrink-0"
               >
-                <TabsList className="h-9 p-1">
-                  <TabsTrigger value="active" className="h-7 text-xs px-3 gap-1.5 flex items-center">
+                <TabsList className="h-9 p-1 bg-muted/60">
+                  <TabsTrigger value="active" className="h-7 text-xs font-bold px-3.5 gap-1.5 flex items-center cursor-pointer">
                     <span>Chưa hoàn thành</span>
                     <span className={cn(
-                      "px-1.5 py-0.5 rounded-full text-[10px] font-extrabold transition-all",
-                      viewTab === "active" 
-                        ? "bg-primary text-primary-foreground" 
-                        : "bg-slate-100 text-slate-700 dark:bg-slate-900/40 dark:text-slate-300"
+                      "px-2 py-0.5 rounded-full text-[10.5px] font-black transition-all",
+                      viewTab !== "completed" && viewTab !== "all"
+                        ? "bg-amber-500 text-white" 
+                        : "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
                     )}>
                       {stats.pendingMaterial + stats.inProduction + stats.pendingQc}
                     </span>
                   </TabsTrigger>
-                  <TabsTrigger value="all" className="h-7 text-xs px-3">
-                    Tất cả
-                  </TabsTrigger>
-                  <TabsTrigger value="pending_material" className="h-7 text-xs px-3 gap-1.5 flex items-center">
-                    <span>Chưa xuất vật tư</span>
-                    <span className={cn(
-                      "px-1.5 py-0.5 rounded-full text-[10px] font-extrabold transition-all",
-                      viewTab === "pending_material" 
-                        ? "bg-orange-500 text-white" 
-                        : "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300"
-                    )}>
-                      {stats.pendingMaterial}
-                    </span>
-                  </TabsTrigger>
-                  <TabsTrigger value="in_production" className="h-7 text-xs px-3 gap-1.5 flex items-center">
-                    <span>Đang sản xuất</span>
-                    <span className={cn(
-                      "px-1.5 py-0.5 rounded-full text-[10px] font-extrabold transition-all flex items-center gap-1",
-                      viewTab === "in_production" 
-                        ? "bg-blue-500 text-white" 
-                        : "bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
-                    )}>
-                      <span>{stats.inProduction}</span>
-                      {stats.inProductionToday > 0 && (
-                        <span className="text-[8px] font-bold opacity-80">+{stats.inProductionToday}</span>
-                      )}
-                    </span>
-                  </TabsTrigger>
-                  <TabsTrigger value="pending_qc" className="h-7 text-xs px-3 gap-1.5 flex items-center">
-                    <span>Chờ kiểm hàng</span>
-                    <span className={cn(
-                      "px-1.5 py-0.5 rounded-full text-[10px] font-extrabold transition-all",
-                      viewTab === "pending_qc" 
-                        ? "bg-amber-500 text-white" 
-                        : "bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
-                    )}>
-                      {stats.pendingQc}
-                    </span>
-                  </TabsTrigger>
-                  <TabsTrigger value="completed" className="h-7 text-xs px-3 gap-1.5 flex items-center">
+
+                  <TabsTrigger value="completed" className="h-7 text-xs font-bold px-3.5 gap-1.5 flex items-center cursor-pointer">
                     <span>Hoàn thành</span>
                     <span className={cn(
-                      "px-1.5 py-0.5 rounded-full text-[10px] font-extrabold transition-all flex items-center gap-1",
+                      "px-2 py-0.5 rounded-full text-[10.5px] font-black transition-all flex items-center gap-1",
                       viewTab === "completed" 
-                        ? "bg-emerald-500 text-white" 
-                        : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                        ? "bg-emerald-600 text-white" 
+                        : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
                     )}>
                       <span>{stats.completed}</span>
                       {stats.completedToday > 0 && (
-                        <span className="text-[8px] font-bold opacity-80">+{stats.completedToday}</span>
+                        <span className="text-[8.5px] font-bold opacity-90">+{stats.completedToday}</span>
                       )}
                     </span>
+                  </TabsTrigger>
+
+                  <TabsTrigger value="all" className="h-7 text-xs font-medium px-2.5 text-slate-500 hover:text-slate-900 cursor-pointer">
+                    Tất cả ({stats.pendingMaterial + stats.inProduction + stats.pendingQc + stats.completed})
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
@@ -551,208 +531,136 @@ export default function ProductionListPage() {
                 onSearchChange={setSearchTerm}
                 selectedStatus={selectedStatus}
                 onStatusChange={setSelectedStatus}
-                sortColumn={sortColumn}
-                sortOrder={sortOrder}
-                onSortColumnChange={setSortColumn}
-                onSortOrderChange={setSortOrder}
-                onClearSort={() => {
-                  setSortColumn("");
-                  setSortOrder("desc");
+                dateFilterType={dateFilterType}
+                onDateFilterTypeChange={setDateFilterType}
+                customFromDate={customFromDate}
+                onCustomFromDateChange={setCustomFromDate}
+                customToDate={customToDate}
+                onCustomToDateChange={setCustomToDate}
+                selectedDesignTypeId={selectedDesignTypeId}
+                designTypes={designTypes}
+                onDesignTypeChange={(val) => {
+                  if (val === "all" || !val) {
+                    setSelectedDesignTypeId(null);
+                    return;
+                  }
+                  const num = Number(val);
+                  if (!isNaN(num)) {
+                    setSelectedDesignTypeId(num);
+                  } else {
+                    const matched = designTypes.find((dt: any) => dt.code?.toUpperCase() === val.toUpperCase());
+                    if (matched?.id) {
+                      setSelectedDesignTypeId(matched.id);
+                    } else {
+                      setSelectedDesignTypeId(val as any);
+                    }
+                  }
+                }}
+                onResetFilters={() => {
+                  setSearchTerm("");
+                  setSelectedStatus("all");
+                  setDateFilterType("all");
+                  setSelectedDesignTypeId(null);
+                  setCustomFromDate("");
+                  setCustomToDate("");
                 }}
                 onOpenDelayReport={() => setIsDelayReportModalOpen(true)}
               />
             </div>
 
-            {/* ROW 2: Date Filters (Below status tabs) */}
-            <div className="flex flex-wrap items-center gap-1.5 bg-background dark:bg-muted/10 p-1 rounded-md border border-border/40 w-fit">
-              <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 px-2 select-none">Ngày lên bài:</span>
-              <Button
-                variant={dateFilterType === "all" ? "default" : "ghost"}
-                size="sm"
-                type="button"
-                className={cn(
-                  "h-7 text-xs px-2.5 rounded-sm font-medium transition-all",
-                  dateFilterType === "all" 
-                    ? "bg-slate-700 text-white shadow-sm" 
-                    : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-muted"
-                )}
-                onClick={() => {
-                  setDateFilterType("all");
-                  setCustomFromDate("");
-                  setCustomToDate("");
-                }}
-              >
-                Tất cả ngày
-              </Button>
-              <Button
-                variant={dateFilterType === "today" ? "default" : "ghost"}
-                size="sm"
-                type="button"
-                className={cn(
-                  "h-7 text-xs px-2.5 rounded-sm font-medium transition-all",
-                  dateFilterType === "today" 
-                    ? "bg-slate-700 text-white shadow-sm" 
-                    : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-muted"
-                )}
-                onClick={() => {
-                  setDateFilterType("today");
-                  setCustomFromDate("");
-                  setCustomToDate("");
-                }}
-              >
-                {dateOptions.todayLabel}
-              </Button>
-              <Button
-                variant={dateFilterType === "yesterday" ? "default" : "ghost"}
-                size="sm"
-                type="button"
-                className={cn(
-                  "h-7 text-xs px-2.5 rounded-sm font-medium transition-all",
-                  dateFilterType === "yesterday" 
-                    ? "bg-slate-700 text-white shadow-sm" 
-                    : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-muted"
-                )}
-                onClick={() => {
-                  setDateFilterType("yesterday");
-                  setCustomFromDate("");
-                  setCustomToDate("");
-                }}
-              >
-                {dateOptions.yesterdayLabel}
-              </Button>
-              <Button
-                variant={dateFilterType === "two_days_ago" ? "default" : "ghost"}
-                size="sm"
-                type="button"
-                className={cn(
-                  "h-7 text-xs px-2.5 rounded-sm font-medium transition-all",
-                  dateFilterType === "two_days_ago" 
-                    ? "bg-slate-700 text-white shadow-sm" 
-                    : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-muted"
-                )}
-                onClick={() => {
-                  setDateFilterType("two_days_ago");
-                  setCustomFromDate(dateOptions.twoDaysAgoValue);
-                  setCustomToDate(dateOptions.twoDaysAgoValue);
-                }}
-              >
-                {dateOptions.twoDaysAgoLabel}
-              </Button>
-              
-              <div className="flex items-center gap-1.5 pl-1.5 border-l border-border/60">
+            {/* ROW 2: Ultra-compact Date & Design Type Sub-Pills */}
+            <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1.5 border-t text-xs">
+              {/* Quick Date Pills */}
+              <div className="flex items-center gap-1 overflow-x-auto py-0.5 max-w-full">
+                <span className="text-[10px] font-bold uppercase text-slate-400 shrink-0 mr-1 select-none">Ngày:</span>
                 <Button
-                  variant={dateFilterType === "custom" ? "default" : "ghost"}
+                  variant={dateFilterType === "all" && !customFromDate ? "default" : "ghost"}
                   size="sm"
                   type="button"
                   className={cn(
-                    "h-7 text-xs px-2.5 rounded-sm font-medium transition-all",
-                    dateFilterType === "custom" 
-                      ? "bg-slate-700 text-white shadow-sm" 
-                      : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-muted"
+                    "h-6 text-[11px] px-2 rounded font-medium transition-all shrink-0",
+                    dateFilterType === "all" && !customFromDate ? "bg-slate-700 text-white" : "text-slate-600 hover:bg-slate-100"
                   )}
-                  onClick={() => {
-                    setDateFilterType("custom");
-                  }}
+                  onClick={() => { setDateFilterType("all"); setCustomFromDate(""); setCustomToDate(""); }}
                 >
-                  Chọn khoảng ngày...
+                  Tất cả
                 </Button>
-                {dateFilterType === "custom" && (
-                  <div className="flex items-center gap-1.5 animate-in fade-in duration-200">
-                    <div className="flex items-center border border-input rounded-sm px-2 bg-background focus-within:ring-1 focus-within:ring-slate-450 h-7">
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase select-none mr-1.5">TỪ</span>
-                      <input
-                        type="date"
-                        value={customFromDate}
-                        onChange={(e) => setCustomFromDate(e.target.value)}
-                        className="bg-transparent border-0 p-0 text-xs focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-none outline-none w-[96px] h-full"
-                      />
-                    </div>
-                    <span className="text-xs text-slate-400">—</span>
-                    <div className="flex items-center border border-input rounded-sm px-2 bg-background focus-within:ring-1 focus-within:ring-slate-450 h-7">
-                      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase select-none mr-1.5">ĐẾN</span>
-                      <input
-                        type="date"
-                        value={customToDate}
-                        onChange={(e) => setCustomToDate(e.target.value)}
-                        className="bg-transparent border-0 p-0 text-xs focus:ring-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus:outline-none outline-none w-[96px] h-full"
-                      />
-                    </div>
-                  </div>
+                <Button
+                  variant={dateFilterType === "today" && !customFromDate ? "default" : "ghost"}
+                  size="sm"
+                  type="button"
+                  className={cn(
+                    "h-6 text-[11px] px-2 rounded font-medium transition-all shrink-0",
+                    dateFilterType === "today" && !customFromDate ? "bg-slate-700 text-white" : "text-slate-600 hover:bg-slate-100"
+                  )}
+                  onClick={() => { setDateFilterType("today"); setCustomFromDate(""); setCustomToDate(""); }}
+                >
+                  {dateOptions.todayLabel}
+                </Button>
+                <Button
+                  variant={dateFilterType === "yesterday" && !customFromDate ? "default" : "ghost"}
+                  size="sm"
+                  type="button"
+                  className={cn(
+                    "h-6 text-[11px] px-2 rounded font-medium transition-all shrink-0",
+                    dateFilterType === "yesterday" && !customFromDate ? "bg-slate-700 text-white" : "text-slate-600 hover:bg-slate-100"
+                  )}
+                  onClick={() => { setDateFilterType("yesterday"); setCustomFromDate(""); setCustomToDate(""); }}
+                >
+                  {dateOptions.yesterdayLabel}
+                </Button>
+
+                {customFromDate && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    type="button"
+                    className="h-6 text-[11px] px-2 rounded font-medium transition-all shrink-0 bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1 shadow-xs"
+                    onClick={() => { setCustomFromDate(""); setCustomToDate(""); setDateFilterType("all"); }}
+                    title="Xóa lọc ngày tùy chọn"
+                  >
+                    <span>
+                      📅 {customFromDate && customToDate && customFromDate !== customToDate
+                        ? `${customFromDate.split("-").reverse().join("/")} - ${customToDate.split("-").reverse().join("/")}`
+                        : `Ngày ${customFromDate.split("-").reverse().join("/")}`}
+                    </span>
+                    <X className="w-3 h-3 text-white opacity-80 hover:opacity-100" />
+                  </Button>
                 )}
               </div>
-            </div>
 
-            {/* ROW 3: Design Type Tabs (below date filters) */}
-            <div className="flex flex-wrap items-center gap-1.5 bg-background dark:bg-muted/10 p-1 rounded-md border border-border/40 w-fit mt-1.5">
-              <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400 px-2 select-none">Loại thiết kế:</span>
-              <Button
-                variant={selectedDesignTypeId === null ? "default" : "ghost"}
-                size="sm"
-                type="button"
-                className={cn(
-                  "h-7 text-xs px-2.5 rounded-sm font-medium transition-all",
-                  selectedDesignTypeId === null 
-                    ? "bg-slate-700 text-white shadow-sm" 
-                    : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-muted"
-                )}
-                onClick={() => setSelectedDesignTypeId(null)}
-              >
-                Tất cả ({designTypeSummaryData?.total ?? totalCount})
-              </Button>
-              {designTypeSummaryData?.designTypes && designTypeSummaryData.designTypes.length > 0
-                ? designTypeSummaryData.designTypes.map((dt) => (
-                    <Button
-                      key={dt.designTypeId}
-                      variant={selectedDesignTypeId === dt.designTypeId ? "default" : "ghost"}
-                      size="sm"
-                      type="button"
-                      className={cn(
-                        "h-7 text-xs px-2.5 rounded-sm font-medium transition-all",
-                        selectedDesignTypeId === dt.designTypeId 
-                          ? "bg-slate-700 text-white shadow-sm" 
-                          : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-muted"
-                      )}
-                      onClick={() => setSelectedDesignTypeId(dt.designTypeId)}
-                    >
-                      <span>{dt.name}</span>
-                      <span className={cn(
-                        "ml-1.5 px-1 py-0.2 rounded-full text-[9px] font-extrabold",
-                        selectedDesignTypeId === dt.designTypeId
-                          ? "bg-white/20 text-white"
-                          : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                      )}>
-                        {dt.count}
-                      </span>
-                    </Button>
-                  ))
-                : designTypes.map((type: any) => {
-                    const count = designTypeCounts[type.id] || 0;
-                    return (
-                      <Button
-                        key={type.id}
-                        variant={selectedDesignTypeId === type.id ? "default" : "ghost"}
-                        size="sm"
-                        type="button"
-                        className={cn(
-                          "h-7 text-xs px-2.5 rounded-sm font-medium transition-all",
-                          selectedDesignTypeId === type.id 
-                            ? "bg-slate-700 text-white shadow-sm" 
-                            : "text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-muted"
-                        )}
-                        onClick={() => setSelectedDesignTypeId(type.id)}
-                      >
-                        <span>{type.name}</span>
-                        <span className={cn(
-                          "ml-1.5 px-1 py-0.2 rounded-full text-[9px] font-extrabold",
-                          selectedDesignTypeId === type.id
-                            ? "bg-white/20 text-white"
-                            : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                        )}>
-                          {count}
-                        </span>
-                      </Button>
-                    );
-                  })}
+              {/* Quick Design Type Summary Pills */}
+              <div className="flex items-center gap-1 overflow-x-auto py-0.5 max-w-full">
+                <span className="text-[10px] font-bold uppercase text-slate-400 shrink-0 mr-1 select-none">Loại:</span>
+                <Button
+                  variant={selectedDesignTypeId === null ? "default" : "ghost"}
+                  size="sm"
+                  type="button"
+                  className={cn(
+                    "h-6 text-[11px] px-2 rounded font-medium transition-all shrink-0",
+                    selectedDesignTypeId === null ? "bg-slate-700 text-white" : "text-slate-600 hover:bg-slate-100"
+                  )}
+                  onClick={() => setSelectedDesignTypeId(null)}
+                >
+                  Tất cả ({designTypeSummaryData?.total ?? totalCount})
+                </Button>
+                {(designTypeSummaryData?.designTypes || []).slice(0, 6).map((dt) => (
+                  <Button
+                    key={dt.designTypeId}
+                    variant={selectedDesignTypeId === dt.designTypeId ? "default" : "ghost"}
+                    size="sm"
+                    type="button"
+                    className={cn(
+                      "h-6 text-[11px] px-2 rounded font-medium transition-all shrink-0 flex items-center gap-1",
+                      selectedDesignTypeId === dt.designTypeId ? "bg-slate-700 text-white" : "text-slate-600 hover:bg-slate-100"
+                    )}
+                    onClick={() => setSelectedDesignTypeId(dt.designTypeId)}
+                  >
+                    <span>{dt.name}</span>
+                    <span className="text-[9px] opacity-75">({dt.count})</span>
+                  </Button>
+                ))}
+              </div>
             </div>
           </div>
 

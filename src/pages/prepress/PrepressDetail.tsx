@@ -121,6 +121,7 @@ import {
   laminationTypeLabels,
   dieLocationLabels,
   dieStatusLabels,
+  getSpecificationBadges,
 } from "@/lib/status-utils";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { downloadFile } from "@/lib/download-utils";
@@ -559,40 +560,16 @@ export default function ProofingOrderDetailPage() {
   }, [orderDesigns]);
 
   const uniqueSpecifications = useMemo(() => {
-    if (!orderDesigns || orderDesigns.length === 0) return [];
     const specs = new Set<string>();
-    orderDesigns.forEach((pod) => {
-      const rawSpec =
-        (pod.design as any)?.specification ||
-        (pod.design as any)?.specifications ||
-        (pod as any).specification ||
-        (pod as any).specifications;
-
-      if (Array.isArray(rawSpec)) {
-        rawSpec.forEach((s: string) => {
-          if (typeof s === "string" && s.trim()) specs.add(s.trim());
-        });
-      } else if (typeof rawSpec === "string" && rawSpec.trim()) {
-        if (rawSpec.trim().startsWith("[") && rawSpec.trim().endsWith("]")) {
-          try {
-            const parsed = JSON.parse(rawSpec);
-            if (Array.isArray(parsed)) {
-              parsed.forEach((s: any) => {
-                if (typeof s === "string" && s.trim()) specs.add(s.trim());
-              });
-            } else {
-              specs.add(rawSpec.trim());
-            }
-          } catch (e) {
-            specs.add(rawSpec.trim());
-          }
-        } else {
-          specs.add(rawSpec.trim());
-        }
-      }
+    if (order) {
+      getSpecificationBadges(order).forEach((s) => specs.add(s));
+    }
+    (orderDesigns || []).forEach((pod: any) => {
+      if (pod.design) getSpecificationBadges(pod.design).forEach((s) => specs.add(s));
+      getSpecificationBadges(pod).forEach((s) => specs.add(s));
     });
     return Array.from(specs);
-  }, [orderDesigns]);
+  }, [order, orderDesigns]);
 
   // ===== Completion readiness (for "Hoàn thành") =====
   const completionMissingItems = useMemo(() => {
@@ -2382,7 +2359,7 @@ export default function ProofingOrderDetailPage() {
       />
 
       <div className="flex-1 flex flex-col min-h-0 overflow-y-auto pb-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[0.7fr_2.3fr_0.5fr_0.5fr] gap-4 w-full">
+        <div className="grid grid-cols-1 lg:grid-cols-[240px_1fr_240px] xl:grid-cols-[250px_1fr_250px] gap-4 w-full">
           <DetailOrderInfoCard
             order={order}
             editingField={editingField}
@@ -2414,7 +2391,7 @@ export default function ProofingOrderDetailPage() {
             isProofer={isProofer}
           />
 
-          <div className="space-y-4">
+          <div className="space-y-4 min-w-0">
             {order && order.status !== "completed" && cartItems.length > 0 && (
               <CartBanner proofingOrderId={order.id} />
             )}
@@ -2450,36 +2427,36 @@ export default function ProofingOrderDetailPage() {
             />
           </div>
 
-          <DetailPlateExportCard
-            order={order}
-            setIsPlateExportDialogOpen={setIsPlateExportDialogOpen}
-            setEditingPlateExport={setEditingPlateExport}
-            handleHandToProduction={handleConfirmHandToProduction}
-            isHandingToProduction={isHandingToProduction}
-            isProofer={isProofer}
-          />
-
-          {hasDieCutDesigns ? (
-            <DetailDieExportCard
+          <div className="space-y-4">
+            <DetailPlateExportCard
               order={order}
-              hasDieCutDesigns={hasDieCutDesigns}
-              isDieExported={isDieExported}
-              setIsDieExportDialogOpen={setIsDieExportDialogOpen}
-              handleOpenReplaceDieDialog={handleOpenReplaceDieDialog}
-              handleRemoveDie={handleRemoveDie}
-              isRemovingDie={isRemovingDie}
-              onEditDie={(die) => {
-                setEditingDie(die);
-                setIsEditDieDialogOpen(true);
-              }}
-              setIsDieListDialogOpen={setIsDieListDialogOpen}
-              setImageViewerOpen={setImageViewerOpen}
-              setViewingImageUrl={setViewingImageUrl}
+              setIsPlateExportDialogOpen={setIsPlateExportDialogOpen}
+              setEditingPlateExport={setEditingPlateExport}
+              handleHandToProduction={handleConfirmHandToProduction}
+              isHandingToProduction={isHandingToProduction}
               isProofer={isProofer}
             />
-          ) : (
-            <div /> /* Empty div to maintain grid if no die cut designs */
-          )}
+
+            {hasDieCutDesigns && (
+              <DetailDieExportCard
+                order={order}
+                hasDieCutDesigns={hasDieCutDesigns}
+                isDieExported={isDieExported}
+                setIsDieExportDialogOpen={setIsDieExportDialogOpen}
+                handleOpenReplaceDieDialog={handleOpenReplaceDieDialog}
+                handleRemoveDie={handleRemoveDie}
+                isRemovingDie={isRemovingDie}
+                onEditDie={(die) => {
+                  setEditingDie(die);
+                  setIsEditDieDialogOpen(true);
+                }}
+                setIsDieListDialogOpen={setIsDieListDialogOpen}
+                setImageViewerOpen={setImageViewerOpen}
+                setViewingImageUrl={setViewingImageUrl}
+                isProofer={isProofer}
+              />
+            )}
+          </div>
         </div>
       </div>
 

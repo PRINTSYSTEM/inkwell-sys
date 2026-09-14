@@ -102,6 +102,7 @@ export default function DesignCreateDialog({
   const [notes, setNotes] = useState<string>("");
   const [basisWeight, setBasisWeight] = useState<number | undefined>(undefined);
   const [gusseted, setGusseted] = useState<boolean>(false);
+  const [isZipper, setIsZipper] = useState<boolean>(false);
 
   // API query for customers
   const { data: customersData, isLoading: loadingCustomers } = useCustomers({
@@ -150,9 +151,19 @@ export default function DesignCreateDialog({
     return designTypeName.toLowerCase().includes("pe") || designTypeName.toLowerCase().includes("pa");
   }, [designTypeName]);
 
+  const handleZipperChange = (active: boolean) => {
+    setIsZipper(active);
+    if (active) {
+      setGusseted(false);
+      setWidth(0);
+      setProcessClassification("cut");
+    }
+  };
+
   const handleGussetedChange = (isGusseted: boolean) => {
     setGusseted(isGusseted);
     if (isGusseted) {
+      setIsZipper(false);
       setProcessClassification("die_cut");
     } else {
       setWidth(0);
@@ -201,6 +212,40 @@ export default function DesignCreateDialog({
   const materialName = selectedMaterial?.name || "";
   const isTheTreo = materialName.toLowerCase().includes("thẻ treo") || materialName.toLowerCase().includes("the treo");
 
+  const matNameLower = materialName.toLowerCase();
+  const isGiay = matNameLower.includes("giấy") || matNameLower.includes("giay");
+  const isMetaline = matNameLower.includes("metaline") || matNameLower.includes("metalize");
+  const isPEorPA = (matNameLower.includes("pe") || matNameLower.includes("pa")) && !isMetaline && !isGiay;
+  const isCuonThuong = (matNameLower.includes("thường") || matNameLower.includes("thuong")) && !isMetaline && !isGiay;
+
+  const shouldShowZipper = useMemo(() => {
+    if (!materialTypeId || !selectedMaterial) return false;
+    if (isTui && !isTuiCuon) {
+      return isPEorPA;
+    }
+    if (isTuiCuon) {
+      return isCuonThuong;
+    }
+    return false;
+  }, [materialTypeId, selectedMaterial, isTui, isTuiCuon, isPEorPA, isCuonThuong]);
+
+  const shouldShowGusseted = useMemo(() => {
+    if (isGiay) return false; // F19: Túi Giấy (TUI-GIAY) không xếp hông
+    return isTui && !isTuiCuon;
+  }, [isTui, isTuiCuon, isGiay]);
+
+  useEffect(() => {
+    if (!shouldShowZipper) {
+      setIsZipper(false);
+    }
+  }, [shouldShowZipper]);
+
+  useEffect(() => {
+    if (!shouldShowGusseted) {
+      setGusseted(false);
+    }
+  }, [shouldShowGusseted]);
+
   // Determine visibility rules
   const needsWidth = isHop || isTuiXepHong;
   const needsAdhesiveOffset = (isNhan || isDecal) && !isHop && !isTuiXepHong;
@@ -247,6 +292,7 @@ export default function DesignCreateDialog({
     setLaminationType(undefined);
     setBasisWeight(undefined);
     setGusseted(false);
+    setIsZipper(false);
   }, [designTypeId]);
 
   // Reset basis weight if material type changes
@@ -314,6 +360,8 @@ export default function DesignCreateDialog({
       }
     }
 
+    const finalNotes = notes.trim();
+
     try {
       await createDesign({
         customerId: selectedCustomer.id!,
@@ -328,9 +376,13 @@ export default function DesignCreateDialog({
         sidesClassification: sidesClassification || null,
         processClassification: processClassification || null,
         laminationType: laminationType,
-        notes: notes.trim() || undefined,
+        notes: finalNotes || undefined,
         basisWeight: hasSpecs ? basisWeight : undefined,
-      });
+        isZipper: isZipper,
+        hasZip: isZipper,
+        hasZipper: isZipper,
+        isZip: isZipper,
+      } as any);
 
       // Clear state and close
       setSelectedCustomer(null);
@@ -348,6 +400,7 @@ export default function DesignCreateDialog({
       setNotes("");
       setBasisWeight(undefined);
       setGusseted(false);
+      setIsZipper(false);
 
       onOpenChange(false);
       if (onSuccess) onSuccess();
@@ -358,14 +411,14 @@ export default function DesignCreateDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col bg-background/95 backdrop-blur-md border border-border/60 shadow-2xl rounded-2xl">
+      <DialogContent className="max-w-2xl w-[95vw] sm:w-full max-h-[92vh] sm:max-h-[90vh] p-4 sm:p-6 overflow-hidden flex flex-col bg-background/95 backdrop-blur-md border border-border/60 shadow-2xl rounded-2xl">
         <DialogHeader className="pb-3 border-b border-border/40">
           <DialogTitle className="text-xl font-bold text-foreground">
             Tạo thiết kế mới
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSave} className="flex-1 overflow-y-auto py-4 px-1 space-y-5 text-sm">
+        <form onSubmit={handleSave} className="flex-1 overflow-y-auto py-3 px-1 sm:px-2 space-y-4 sm:space-y-5 text-sm">
           {/* 1. Customer Selector */}
           <div className="space-y-2">
             <Label className="font-semibold text-foreground flex items-center gap-1">
@@ -541,34 +594,72 @@ export default function DesignCreateDialog({
             )}
           </div>
 
-          {/* Tùy chọn cho Túi: Túi xếp hông */}
-          {isTui && !isTuiCuon && (
-            <div className="space-y-2 animate-in fade-in duration-200">
-              <Label className="font-semibold text-foreground">Túi xếp hông</Label>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  onClick={() => handleGussetedChange(true)}
-                  className={`px-4 py-2 text-xs font-bold transition-all h-9 ${
-                    gusseted
-                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                      : "bg-background border border-border hover:border-primary/50 text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  Có
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => handleGussetedChange(false)}
-                  className={`px-4 py-2 text-xs font-bold transition-all h-9 ${
-                    !gusseted
-                      ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                      : "bg-background border border-border hover:border-primary/50 text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  Không
-                </Button>
-              </div>
+          {/* Tùy chọn cho Túi & Túi cuộn: Túi Zipper & Túi xếp hông */}
+          {(shouldShowZipper || shouldShowGusseted) && (
+            <div className={`grid grid-cols-1 ${shouldShowZipper && shouldShowGusseted ? "sm:grid-cols-2" : ""} gap-4 animate-in fade-in duration-200`}>
+              {shouldShowZipper && (
+                <div className="space-y-2">
+                  <Label className="font-semibold text-foreground">Túi Zipper</Label>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      onClick={() => handleZipperChange(true)}
+                      className={`px-4 py-2 text-xs font-bold transition-all h-9 ${
+                        isZipper
+                          ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                          : "bg-background border border-border hover:border-primary/50 text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      Có
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => handleZipperChange(false)}
+                      className={`px-4 py-2 text-xs font-bold transition-all h-9 ${
+                        !isZipper
+                          ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                          : "bg-background border border-border hover:border-primary/50 text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      Không
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {shouldShowGusseted && (
+                <div className="space-y-2">
+                  <Label className={`font-semibold text-foreground ${isZipper ? "opacity-50" : ""}`}>
+                    Túi xếp hông
+                  </Label>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      disabled={isZipper}
+                      onClick={() => handleGussetedChange(true)}
+                      className={`px-4 py-2 text-xs font-bold transition-all h-9 ${
+                        gusseted
+                          ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                          : "bg-background border border-border hover:border-primary/50 text-muted-foreground hover:text-foreground"
+                      } ${isZipper ? "opacity-50 cursor-not-allowed" : ""}`}
+                    >
+                      Có
+                    </Button>
+                    <Button
+                      type="button"
+                      disabled={isZipper}
+                      onClick={() => handleGussetedChange(false)}
+                      className={`px-4 py-2 text-xs font-bold transition-all h-9 ${
+                        !gusseted
+                          ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                          : "bg-background border border-border hover:border-primary/50 text-muted-foreground hover:text-foreground"
+                      } ${isZipper ? "opacity-50 cursor-not-allowed" : ""}`}
+                    >
+                      Không
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

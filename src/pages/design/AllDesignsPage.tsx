@@ -605,33 +605,33 @@ export default function AllDesignsPage() {
                   <TableHead className="h-9 text-sm font-bold w-12">
                     Ảnh
                   </TableHead>
-                  <TableHead className="h-9 text-sm font-bold ">
+                  <TableHead className="h-9 text-sm font-bold min-w-[115px] whitespace-nowrap">
                     Mã thiết kế
                   </TableHead>
-                  <TableHead className="h-9 text-sm font-bold">
+                  <TableHead className="h-9 text-sm font-bold min-w-[125px] whitespace-nowrap">
                     Mã đơn hàng
                   </TableHead>
-                  <TableHead className="h-9 text-sm font-bold">
+                  <TableHead className="h-9 text-sm font-bold min-w-[240px]">
                     Tên thiết kế
                   </TableHead>
-                  <TableHead className="h-9 text-sm font-bold">
+                  <TableHead className="h-9 text-sm font-bold min-w-[130px]">
                     Khách hàng
                   </TableHead>
                   {/* Yêu cầu column hidden per request */}
-                  <TableHead className="h-9 text-sm font-bold">
+                  <TableHead className="h-9 text-sm font-bold min-w-[110px] whitespace-nowrap">
                     Trạng thái
                   </TableHead>
-                  <TableHead className="h-9 text-sm font-bold">Người thiết kế</TableHead>
-                  <TableHead className="h-9 text-sm font-bold">
+                  <TableHead className="h-9 text-sm font-bold min-w-[155px] whitespace-nowrap">Người thiết kế</TableHead>
+                  <TableHead className="h-9 text-sm font-bold min-w-[70px] whitespace-nowrap">
                     Loại
                   </TableHead>
-                  <TableHead className="h-9 text-sm font-bold">
+                  <TableHead className="h-9 text-sm font-bold min-w-[135px] whitespace-nowrap">
                     Kích thước
                   </TableHead>
-                  <TableHead className="h-9 text-sm font-bold">
+                  <TableHead className="h-9 text-sm font-bold min-w-[160px] max-w-[220px]">
                     Ghi chú
                   </TableHead>
-                  <TableHead className="h-9 text-sm font-bold text-right">
+                  <TableHead className="h-9 text-sm font-bold text-right whitespace-nowrap">
                     Thao tác
                   </TableHead>
                 </TableRow>
@@ -680,36 +680,36 @@ export default function AllDesignsPage() {
                           );
                         })()}
                       </TableCell>
-                      <TableCell className="py-3 font-semibold text-sm">
+                      <TableCell className="py-3 font-semibold text-sm min-w-[115px] whitespace-nowrap">
                         {design.code?.startsWith("NHAP") ? (
-                          <Badge variant="outline" className="bg-orange-50/80 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border-orange-200/80 dark:border-orange-900/50 font-semibold px-2 py-0.5 rounded">
+                          <Badge variant="outline" className="bg-orange-50/80 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border-orange-200/80 dark:border-orange-900/50 font-semibold px-2 py-0.5 rounded whitespace-nowrap">
                             {design.code}
                           </Badge>
                         ) : (
                           design.code || `DES-${design.id}`
                         )}
                       </TableCell>
-                      <TableCell className="py-3">
+                      <TableCell className="py-3 min-w-[125px] whitespace-nowrap">
                         {design.latestOrderCode ? (
                           <Badge
                             variant="outline"
-                            className="font-mono font-semibold text-xs"
+                            className="font-mono font-semibold text-xs whitespace-nowrap inline-block"
                           >
                             {design.latestOrderCode}
                           </Badge>
                         ) : (
-                          <span className="font-medium">—</span>
+                          <span className="font-medium text-muted-foreground">—</span>
                         )}
                       </TableCell>
-                      <TableCell className="py-3 text-sm font-semibold max-w-[150px]">
+                      <TableCell className="py-3 text-xs font-semibold leading-snug min-w-[240px]">
                         <div
-                          className="truncate"
+                          className="break-words"
                           title={design.designName || "—"}
                         >
                           {design.designName || "—"}
                         </div>
                       </TableCell>
-                      <TableCell className="py-3 text-sm font-semibold max-w-[150px]">
+                      <TableCell className="py-3 text-sm font-semibold min-w-[130px] max-w-[180px]">
                         <div
                           className="truncate"
                           title={
@@ -724,7 +724,7 @@ export default function AllDesignsPage() {
                         </div>
                       </TableCell>
                       {/* Removed requirements column (moved to detail) */}
-                      <TableCell className="py-3">
+                      <TableCell className="py-3 min-w-[110px] whitespace-nowrap">
                         <StatusBadge
                           status={design.status || ""}
                           label={
@@ -734,7 +734,7 @@ export default function AllDesignsPage() {
                           }
                         />
                       </TableCell>
-                      <TableCell className="py-3 text-sm font-semibold max-w-[140px]">
+                      <TableCell className="py-3 text-xs font-semibold min-w-[155px]">
                         {isDesignLeadOrAdmin ? (
                           <div onClick={(e) => e.stopPropagation()}>
                             <Select
@@ -750,7 +750,7 @@ export default function AllDesignsPage() {
                                 updateDesign({ id: design.id, data: { assignedDesignerId: assignedId } } as any);
                               }}
                             >
-                              <SelectTrigger className="h-8 text-sm">
+                              <SelectTrigger className="h-8 text-xs w-[145px]">
                                 <SelectValue placeholder="Chọn designer" />
                               </SelectTrigger>
                               <SelectContent>
@@ -764,14 +764,14 @@ export default function AllDesignsPage() {
                             </Select>
                           </div>
                         ) : (
-                          <div className="truncate">{design.designer?.fullName || '—'}</div>
+                          <div className="truncate whitespace-nowrap">{design.designer?.fullName || '—'}</div>
                         )}
                       </TableCell>
-                      <TableCell className="py-3 text-sm font-semibold">
+                      <TableCell className="py-3 text-sm font-semibold min-w-[70px] whitespace-nowrap">
                         {design.designType?.name || "—"}
                       </TableCell>
-                      <TableCell className="py-3">
-                        <div className="flex items-center gap-1 font-mono text-xs font-semibold">
+                      <TableCell className="py-3 min-w-[135px] whitespace-nowrap">
+                        <div className="flex items-center gap-1 font-mono text-xs font-semibold whitespace-nowrap">
                           <span>
                             {design.width
                               ? `${design.length} x ${design.width} x ${design.height}`
@@ -779,7 +779,7 @@ export default function AllDesignsPage() {
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell className="py-3 text-xs text-muted-foreground break-words max-w-[180px]" title={design.notes || ""}>
+                      <TableCell className="py-3 text-xs text-muted-foreground min-w-[160px] max-w-[220px] break-words" title={design.notes || ""}>
                         {design.notes || "—"}
                       </TableCell>
                       <TableCell className="py-3 text-right">

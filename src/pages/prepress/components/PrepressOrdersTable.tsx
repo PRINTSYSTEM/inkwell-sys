@@ -68,20 +68,20 @@ export function PrepressOrdersTable({
                     <TableHead className="h-10 text-sm font-bold min-w-[100px] w-28">
                       Loại bài
                     </TableHead>
-                    <TableHead className="h-10 text-sm font-bold min-w-[140px] w-36">
+                    <TableHead className="h-10 text-sm font-bold min-w-[130px] w-36">
                       Chất liệu
                     </TableHead>
-                    <TableHead className="h-10 text-sm font-bold min-w-[210px] w-56">
+                    <TableHead className="h-10 text-sm font-bold min-w-[130px] w-36">
                       Mã hàng
                     </TableHead>
-                    <TableHead className="h-10 text-sm font-bold text-center w-32">
+                    <TableHead className="h-10 text-sm font-bold text-center w-28">
                       Kích thước
                     </TableHead>
                     <TableHead className="h-10 text-sm font-bold text-center w-24">
                       Số lượng
                     </TableHead>
 
-                    <TableHead className="h-10 text-sm font-bold w-28">
+                    <TableHead className="h-10 text-sm font-bold min-w-[240px] w-64">
                       Quy cách
                     </TableHead>
                     <TableHead className="h-10 text-sm font-bold w-36">

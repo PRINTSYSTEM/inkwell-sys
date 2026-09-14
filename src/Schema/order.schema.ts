@@ -124,7 +124,13 @@ export type CreateDesignRequestEmbedded = z.infer<
 // ===== CreateOrderRequest =====
 // Use generated schema but extend with our custom designRequests
 export const CreateOrderRequestSchema =
-  GenCreateOrderRequestSchema.passthrough();
+  GenCreateOrderRequestSchema.passthrough().refine(
+    (data) => (data.depositAmount ?? 0) <= (data.totalAmount ?? 0),
+    {
+      message: "Tiền cọc không được lớn hơn tổng tiền",
+      path: ["depositAmount"],
+    }
+  );
 export type CreateOrderRequest = z.infer<typeof CreateOrderRequestSchema>;
 
 // ===== UpdateOrderRequest =====

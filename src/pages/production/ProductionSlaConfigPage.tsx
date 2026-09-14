@@ -45,11 +45,14 @@ import {
   RotateCcw,
   User,
   Calendar,
-  X,
   FileCheck,
   MoreVertical,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useFlowWorkerDefaults, useUpdateFlowWorkerDefaults } from "@/hooks/use-production";
+import { toCanonicalBeStageCode } from "@/lib/status-utils";
+import { StageWorkerReportModal } from "./components/StageWorkerReportModal";
 
 // 19 Flows grouped into 7 Product Categories
 // 19 Flows grouped into 7 Product Categories
@@ -113,6 +116,7 @@ interface StageSlaConfig {
   waitLate: number | null;
   execWarning: number | null;
   execLate: number | null;
+  defaultWorkerCount?: number | null;
   condition: string;
   note: string;
   isCustom: boolean;
@@ -337,8 +341,28 @@ const INITIAL_HISTORY = [
 ];
 
 export default function ProductionSlaConfigPage() {
-  const [selectedFlowId, setSelectedFlowId] = useState<string>("F17");
+  const [selectedFlowId, setSelectedFlowIdState] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem("sla_config_selected_flow_id");
+      if (saved && typeof saved === "string" && saved.trim()) {
+        return saved.trim();
+      }
+    } catch {}
+    return "F01";
+  });
+
+  const setSelectedFlowId = (flowId: string) => {
+    setSelectedFlowIdState(flowId);
+    try {
+      localStorage.setItem("sla_config_selected_flow_id", flowId);
+    } catch {}
+  };
+
   const [searchFlowQuery, setSearchFlowQuery] = useState<string>("");
+
+  // Worker default counts API hooks
+  const { data: workerDefaultsData } = useFlowWorkerDefaults(selectedFlowId);
+  const updateWorkerDefaults = useUpdateFlowWorkerDefaults();
 
   // State map mapping Flow ID -> distinct Stage SLA array
   const [flowSlaMap, setFlowSlaMap] = useState<Record<string, StageSlaConfig[]>>(INITIAL_FLOW_SLA_MAP);
@@ -352,7 +376,36 @@ export default function ProductionSlaConfigPage() {
   const [isNotesOpen, setIsNotesOpen] = useState<boolean>(false);
   const [isCopyDialogOpen, setIsCopyDialogOpen] = useState<boolean>(false);
   const [isFlowchartOpen, setIsFlowchartOpen] = useState<boolean>(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState<boolean>(false);
   const [historyLogs, setHistoryLogs] = useState(INITIAL_HISTORY);
+
+  // Sync worker defaults into flowSlaMap when loaded from API
+  React.useEffect(() => {
+    if (workerDefaultsData && Array.isArray(workerDefaultsData)) {
+      setFlowSlaMap((prevMap) => {
+        const flowStages = prevMap[selectedFlowId] || INITIAL_FLOW_SLA_MAP[selectedFlowId] || INITIAL_FLOW_SLA_MAP["F01"];
+        const updated = flowStages.map((st) => {
+          const matched = workerDefaultsData.find((d) => {
+            if (!d) return false;
+            const dCode = toCanonicalBeStageCode(d.stageCode);
+            const stCode = toCanonicalBeStageCode(st.stageCode);
+            const codeMatch = dCode !== "" && dCode === stCode;
+            const nameMatch = Boolean(
+              d.stageName &&
+              st.stepName &&
+              d.stageName.toLowerCase() === st.stepName.toLowerCase()
+            );
+            return codeMatch || nameMatch;
+          });
+          if (matched !== undefined && matched.defaultWorkerCount !== undefined && matched.defaultWorkerCount !== null) {
+            return { ...st, defaultWorkerCount: matched.defaultWorkerCount };
+          }
+          return st;
+        });
+        return { ...prevMap, [selectedFlowId]: updated };
+      });
+    }
+  }, [workerDefaultsData, selectedFlowId]);
 
   // Find selected flow info
   const currentFlow = useMemo(() => {
@@ -360,12 +413,12 @@ export default function ProductionSlaConfigPage() {
       const found = group.flows.find((f) => f.id === selectedFlowId);
       if (found) return { ...found, category: group.category };
     }
-    return { id: "F17", name: "Decal cuộn thường", code: "DECAL-CUON-THUONG", category: "DECAL CUỘN" };
+    return { id: "F01", name: "Hộp thường", code: "HOP-THUONG", category: "HỘP GIẤY" };
   }, [selectedFlowId]);
 
   // Active stages list specifically for the selected flow
   const currentStages = useMemo(() => {
-    return flowSlaMap[selectedFlowId] || INITIAL_FLOW_SLA_MAP[selectedFlowId] || INITIAL_FLOW_SLA_MAP["F17"];
+    return flowSlaMap[selectedFlowId] || INITIAL_FLOW_SLA_MAP[selectedFlowId] || INITIAL_FLOW_SLA_MAP["F01"];
   }, [flowSlaMap, selectedFlowId]);
 
   const filteredFlowGroups = useMemo(() => {
@@ -381,7 +434,7 @@ export default function ProductionSlaConfigPage() {
 
   const handleStageValueChange = (
     index: number,
-    field: "waitWarning" | "waitLate" | "execWarning" | "execLate" | "note",
+    field: "waitWarning" | "waitLate" | "execWarning" | "execLate" | "defaultWorkerCount" | "note",
     val: string
   ) => {
     setFlowSlaMap((prevMap) => {
@@ -409,23 +462,68 @@ export default function ProductionSlaConfigPage() {
     );
   };
 
-  const handleSaveSla = () => {
-    const now = new Date().toISOString().replace("T", " ").substring(0, 16);
-    const newLog = {
-      id: Date.now(),
-      timestamp: now,
-      user: "Người dùng hiện tại",
-      flowId: currentFlow.id,
-      flowName: currentFlow.name,
-      action: "Cập nhật SLA",
-      details: `Đã lưu cấu hình SLA tùy chỉnh cho ${currentFlow.id} (${currentStages.length} công đoạn)`,
-      status: "Thành công",
-    };
-    setHistoryLogs((prev) => [newLog, ...prev]);
+  const handleSaveSla = async () => {
+    try {
+      const payloadDefaults = currentStages
+        .filter((st) => st.stageCode !== "BINH_BAI" && st.stageCode !== "DISPATCH")
+        .map((st) => ({
+          stageCode: toCanonicalBeStageCode(st.stageCode),
+          defaultWorkerCount:
+            st.defaultWorkerCount == null || String(st.defaultWorkerCount).trim() === ""
+              ? null
+              : Number(st.defaultWorkerCount),
+        }));
 
-    toast.success(`Đã lưu cấu hình SLA riêng cho ${currentFlow.id} thành công!`, {
-      description: `Cấu hình SLA cho ${currentFlow.id} - ${currentFlow.name} đã được lưu riêng biệt vào hệ thống.`,
-    });
+      if (payloadDefaults.length === 0) {
+        toast.error("Không có công đoạn sản xuất hợp lệ để lưu số công.");
+        return;
+      }
+
+      await updateWorkerDefaults.mutate({
+        flowId: selectedFlowId,
+        defaults: payloadDefaults,
+      });
+
+      const now = new Date().toISOString().replace("T", " ").substring(0, 16);
+      const newLog = {
+        id: Date.now(),
+        timestamp: now,
+        user: "Người dùng hiện tại",
+        flowId: currentFlow.id,
+        flowName: currentFlow.name,
+        action: "Cập nhật SLA & Số công",
+        details: `Đã lưu số công mặc định trực tiếp vào CSDL cho ${currentFlow.id} (${payloadDefaults.length} công đoạn)`,
+        status: "Thành công",
+      };
+      setHistoryLogs((prev) => [newLog, ...prev]);
+
+      toast.success(`Đã lưu cấu hình SLA & Số công mặc định vào CSDL cho ${currentFlow.id}!`, {
+        description: `Cấu hình SLA & số công cho ${currentFlow.id} - ${currentFlow.name} đã được cập nhật trực tiếp vào DB.`,
+      });
+
+      // Reload page after save so fresh data loads from server
+      setTimeout(() => {
+        window.location.reload();
+      }, 700);
+    } catch (e: any) {
+      console.error("Lỗi khi lưu số công mặc định:", e);
+      const is404 = e?.response?.status === 404 || e?.status === 404 || String(e?.message).includes("404");
+      const errorMsg =
+        e?.response?.data?.error ||
+        e?.response?.data?.message ||
+        (typeof e?.response?.data?.details === "string" ? e?.response?.data?.details : null) ||
+        e?.message;
+
+      if (is404) {
+        toast.error(`Backend chưa publish API endpoint /api/production/flows/${selectedFlowId}/worker-defaults (404)`, {
+          description: "Vui lòng thông báo Backend team rebuild/restart API server để cập nhật endpoint lưu số công mặc định.",
+        });
+      } else {
+        toast.error(`Không thể lưu cấu hình số công vào CSDL`, {
+          description: errorMsg || "Thông tin gửi lên không đúng định dạng hoặc chứa mã khâu không hợp lệ (400 Bad Request)",
+        });
+      }
+    }
   };
 
   const handleSaveGlobalDefaults = () => {
@@ -524,14 +622,6 @@ export default function ProductionSlaConfigPage() {
             onClick={() => setIsNotesOpen(true)}
           >
             <Info className="w-3.5 h-3.5 text-amber-600" /> Lưu ý
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 text-xs font-semibold gap-1 bg-card"
-            onClick={() => setIsCopyDialogOpen(true)}
-          >
-            <Copy className="w-3.5 h-3.5 text-amber-600" /> Sao chép cấu hình
           </Button>
 
           <Button
@@ -689,6 +779,11 @@ export default function ProductionSlaConfigPage() {
                               {st.stepIndex}
                             </span>
                             <span className="font-bold text-[11px] text-foreground truncate">{st.stepName}</span>
+                            {st.defaultWorkerCount !== undefined && st.defaultWorkerCount !== null && (
+                              <span className="text-[9px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/50 px-1 rounded shrink-0">
+                                👥 {st.defaultWorkerCount}
+                              </span>
+                            )}
                           </div>
                           {st.execWarning ? (
                             <p className="text-[10px] text-blue-700 dark:text-blue-300 font-mono font-bold leading-none bg-blue-50 dark:bg-blue-950/40 px-1 py-0.5 rounded">
@@ -714,6 +809,11 @@ export default function ProductionSlaConfigPage() {
                         <TableHead className="w-10 text-center font-bold">#</TableHead>
                         <TableHead className="font-bold min-w-[120px]">Công đoạn</TableHead>
 
+                        {/* Distinct Header: SỐ CÔNG MẶC ĐỊNH */}
+                        <TableHead className="font-extrabold text-center bg-emerald-100/90 dark:bg-emerald-950/60 text-emerald-950 dark:text-emerald-200 border-x border-emerald-300/80 uppercase tracking-wider py-2 min-w-[110px]">
+                          👥 Số công mặc định
+                        </TableHead>
+
                         {/* Distinct Header: THỜI GIAN CHỜ */}
                         <TableHead className="font-extrabold text-center bg-amber-100/90 dark:bg-amber-950/60 text-amber-950 dark:text-amber-200 border-x border-amber-300/80 uppercase tracking-wider py-2" colSpan={2}>
                           ⏳ Thời gian chờ (phút)
@@ -727,6 +827,9 @@ export default function ProductionSlaConfigPage() {
 
                       <TableRow className="text-[10px] border-b">
                         <TableHead colSpan={2}></TableHead>
+                        <TableHead className="text-center font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50/90 dark:bg-emerald-950/40 border-x border-emerald-300/70">
+                          Nhân sự (Công)
+                        </TableHead>
                         <TableHead className="text-center font-bold text-amber-800 dark:text-amber-300 bg-amber-50/90 dark:bg-amber-950/40 border-l border-amber-300/70">
                           Cảnh báo (Vàng)
                         </TableHead>
@@ -753,6 +856,18 @@ export default function ProductionSlaConfigPage() {
                                 ({st.stageCode})
                               </span>
                             </div>
+                          </TableCell>
+
+                          {/* WORKER DEFAULT COUNT COLUMN */}
+                          <TableCell className="p-1 text-center bg-emerald-50/30 dark:bg-emerald-950/10 border-x border-emerald-200/50">
+                            <Input
+                              type="number"
+                              min={0}
+                              placeholder="—"
+                              value={st.defaultWorkerCount ?? ""}
+                              onChange={(e) => handleStageValueChange(idx, "defaultWorkerCount", e.target.value)}
+                              className="h-7 w-16 text-center text-xs font-mono font-extrabold border-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/50 text-emerald-950 dark:text-emerald-100 focus:ring-2 focus:ring-emerald-500 mx-auto"
+                            />
                           </TableCell>
 
                           {/* WAIT SLA: Yellow Warning (Amber Column Tint) */}
@@ -1140,6 +1255,12 @@ export default function ProductionSlaConfigPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Stage Worker Report Modal */}
+      <StageWorkerReportModal
+        isOpen={isReportModalOpen}
+        onOpenChange={setIsReportModalOpen}
+      />
     </div>
   );
 }

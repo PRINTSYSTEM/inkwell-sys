@@ -186,6 +186,21 @@ export const useProductionDesignTypeSummary = (params?: Record<string, unknown>)
   });
 };
 
+// GET /api/production-orders/:id/history - Unified history for a production order
+export const useProductionOrderHistory = (productionOrderId: number | null, enabled = true) => {
+  return useQuery<any[]>({
+    queryKey: ["production-order-history", productionOrderId],
+    queryFn: async () => {
+      if (!productionOrderId) return [];
+      const res = await apiRequest.get<any[]>(
+        API_SUFFIX.PRODUCTION_ORDER_HISTORY(productionOrderId)
+      );
+      return res.data;
+    },
+    enabled: enabled && !!productionOrderId,
+  });
+};
+
 // GET /api/production-orders/steps/:stepId/history - Fetch production step status transition history
 export const useProductionStepHistory = (stepId: number | null) => {
   return useQuery<ProductionStepHistoryResponse[]>({
@@ -511,5 +526,180 @@ export const useProductionFlows = () => {
     staleTime: 5 * 60 * 1000,
   });
 };
+
+// ===== WORKER COUNT HOOKS =====
+
+// PUT /api/production-orders/:orderId/steps/:stepId/worker-count - Override step worker count
+export const useUpdateStepWorkerCount = () => {
+  const queryClient = useQueryClient();
+
+  const { data, loading, error, execute, reset } = useAsyncCallback<
+    ProductionStepResponse,
+    [{ orderId: number; stepId: number; workerCount: number | null }]
+  >(async ({ orderId, stepId, workerCount }) => {
+    const res = await apiRequest.put<ProductionStepResponse>(
+      API_SUFFIX.PRODUCTION_STEP_WORKER_COUNT(orderId, stepId),
+      { workerCount }
+    );
+    return res.data;
+  });
+
+  const mutate = async (payload: { orderId: number; stepId: number; workerCount: number | null }) => {
+    try {
+      const result = await execute(payload);
+      invalidateRelatedQueries(queryClient, [
+        "production-orders",
+        "productions",
+        "print-orders",
+        "post-print",
+      ]);
+      toast.success("Thành công", {
+        description: "Đã cập nhật số công cho công đoạn",
+      });
+      return result;
+    } catch (err: unknown) {
+      const errorObj = err as any;
+      toast.error("Không thể cập nhật số công", {
+        description: errorObj?.response?.data?.message || errorObj?.message || "Không thể cập nhật số công",
+      });
+      throw err;
+    }
+  };
+
+  return {
+    data,
+    isPending: loading,
+    error,
+    mutate,
+    reset,
+  };
+};
+
+export interface FlowWorkerDefaultItem {
+  stageCode: string;
+  stageName?: string;
+  defaultWorkerCount: number | null;
+}
+
+// GET /api/production/flows/:flowId/worker-defaults
+export const useFlowWorkerDefaults = (flowId: string | number | null) => {
+  return useQuery<FlowWorkerDefaultItem[]>({
+    queryKey: ["production-flow-worker-defaults", flowId],
+    enabled: !!flowId,
+    queryFn: async () => {
+      try {
+        const res = await apiRequest.get<FlowWorkerDefaultItem[]>(
+          API_SUFFIX.PRODUCTION_FLOW_WORKER_DEFAULTS(flowId!)
+        );
+        return res.data || [];
+      } catch (err: any) {
+        if (err?.response?.status === 404 || err?.status === 404) {
+          return [];
+        }
+        throw err;
+      }
+    },
+  });
+};
+
+// PUT /api/production/flows/:flowId/worker-defaults
+export const useUpdateFlowWorkerDefaults = () => {
+  const queryClient = useQueryClient();
+
+  const { loading, execute } = useAsyncCallback<
+    FlowWorkerDefaultItem[],
+    [{ flowId: string | number; defaults: Array<{ stageCode: string; defaultWorkerCount: number | null }> }]
+  >(async ({ flowId, defaults }) => {
+    const res = await apiRequest.put<FlowWorkerDefaultItem[]>(
+      API_SUFFIX.PRODUCTION_FLOW_WORKER_DEFAULTS(flowId),
+      defaults
+    );
+    return res.data;
+  });
+
+  const mutate = async (payload: { flowId: string | number; defaults: Array<{ stageCode: string; defaultWorkerCount: number | null }> }) => {
+    const result = await execute(payload);
+    queryClient.invalidateQueries({ queryKey: ["production-flow-worker-defaults", payload.flowId] });
+    return result;
+  };
+
+  return {
+    isPending: loading,
+    mutate,
+  };
+};
+
+export interface StageWorkerReportItem {
+  stageCode: string;
+  stageName: string;
+  orderCount?: number;
+  totalOrdersCount?: number;
+  totalWorkerCount: number;
+}
+
+export interface StageWorkerReportResponse {
+  fromDate?: string;
+  toDate?: string;
+  items: StageWorkerReportItem[];
+}
+
+export interface StageWorkerOrderResponse {
+  productionOrderId?: number;
+  id?: number;
+  orderCode: string;
+  code?: string;
+  proofingOrderCode?: string;
+  workerCount: number;
+  createdAt: string;
+}
+
+// GET /api/production/stage-worker-report
+export const useStageWorkerReport = (from?: string, to?: string) => {
+  return useQuery<StageWorkerReportResponse | StageWorkerReportItem[]>({
+    queryKey: ["production-stage-worker-report", from, to],
+    queryFn: async () => {
+      const res = await apiRequest.get(
+        API_SUFFIX.PRODUCTION_STAGE_WORKER_REPORT,
+        { params: normalizeParams({ fromDate: from, toDate: to, from, to } as Record<string, unknown>) }
+      );
+      return res.data;
+    },
+  });
+};
+
+export async function exportStageWorkerReportExcel(fromDate?: string, toDate?: string) {
+  try {
+    const params = normalizeParams({
+      fromDate,
+      toDate,
+      from: fromDate,
+      to: toDate,
+    } as Record<string, unknown>);
+
+    const res = await apiRequest.get(API_SUFFIX.PRODUCTION_STAGE_WORKER_REPORT_EXCEL, {
+      params,
+      responseType: "blob",
+    });
+
+    const blob = new Blob([res.data], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    const fileName = `Bao_Cao_So_Cong_Theo_Khau_${fromDate || "30ngay"}_den_${toDate || "hientai"}.xlsx`;
+    link.setAttribute("download", fileName);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Export Excel error:", error);
+    const query = new URLSearchParams();
+    if (fromDate) query.append("fromDate", fromDate);
+    if (toDate) query.append("toDate", toDate);
+    window.open(`/api/production/stage-worker-report/excel?${query.toString()}`, "_blank");
+  }
+}
 
 export { productionOrderCrudApi, productionOrderKeys };

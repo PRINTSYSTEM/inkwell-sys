@@ -23,6 +23,7 @@ import {
   RotateCcw,
   History,
   Clock,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -107,6 +108,25 @@ const formatImpositionDate = (item: PrintOrderResponse) => {
     return format(d, "dd/MM/yyyy", { locale: vi });
   } catch {
     return "Chưa xác định ngày";
+  }
+};
+
+const getImpositionTimestamp = (item: PrintOrderResponse): number => {
+  const rawDate =
+    item.productionOrder?.proofingOrder?.completedAt ||
+    item.impositionCompletedAt ||
+    item.impositionDate ||
+    item.productionOrder?.proofingOrder?.updatedAt ||
+    item.productionOrder?.createdAt ||
+    item.dispatchedAt ||
+    (item as any).createdAt;
+
+  if (!rawDate) return 0;
+  try {
+    const d = new Date(rawDate);
+    return isNaN(d.getTime()) ? 0 : d.getTime();
+  } catch {
+    return 0;
   }
 };
 
@@ -216,6 +236,21 @@ export default function ProductionDispatch() {
   const [historyPrintOrderId, setHistoryPrintOrderId] = useState<number | null>(null);
   const [historyProofingCode, setHistoryProofingCode] = useState<string | undefined>(undefined);
 
+  // Force Dispatch (Điều lệnh chờ nguyên liệu & Điều lệnh trước) Dialog State
+  const [forceDispatchDialogOpen, setForceDispatchDialogOpen] = useState(false);
+  const [forceDispatchTargetIds, setForceDispatchTargetIds] = useState<number[]>([]);
+  const [expectedPaperDate, setExpectedPaperDate] = useState<string>("");
+  const [scheduledPrintDate, setScheduledPrintDate] = useState<string>("");
+  const [isForceDispatching, setIsForceDispatching] = useState(false);
+
+  // Global Header Dispatch Date (Mặc định hôm nay YYYY-MM-DD để giảm thao tác)
+  const [dispatchDate, setDispatchDate] = useState<string>(() => format(new Date(), "yyyy-MM-dd"));
+
+  // Standard Dispatch Dialog State (cho phép chọn Ngày in dự kiến / Điều lệnh cho ngày khác)
+  const [dispatchDialogOpen, setDispatchDialogOpen] = useState(false);
+  const [dispatchTargetIds, setDispatchTargetIds] = useState<number[]>([]);
+  const [dispatchScheduledDate, setDispatchScheduledDate] = useState<string>("");
+
   // Main Tab State: "candidates" (Bài chờ điều lệnh) vs "undo" (Hủy điều lệnh)
   const [mainTab, setMainTab] = useState<"candidates" | "undo">("candidates");
 
@@ -258,8 +293,122 @@ export default function ProductionDispatch() {
 
   const candidateItems = candidatesData?.items || [];
 
+  const forceDispatchTargetItems = useMemo(() => {
+    return candidateItems.filter((ci) => forceDispatchTargetIds.includes(ci.id));
+  }, [candidateItems, forceDispatchTargetIds]);
+
+  const dispatchTargetItems = useMemo(() => {
+    return candidateItems.filter((ci) => dispatchTargetIds.includes(ci.id));
+  }, [candidateItems, dispatchTargetIds]);
+
+  const formatISO = (dateVal: any): string | undefined => {
+    if (!dateVal) return undefined;
+    if (dateVal instanceof Date) return dateVal.toISOString();
+    if (typeof dateVal.toISOString === "function") return dateVal.toISOString();
+    if (typeof dateVal.toDate === "function") return dateVal.toDate().toISOString();
+
+    const d = new Date(dateVal);
+    return !isNaN(d.getTime()) ? d.toISOString() : undefined;
+  };
+
+  const handleOpenDispatchModal = (ids: number[]) => {
+    if (ids.length === 0) return;
+    setDispatchTargetIds(ids);
+    setDispatchScheduledDate(dispatchDate);
+    setDispatchDialogOpen(true);
+  };
+
+  const handleOpenForceDispatchModal = (ids: number[]) => {
+    if (ids.length === 0) return;
+    setForceDispatchTargetIds(ids);
+    setExpectedPaperDate("");
+    setScheduledPrintDate(dispatchDate);
+    setForceDispatchDialogOpen(true);
+  };
+
+  const handleConfirmDispatch = async () => {
+    if (dispatchTargetIds.length === 0) return;
+
+    const schedPrintISO = formatISO(dispatchScheduledDate || dispatchDate);
+
+    dispatchMutation.mutate(
+      {
+        printOrderIds: dispatchTargetIds,
+        ...(schedPrintISO ? { scheduledPrintDate: schedPrintISO } : {}),
+      },
+      {
+        onSuccess: () => {
+          setCheckedGiayMap((prev) => {
+            const next = { ...prev };
+            dispatchTargetIds.forEach((id) => delete next[id]);
+            return next;
+          });
+          setCheckedFluteMap((prev) => {
+            const next = { ...prev };
+            dispatchTargetIds.forEach((id) => delete next[id]);
+            return next;
+          });
+          setSelectedIds([]);
+          setDispatchDialogOpen(false);
+          setDispatchTargetIds([]);
+          setDispatchScheduledDate("");
+          refetch();
+          refetchWaiting();
+        },
+      }
+    );
+  };
+
+  const handleConfirmForceDispatch = async () => {
+    if (forceDispatchTargetIds.length === 0) return;
+    setIsForceDispatching(true);
+
+    try {
+      // Auto confirm paper & flute readiness for target items before dispatching to satisfy backend preconditions
+      for (const item of forceDispatchTargetItems) {
+        const readiness = getItemReadiness(item);
+        if (!readiness.giayOk) {
+          await confirmPaperReadyMutation.mutateAsync({
+            id: item.id,
+            isPaperReady: true,
+          });
+        }
+        if (readiness.requiresFlute && !readiness.fluteOk) {
+          await confirmFluteReadyMutation.mutateAsync({
+            id: item.id,
+            isFluteReady: true,
+          });
+        }
+      }
+
+      const expPaperISO = formatISO(expectedPaperDate);
+      const schedPrintISO = formatISO(scheduledPrintDate || dispatchDate);
+
+      await dispatchMutation.mutateAsync({
+        printOrderIds: forceDispatchTargetIds,
+        isPendingMaterials: true,
+        ...(expPaperISO ? { expectedPaperDate: expPaperISO } : {}),
+        ...(schedPrintISO ? { scheduledPrintDate: schedPrintISO } : {}),
+      });
+
+      toast.success("Điều lệnh thành công!");
+      setForceDispatchDialogOpen(false);
+      setForceDispatchTargetIds([]);
+      setSelectedIds([]);
+      setExpectedPaperDate("");
+      setScheduledPrintDate("");
+      refetch();
+      refetchWaiting();
+    } catch (err: any) {
+      const errMsg = err?.response?.data?.message || err?.message || "Không thể điều lệnh chờ nguyên liệu";
+      toast.error(errMsg);
+    } finally {
+      setIsForceDispatching(false);
+    }
+  };
+
   const formatDispatchDateKey = (item: PrintOrderResponse) => {
-    const rawDate = item.dispatchedAt || (item as any).createdAt;
+    const rawDate = item.scheduledPrintDate || item.dispatchedAt || (item as any).createdAt;
     if (!rawDate) return "Chưa xác định ngày";
     try {
       const d = new Date(rawDate);
@@ -283,7 +432,7 @@ export default function ProductionDispatch() {
 
     waitingItems.forEach((item) => {
       const dateKey = formatDispatchDateKey(item);
-      const rawDate = item.dispatchedAt || (item as any).createdAt;
+      const rawDate = item.scheduledPrintDate || item.dispatchedAt || (item as any).createdAt;
       const sortTime = rawDate ? new Date(rawDate).getTime() : 0;
 
       if (!dateMap.has(dateKey)) {
@@ -301,11 +450,27 @@ export default function ProductionDispatch() {
       dateEntry.items.push(item);
     });
 
-    // Sort dates descending (newest date first, "Chưa xác định ngày" last)
+    // Sort dates (Today first, then descending by date, "Chưa xác định ngày" last)
+    const todayLabel = format(new Date(), "dd/MM/yyyy", { locale: vi });
+
     let result = Array.from(dateMap.values()).sort((a, b) => {
+      if (a.dateKey === todayLabel) return -1;
+      if (b.dateKey === todayLabel) return 1;
       if (a.dateKey === "Chưa xác định ngày") return 1;
       if (b.dateKey === "Chưa xác định ngày") return -1;
       return b.dateSortTime - a.dateSortTime;
+    });
+
+    // Sort items within each date section descending by timestamp (newest item first)
+    result.forEach((group) => {
+      group.items.sort((a, b) => {
+        const rawA = a.scheduledPrintDate || a.dispatchedAt || (a as any).createdAt;
+        const rawB = b.scheduledPrintDate || b.dispatchedAt || (b as any).createdAt;
+        const tA = rawA ? new Date(rawA).getTime() : 0;
+        const tB = rawB ? new Date(rawB).getTime() : 0;
+        if (tA !== tB) return tB - tA;
+        return (b.id || 0) - (a.id || 0);
+      });
     });
 
     if (selectedDateFilter) {
@@ -559,28 +724,58 @@ export default function ProductionDispatch() {
     });
   }, [candidateItems, selectedDesignTypeId, selectedStatusFilter, checkedKemMap, checkedKhuonMap, checkedGiayMap, checkedFluteMap]);
 
-  // Group filtered items strictly by Imposition Date (formatted dd/MM/yyyy)
+  // Group filtered items strictly by Imposition Date (formatted dd/MM/yyyy) and sort descending (newest date & time first)
   const groupedByDate = useMemo(() => {
-    const groups: Record<string, PrintOrderResponse[]> = {};
+    const dateMap = new Map<
+      string,
+      {
+        dateLabel: string;
+        dateSortTime: number;
+        items: PrintOrderResponse[];
+      }
+    >();
 
     filteredItems.forEach((item) => {
       const dateLabel = formatImpositionDate(item);
-      if (!groups[dateLabel]) {
-        groups[dateLabel] = [];
+      const time = getImpositionTimestamp(item);
+
+      if (!dateMap.has(dateLabel)) {
+        dateMap.set(dateLabel, {
+          dateLabel,
+          dateSortTime: time,
+          items: [],
+        });
       }
-      groups[dateLabel].push(item);
+
+      const dateEntry = dateMap.get(dateLabel)!;
+      if (time > dateEntry.dateSortTime) {
+        dateEntry.dateSortTime = time;
+      }
+      dateEntry.items.push(item);
     });
 
-    const sortedDateKeys = Object.keys(groups).sort((a, b) => {
-      if (a === "Chưa xác định ngày") return 1;
-      if (b === "Chưa xác định ngày") return -1;
-      return b.localeCompare(a);
+    // 1. Sort date sections (Today first, then descending by timestamp, "Chưa xác định ngày" last)
+    const todayLabel = format(new Date(), "dd/MM/yyyy", { locale: vi });
+
+    let result = Array.from(dateMap.values()).sort((a, b) => {
+      if (a.dateLabel === todayLabel) return -1;
+      if (b.dateLabel === todayLabel) return 1;
+      if (a.dateLabel === "Chưa xác định ngày") return 1;
+      if (b.dateLabel === "Chưa xác định ngày") return -1;
+      return b.dateSortTime - a.dateSortTime;
     });
 
-    let result = sortedDateKeys.map((dateKey) => ({
-      dateLabel: dateKey,
-      items: groups[dateKey],
-    }));
+    // 2. Sort items within each date section descending by timestamp (newest item first)
+    result.forEach((group) => {
+      group.items.sort((a, b) => {
+        const timeA = getImpositionTimestamp(a);
+        const timeB = getImpositionTimestamp(b);
+        if (timeA !== timeB) {
+          return timeB - timeA;
+        }
+        return (b.id || 0) - (a.id || 0);
+      });
+    });
 
     if (selectedDateFilter) {
       try {
@@ -639,30 +834,11 @@ export default function ProductionDispatch() {
     if (selectedIds.length === 0) return;
 
     if (isAnySelectedUneligible) {
-      toast.warning("Vui lòng tick xác nhận đủ Kẽm và Giấy cho tất cả bài đã chọn trước khi điều lệnh!");
+      handleOpenForceDispatchModal(selectedIds);
       return;
     }
 
-    dispatchMutation.mutate(
-      { printOrderIds: selectedIds },
-      {
-        onSuccess: () => {
-          setCheckedGiayMap((prev) => {
-            const next = { ...prev };
-            selectedIds.forEach((id) => delete next[id]);
-            return next;
-          });
-          setCheckedFluteMap((prev) => {
-            const next = { ...prev };
-            selectedIds.forEach((id) => delete next[id]);
-            return next;
-          });
-          setSelectedIds([]);
-          refetch();
-          refetchWaiting();
-        },
-      }
-    );
+    handleOpenDispatchModal(selectedIds);
   };
 
   // Active counts from summary API (with fallback to candidateItems stats)
@@ -723,6 +899,21 @@ export default function ProductionDispatch() {
         </div>
 
         <div className="flex items-center gap-2">
+          {mainTab === "candidates" && (
+            <div className="flex items-center gap-1.5 bg-amber-50/90 px-2.5 py-1 rounded-lg border border-amber-200 shadow-2xs">
+              <Calendar className="h-3.5 w-3.5 text-amber-700 shrink-0" />
+              <span className="text-xs font-bold text-amber-950 shrink-0">Ngày điều lệnh:</span>
+              <div className="w-36 h-7 bg-white rounded-md border border-amber-300 overflow-hidden flex items-center px-1">
+                <DatePicker
+                  value={dispatchDate}
+                  onChange={(val) => setDispatchDate(val || format(new Date(), "yyyy-MM-dd"))}
+                  allowClear={false}
+                  className="w-full h-6 text-xs font-medium"
+                />
+              </div>
+            </div>
+          )}
+
           <Button
             variant="outline"
             size="sm"
@@ -738,17 +929,21 @@ export default function ProductionDispatch() {
           {mainTab === "candidates" && (
             <Button
               onClick={handleDispatchSelected}
-              disabled={selectedIds.length === 0 || isAnySelectedUneligible || dispatchMutation.isPending}
+              disabled={selectedIds.length === 0 || dispatchMutation.isPending}
               title={
-                isAnySelectedUneligible
-                  ? "Tất cả các bài đã chọn phải thỏa mãn đủ Kẽm và Giấy mới có thể điều lệnh!"
-                  : "Bấm để điều lệnh sản xuất"
+                selectedIds.length === 0
+                  ? "Vui lòng chọn ít nhất 1 bài để điều lệnh"
+                  : isAnySelectedUneligible
+                    ? "Có bài chưa đủ điều kiện (Kẽm/Giấy). Bấm để Điều lệnh chờ nguyên liệu"
+                    : "Bấm để điều lệnh sản xuất"
               }
               className={cn(
                 "h-8 text-white font-bold px-4 rounded-lg shadow-2xs transition-all text-xs",
-                selectedIds.length > 0 && !isAnySelectedUneligible
-                  ? "bg-[#93631F] hover:bg-[#7a521a] cursor-pointer"
-                  : "bg-slate-200 text-slate-400 cursor-not-allowed border-slate-200 shadow-none"
+                selectedIds.length === 0
+                  ? "bg-slate-200 text-slate-400 cursor-not-allowed border-slate-200 shadow-none"
+                  : isAnySelectedUneligible
+                    ? "bg-amber-600 hover:bg-amber-700 cursor-pointer"
+                    : "bg-[#93631F] hover:bg-[#7a521a] cursor-pointer"
               )}
             >
               {dispatchMutation.isPending ? (
@@ -756,7 +951,9 @@ export default function ProductionDispatch() {
               ) : (
                 <Send className="h-3.5 w-3.5 mr-1.5" />
               )}
-              Điều lệnh ({selectedIds.length} bài)
+              {isAnySelectedUneligible
+                ? `Điều lệnh chờ NL (${selectedIds.length} bài)`
+                : `Điều lệnh (${selectedIds.length} bài)`}
             </Button>
           )}
         </div>
@@ -1570,17 +1767,7 @@ export default function ProductionDispatch() {
 
                           {/* Thao tác Buttons: 2x2 grid layout */}
                           <TableCell className="text-center py-1.5 px-2" onClick={(e) => e.stopPropagation()}>
-                            <div className="grid grid-cols-2 gap-1.5 w-[205px] mx-auto">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleOpenDetailModal(item)}
-                                className="h-7 text-[10.5px] font-semibold text-slate-700 border-slate-200 hover:bg-slate-100 rounded-md px-1.5 w-full flex items-center justify-center gap-1 cursor-pointer shadow-2xs"
-                                title="Xem chi tiết bài bình (chỉ đọc)"
-                              >
-                                <Eye className="h-3 w-3 text-slate-500 shrink-0" /> Chi tiết
-                              </Button>
-
+                            <div className="grid grid-cols-2 gap-1.5 w-[210px] mx-auto">
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -1603,24 +1790,36 @@ export default function ProductionDispatch() {
 
                               <Button
                                 size="sm"
-                                disabled={!readiness.isEligible || dispatchMutation.isPending}
+                                disabled={!readiness.isEligible || dispatchMutation.isPending || isForceDispatching}
                                 onClick={() => {
                                   if (!readiness.isEligible) return;
-                                  dispatchMutation.mutate({ printOrderIds: [item.id] });
+                                  handleOpenDispatchModal([item.id]);
                                 }}
                                 className={cn(
-                                  "h-7 text-[10.5px] font-bold text-white rounded-md px-1.5 w-full flex items-center justify-center gap-1 transition-all shrink-0 shadow-2xs",
+                                  "h-7 text-[10px] font-bold text-white rounded-md px-1 w-full flex items-center justify-center gap-0.5 transition-all shrink-0 shadow-2xs",
                                   readiness.isEligible
                                     ? "bg-[#93631F] hover:bg-[#7a521a] cursor-pointer"
                                     : "bg-slate-200 text-slate-400 cursor-not-allowed border-slate-200 shadow-none"
                                 )}
                                 title={
                                   readiness.isEligible
-                                    ? "Bấm để điều lệnh sản xuất ngay cho bài này"
-                                    : "Bài me chưa đủ điều kiện (Kẽm, Khuôn, Giấy, Sóng) để điều lệnh!"
+                                    ? "Bấm để điều lệnh sản xuất (cho phép chọn ngày in dự kiến)"
+                                    : "Bài chưa đủ điều kiện (Kẽm/Giấy). Dùng nút 'Điều lệnh chờ NL' bên cạnh để điều lệnh chờ vật tư."
                                 }
                               >
                                 <Send className="h-3 w-3 shrink-0" /> Điều lệnh
+                              </Button>
+
+                              <Button
+                                size="sm"
+                                disabled={dispatchMutation.isPending || isForceDispatching}
+                                onClick={() => {
+                                  handleOpenForceDispatchModal([item.id]);
+                                }}
+                                className="h-7 text-[9.5px] font-bold text-white rounded-md px-1 w-full flex items-center justify-center gap-0.5 transition-all shrink-0 shadow-2xs bg-amber-600 hover:bg-amber-700 cursor-pointer"
+                                title="Bấm để Điều lệnh chờ nguyên liệu cho bài này"
+                              >
+                                <Send className="h-3 w-3 shrink-0" /> Điều lệnh chờ NL
                               </Button>
                             </div>
                           </TableCell>
@@ -1753,6 +1952,28 @@ export default function ProductionDispatch() {
                                       </span>
                                     ) : null;
                                   })()}
+                                  {(item.isPendingMaterials || item.expectedPaperDate || item.expectedMaterialAt) && (
+                                    <Badge
+                                      className="bg-amber-100 text-amber-900 border-amber-300 font-extrabold text-[9.5px] px-1.5 py-0 flex items-center gap-1 w-fit shadow-2xs"
+                                      title={
+                                        item.expectedPaperDate || item.expectedMaterialAt
+                                          ? `Chờ nguyên liệu - Dự kiến có: ${formatDateTime(item.expectedPaperDate || item.expectedMaterialAt)}`
+                                          : "Bài in đang chờ nguyên liệu về kho"
+                                      }
+                                    >
+                                      <AlertCircle className="h-2.5 w-2.5 text-amber-600 shrink-0" />
+                                      Chờ nguyên liệu
+                                    </Badge>
+                                  )}
+                                  {item.scheduledPrintDate && (
+                                    <Badge
+                                      className="bg-blue-100 text-blue-900 border-blue-300 font-bold text-[9.5px] px-1.5 py-0 flex items-center gap-1 w-fit shadow-2xs"
+                                      title={`Dự kiến in: ${formatDateTime(item.scheduledPrintDate)}`}
+                                    >
+                                      <Calendar className="h-2.5 w-2.5 text-blue-600 shrink-0" />
+                                      Dự kiến in: {formatDateTime(item.scheduledPrintDate)}
+                                    </Badge>
+                                  )}
                                 </div>
                               </TableCell>
                               <TableCell className="py-2 px-2">
@@ -1769,9 +1990,22 @@ export default function ProductionDispatch() {
                               <TableCell className="py-2 px-2 text-[11px] font-medium text-slate-700">{dispatchedBy}</TableCell>
                               <TableCell className="py-2 px-2 text-[11px] font-mono text-slate-600">{dispatchedAt}</TableCell>
                               <TableCell className="py-2 px-2">
-                                <Badge className="bg-amber-50 text-amber-800 border-amber-200 font-bold text-[10px]">
-                                  Chưa in / Chờ in
-                                </Badge>
+                                <div className="flex flex-col gap-1 items-start">
+                                  {(item.isPendingMaterials || item.expectedPaperDate || item.expectedMaterialAt) ? (
+                                    <Badge className="bg-amber-100 text-amber-900 border-amber-300 font-extrabold text-[10px] flex items-center gap-1">
+                                      <AlertCircle className="h-3 w-3 text-amber-600 shrink-0" /> Chờ nguyên liệu
+                                    </Badge>
+                                  ) : (
+                                    <Badge className="bg-amber-50 text-amber-800 border-amber-200 font-bold text-[10px]">
+                                      Chưa in / Chờ in
+                                    </Badge>
+                                  )}
+                                  {item.scheduledPrintDate && (
+                                    <Badge className="bg-blue-50 text-blue-800 border-blue-200 font-bold text-[10px] flex items-center gap-1">
+                                      <Calendar className="h-3 w-3 text-blue-600 shrink-0" /> Dự kiến in
+                                    </Badge>
+                                  )}
+                                </div>
                               </TableCell>
                               <TableCell className="text-center py-2 px-2">
                                 <Button
@@ -1891,6 +2125,142 @@ export default function ProductionDispatch() {
             >
               {undoDispatchMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
               Xác nhận Hủy điều lệnh
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Confirm Điều lệnh chờ nguyên liệu */}
+      <Dialog open={forceDispatchDialogOpen} onOpenChange={setForceDispatchDialogOpen}>
+        <DialogContent className="max-w-md bg-white border-amber-200">
+          <DialogHeader>
+            <DialogTitle className="text-amber-800 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-600" /> Xác nhận Điều lệnh chờ Nguyên liệu
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-600 pt-2 space-y-2">
+              <p>
+                Bài in được chọn hiện <strong>chưa đủ điều kiện nguyên liệu</strong> (thiếu kẽm, khuôn, giấy hoặc sóng):
+              </p>
+              <div className="bg-amber-50 p-2.5 rounded-lg border border-amber-200 text-xs text-amber-900 space-y-1.5 font-medium my-2">
+                {forceDispatchTargetItems.map((item) => {
+                  const readiness = getItemReadiness(item);
+                  const proofingCode = item.productionOrder?.proofingOrderCode || `PO-${item.productionOrderId}`;
+                  return (
+                    <div key={item.id} className="flex justify-between items-center border-b border-amber-200/50 pb-1 last:border-0 last:pb-0">
+                      <span className="font-mono font-bold text-slate-900">{proofingCode}</span>
+                      <Badge variant="outline" className="bg-amber-100/80 text-amber-800 border-amber-300 font-semibold text-[10px]">
+                        {readiness.missingReason === "missing_kem" ? "Thiếu kẽm" :
+                         readiness.missingReason === "missing_khuon" ? "Thiếu khuôn" :
+                         readiness.missingReason === "missing_flute" ? "Thiếu sóng" : "Thiếu giấy"}
+                      </Badge>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="space-y-2 pt-1">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                    <Calendar className="h-3.5 w-3.5 text-amber-600" /> Ngày dự kiến có giấy / nguyên liệu
+                  </label>
+                  <DatePicker
+                    value={expectedPaperDate}
+                    onChange={(d) => setExpectedPaperDate(d)}
+                    placeholder="Chọn ngày dự kiến có giấy..."
+                    className="w-full text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                    <Calendar className="h-3.5 w-3.5 text-amber-600" /> Ngày điều lệnh / Dự kiến sản xuất
+                  </label>
+                  <DatePicker
+                    value={scheduledPrintDate}
+                    onChange={(d) => setScheduledPrintDate(d)}
+                    placeholder="Mặc định: Hôm nay (hoặc chọn ngày khác...)"
+                    className="w-full text-xs"
+                  />
+                </div>
+              </div>
+
+              <p className="text-[11px] text-slate-500 italic pt-1">
+                Hệ thống sẽ tự động xác nhận trạng thái nguyên liệu đủ điều kiện để chuyển bài sang danh sách sản xuất.
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="mt-3">
+            <Button variant="outline" size="sm" onClick={() => setForceDispatchDialogOpen(false)}>
+              Hủy bỏ
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleConfirmForceDispatch}
+              disabled={isForceDispatching || dispatchMutation.isPending}
+              className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs"
+            >
+              {isForceDispatching || dispatchMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+              Xác nhận Điều lệnh chờ NL
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Confirm Điều lệnh sản xuất chuẩn (Cho phép chọn ngày điều lệnh khác) */}
+      <Dialog open={dispatchDialogOpen} onOpenChange={setDispatchDialogOpen}>
+        <DialogContent className="max-w-md bg-white border-slate-200">
+          <DialogHeader>
+            <DialogTitle className="text-[#93631F] flex items-center gap-2 text-base font-bold">
+              <Send className="h-5 w-5 text-[#93631F]" /> Xác nhận Điều Lệnh Sản Xuất
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-600 pt-2 space-y-2">
+              <p>
+                Bạn chuẩn bị điều lệnh cho <strong>{dispatchTargetIds.length} bài in</strong> đã đủ điều kiện:
+              </p>
+
+              <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs text-slate-900 space-y-1.5 font-medium my-2 max-h-40 overflow-y-auto">
+                {dispatchTargetItems.map((item) => {
+                  const proofingCode = item.productionOrder?.proofingOrderCode || `PO-${item.productionOrderId}`;
+                  const materialName = item.materialTypeName || (item.productionOrder?.proofingOrder as any)?.materialType?.name || "—";
+                  return (
+                    <div key={item.id} className="flex justify-between items-center border-b border-slate-200/60 pb-1 last:border-0 last:pb-0">
+                      <span className="font-mono font-bold text-blue-600">{proofingCode}</span>
+                      <span className="text-[11px] text-slate-600 truncate max-w-[180px]">{materialName}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="space-y-1 pt-1">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1">
+                  <Calendar className="h-3.5 w-3.5 text-[#93631F]" /> Ngày điều lệnh / Dự kiến sản xuất
+                </label>
+                <DatePicker
+                  value={dispatchScheduledDate}
+                  onChange={(d) => setDispatchScheduledDate(d)}
+                  placeholder="Mặc định: Hôm nay (hoặc chọn ngày khác...)"
+                  className="w-full text-xs"
+                />
+                <p className="text-[10.5px] text-slate-500 italic pt-0.5">
+                  Nếu không chọn ngày, hệ thống sẽ lấy thời gian điều lệnh là <strong>Hôm nay</strong>.
+                </p>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="mt-3">
+            <Button variant="outline" size="sm" onClick={() => setDispatchDialogOpen(false)}>
+              Hủy bỏ
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleConfirmDispatch}
+              disabled={dispatchMutation.isPending}
+              className="bg-[#93631F] hover:bg-[#7a521a] text-white font-bold text-xs"
+            >
+              {dispatchMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : null}
+              Xác nhận Điều lệnh
             </Button>
           </DialogFooter>
         </DialogContent>

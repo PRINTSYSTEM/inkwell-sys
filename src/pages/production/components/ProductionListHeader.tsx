@@ -37,12 +37,6 @@ export function ProductionListHeader({
       </div>
 
       <div className="flex items-center gap-2 flex-wrap">
-        {/* Date pill */}
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border bg-card text-xs font-semibold text-slate-700 dark:text-slate-200 shadow-2xs">
-          <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-          <span>Hôm nay ({todayStr})</span>
-        </div>
-
         {/* Refresh button */}
         {onRefresh && (
           <Button
@@ -56,16 +50,6 @@ export function ProductionListHeader({
             <span>Làm mới</span>
           </Button>
         )}
-
-        {/* Create button */}
-        <Button
-          size="sm"
-          onClick={onCreateNew}
-          className="h-8 text-xs font-bold gap-1 bg-[#93631F] hover:bg-[#7a521a] text-white shadow-sm cursor-pointer"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Tạo lệnh SX</span>
-        </Button>
       </div>
     </div>
   );

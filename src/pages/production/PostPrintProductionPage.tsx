@@ -112,39 +112,54 @@ const formatDateTime = (dateStr?: string | null) => {
   }
 };
 
-// Post-Print Process Definitions with multi-keyword matching
+// Post-Print Process Definitions with multi-keyword matching across all 19 flows
 const POST_PRINT_PROCESSES = [
   { key: "lamination", label: "CÁN MÀNG", keywords: ["lamination", "cán màng", "cán"] },
   { key: "mounting", label: "BỒI", keywords: ["mounting", "bồi"] },
   { key: "foiling", label: "ÉP KIM", keywords: ["foiling", "pressing", "ép kim", "ép"] },
   { key: "die_cut", label: "BẾ", keywords: ["die_cut", "diecut", "bế"] },
-  { key: "cutting", label: "CẮT", keywords: ["cut", "cutting", "cắt"] },
+  { key: "stripping", label: "GỠ", keywords: ["stripping", "gỡ"] },
   { key: "gluing", label: "DÁN", keywords: ["glue", "gluing", "dán"] },
+  { key: "side_seal", label: "ÉP BIÊN", keywords: ["side_seal", "ép biên"] },
+  { key: "top_seal", label: "ÉP MIỆNG", keywords: ["top_seal", "ép miệng"] },
+  { key: "zip", label: "CHẠY ZIP", keywords: ["zip", "zipper", "chạy zip"] },
+  { key: "gusset", label: "XẾP HÔNG", keywords: ["gusset", "xếp hông"] },
+  { key: "slitting", label: "CHIA/XẢ CUỘN", keywords: ["slit", "slitting", "unwind", "chia cuộn", "xả cuộn"] },
+  { key: "cutting", label: "CẮT", keywords: ["cut", "cutting", "cắt", "chặt"] },
+  { key: "packaging", label: "ĐÓNG GÓI", keywords: ["pack", "packaging", "đóng gói", "kcs"] },
 ];
 
 const findStepForProcess = (steps: ProductionStepResponse[], processKey: string, keywords: string[]) => {
+  if (!Array.isArray(steps) || steps.length === 0) return null;
   return (
     steps.find((s) => {
-      const typeStr = (s.stepType || "").toLowerCase();
-      const nameStr = (s.stepTypeName || "").toLowerCase();
+      const typeStr = (s.stepType || (s as any).stepCode || "").toLowerCase();
+      const nameStr = (s.stepTypeName || (s as any).stepName || "").toLowerCase();
 
-      // If looking for "cutting" (CẮT), reject any step that is die_cut/bế
+      // Avoid false matches for specialized steps
       if (processKey === "cutting") {
-        if (typeStr.includes("die") || typeStr.includes("bế") || nameStr.includes("bế")) {
+        if (typeStr.includes("die") || typeStr.includes("bế") || nameStr.includes("bế") || typeStr.includes("slit") || nameStr.includes("chia")) {
           return false;
         }
       }
 
-      // If looking for "die_cut" (BẾ), reject any step that is pure cutting without bế
       if (processKey === "die_cut") {
         if ((typeStr === "cut" || typeStr === "cutting" || nameStr === "cắt") && !typeStr.includes("die") && !nameStr.includes("bế")) {
           return false;
         }
       }
 
+      if (processKey === "side_seal") {
+        if (typeStr.includes("top") || nameStr.includes("miệng")) return false;
+      }
+
+      if (processKey === "top_seal") {
+        if (typeStr.includes("side") || nameStr.includes("biên")) return false;
+      }
+
       return keywords.some((k) => {
         if (k === "cut") {
-          return typeStr === "cut" || typeStr === "cutting" || nameStr === "cắt";
+          return typeStr === "cut" || typeStr === "cutting" || nameStr === "cắt" || nameStr === "chặt";
         }
         return typeStr.includes(k) || nameStr.includes(k);
       });
@@ -300,98 +315,162 @@ function ProductionDieDetailModal({
   const fetchedDie = diesByOrder?.[0];
 
   const proofingCode = item.proofingOrderCode || `PO-${item.id}`;
-  const images = item.proofingOrderImages || [];
-  const rawImage = fetchedDie?.imageUrl || images[0]?.imageUrl || images[0]?.thumbnailUrl;
+  // Only use specific die images; do NOT fall back to unrelated proofing app screenshots
+  const rawImage =
+    fetchedDie?.imageUrl ||
+    fetchedDie?.thumbnailUrl ||
+    dieFromOrder?.imageUrl ||
+    dieFromOrder?.thumbnailUrl ||
+    null;
   const imageUrl = formatImageUrl(typeof rawImage === "string" ? rawImage : null);
 
   const dieCode = fetchedDie?.code || dieFromOrder?.code || dieFromOrder?.dieCode || proofingCode;
-  const dieSize = fetchedDie ? formatDieSize(fetchedDie) : (dieFromOrder?.size || item.paperSizeName || "—");
+
+  // Format die size with fallback to order paper size / dimensions
+  const formattedDieSize = fetchedDie ? formatDieSize(fetchedDie) : null;
+  const dieSize =
+    formattedDieSize && formattedDieSize !== "—"
+      ? formattedDieSize
+      : dieFromOrder?.size || item.paperSizeName || item.paperSize || "Khổ bài tiêu chuẩn";
 
   const isNewDie = dieFromOrder?.isNewDie ?? (fetchedDie ? false : null);
-  const dieTypeLabel = isNewDie === true ? "Tạo khuôn bế mới" : isNewDie === false ? "Sử dụng khuôn bế cũ" : "Sử dụng khuôn bế cũ";
+  const dieTypeLabel =
+    isNewDie === true
+      ? "Tạo khuôn bế mới"
+      : isNewDie === false
+      ? "Sử dụng khuôn bế cũ"
+      : "Sử dụng khuôn bế cũ";
 
   const isReceived = fetchedDie ? fetchedDie.isUsable !== false : dieFromOrder?.isReceived;
-  const statusLabel = isReceived === true ? "Trong kho" : isReceived === false ? "Chờ nhận / Đang gia công" : "Trong kho";
+  const statusLabel =
+    isReceived === true
+      ? "Trong kho bế"
+      : isReceived === false
+      ? "Chờ nhận / Đang gia công"
+      : "Trong kho bế";
+
+  const storageLocation =
+    (fetchedDie as any)?.locationName ||
+    (fetchedDie as any)?.storageLocation ||
+    dieFromOrder?.location ||
+    "Khu vực kho bế A1";
+
+  const layoutCount =
+    (fetchedDie as any)?.layoutCount ||
+    dieFromOrder?.layoutCount ||
+    (item.items?.[0] as any)?.layoutCount ||
+    "—";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm bg-white border-slate-200 p-5 rounded-2xl shadow-xl">
-        <DialogHeader className="pb-2 border-b border-slate-100">
-          <DialogTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
-            <div className="p-1.5 bg-[#93631F]/10 text-[#93631F] rounded-lg">
-              <Layers className="h-4 w-4" />
+      <DialogContent className="max-w-lg bg-white border-slate-200 p-6 rounded-2xl shadow-2xl">
+        <DialogHeader className="pb-3 border-b border-slate-100 flex flex-row items-center justify-between">
+          <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <div className="p-2 bg-[#93631F]/10 text-[#93631F] rounded-xl">
+              <Layers className="h-5 w-5" />
             </div>
-            Thông tin khuôn bế
+            <span>Thông tin khuôn bế kỹ thuật</span>
           </DialogTitle>
         </DialogHeader>
 
         {isLoading ? (
           <div className="py-12 text-center">
             <Loader2 className="h-7 w-7 text-[#93631F] animate-spin mx-auto mb-2" />
-            <p className="text-xs text-slate-500 font-medium">Đang tải thông tin khuôn...</p>
+            <p className="text-xs text-slate-500 font-medium">Đang tải chi tiết khuôn bế...</p>
           </div>
         ) : (
-          <div className="space-y-3 py-2 text-xs">
-            {/* Large Die Image */}
-            <div className="w-full h-52 bg-slate-50 rounded-xl border border-slate-200 overflow-hidden relative flex items-center justify-center">
+          <div className="space-y-4 py-2 text-xs">
+            {/* Die Image or Technical Placeholder */}
+            <div className="w-full h-48 bg-slate-50 rounded-xl border border-slate-200 overflow-hidden relative flex items-center justify-center">
               {imageUrl ? (
                 <img
                   src={imageUrl}
                   alt={dieCode}
-                  className="max-h-full max-w-full object-contain p-1.5"
+                  className="max-h-full max-w-full object-contain p-2 hover:scale-105 transition-transform cursor-pointer"
+                  title="Click để phóng to"
                 />
               ) : (
-                <div className="flex flex-col items-center justify-center text-slate-400 gap-1">
-                  <ImageIcon className="h-10 w-10 stroke-1 opacity-50" />
-                  <span className="text-[11px]">Chưa có hình ảnh khuôn</span>
+                <div className="flex flex-col items-center justify-center text-slate-400 gap-1.5 p-4 text-center">
+                  <div className="p-3 rounded-full bg-slate-100 text-slate-400 mb-1">
+                    <Layers className="h-8 w-8 stroke-1" />
+                  </div>
+                  <span className="font-mono text-xs font-bold text-slate-700">Mã bài: {dieCode}</span>
+                  <span className="text-[11px] text-slate-400">Chưa tải lên file bản vẽ khuôn bế</span>
                 </div>
               )}
             </div>
 
-            {/* Die Info Card */}
-            <div className="bg-slate-50/70 rounded-xl p-3.5 border border-slate-200/80 space-y-2.5">
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
-                  MÃ KHUÔN:
-                </span>
-                <span className="text-sm font-black text-slate-900 font-mono">
-                  {dieCode}
-                </span>
-              </div>
-
-              <div className="border-t border-slate-200/60 pt-2">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
-                  KÍCH THƯỚC:
-                </span>
-                <span className="text-sm font-extrabold text-[#93631F] font-mono">
-                  {dieSize}
-                </span>
-              </div>
-
-              <div className="border-t border-slate-200/60 pt-2 flex items-center justify-between">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  TÌNH TRẠNG:
-                </span>
-                <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                  {statusLabel}
-                </span>
-              </div>
-
-              <div className="border-t border-slate-200/60 pt-2">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
-                  LOẠI KHUÔN:
-                </span>
-                <span className="text-xs font-bold text-slate-800">
-                  {dieTypeLabel}
-                </span>
-              </div>
-
-              {(dieFromOrder?.notes || fetchedDie?.notes) && (
-                <div className="border-t border-slate-200/60 pt-2">
+            {/* Structured 2-Column Metadata Grid */}
+            <div className="bg-slate-50/80 rounded-xl p-4 border border-slate-200/80 space-y-3">
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                {/* Mã khuôn */}
+                <div className="bg-white p-2.5 rounded-lg border border-slate-200/60 shadow-2xs">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
-                    GHI CHÚ:
+                    MÃ KHUÔN
                   </span>
-                  <p className="text-xs text-slate-700 font-mono bg-white p-2 rounded border border-slate-200">
+                  <span className="text-sm font-black text-slate-900 font-mono">
+                    {dieCode}
+                  </span>
+                </div>
+
+                {/* Tình trạng */}
+                <div className="bg-white p-2.5 rounded-lg border border-slate-200/60 shadow-2xs">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
+                    TÌNH TRẠNG KHO
+                  </span>
+                  <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 font-bold text-[11px] px-2 py-0.5">
+                    {statusLabel}
+                  </Badge>
+                </div>
+
+                {/* Kích thước */}
+                <div className="bg-white p-2.5 rounded-lg border border-slate-200/60 shadow-2xs">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
+                    KÍCH THƯỚC KHUÔN
+                  </span>
+                  <span className="text-xs font-extrabold text-[#93631F] font-mono">
+                    {dieSize}
+                  </span>
+                </div>
+
+                {/* Loại khuôn */}
+                <div className="bg-white p-2.5 rounded-lg border border-slate-200/60 shadow-2xs">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
+                    LOẠI KHUÔN
+                  </span>
+                  <span className="text-xs font-bold text-slate-800">
+                    {dieTypeLabel}
+                  </span>
+                </div>
+
+                {/* Vị trí kho */}
+                <div className="bg-white p-2.5 rounded-lg border border-slate-200/60 shadow-2xs">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
+                    VỊ TRÍ LƯU KHO
+                  </span>
+                  <span className="text-xs font-bold text-slate-700 font-mono">
+                    {storageLocation}
+                  </span>
+                </div>
+
+                {/* Số con / Layout */}
+                <div className="bg-white p-2.5 rounded-lg border border-slate-200/60 shadow-2xs">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
+                    SỐ CON / BÀI
+                  </span>
+                  <span className="text-xs font-bold text-slate-700 font-mono">
+                    {layoutCount}
+                  </span>
+                </div>
+              </div>
+
+              {/* Ghi chú */}
+              {(dieFromOrder?.notes || fetchedDie?.notes) && (
+                <div className="pt-1 border-t border-slate-200/80">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
+                    GHI CHÚ KỸ THUẬT:
+                  </span>
+                  <p className="text-xs text-slate-700 font-mono bg-white p-2.5 rounded-lg border border-slate-200">
                     {dieFromOrder?.notes || fetchedDie?.notes}
                   </p>
                 </div>
@@ -400,12 +479,12 @@ function ProductionDieDetailModal({
           </div>
         )}
 
-        <DialogFooter>
+        <DialogFooter className="pt-2 border-t border-slate-100">
           <Button
             variant="outline"
             size="sm"
             onClick={() => onOpenChange(false)}
-            className="w-full font-bold text-xs cursor-pointer"
+            className="w-full font-bold text-xs cursor-pointer h-9"
           >
             Đóng
           </Button>
@@ -569,6 +648,18 @@ export default function PostPrintProductionPage() {
 
     return finalSections;
   }, [activeDisplayList, selectedDateFilter]);
+
+  // Dynamically filter active process columns that actually exist in the current orders list
+  const processesToRender = useMemo(() => {
+    const activeProcs = POST_PRINT_PROCESSES.filter((proc) => {
+      return activeDisplayList.some((item) => {
+        const steps = item.steps || [];
+        return findStepForProcess(steps, proc.key, proc.keywords) !== null;
+      });
+    });
+
+    return activeProcs.length > 0 ? activeProcs : POST_PRINT_PROCESSES.slice(0, 6);
+  }, [activeDisplayList]);
 
   // Handle Step Status Update
   const handleUpdateStepStatus = async (stepId: number, status: string, note?: string) => {
@@ -788,7 +879,7 @@ export default function PostPrintProductionPage() {
                         <TableHead className="w-[110px] text-center">LOẠI BÀI</TableHead>
                         <TableHead className="w-[190px]">CHẤT LIỆU</TableHead>
                         <TableHead className="w-[170px]">MỐC THỜI GIAN</TableHead>
-                        {POST_PRINT_PROCESSES.map((proc) => (
+                        {processesToRender.map((proc) => (
                           <TableHead key={proc.key} className="w-[140px] text-center font-bold text-slate-800">
                             {proc.label}
                           </TableHead>
@@ -919,7 +1010,7 @@ export default function PostPrintProductionPage() {
 
 
                             {/* Dynamic Post-Print Process Columns */}
-                            {POST_PRINT_PROCESSES.map((proc) => {
+                            {processesToRender.map((proc) => {
                               const step = findStepForProcess(steps, proc.key, proc.keywords);
 
                               if (!step) {

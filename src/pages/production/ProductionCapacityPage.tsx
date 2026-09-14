@@ -50,6 +50,8 @@ import type {
   CapacityStageSummaryResponse,
   CapacityReallocationCandidate,
 } from "@/types/capacity";
+import { ProductionOrderDetailDrawer } from "./components/ProductionOrderDetailDrawer";
+import type { ProductionOrderResponse } from "@/Schema";
 
 export default function ProductionCapacityPage() {
   const [selectedTimeRange, setSelectedTimeRange] = useState<string>("today");
@@ -57,6 +59,10 @@ export default function ProductionCapacityPage() {
   const [selectedFlow, setSelectedFlow] = useState<string>("all");
   const [selectedStageId, setSelectedStageId] = useState<number>(1);
   const [selectedCandidates, setSelectedCandidates] = useState<number[]>([]);
+  const [candidateFilter, setCandidateFilter] = useState<"all" | "overloaded" | "urgent">("all");
+
+  const [selectedDrawerOrder, setSelectedDrawerOrder] = useState<ProductionOrderResponse | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
 
   // Real API Queries
   const { data: kpiData, isLoading: isLoadingKpis, refetch: refetchKpis } = useCapacityKpiSummary();
@@ -161,11 +167,11 @@ export default function ProductionCapacityPage() {
           />
 
           <Select value={selectedFlow} onValueChange={setSelectedFlow}>
-            <SelectTrigger className="w-36 h-8 text-xs bg-card">
-              <SelectValue placeholder="Tất cả Flow" />
+            <SelectTrigger className="w-40 h-8 text-xs bg-card">
+              <SelectValue placeholder="Tất cả loại sản phẩm" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tất cả Flow (F01 - F19)</SelectItem>
+              <SelectItem value="all">Tất cả loại sản phẩm</SelectItem>
               <SelectItem value="F01">F01 - Hộp thường</SelectItem>
               <SelectItem value="F02">F02 - Hộp metalize</SelectItem>
               <SelectItem value="F03">F03 - Hộp duplex bồi sóng</SelectItem>
@@ -435,8 +441,15 @@ export default function ProductionCapacityPage() {
                     </TableRow>
                   ) : (
                     candidates.map((c) => (
-                      <TableRow key={c.productionOrderId} className="hover:bg-muted/50">
-                        <TableCell><Checkbox /></TableCell>
+                      <TableRow
+                        key={c.productionOrderId}
+                        className="hover:bg-primary/5 cursor-pointer transition-colors"
+                        onClick={() => {
+                          setSelectedDrawerOrder({ id: c.productionOrderId } as any);
+                          setIsDrawerOpen(true);
+                        }}
+                      >
+                        <TableCell onClick={(e) => e.stopPropagation()}><Checkbox checked={selectedCandidates.includes(c.productionOrderId)} onCheckedChange={() => toggleCandidate(c.productionOrderId)} /></TableCell>
                         <TableCell className="font-bold text-primary font-mono">{c.proofingOrderCode || `PO#${c.productionOrderId}`}</TableCell>
                         <TableCell><Badge variant="secondary" className="text-[10px] font-bold">Flow</Badge></TableCell>
                         <TableCell className="font-medium">Lệnh sản xuất #{c.productionOrderId}</TableCell>
@@ -619,6 +632,12 @@ export default function ProductionCapacityPage() {
           </Card>
         </div>
       </div>
+
+      <ProductionOrderDetailDrawer
+        order={selectedDrawerOrder}
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+      />
     </div>
   );
 }

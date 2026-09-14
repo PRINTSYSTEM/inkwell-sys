@@ -12,6 +12,8 @@ import {
   ChevronLeft,
   ChevronRight,
   TrendingUp,
+  Download,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,6 +38,9 @@ import { TableSkeleton } from "@/components/ui/skeleton-components";
 import { ProductionTimingBadge } from "@/components/production";
 import { useProductionDelayReport, useProductionDelaySummary } from "@/hooks/use-production-timing";
 import { cn } from "@/lib/utils";
+import { apiRequest } from "@/lib/http";
+import { API_SUFFIX, normalizeParams } from "@/apis/util.api";
+import { toast } from "sonner";
 
 const STEP_OPTIONS = [
   { value: "ALL", label: "Tất cả khâu" },
@@ -68,6 +73,7 @@ export default function ProductionDelayReportPage() {
   const [stepType, setStepType] = useState("ALL");
   const [level, setLevel] = useState("ALL");
   const [search, setSearch] = useState("");
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
 
   const queryParams = {
     pageNumber,
@@ -97,6 +103,38 @@ export default function ProductionDelayReportPage() {
     refetchSummary();
   };
 
+  const handleExportExcel = async () => {
+    try {
+      setIsExportingExcel(true);
+      const response = await apiRequest.get(API_SUFFIX.PRODUCTION_DELAY_REPORT_EXCEL, {
+        params: normalizeParams({
+          fromDate: fromDate || undefined,
+          toDate: toDate || undefined,
+          stepType: stepType === "ALL" ? undefined : stepType,
+          level: level === "ALL" ? undefined : level,
+          search: search.trim() || undefined,
+        }),
+        responseType: "blob",
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      const filename = `Bao_Cao_LSX_Tre_Tien_Do_${format(new Date(), "ddMMyyyy_HHmm")}.xlsx`;
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success("Xuất file Excel thành công", { description: filename });
+    } catch (error: any) {
+      toast.error("Không thể xuất file Excel", {
+        description: error?.response?.data?.message || "Có lỗi xảy ra khi tải báo cáo Excel.",
+      });
+    } finally {
+      setIsExportingExcel(false);
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-3.5 max-w-7xl mx-auto flex flex-col h-full">
       {/* Title */}
@@ -112,6 +150,21 @@ export default function ProductionDelayReportPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs font-bold border-emerald-600 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-700 cursor-pointer"
+            onClick={handleExportExcel}
+            disabled={isExportingExcel}
+          >
+            {isExportingExcel ? (
+              <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+            ) : (
+              <Download className="w-3.5 h-3.5 mr-1 text-emerald-600" />
+            )}
+            Xuất Excel
+          </Button>
+
           <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleRefresh}>
             <RefreshCw className="w-3.5 h-3.5 mr-1" />
             Làm mới

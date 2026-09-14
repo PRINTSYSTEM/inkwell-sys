@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,11 +37,16 @@ import {
   ChevronRight,
   Loader2,
   Filter,
+  Users,
 } from "lucide-react";
 import { useCapacityKpiSummary, useCapacitySummary } from "@/hooks/use-capacity";
 import { useProductionOrders, useProductionFlows } from "@/hooks/use-production";
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 import { toast } from "sonner";
+import { StageWorkerReportModal } from "./components/StageWorkerReportModal";
+import { ProductionOrderDetailDrawer } from "./components/ProductionOrderDetailDrawer";
+import { StageCapacityDetailModal } from "./components/StageCapacityDetailModal";
+import type { ProductionOrderResponse } from "@/Schema";
 
 // Fallback 16 Production Stages Data in case BE summary is loading
 const DEFAULT_STAGE_DATA = [
@@ -110,6 +115,7 @@ export default function ProductionDashboardPage() {
   const [productType, setProductType] = useState<string>("all");
   const [flowFilter, setFlowFilter] = useState<string>("all");
   const [lastUpdated, setLastUpdated] = useState<string>(format(new Date(), "HH:mm dd/MM/yyyy"));
+  const [isReportModalOpen, setIsReportModalOpen] = useState<boolean>(false);
 
   // 1. GET /api/v1/capacity/kpi-summary
   const {
@@ -226,47 +232,102 @@ export default function ProductionDashboardPage() {
 
   // Process & Deduplicate Stage Donut Data by stageCode
   const stageGridData = React.useMemo(() => {
+    let list: Array<{ stageCode: string; stageName: string; total: number; ok: number; warning: number; late: number }> = [];
+
     if (!stageSummaryData || stageSummaryData.length === 0) {
-      return DEFAULT_STAGE_DATA;
+      list = DEFAULT_STAGE_DATA;
+    } else {
+      const stageMap = new Map<
+        string,
+        { stageCode: string; stageName: string; total: number; ok: number; warning: number; late: number }
+      >();
+
+      stageSummaryData.forEach((st) => {
+        const code = st.stageCode || st.stageName;
+        const total = st.orderCount || 0;
+        const late = st.isOverloaded ? Math.ceil(total * 0.25) : 0;
+        const warning = Math.ceil(total * 0.15);
+        const ok = Math.max(0, total - late - warning);
+
+        const existing = stageMap.get(code);
+        if (existing) {
+          existing.total += total;
+          existing.ok += ok;
+          existing.warning += warning;
+          existing.late += late;
+        } else {
+          stageMap.set(code, {
+            stageCode: st.stageCode,
+            stageName: st.stageName,
+            total,
+            ok,
+            warning,
+            late,
+          });
+        }
+      });
+      list = Array.from(stageMap.values());
     }
 
-    const stageMap = new Map<
-      string,
-      { stageCode: string; stageName: string; total: number; ok: number; warning: number; late: number }
-    >();
-
-    stageSummaryData.forEach((st) => {
-      const code = st.stageCode || st.stageName;
-      const total = st.orderCount || 0;
-      const late = st.isOverloaded ? Math.ceil(total * 0.25) : 0;
-      const warning = Math.ceil(total * 0.15);
-      const ok = Math.max(0, total - late - warning);
-
-      const existing = stageMap.get(code);
-      if (existing) {
-        existing.total += total;
-        existing.ok += ok;
-        existing.warning += warning;
-        existing.late += late;
-      } else {
-        stageMap.set(code, {
-          stageCode: st.stageCode,
-          stageName: st.stageName,
-          total,
-          ok,
-          warning,
-          late,
-        });
-      }
+    // Filter out "xuất nguyên liệu" per user request for balanced 16-stage grid layout
+    return list.filter((st) => {
+      const nameOrCode = (st.stageCode || st.stageName || "").toLowerCase();
+      return (
+        !nameOrCode.includes("xuất nguyên liệu") &&
+        !nameOrCode.includes("xuat_nguyen_lieu") &&
+        !nameOrCode.includes("material_export")
+      );
     });
-
-    return Array.from(stageMap.values());
   }, [stageSummaryData]);
+
+  const [selectedStageCode, setSelectedStageCode] = useState<string | null>(null);
+  const [overloadFilter, setOverloadFilter] = useState<"all" | "overloaded" | "late">("all");
+  const [selectedDrawerOrder, setSelectedDrawerOrder] = useState<ProductionOrderResponse | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
+  const [isCapacityModalOpen, setIsCapacityModalOpen] = useState<boolean>(false);
+
+  // Helper matching order's current step to selected stage code
+  const matchesStage = (o: any, stageCode: string) => {
+    if (!stageCode || stageCode === "all") return true;
+    const currentStep = String(o.currentStepName || o.steps?.[0]?.stepName || "").toLowerCase();
+    const code = stageCode.toLowerCase();
+    if (code.includes("in") && currentStep.includes("in")) return true;
+    if ((code.includes("can") || code.includes("lamination")) && (currentStep.includes("cán") || currentStep.includes("lamination"))) return true;
+    if ((code.includes("boi") || code.includes("mounting")) && (currentStep.includes("bồi") || currentStep.includes("mounting"))) return true;
+    if ((code.includes("be") || code.includes("die_cut")) && (currentStep.includes("bế") || currentStep.includes("die_cut"))) return true;
+    if ((code.includes("go") || code.includes("stripping")) && (currentStep.includes("gỡ") || currentStep.includes("stripping"))) return true;
+    if ((code.includes("dan") || code.includes("glue")) && (currentStep.includes("dán") || currentStep.includes("glue"))) return true;
+    if ((code.includes("cat") || code.includes("cut")) && (currentStep.includes("cắt") || currentStep.includes("cut"))) return true;
+    if (code.includes("ep_bien") && (currentStep.includes("ép biên") || currentStep.includes("side_seal"))) return true;
+    if (code.includes("xa_cuon") && (currentStep.includes("xả cuộn") || currentStep.includes("unwind"))) return true;
+    if (code.includes("xep_hong") && (currentStep.includes("xếp hông") || currentStep.includes("gusset"))) return true;
+    if (code.includes("chay_zip") && currentStep.includes("zip")) return true;
+    if (code.includes("chia_cuon") && (currentStep.includes("chia cuộn") || currentStep.includes("slit"))) return true;
+    if (code.includes("ep_mieng") && (currentStep.includes("ép miệng") || currentStep.includes("top_seal"))) return true;
+    if (code.includes("dong_goi") && (currentStep.includes("đóng gói") || currentStep.includes("packaging"))) return true;
+    if (code.includes("dieu_lenh") && (currentStep.includes("điều lệnh") || currentStep.includes("dispatch"))) return true;
+    if (code.includes("binh_bai") && (currentStep.includes("bình bài") || currentStep.includes("proofing"))) return true;
+    return currentStep.includes(code);
+  };
+
+  const selectedStageInfo = useMemo(() => {
+    if (!selectedStageCode) return null;
+    return stageGridData.find((s) => s.stageCode === selectedStageCode) || null;
+  }, [stageGridData, selectedStageCode]);
+
+  const selectedCapacityStage = useMemo(() => {
+    if (!selectedStageCode || !stageSummaryData) return null;
+    return stageSummaryData.find((s) => {
+      const sCode = (s.stageCode || s.stageName || "").toLowerCase();
+      const target = selectedStageCode.toLowerCase();
+      return sCode.includes(target) || target.includes(sCode);
+    }) || null;
+  }, [stageSummaryData, selectedStageCode]);
 
   // Real orders list from BE
   const rawOrders = productionOrdersData?.items || [];
 
-  // Filter orders by Product Type and Flow Code
+  // Filter orders by Product Type, Flow Code, Selected Stage Code, and Overload/Late Filters
   const filteredOrders = rawOrders.filter((o: any) => {
     if (flowFilter !== "all") {
       const code = (o.flowCode || o.flowId || "").toLowerCase();
@@ -279,6 +340,23 @@ export default function ProductionDashboardPage() {
       if (productType === "bag" && !pName.includes("túi") && !pName.includes("bag")) return false;
       if (productType === "decal" && !pName.includes("decal")) return false;
     }
+
+    // Filter by selected stage
+    if (selectedStageCode && !matchesStage(o, selectedStageCode)) {
+      return false;
+    }
+
+    // Filter by overload / long processing time or late SLA
+    if (overloadFilter === "overloaded") {
+      const procMin = o.processingMinutes ?? 45;
+      const isUrgent = o.isUrgent || o.isRush || o.priority === "high";
+      if (procMin < 45 && !isUrgent) return false;
+    } else if (overloadFilter === "late") {
+      const statusText = String(o.statusDisplay || o.status || "");
+      const isLate = statusText.toLowerCase().includes("trễ") || statusText.toLowerCase().includes("late") || statusText.toLowerCase().includes("quá hạn");
+      if (!isLate) return false;
+    }
+
     return true;
   });
 
@@ -354,10 +432,10 @@ export default function ProductionDashboardPage() {
           {/* Flow Filter */}
           <Select value={flowFilter} onValueChange={setFlowFilter}>
             <SelectTrigger className="w-40 h-8 text-xs bg-card">
-              <SelectValue placeholder="Tất cả Flow (F01...)" />
+              <SelectValue placeholder="Tất cả loại sản phẩm" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tất cả Flow (F01 - F19)</SelectItem>
+              <SelectItem value="all">Tất cả loại sản phẩm</SelectItem>
               {availableFlows.map((f) => (
                 <SelectItem key={f.id} value={f.id}>
                   {f.name}
@@ -376,6 +454,17 @@ export default function ProductionDashboardPage() {
           >
             <RefreshCw className={cn("w-3.5 h-3.5", (isKpiLoading || isStageLoading || isOrdersLoading) && "animate-spin")} />
             Làm mới
+          </Button>
+
+          {/* Worker Count Report Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs font-bold gap-1 bg-card text-[#93631F] border-[#93631F]/30 hover:bg-[#93631F]/10 dark:text-amber-400 dark:border-amber-800 cursor-pointer"
+            onClick={() => setIsReportModalOpen(true)}
+          >
+            <Users className="w-3.5 h-3.5 text-[#93631F] dark:text-amber-400" />
+            Báo cáo số công
           </Button>
 
           {/* Export Report Button */}
@@ -506,9 +595,17 @@ export default function ProductionDashboardPage() {
                 const okPct = Math.round((item.ok / totalCount) * 100);
                 const warnPct = Math.round((item.warning / totalCount) * 100);
                 const latePct = Math.max(0, 100 - okPct - warnPct);
+                const isSelected = selectedStageCode === item.stageCode;
 
                 return (
-                  <div key={item.stageCode} className="flex flex-col items-center p-2 rounded-lg border bg-card hover:shadow-sm transition-shadow">
+                  <div
+                    key={item.stageCode}
+                    onClick={() => setSelectedStageCode((prev) => (prev === item.stageCode ? null : item.stageCode))}
+                    className={cn(
+                      "flex flex-col items-center p-2 rounded-lg border bg-card hover:shadow-md cursor-pointer transition-all relative",
+                      isSelected ? "border-primary ring-2 ring-primary/40 bg-primary/5 shadow-md scale-105" : "border-slate-200 dark:border-slate-800"
+                    )}
+                  >
                     {/* Stage Label */}
                     <span className="text-xs font-bold text-foreground mb-2 flex items-center gap-1">
                       {item.stageName}
@@ -576,6 +673,107 @@ export default function ProductionDashboardPage() {
                   </div>
                 );
               })}
+            </div>
+          )}
+
+          {/* Selected Stage Combined Detail Banner */}
+          {selectedStageInfo && (
+            <div className="mt-4 p-3.5 rounded-xl border border-primary/30 bg-primary/5 shadow-sm space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-primary/20 pb-2.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Layers className="w-5 h-5 text-primary" />
+                  <h3 className="text-sm font-bold text-foreground">
+                    Đang xem chi tiết khâu: <span className="text-primary font-black uppercase text-base">{selectedStageInfo.stageName}</span>
+                  </h3>
+                  {selectedCapacityStage?.isOverloaded ? (
+                    <Badge className="bg-red-500 text-white text-[10px] font-black uppercase animate-pulse border-none">
+                      ⚠️ QUÁ TẢI CÔNG SUẤT ({selectedCapacityStage.utilizationPercent?.toFixed(0)}%)
+                    </Badge>
+                  ) : selectedCapacityStage && selectedCapacityStage.utilizationPercent >= 80 ? (
+                    <Badge className="bg-amber-500 text-white text-[10px] font-black uppercase border-none">
+                      ⚡ GẦN ĐẦY CÔNG SUẤT ({selectedCapacityStage.utilizationPercent?.toFixed(0)}%)
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-emerald-500 text-white text-[10px] font-bold border-none">
+                      🟢 CÔNG SUẤT BÌNH THƯỜNG
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 text-xs font-semibold flex-wrap">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="h-7 text-xs px-3 font-bold gap-1.5 bg-purple-700 hover:bg-purple-800 text-white cursor-pointer shadow-sm"
+                    onClick={() => setIsCapacityModalOpen(true)}
+                  >
+                    <BarChart3 className="w-3.5 h-3.5" />
+                    <span>Xem phân tích tải 7 ngày & công suất khâu</span>
+                  </Button>
+                  <Button
+                    variant={overloadFilter === "all" ? "default" : "outline"}
+                    size="sm"
+                    className="h-7 text-xs px-2.5 font-bold cursor-pointer"
+                    onClick={() => setOverloadFilter("all")}
+                  >
+                    Tất cả ({selectedStageInfo.total} lệnh)
+                  </Button>
+                  <Button
+                    variant={overloadFilter === "overloaded" ? "default" : "outline"}
+                    size="sm"
+                    className={cn("h-7 text-xs px-2.5 font-bold cursor-pointer", overloadFilter === "overloaded" && "bg-amber-600 hover:bg-amber-700")}
+                    onClick={() => setOverloadFilter("overloaded")}
+                  >
+                    ⚡ Lệnh SX lâu / Nhu cầu cao
+                  </Button>
+                  <Button
+                    variant={overloadFilter === "late" ? "default" : "outline"}
+                    size="sm"
+                    className={cn("h-7 text-xs px-2.5 font-bold cursor-pointer", overloadFilter === "late" && "bg-red-600 hover:bg-red-700")}
+                    onClick={() => setOverloadFilter("late")}
+                  >
+                    🔴 Lệnh quá hạn SLA ({selectedStageInfo.late})
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground cursor-pointer"
+                    onClick={() => setSelectedStageCode(null)}
+                  >
+                    Bỏ chọn khâu
+                  </Button>
+                </div>
+              </div>
+
+              {/* Combined Capacity & SLA Status Metrics Row */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                <div className="p-2.5 rounded-lg border bg-card">
+                  <span className="text-muted-foreground font-medium text-[11px]">Nhu cầu vs Công suất:</span>
+                  <div className="text-sm font-bold font-mono text-foreground mt-0.5">
+                    {selectedCapacityStage ? `${selectedCapacityStage.demandHours.toFixed(1)}h / ${selectedCapacityStage.capacityHours.toFixed(1)}h` : "N/A (Cần xếp lịch)"}
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-lg border bg-card">
+                  <span className="text-muted-foreground font-medium text-[11px]">Mức tải công suất:</span>
+                  <div className={cn("text-sm font-bold font-mono mt-0.5", selectedCapacityStage?.isOverloaded ? "text-red-600" : "text-emerald-600")}>
+                    {selectedCapacityStage ? `${selectedCapacityStage.utilizationPercent.toFixed(0)}% (${selectedCapacityStage.status})` : "Bình thường"}
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-lg border bg-card">
+                  <span className="text-muted-foreground font-medium text-[11px]">Thời gian Thừa / Thiếu:</span>
+                  <div className={cn("text-sm font-bold font-mono mt-0.5", (selectedCapacityStage?.differenceHours ?? 0) < 0 ? "text-red-600" : "text-emerald-600")}>
+                    {selectedCapacityStage ? ((selectedCapacityStage.differenceHours > 0 ? `+${selectedCapacityStage.differenceHours.toFixed(1)}h` : `${selectedCapacityStage.differenceHours.toFixed(1)}h`)) : "0.0h"}
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-lg border bg-card flex items-center justify-around font-bold">
+                  <span className="text-emerald-600 font-mono">🟢 {selectedStageInfo.ok} OK</span>
+                  <span className="text-amber-600 font-mono">🟡 {selectedStageInfo.warning} Cảnh báo</span>
+                  <span className="text-red-600 font-mono">🔴 {selectedStageInfo.late} Quá hạn</span>
+                </div>
+              </div>
             </div>
           )}
         </CardContent>
@@ -722,7 +920,14 @@ export default function ProductionDashboardPage() {
                   const isWarn = statusText.toLowerCase().includes("cảnh báo") || statusText.toLowerCase().includes("warning") || statusText.toLowerCase().includes("sắp");
 
                   return (
-                    <TableRow key={o.id || orderCode} className="hover:bg-muted/50">
+                    <TableRow
+                      key={o.id || orderCode}
+                      className="hover:bg-primary/5 cursor-pointer transition-colors"
+                      onClick={() => {
+                        setSelectedDrawerOrder(o);
+                        setIsDrawerOpen(true);
+                      }}
+                    >
                       <TableCell className="font-bold font-mono text-primary">{orderCode}</TableCell>
                       <TableCell className="text-muted-foreground">{createdAt}</TableCell>
                       <TableCell><Badge variant="secondary" className="text-[10px] font-bold">{flowDisplay}</Badge></TableCell>
@@ -743,12 +948,16 @@ export default function ProductionDashboardPage() {
                       <TableCell className="text-muted-foreground italic">{o.notes || "—"}</TableCell>
                       <TableCell className="text-right">
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="sm"
-                          className="h-7 text-xs font-bold text-primary"
-                          onClick={() => navigate(`/production/${o.id}`)}
+                          className="h-7 text-xs font-bold text-primary border-primary/30 hover:bg-primary/10 gap-1 cursor-pointer"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedDrawerOrder(o);
+                            setIsDrawerOpen(true);
+                          }}
                         >
-                          <Eye className="w-3.5 h-3.5 mr-1" /> Xem
+                          <Eye className="w-3.5 h-3.5" /> Chi tiết
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -759,6 +968,38 @@ export default function ProductionDashboardPage() {
           )}
         </CardContent>
       </Card>
+
+      <StageWorkerReportModal
+        isOpen={isReportModalOpen}
+        onOpenChange={setIsReportModalOpen}
+      />
+
+      <ProductionOrderDetailDrawer
+        order={selectedDrawerOrder}
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+      />
+
+      <StageCapacityDetailModal
+        isOpen={isCapacityModalOpen}
+        onOpenChange={setIsCapacityModalOpen}
+        stageCode={selectedStageCode}
+        stageName={selectedStageInfo?.stageName || "Khâu sản xuất"}
+        stageId={selectedCapacityStage?.stageId || 1}
+        demandHours={selectedCapacityStage?.demandHours ?? 0}
+        capacityHours={selectedCapacityStage?.capacityHours ?? 8}
+        utilizationPercent={selectedCapacityStage?.utilizationPercent ?? 0}
+        differenceHours={selectedCapacityStage?.differenceHours ?? 0}
+        status={selectedCapacityStage?.status || "Bình thường"}
+        isOverloaded={selectedCapacityStage?.isOverloaded ?? false}
+        orderCount={selectedStageInfo?.total ?? 0}
+        date={fromDate}
+      />
+
+      <StageWorkerReportModal
+        isOpen={isReportModalOpen}
+        onOpenChange={setIsReportModalOpen}
+      />
     </div>
   );
 }

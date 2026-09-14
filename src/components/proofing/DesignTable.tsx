@@ -21,6 +21,9 @@ import {
   processClassificationLabels,
   sidesClassificationLabels,
   laminationTypeLabels,
+  getSpecificationBadges,
+  getFlowCode,
+  getSpecBadgeStyle,
 } from "@/lib/status-utils";
 import { TruncatedText } from "@/components/ui/truncated-text";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
@@ -155,26 +158,26 @@ export function DesignTable({
 
   return (
     <>
-      <div className="rounded-md border relative">
-        <Table>
+      <div className="rounded-md border relative overflow-x-auto">
+        <Table className="min-w-[1250px]">
           <TableHeader>
             <TableRow>
-              <TableHead className="w-16 h-10 text-sm font-bold">Ảnh</TableHead>
-              <TableHead className="h-10 text-sm font-bold">Đơn hàng</TableHead>
-              <TableHead className="h-10 text-sm font-bold">Mã hàng</TableHead>
-              <TableHead className="h-10 text-sm font-bold">
+              <TableHead className="w-14 h-10 text-sm font-bold">Ảnh</TableHead>
+              <TableHead className="w-28 min-w-[110px] h-10 text-sm font-bold whitespace-nowrap">Đơn hàng</TableHead>
+              <TableHead className="w-36 min-w-[130px] h-10 text-sm font-bold whitespace-nowrap">Mã hàng</TableHead>
+              <TableHead className="w-32 min-w-[110px] h-10 text-sm font-bold text-center whitespace-nowrap">
                 Kích thước (mm)
               </TableHead>
-              <TableHead className="h-10 text-sm font-bold">SL đặt</TableHead>
-              <TableHead className="h-10 text-sm font-bold">
+              <TableHead className="w-28 min-w-[100px] h-10 text-sm font-bold text-center whitespace-nowrap">SL đặt</TableHead>
+              <TableHead className="w-40 min-w-[140px] h-10 text-sm font-bold">
                 Chất liệu
               </TableHead>
-              <TableHead className="h-10 text-sm font-bold">Quy cách</TableHead>
+              <TableHead className="w-64 min-w-[220px] h-10 text-sm font-bold">Quy cách</TableHead>
               {!isConfiguring && (
-                <TableHead className="h-10 text-sm font-bold">Giao hàng</TableHead>
+                <TableHead className="w-24 min-w-[80px] h-10 text-sm font-bold whitespace-nowrap">Giao hàng</TableHead>
               )}
-              <TableHead className="h-10 text-sm font-bold">Ngày tạo</TableHead>
-              <TableHead className="h-10 text-sm font-bold text-right sticky right-0 bg-background z-20">
+              <TableHead className="w-36 min-w-[120px] h-10 text-sm font-bold whitespace-nowrap">Ngày tạo</TableHead>
+              <TableHead className="w-40 min-w-[160px] h-10 text-sm font-bold text-right sticky right-0 bg-background z-20">
                 Thao tác
               </TableHead>
             </TableRow>
@@ -371,53 +374,29 @@ export function DesignTable({
                         </div>
                       )}
 
-                      {(design.processClassificationOptionName ||
-                        design.laminationType ||
-                        (design.specification &&
-                          design.specification.length > 0)) && (
+                      {(() => {
+                        const specs = getSpecificationBadges(design);
+                        if (specs.length === 0) return null;
+                        return (
                           <div className="space-y-1.5">
                             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold flex items-center gap-1.5">
                               <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
                               Quy cách sản xuất
                             </p>
                             <div className="flex flex-wrap gap-1.5">
-                              {design.specification &&
-                                design.specification.length > 0
-                                ? design.specification.map((spec, i) => (
-                                  <Badge
-                                    key={i}
-                                    variant="secondary"
-                                    className="text-[10px] bg-blue-50 text-blue-700 border-blue-100"
-                                  >
-                                    {spec}
-                                  </Badge>
-                                ))
-                                : null}
-                              {!design.specification?.length &&
-                                design.processClassificationOptionName && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-[10px] bg-amber-100 text-amber-800 border-amber-200"
-                                  >
-                                    {processClassificationLabels[
-                                      design.processClassificationOptionName
-                                    ] || design.processClassificationOptionName}
-                                  </Badge>
-                                )}
-                              {!design.specification?.length &&
-                                design.laminationType && (
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-[10px]"
-                                  >
-                                    {laminationTypeLabels[
-                                      design.laminationType
-                                    ] || design.laminationType}
-                                  </Badge>
-                                )}
+                              {specs.map((spec, i) => (
+                                <Badge
+                                  key={i}
+                                  variant="secondary"
+                                  className="text-[10px] bg-blue-50 text-blue-700 border-blue-100"
+                                >
+                                  {spec}
+                                </Badge>
+                              ))}
                             </div>
                           </div>
-                        )}
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>
@@ -484,19 +463,19 @@ export function DesignTable({
                       </CursorTooltip>
                     </div>
                   </TableCell>
-                  <TableCell className="py-1">
-                    <div className="flex items-center gap-1.5">
+                  <TableCell className="py-1 whitespace-nowrap w-28 min-w-[110px]">
+                    <div className="flex items-center gap-1.5 whitespace-nowrap">
                       {design.queueItemId?.startsWith("RD_") ? (
                         <Badge
                           variant="secondary"
-                          className="bg-gray-100 text-gray-600 border-none font-normal text-xs py-0.5 px-2 hover:bg-gray-100"
+                          className="bg-gray-100 text-gray-600 border-none font-normal text-xs py-0.5 px-2 hover:bg-gray-100 whitespace-nowrap"
                         >
                           Chưa lên đơn
                         </Badge>
                       ) : design.orderCode ? (
-                        <div className="flex items-center gap-1.5">
-                          <FileText className="h-3 w-3 text-muted-foreground" />
-                          <span className="font-semibold text-sm text-primary">
+                        <div className="flex items-center gap-1.5 whitespace-nowrap">
+                          <FileText className="h-3 w-3 text-muted-foreground shrink-0" />
+                          <span className="font-semibold text-sm text-primary whitespace-nowrap">
                             {design.orderCode}
                           </span>
                         </div>
@@ -507,28 +486,28 @@ export function DesignTable({
                       )}
                     </div>
                   </TableCell>
-                    <TableCell className="py-1 font-mono text-sm font-semibold">
-                      <div className="flex items-center gap-1.5">
-                        <span>{highlightText(design.code, searchTerm)}</span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 text-muted-foreground hover:text-foreground shrink-0"
-                          onClick={(e) => handleCopy(design.code, e)}
-                          title="Sao chép mã hàng"
-                        >
-                          <Copy className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                    <TableCell className="py-1">
-                      <div className="text-sm text-muted-foreground">
-                        {design.length} × {design.height}
-                        {design.width ? ` × ${design.width}` : ""}
-                      </div>
-                    </TableCell>
-                    <TableCell
-                      className="py-1"
+                  <TableCell className="py-1 font-mono text-sm font-semibold whitespace-nowrap w-36 min-w-[130px]">
+                    <div className="flex items-center gap-1.5 whitespace-nowrap">
+                      <span className="whitespace-nowrap">{highlightText(design.code, searchTerm)}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-muted-foreground hover:text-foreground shrink-0"
+                        onClick={(e) => handleCopy(design.code, e)}
+                        title="Sao chép mã hàng"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                  <TableCell className="py-1 text-center whitespace-nowrap w-32 min-w-[110px]">
+                    <div className="text-sm text-muted-foreground whitespace-nowrap">
+                      {design.length} × {design.height}
+                      {design.width ? ` × ${design.width}` : ""}
+                    </div>
+                  </TableCell>
+                  <TableCell
+                    className="py-1 text-center w-28 min-w-[100px]"
                       onClick={(e) => {
                         if (canEditQuantity) {
                           e.stopPropagation();
@@ -690,7 +669,7 @@ export function DesignTable({
                         </div>
                       )}
                     </TableCell>
-                    <TableCell className="py-1">
+                    <TableCell className="py-1 w-40 min-w-[140px]">
                       <div
                         title={design.materialTypeName}
                         className="whitespace-normal break-words min-w-[120px]"
@@ -704,32 +683,36 @@ export function DesignTable({
                         })()}
                       </div>
                     </TableCell>
-                    <TableCell className="py-1">
-                      <div className="flex flex-wrap gap-1">
+                    <TableCell className="py-1 w-64 min-w-[220px]">
+                      <div className="flex flex-wrap gap-1 items-center">
                         {(() => {
-                          const specs = design.specification as any;
-                          if (Array.isArray(specs) && specs.length > 0) {
-                            return specs.map((spec, i) => (
-                              <Badge
-                                key={i}
-                                variant="secondary"
-                                className="text-[10px] bg-blue-50 text-blue-700 border-blue-100 whitespace-nowrap"
-                              >
-                                {spec}
-                              </Badge>
-                            ));
-                          }
-                          if (
-                            typeof specs === "string" &&
-                            specs.trim().length > 0
-                          ) {
+                          const flowCode = getFlowCode(design);
+                          const list = getSpecificationBadges(design);
+                          if (list.length > 0) {
                             return (
-                              <Badge
-                                variant="secondary"
-                                className="text-[10px] bg-blue-50 text-blue-700 border-blue-100 whitespace-nowrap"
-                              >
-                                {specs}
-                              </Badge>
+                              <>
+                                {flowCode && (
+                                  <Badge
+                                    variant="default"
+                                    className="text-[10px] font-bold bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-none px-1.5 py-0.5 rounded whitespace-nowrap"
+                                    title={`Luồng sản xuất: ${flowCode}`}
+                                  >
+                                    {flowCode}
+                                  </Badge>
+                                )}
+                                {list.map((spec, i) => (
+                                  <Badge
+                                    key={i}
+                                    variant="secondary"
+                                    className={cn(
+                                      "text-[10px] whitespace-nowrap border px-1.5 py-0.5 rounded",
+                                      getSpecBadgeStyle(spec)
+                                    )}
+                                  >
+                                    {spec}
+                                  </Badge>
+                                ))}
+                              </>
                             );
                           }
                           return (
@@ -741,15 +724,15 @@ export function DesignTable({
                       </div>
                     </TableCell>
                     {!isConfiguring && (
-                      <TableCell className="py-1 text-sm">
-                        <div className="flex flex-col gap-1">
+                      <TableCell className="py-1 text-sm whitespace-nowrap w-24 min-w-[80px]">
+                        <div className="flex flex-col gap-1 whitespace-nowrap">
                           {isUrgent && (
-                            <span className="font-extrabold text-red-600 dark:text-red-500 text-sm">
+                            <span className="font-extrabold text-red-600 dark:text-red-500 text-sm whitespace-nowrap">
                               Gấp
                             </span>
                           )}
                           {deliveryInfo ? (
-                            <div className="text-sm text-muted-foreground">
+                            <div className="text-sm text-muted-foreground whitespace-nowrap">
                               {deliveryInfo}
                             </div>
                           ) : (
@@ -758,7 +741,7 @@ export function DesignTable({
                         </div>
                       </TableCell>
                     )}
-                    <TableCell className="py-1 text-[11px] text-muted-foreground">
+                    <TableCell className="py-1 text-[11px] text-muted-foreground whitespace-nowrap w-36 min-w-[120px]">
                       {design.createdAt ? (
                         (() => {
                           const date = new Date(design.createdAt);
@@ -782,7 +765,7 @@ export function DesignTable({
                     </TableCell>
                     <TableCell
                       className={cn(
-                        "py-1 text-right sticky right-0 z-10 transition-colors",
+                        "py-1 w-40 min-w-[160px] text-right sticky right-0 z-10 transition-colors",
                         isSelected
                           ? "bg-green-100/90 group-hover:bg-green-200/80 dark:bg-green-900/40"
                           : "bg-background",

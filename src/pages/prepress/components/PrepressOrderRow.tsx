@@ -22,11 +22,43 @@ import { formatDesignDimensions } from "@/utils/format-die-size";
 import { format } from "date-fns";
 import {
   processClassificationLabels,
+  laminationTypeLabels,
   proofingStatusLabels,
+  getSpecificationBadges,
+  sortSpecificationSteps,
+  getFlowCode,
+  getSpecBadgeStyle,
 } from "@/lib/status-utils";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 
-function DesignHoverContent({ design, pod }: { design: any; pod: any }) {
+function DesignHoverContent({ design, pod, order }: { design: any; pod: any; order?: any }) {
+  const rawFlowCode =
+    pod?.flowCode ||
+    pod?.productionFlowCode ||
+    pod?.flow ||
+    pod?.productionFlow?.code ||
+    design?.flowCode ||
+    design?.productionFlowCode ||
+    design?.flow ||
+    design?.productionFlow?.code ||
+    order?.flowCode ||
+    order?.productionFlowCode ||
+    order?.flow ||
+    order?.productionFlow?.code;
+
+  const flowCode = typeof rawFlowCode === "string" ? rawFlowCode.trim().toUpperCase() : null;
+
+  const flowName =
+    pod?.flowName ||
+    pod?.productionFlowName ||
+    pod?.productionFlow?.name ||
+    design?.flowName ||
+    design?.productionFlowName ||
+    design?.productionFlow?.name ||
+    order?.flowName ||
+    order?.productionFlowName ||
+    order?.productionFlow?.name;
+
   return (
     <div className="flex gap-4 p-2 text-xs">
       <div className="w-28 h-28 shrink-0 rounded-md border bg-muted overflow-hidden">
@@ -67,6 +99,12 @@ function DesignHoverContent({ design, pod }: { design: any; pod: any }) {
             </span>
           </div>
           <div className="flex justify-between gap-2">
+            <span className="text-muted-foreground">Luồng sản xuất:</span>
+            <span className="font-mono font-bold text-blue-600 dark:text-blue-400 truncate max-w-[160px]">
+              {flowCode ? `${flowCode}${flowName ? ` (${flowName})` : ""}` : "—"}
+            </span>
+          </div>
+          <div className="flex justify-between gap-2">
             <span className="text-muted-foreground">Người tạo:</span>
             <span className="font-semibold text-foreground truncate max-w-[120px]">
               {design?.designer?.fullName || design?.designer?.username || "—"}
@@ -91,11 +129,13 @@ function DesignHoverContent({ design, pod }: { design: any; pod: any }) {
 
 function DesignCodeHoverCard({
   pod,
+  order,
   idx,
   debouncedSearchTerm,
   highlightText,
 }: {
   pod: any;
+  order?: any;
   idx: number;
   debouncedSearchTerm: string;
   highlightText: (text: string, term: string) => any;
@@ -141,7 +181,7 @@ function DesignCodeHoverCard({
         align="start"
         sideOffset={10}
       >
-        {isOpen && <DesignHoverContent design={pod.design} pod={pod} />}
+        {isOpen && <DesignHoverContent design={pod.design} pod={pod} order={order} />}
       </HoverCardContent>
     </HoverCard>
   );
@@ -291,27 +331,19 @@ export const PrepressOrderRow = React.memo(function PrepressOrderRow({
 
   const specTexts = useMemo(() => {
     const set = new Set<string>();
-    if (order.laminationTypeName) set.add(order.laminationTypeName);
-    if (order.processClassification) {
-      set.add(processClassificationLabels[order.processClassification] || order.processClassification);
-    }
+    getSpecificationBadges(order).forEach((s) => set.add(s));
     designs.forEach((pod: any) => {
-      const d = pod.design;
-      if (!d) return;
-      const specs = d.specification || (d as any).specifications;
-      if (Array.isArray(specs)) {
-        specs.forEach((s: string) => s && set.add(s));
-      } else if (typeof specs === "string" && specs.trim().length > 0) {
-        set.add(specs.trim());
-      } else if (d.processClassification) {
-        set.add(processClassificationLabels[d.processClassification] || d.processClassification);
-      } else if (d.length != null && d.height != null) {
-        set.add(`${d.length}x${d.height}mm`);
-      }
+      if (pod.design) getSpecificationBadges(pod.design).forEach((s) => set.add(s));
+      getSpecificationBadges(pod).forEach((s) => set.add(s));
     });
-    const list = Array.from(set).filter((s) => s && s !== "—");
-    return list.length > 0 ? list : ["—"];
-  }, [order.laminationTypeName, order.processClassification, designs]);
+    const flowCode =
+      order.flowCode ||
+      order.productionFlowCode ||
+      order.flow ||
+      order.productionFlow?.code;
+    const sorted = sortSpecificationSteps(Array.from(set), flowCode);
+    return sorted.length > 0 ? sorted : ["—"];
+  }, [order, designs]);
 
   return (
     <>
@@ -370,7 +402,7 @@ export const PrepressOrderRow = React.memo(function PrepressOrderRow({
           </div>
         </TableCell>
 
-        <TableCell className="py-3 font-medium text-xs align-top min-w-[140px] w-36 break-words">
+        <TableCell className="py-3 font-medium text-xs align-top min-w-[130px] w-36 break-words">
           <div className="flex flex-col gap-1">
             {materialTypeTexts.map((text: string, idx: number) => (
               <span key={idx} className="block text-muted-foreground break-words leading-tight">
@@ -380,13 +412,14 @@ export const PrepressOrderRow = React.memo(function PrepressOrderRow({
           </div>
         </TableCell>
 
-        <TableCell className="py-3 font-bold text-xs align-top min-w-[210px] w-56 text-slate-800 dark:text-slate-200">
+        <TableCell className="py-3 font-bold text-xs align-top min-w-[130px] w-36 text-slate-800 dark:text-slate-200">
           <div className="flex flex-col gap-1.5">
             {designs.length > 0 ? (
               (showAllDesigns ? designs : designs.slice(0, 1)).map((pod: any, idx: number) => (
                 <DesignCodeHoverCard
                   key={pod.id || idx}
                   pod={pod}
+                  order={order}
                   idx={idx}
                   debouncedSearchTerm={debouncedSearchTerm}
                   highlightText={highlightText}
@@ -428,13 +461,36 @@ export const PrepressOrderRow = React.memo(function PrepressOrderRow({
         <TableCell className="py-3 font-bold text-sm align-top text-center text-rose-600 font-mono">
           {order.totalQuantity ? order.totalQuantity.toLocaleString("vi-VN") : "0"}
         </TableCell>
-        <TableCell className="py-3 text-xs align-top">
-          <div className="flex flex-col gap-1">
-            {specTexts.map((spec: string, idx: number) => (
-              <span key={idx} className="block">
-                {spec}
-              </span>
-            ))}
+        <TableCell className="py-3 text-xs align-top min-w-[240px] w-64">
+          <div className="flex flex-wrap gap-1 items-center">
+            {(() => {
+              const flowCode = getFlowCode(order);
+              return (
+                <>
+                  {flowCode && (
+                    <Badge
+                      variant="default"
+                      className="text-[10px] font-bold bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-none px-1.5 py-0.5 rounded whitespace-nowrap"
+                      title={`Luồng sản xuất: ${flowCode}`}
+                    >
+                      {flowCode}
+                    </Badge>
+                  )}
+                  {specTexts.map((spec: string, idx: number) => (
+                    <Badge
+                      key={idx}
+                      variant="outline"
+                      className={cn(
+                        "text-[11px] font-medium px-1.5 py-0.5 rounded whitespace-nowrap border",
+                        getSpecBadgeStyle(spec)
+                      )}
+                    >
+                      {spec}
+                    </Badge>
+                  ))}
+                </>
+              );
+            })()}
           </div>
         </TableCell>
         <TableCell className="py-3 align-top">

@@ -30,6 +30,7 @@ export const ProductionStepResponseSchema = GenProductionStepResponseSchema.exte
   elapsedHours: z.number().nullish(),
   remainingHours: z.number().nullish(),
   lateHours: z.number().nullish(),
+  workerCount: z.number().nullish(),
 }).passthrough();
 export type ProductionStepResponse = z.infer<
   typeof ProductionStepResponseSchema
@@ -40,6 +41,7 @@ export const ProductionOrderResponseSchema = GenProductionOrderResponseSchema.ex
   isUrgent: z.boolean().nullish(),
   timingStatus: z.string().nullish(),
   mostLateStepType: z.string().nullish(),
+  totalWorkerCount: z.number().nullish(),
   steps: z.array(ProductionStepResponseSchema).nullish(),
   proofingOrder: z.object({
     id: z.number(),

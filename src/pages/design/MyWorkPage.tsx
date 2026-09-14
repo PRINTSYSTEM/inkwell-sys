@@ -548,7 +548,7 @@ export default function MyWorkPage() {
                 <TableHead className="h-9 text-sm font-bold">
                   Mã thiết kế
                 </TableHead>
-                <TableHead className="h-9 text-sm font-bold">
+                <TableHead className="h-9 text-sm font-bold min-w-[250px] lg:min-w-[300px]">
                   Tên thiết kế
                 </TableHead>
                 <TableHead className="h-9 text-sm font-bold">Loại</TableHead>
@@ -624,8 +624,8 @@ export default function MyWorkPage() {
                       </TableCell>
 
                       {/* Name */}
-                      <TableCell className="py-3">
-                        <p className="font-semibold text-sm line-clamp-1">
+                      <TableCell className="py-3 min-w-[250px] lg:min-w-[300px]">
+                        <p className="font-semibold text-sm line-clamp-2 break-words">
                           {design.designName || "Chưa đặt tên"}
                         </p>
                       </TableCell>

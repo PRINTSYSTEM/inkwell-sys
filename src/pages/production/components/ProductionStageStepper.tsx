@@ -1,8 +1,33 @@
 import React from "react";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Clock, AlertTriangle, AlertCircle, Circle } from "lucide-react";
 import type { ProductionStepSla, SlaStatusType } from "@/types/capacity";
+import { getProductionStepName } from "@/lib/status-utils";
+
+const safeFormatTime = (dateStr?: string | Date | null) => {
+  if (!dateStr) return null;
+  try {
+    if (typeof dateStr === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateStr.trim())) {
+      const [y, m, d] = dateStr.trim().split("-").map(Number);
+      return `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}/${y}`;
+    }
+    const d = typeof dateStr === "string" ? new Date(dateStr) : dateStr;
+    if (Number.isNaN(d.getTime())) return String(dateStr);
+
+    const isMidnightString =
+      typeof dateStr === "string" &&
+      (dateStr.includes("T00:00:00") || dateStr.endsWith(" 00:00:00"));
+    if (isMidnightString) {
+      return format(d, "dd/MM/yyyy");
+    }
+
+    return format(d, "HH:mm dd/MM/yyyy");
+  } catch {
+    return String(dateStr);
+  }
+};
 
 export interface ProductionStageStepperProps {
   steps: ProductionStepSla[];
@@ -80,6 +105,7 @@ export function ProductionStageStepper({
           const config = statusColorConfig[statusKey] || statusColorConfig.inactive;
           const Icon = config.icon;
           const isLast = idx === steps.length - 1;
+          const stepName = getProductionStepName(step);
 
           return (
             <React.Fragment key={step.id || idx}>
@@ -90,11 +116,11 @@ export function ProductionStageStepper({
                   config.border
                 )}
                 onClick={() => onStepClick?.(step)}
-                title={`Khâu: ${step.stepName || "Công đoạn"} | SLA: ${config.label}`}
+                title={`Khâu: ${stepName} | SLA: ${config.label}`}
               >
                 <Icon className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate max-w-[90px]">
-                  {step.stepName || `Khâu ${idx + 1}`}
+                  {stepName}
                 </span>
                 {step.processingMinutes != null && step.processingMinutes > 0 && (
                   <span className="text-[10px] opacity-85 font-mono">
@@ -129,7 +155,7 @@ export function ProductionStageStepper({
           <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
           <div className="flex-1">
             <p className="font-bold">
-              Cảnh báo Quá Hạn SLA tại Khâu: {lateStep.stepName}
+              Cảnh báo Quá Hạn SLA tại Khâu: {getProductionStepName(lateStep)}
             </p>
             <p className="text-[11px] mt-0.5 opacity-90">
               {lateStep.processingStatus === "late"
@@ -146,6 +172,17 @@ export function ProductionStageStepper({
             step.processingStatus || step.waitingStatus || "inactive";
           const config = statusColorConfig[statusKey] || statusColorConfig.inactive;
           const Icon = config.icon;
+          const stepName = getProductionStepName(step);
+
+          const nextStep = idx < steps.length - 1 ? steps[idx + 1] : null;
+          const isStepDone = (step as any).status === "completed" || (step as any).status === "done";
+          const stepFinishTime =
+            step.completedAt ||
+            (step as any).completed_at ||
+            (step as any).finishedAt ||
+            (step as any).finishAt ||
+            (step as any).updatedAt ||
+            (isStepDone ? (nextStep?.readyAt || nextStep?.startedAt) : null);
 
           return (
             <div
@@ -165,7 +202,7 @@ export function ProductionStageStepper({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <h4 className="font-bold text-sm text-foreground">
-                    {step.stepName || `Công đoạn ${idx + 1}`}
+                    {stepName}
                   </h4>
                   <Badge className={cn("text-[10px] px-1.5 py-0 border-none font-bold", config.badgeBg)}>
                     {config.badgeText}
@@ -174,13 +211,13 @@ export function ProductionStageStepper({
 
                 <div className="mt-1 space-y-0.5 text-[11px] text-muted-foreground">
                   {step.readyAt && (
-                    <p>Sẵn sàng: <span className="font-medium text-foreground">{step.readyAt}</span></p>
+                    <p>Sẵn sàng: <span className="font-medium text-foreground">{safeFormatTime(step.readyAt)}</span></p>
                   )}
                   {step.startedAt && (
-                    <p>Bắt đầu: <span className="font-medium text-foreground">{step.startedAt}</span></p>
+                    <p>Bắt đầu: <span className="font-medium text-foreground">{safeFormatTime(step.startedAt)}</span></p>
                   )}
-                  {step.completedAt && (
-                    <p>Hoàn thành: <span className="font-medium text-foreground">{step.completedAt}</span></p>
+                  {stepFinishTime && (
+                    <p>Hoàn thành: <span className="font-medium text-foreground">{safeFormatTime(stepFinishTime)}</span></p>
                   )}
                 </div>
 

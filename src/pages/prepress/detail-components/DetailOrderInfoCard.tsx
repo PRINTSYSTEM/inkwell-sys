@@ -27,6 +27,7 @@ import {
 import {
   processClassificationLabels,
   laminationTypeLabels,
+  getSpecBadgeStyle,
 } from "@/lib/status-utils";
 import { downloadFile } from "@/lib/download-utils";
 import { format } from "date-fns";
@@ -85,9 +86,9 @@ export function DetailOrderInfoCard({
   inlineNotes,
   setInlineNotes,
   inlineBasisWeight = "",
-  setInlineBasisWeight = () => {},
+  setInlineBasisWeight = () => { },
   inlineRollWidth = "",
-  setInlineRollWidth = () => {},
+  setInlineRollWidth = () => { },
   paperSizes,
   uniqueProcessClassifications,
   uniqueLaminationTypes,
@@ -142,7 +143,7 @@ export function DetailOrderInfoCard({
 
   const gsmWarnings = useMemo(() => {
     if (!order?.basisWeight || !order?.proofingOrderDesigns || order.proofingOrderDesigns.length === 0) return [];
-    
+
     const warnings: { type: "error" | "warning"; message: string }[] = [];
     order.proofingOrderDesigns.forEach((pod: any) => {
       const designGsm = pod.design?.basisWeight;
@@ -267,28 +268,28 @@ export function DetailOrderInfoCard({
                           setImageViewerOpen(true);
                         }}
                       />
-                    
-                    {/* Maximize Icon */}
-                    <div 
-                      className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none"
-                    >
-                      <Maximize2 className="h-5 w-5 text-white drop-shadow-md" />
-                    </div>
 
-                    {/* Delete Icon (Top-Right, Hoverable) */}
-                    {order.status !== "completed" && onDeleteImage && isProofer && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDeleteImage(img.id);
-                        }}
-                        className="absolute top-1.5 right-1.5 p-1 rounded-md bg-black/60 hover:bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 shadow-sm"
-                        title="Xóa ảnh này"
+                      {/* Maximize Icon */}
+                      <div
+                        className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
+                        <Maximize2 className="h-5 w-5 text-white drop-shadow-md" />
+                      </div>
+
+                      {/* Delete Icon (Top-Right, Hoverable) */}
+                      {order.status !== "completed" && onDeleteImage && isProofer && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteImage(img.id);
+                          }}
+                          className="absolute top-1.5 right-1.5 p-1 rounded-md bg-black/60 hover:bg-red-600 text-white opacity-0 group-hover:opacity-100 transition-all duration-200 z-10 shadow-sm"
+                          title="Xóa ảnh này"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -376,56 +377,56 @@ export function DetailOrderInfoCard({
 
           {/* Paper and Material */}
           <div className="flex flex-col gap-1.5">
-            <div className="flex items-center justify-between">
-              <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">
-                Khổ giấy
-                {editingField !== "all" && !(order.paperSize?.name || order.customPaperSize) && (
-                  <span title="Chưa chọn khổ giấy" className="ml-2 inline-flex items-center justify-center w-4 h-4 bg-red-600 text-white text-[10px] font-bold rounded-full">!</span>
-                )}
-              </Label>
-              <div className="flex items-center gap-1">
-                {editingField === "all" ? (
-                  <div className="flex gap-1.5 items-center">
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">
+                  Khổ giấy
+                  {editingField !== "all" && !(order.paperSize?.name || order.customPaperSize) && (
+                    <span title="Chưa chọn khổ giấy" className="ml-2 inline-flex items-center justify-center w-4 h-4 bg-red-600 text-white text-[10px] font-bold rounded-full">!</span>
+                  )}
+                </Label>
+                <div className="flex items-center gap-1">
+                  {editingField === "all" ? (
                     <SearchableSelect
                       value={inlinePaperSizeId}
                       onValueChange={setInlinePaperSizeId}
-                      className="h-6 text-xs px-2 w-[120px] bg-slate-50 hover:bg-slate-100"
+                      className="h-7 text-xs px-2 w-[130px] bg-slate-50 hover:bg-slate-100"
                       placeholder="Chọn khổ..."
                       searchPlaceholder="Tìm khổ..."
                       popoverWidth="w-[200px]"
                       options={[
-                        { value: "custom", label: "-- Nhập thủ công --" },
+                        { value: "custom", label: "Nhập thủ công" },
                         ...paperSizes.map((ps) => ({
                           value: ps.id.toString(),
                           label: `${ps.name} cm`
                         }))
                       ]}
                     />
-                    {inlinePaperSizeId === "custom" && (
-                      <Input
-                        value={inlineCustomPaperSize}
-                        onChange={(e) =>
-                          setInlineCustomPaperSize(e.target.value)
-                        }
-                        placeholder="ví dụ: 90×90"
-                        className="h-6 text-xs px-2 w-24"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") handleSaveField();
-                          else if (e.key === "Escape")
-                            handleCancelEditField();
-                        }}
-                        autoFocus={false}
-                      />
-                    )}
-                  </div>
-                ) : (
-                  <p className="font-bold text-[12px]">
-                    {order.paperSize?.name ||
-                      order.customPaperSize ||
-                      "Chưa chọn"} cm
-                  </p>
-                )}
+                  ) : (
+                    <p className="font-bold text-[12px]">
+                      {order.paperSize?.name ||
+                        order.customPaperSize ||
+                        "Chưa chọn"} cm
+                    </p>
+                  )}
+                </div>
               </div>
+              {editingField === "all" && inlinePaperSizeId === "custom" && (
+                <div className="flex items-center justify-end gap-2 pt-0.5">
+                  <span className="text-[10px] text-muted-foreground italic shrink-0">Khổ nhập:</span>
+                  <Input
+                    value={inlineCustomPaperSize}
+                    onChange={(e) => setInlineCustomPaperSize(e.target.value)}
+                    placeholder="ví dụ: 90×90"
+                    className="h-7 text-xs px-2 w-[130px] text-right font-medium bg-amber-50/50 border-amber-300 focus:bg-white"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleSaveField();
+                      else if (e.key === "Escape") handleCancelEditField();
+                    }}
+                    autoFocus={false}
+                  />
+                </div>
+              )}
             </div>
 
             <div className="flex items-start justify-between gap-4">
@@ -527,16 +528,19 @@ export function DetailOrderInfoCard({
           {/* Classification Badges */}
           <div className="flex flex-col gap-1.5">
             {uniqueSpecifications && uniqueSpecifications.length > 0 ? (
-              <div className="flex items-center justify-between">
-                <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">
+              <div className="flex flex-col gap-1">
+                <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight">
                   Quy cách đầy đủ
                 </Label>
-                <div className="flex flex-wrap gap-1 justify-end">
+                <div className="flex flex-wrap gap-1 items-center">
                   {uniqueSpecifications.map((s) => (
                     <Badge
                       key={s}
                       variant="secondary"
-                      className="text-[9px] font-bold px-1 py-0 bg-amber-100 text-amber-700 border-none"
+                      className={cn(
+                        "text-[9px] font-semibold px-1.5 py-0.5 rounded whitespace-nowrap border",
+                        getSpecBadgeStyle(s)
+                      )}
                     >
                       {s}
                     </Badge>
@@ -545,32 +549,38 @@ export function DetailOrderInfoCard({
               </div>
             ) : (
               <>
-                <div className="flex items-center justify-between">
-                  <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">
+                <div className="flex flex-col gap-1">
+                  <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight">
                     Quy cách
                   </Label>
-                  <div className="flex flex-wrap gap-1 justify-end">
+                  <div className="flex flex-wrap gap-1 items-center">
                     {uniqueProcessClassifications.map((c) => (
                       <Badge
                         key={c}
                         variant="secondary"
-                        className="text-[9px] font-bold px-1 py-0 bg-primary/10 text-primary border-none"
+                        className={cn(
+                          "text-[9px] font-semibold px-1.5 py-0.5 rounded whitespace-nowrap border",
+                          getSpecBadgeStyle(processClassificationLabels[c] || c)
+                        )}
                       >
                         {processClassificationLabels[c] || c}
                       </Badge>
                     ))}
                   </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">
+                <div className="flex flex-col gap-1">
+                  <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight">
                     Cán màng
                   </Label>
-                  <div className="flex flex-wrap gap-1 justify-end">
+                  <div className="flex flex-wrap gap-1 items-center">
                     {uniqueLaminationTypes.map((l) => (
                       <Badge
                         key={l}
                         variant="secondary"
-                        className="text-[9px] font-bold px-1 py-0 bg-blue-50 text-blue-700 border-none"
+                        className={cn(
+                          "text-[9px] font-semibold px-1.5 py-0.5 rounded whitespace-nowrap border",
+                          getSpecBadgeStyle(laminationTypeLabels[l] || l)
+                        )}
                       >
                         {laminationTypeLabels[l] || l}
                       </Badge>
@@ -585,14 +595,43 @@ export function DetailOrderInfoCard({
 
           {/* Customer Info */}
           <div className="flex flex-col gap-1.5">
-            <div className="flex items-start justify-between gap-4">
-              <Label className="text-muted-foreground text-[11px] font-normal uppercase tracking-tight shrink-0 mt-0.5">
+            <div className="flex items-center justify-between gap-4">
+              <Label className="text-muted-foreground text-[10px] font-normal uppercase tracking-tight shrink-0">
                 Khách hàng
               </Label>
               <div className="text-right min-w-0">
-                <p className="font-bold text-[13px] leading-snug break-words">
-                  {customerDisplayName}
-                </p>
+                {customerDisplayName !== "—" ? (
+                  <TooltipProvider delayDuration={150}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <p className="font-bold text-[12px] leading-tight truncate max-w-[170px] cursor-help border-b border-dashed border-slate-300 dark:border-slate-700 hover:text-primary transition-colors">
+                          {customerDisplayName}
+                        </p>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="top"
+                        align="end"
+                        className="max-w-[320px] p-3 bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100 border border-slate-200 dark:border-slate-800 shadow-xl rounded-xl text-xs space-y-1 z-50"
+                      >
+                        <div className="font-bold text-xs text-slate-900 dark:text-slate-100 leading-snug">
+                          {customerDisplayName}
+                        </div>
+                        {customerCompanyName && customerName && customerCompanyName !== customerName && (
+                          <div className="text-[11px] text-slate-600 dark:text-slate-400">
+                            Liên hệ: <span className="font-medium text-slate-900 dark:text-slate-100">{customerName}</span>
+                          </div>
+                        )}
+                        {(customerSource?.code || order.customerCode) && (
+                          <div className="text-[11px] text-slate-600 dark:text-slate-400">
+                            Mã KH: <span className="font-mono font-medium text-slate-900 dark:text-slate-100">{customerSource?.code || order.customerCode}</span>
+                          </div>
+                        )}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : (
+                  <p className="font-bold text-[12px] text-muted-foreground">—</p>
+                )}
               </div>
             </div>
           </div>

@@ -75,7 +75,7 @@ export function DetailDieExportCard({
   if (!order) return null;
 
   return (
-    <Card className="relative h-full flex flex-col">
+    <Card className="relative flex flex-col">
         <CardHeader className="pb-1.5 px-4">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm flex items-center gap-2">
@@ -97,14 +97,14 @@ export function DetailDieExportCard({
           </div>
         </CardHeader>
 
-        <CardContent className="px-4 pb-4 flex-1 flex flex-col overflow-hidden">
+        <CardContent className="px-4 pb-3 flex flex-col overflow-hidden">
           {!hasExports ? (
-            <div className="flex flex-col items-center py-6 space-y-4 bg-muted/20 rounded-lg border border-dashed border-muted-foreground/20">
-              <div className="text-center space-y-1">
-                <p className="font-bold text-sm text-muted-foreground">
+            <div className="flex flex-col items-center py-3.5 space-y-2 bg-muted/20 rounded-lg border border-dashed border-muted-foreground/20">
+              <div className="text-center space-y-0.5">
+                <p className="font-bold text-xs text-muted-foreground">
                   Chưa có thông tin xuất khuôn
                 </p>
-                <p className="text-[11px] text-muted-foreground/60">
+                <p className="text-[10px] text-muted-foreground/60">
                   Bài này có bế, cần xuất khuôn
                 </p>
               </div>
@@ -113,7 +113,7 @@ export function DetailDieExportCard({
                   variant="outline"
                   size="sm"
                   onClick={() => setIsDieExportDialogOpen(true)}
-                  className="h-8 px-4 text-xs font-bold rounded-md"
+                  className="h-7 px-3 text-xs font-bold rounded-md"
                 >
                   Xuất khuôn
                 </Button>

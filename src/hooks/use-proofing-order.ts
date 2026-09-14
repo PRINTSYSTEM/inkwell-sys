@@ -375,6 +375,38 @@ export const useAvailableOrderDetailsForProofing = (
             designerName: design.designer?.fullName || design.designer?.username || undefined,
             createdBy: (od as any).createdBy?.fullName || (od as any).createdBy?.username || undefined,
             proofingAllocations: od.proofingAllocations || undefined,
+            productionFlowCode:
+              (od as any).productionFlowCode ||
+              (od as any).flowCode ||
+              (od as any).productionFlow?.code ||
+              (design as any).productionFlowCode ||
+              (design as any).flowCode ||
+              (design as any).productionFlow?.code ||
+              undefined,
+            flowCode:
+              (od as any).productionFlowCode ||
+              (od as any).flowCode ||
+              (od as any).productionFlow?.code ||
+              (design as any).productionFlowCode ||
+              (design as any).flowCode ||
+              (design as any).productionFlow?.code ||
+              undefined,
+            productionFlowName:
+              (od as any).productionFlowName ||
+              (od as any).flowName ||
+              (od as any).productionFlow?.name ||
+              (design as any).productionFlowName ||
+              (design as any).flowName ||
+              (design as any).productionFlow?.name ||
+              undefined,
+            flowName:
+              (od as any).productionFlowName ||
+              (od as any).flowName ||
+              (od as any).productionFlow?.name ||
+              (design as any).productionFlowName ||
+              (design as any).flowName ||
+              (design as any).productionFlow?.name ||
+              undefined,
             specification: (() => {
               const rawSpec =
                 (od as any).specification ||
