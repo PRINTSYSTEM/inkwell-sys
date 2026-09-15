@@ -211,6 +211,7 @@ export function DesignTable({
                       <img
                         src={design.thumbnailUrl}
                         alt={design.name}
+                        loading="lazy"
                         className="max-h-[140px] w-auto object-contain rounded-lg border shadow-sm bg-muted/50"
                       />
                     ) : (
@@ -452,6 +453,7 @@ export function DesignTable({
                             <img
                               src={design.thumbnailUrl}
                               alt={design.name}
+                              loading="lazy"
                               className="w-full h-full object-cover"
                             />
                           </button>

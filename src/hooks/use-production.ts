@@ -510,7 +510,6 @@ export const usePostPrintCounts = () => {
       );
       return res.data;
     },
-    refetchInterval: 15000,
   });
 };
 
@@ -620,6 +619,89 @@ export const useUpdateFlowWorkerDefaults = () => {
   const mutate = async (payload: { flowId: string | number; defaults: Array<{ stageCode: string; defaultWorkerCount: number | null }> }) => {
     const result = await execute(payload);
     queryClient.invalidateQueries({ queryKey: ["production-flow-worker-defaults", payload.flowId] });
+    return result;
+  };
+
+  return {
+    isPending: loading,
+    mutate,
+  };
+};
+
+export interface FlowStageSlaItem {
+  stageId?: number;
+  stageCode: string;
+  stageName?: string;
+  defaultWorkerCount?: number | null;
+  waitWarningMinutes?: number | null;
+  waitLateMinutes?: number | null;
+  execWarningMinutes?: number | null;
+  execLateMinutes?: number | null;
+}
+
+export interface FlowSlaConfigResponse {
+  flowId: string;
+  flowCode?: string;
+  flowName?: string;
+  stages: FlowStageSlaItem[];
+}
+
+export interface UpdateFlowSlaConfigPayload {
+  flowId: string;
+  stages: Array<{
+    stageCode: string;
+    defaultWorkerCount?: number | null;
+    waitWarningMinutes?: number | null;
+    waitLateMinutes?: number | null;
+    execWarningMinutes?: number | null;
+    execLateMinutes?: number | null;
+  }>;
+}
+
+// GET /api/production/flows/:flowId/sla-config
+export const useFlowSlaConfig = (flowId: string | null) => {
+  return useQuery<FlowSlaConfigResponse | null>({
+    queryKey: ["production-flow-sla-config", flowId],
+    enabled: !!flowId,
+    queryFn: async () => {
+      try {
+        const res = await apiRequest.get<FlowSlaConfigResponse>(
+          API_SUFFIX.PRODUCTION_FLOW_SLA_CONFIG(flowId!)
+        );
+        return res.data || null;
+      } catch (err: any) {
+        if (err?.response?.status === 404 || err?.status === 404) {
+          return null;
+        }
+        throw err;
+      }
+    },
+  });
+};
+
+// PUT /api/production/flows/:flowId/sla-config
+export const useUpdateFlowSlaConfig = () => {
+  const queryClient = useQueryClient();
+
+  const { loading, execute } = useAsyncCallback<
+    FlowSlaConfigResponse,
+    [UpdateFlowSlaConfigPayload]
+  >(async (payload) => {
+    const res = await apiRequest.put<FlowSlaConfigResponse>(
+      API_SUFFIX.PRODUCTION_FLOW_SLA_CONFIG(payload.flowId),
+      payload
+    );
+    return res.data;
+  });
+
+  const mutate = async (payload: UpdateFlowSlaConfigPayload) => {
+    const result = await execute(payload);
+    queryClient.invalidateQueries({
+      queryKey: ["production-flow-sla-config", payload.flowId],
+    });
+    queryClient.invalidateQueries({
+      queryKey: ["production-flow-worker-defaults", payload.flowId],
+    });
     return result;
   };
 

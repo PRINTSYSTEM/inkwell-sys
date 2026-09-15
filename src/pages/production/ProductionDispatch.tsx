@@ -1540,7 +1540,7 @@ export default function ProductionDispatch() {
                                                 onClick={() => setViewingImageUrl(dieImg)}
                                                 title="Bấm để phóng to hình khuôn"
                                               >
-                                                <img src={dieImg} alt={d.code || "Hình khuôn"} className="h-full w-full object-cover" />
+                                                <img src={dieImg} alt={d.code || "Hình khuôn"} loading="lazy" className="h-full w-full object-cover" />
                                               </div>
                                             ) : (
                                               <div className="h-12 w-12 bg-slate-100 rounded border border-slate-200 shrink-0 flex items-center justify-center text-slate-400">

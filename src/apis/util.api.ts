@@ -371,6 +371,8 @@ export const API_SUFFIX = {
     }
     return `/production/flows/${cleanId}/worker-defaults`;
   },
+  PRODUCTION_FLOW_SLA_CONFIG: (flowId: string | number) =>
+    `/production/flows/${flowId}/sla-config`,
   PRODUCTION_STAGE_WORKER_REPORT: "/production/stage-worker-report",
   PRODUCTION_STAGE_WORKER_REPORT_ORDERS: (stageCode: string) =>
     `/production/stage-worker-report/${stageCode}/orders`,

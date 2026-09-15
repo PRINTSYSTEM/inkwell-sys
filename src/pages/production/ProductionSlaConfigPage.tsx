@@ -50,7 +50,7 @@ import {
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
-import { useFlowWorkerDefaults, useUpdateFlowWorkerDefaults } from "@/hooks/use-production";
+import { useFlowWorkerDefaults, useUpdateFlowWorkerDefaults, useFlowSlaConfig, useUpdateFlowSlaConfig } from "@/hooks/use-production";
 import { toCanonicalBeStageCode } from "@/lib/status-utils";
 import { StageWorkerReportModal } from "./components/StageWorkerReportModal";
 
@@ -360,12 +360,26 @@ export default function ProductionSlaConfigPage() {
 
   const [searchFlowQuery, setSearchFlowQuery] = useState<string>("");
 
-  // Worker default counts API hooks
+  // Worker default counts & SLA Config API hooks
   const { data: workerDefaultsData } = useFlowWorkerDefaults(selectedFlowId);
   const updateWorkerDefaults = useUpdateFlowWorkerDefaults();
 
-  // State map mapping Flow ID -> distinct Stage SLA array
-  const [flowSlaMap, setFlowSlaMap] = useState<Record<string, StageSlaConfig[]>>(INITIAL_FLOW_SLA_MAP);
+  const { data: flowSlaConfigData } = useFlowSlaConfig(selectedFlowId);
+  const updateFlowSlaConfig = useUpdateFlowSlaConfig();
+
+  // State map mapping Flow ID -> distinct Stage SLA array with localStorage persistence
+  const [flowSlaMap, setFlowSlaMap] = useState<Record<string, StageSlaConfig[]>>(() => {
+    try {
+      const saved = localStorage.getItem("sla_config_flow_map");
+      if (saved && typeof saved === "string") {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === "object") {
+          return { ...INITIAL_FLOW_SLA_MAP, ...parsed };
+        }
+      }
+    } catch {}
+    return INITIAL_FLOW_SLA_MAP;
+  });
   const [globalDefaults, setGlobalDefaults] = useState(DEFAULT_GLOBAL_STAGES);
   const [sourceCopyFlow, setSourceCopyFlow] = useState<string>("");
   const [copyWaitTime, setCopyWaitTime] = useState<boolean>(true);
@@ -379,9 +393,39 @@ export default function ProductionSlaConfigPage() {
   const [isReportModalOpen, setIsReportModalOpen] = useState<boolean>(false);
   const [historyLogs, setHistoryLogs] = useState(INITIAL_HISTORY);
 
-  // Sync worker defaults into flowSlaMap when loaded from API
+  // Sync SLA Config & worker defaults into flowSlaMap when loaded from API
   React.useEffect(() => {
-    if (workerDefaultsData && Array.isArray(workerDefaultsData)) {
+    if (flowSlaConfigData?.stages && Array.isArray(flowSlaConfigData.stages) && flowSlaConfigData.stages.length > 0) {
+      setFlowSlaMap((prevMap) => {
+        const flowStages = prevMap[selectedFlowId] || INITIAL_FLOW_SLA_MAP[selectedFlowId] || INITIAL_FLOW_SLA_MAP["F01"];
+        const updated = flowStages.map((st) => {
+          const matched = flowSlaConfigData.stages.find((d) => {
+            if (!d) return false;
+            const dCode = toCanonicalBeStageCode(d.stageCode);
+            const stCode = toCanonicalBeStageCode(st.stageCode);
+            const codeMatch = dCode !== "" && dCode === stCode;
+            const nameMatch = Boolean(
+              d.stageName &&
+              st.stepName &&
+              d.stageName.toLowerCase() === st.stepName.toLowerCase()
+            );
+            return codeMatch || nameMatch;
+          });
+          if (matched) {
+            return {
+              ...st,
+              defaultWorkerCount: matched.defaultWorkerCount ?? st.defaultWorkerCount,
+              waitWarning: matched.waitWarningMinutes ?? st.waitWarning,
+              waitLate: matched.waitLateMinutes ?? st.waitLate,
+              execWarning: matched.execWarningMinutes ?? st.execWarning,
+              execLate: matched.execLateMinutes ?? st.execLate,
+            };
+          }
+          return st;
+        });
+        return { ...prevMap, [selectedFlowId]: updated };
+      });
+    } else if (workerDefaultsData && Array.isArray(workerDefaultsData)) {
       setFlowSlaMap((prevMap) => {
         const flowStages = prevMap[selectedFlowId] || INITIAL_FLOW_SLA_MAP[selectedFlowId] || INITIAL_FLOW_SLA_MAP["F01"];
         const updated = flowStages.map((st) => {
@@ -405,7 +449,7 @@ export default function ProductionSlaConfigPage() {
         return { ...prevMap, [selectedFlowId]: updated };
       });
     }
-  }, [workerDefaultsData, selectedFlowId]);
+  }, [flowSlaConfigData, workerDefaultsData, selectedFlowId]);
 
   // Find selected flow info
   const currentFlow = useMemo(() => {
@@ -464,25 +508,86 @@ export default function ProductionSlaConfigPage() {
 
   const handleSaveSla = async () => {
     try {
-      const payloadDefaults = currentStages
-        .filter((st) => st.stageCode !== "BINH_BAI" && st.stageCode !== "DISPATCH")
-        .map((st) => ({
-          stageCode: toCanonicalBeStageCode(st.stageCode),
-          defaultWorkerCount:
-            st.defaultWorkerCount == null || String(st.defaultWorkerCount).trim() === ""
-              ? null
-              : Number(st.defaultWorkerCount),
-        }));
+      // FE Client-side Validation according to Spec:
+      // 1. All numbers >= 0
+      // 2. waitWarningMinutes <= waitLateMinutes
+      // 3. execWarningMinutes <= execLateMinutes
+      for (const st of currentStages) {
+        const checkItems = [
+          { label: "Số công mặc định", val: st.defaultWorkerCount },
+          { label: "Thời gian chờ Cảnh báo (Vàng)", val: st.waitWarning },
+          { label: "Thời gian chờ Quá hạn (Đỏ)", val: st.waitLate },
+          { label: "Thời gian làm Cảnh báo (Vàng)", val: st.execWarning },
+          { label: "Thời gian làm Quá hạn (Đỏ)", val: st.execLate },
+        ];
 
-      if (payloadDefaults.length === 0) {
-        toast.error("Không có công đoạn sản xuất hợp lệ để lưu số công.");
-        return;
+        for (const item of checkItems) {
+          if (item.val !== null && item.val !== undefined && Number(item.val) < 0) {
+            toast.error(`Khâu "${st.stepName}": ${item.label} phải là số không âm (>= 0)!`);
+            return;
+          }
+        }
+
+        if (
+          st.waitWarning !== null &&
+          st.waitWarning !== undefined &&
+          st.waitLate !== null &&
+          st.waitLate !== undefined &&
+          Number(st.waitWarning) > Number(st.waitLate)
+        ) {
+          toast.error(
+            `Khâu "${st.stepName}": Thời gian chờ Cảnh báo (${st.waitWarning}m) không được lớn hơn thời gian Quá hạn (${st.waitLate}m)!`
+          );
+          return;
+        }
+
+        if (
+          st.execWarning !== null &&
+          st.execWarning !== undefined &&
+          st.execLate !== null &&
+          st.execLate !== undefined &&
+          Number(st.execWarning) > Number(st.execLate)
+        ) {
+          toast.error(
+            `Khâu "${st.stepName}": Thời gian làm khâu Cảnh báo (${st.execWarning}m) không được lớn hơn thời gian Quá hạn (${st.execLate}m)!`
+          );
+          return;
+        }
       }
 
-      await updateWorkerDefaults.mutate({
+      // Build payload for PUT /api/production/flows/{flowId}/sla-config
+      const payloadStages = currentStages.map((st) => ({
+        stageCode: st.stageCode.toUpperCase(),
+        defaultWorkerCount: st.defaultWorkerCount ?? 0,
+        waitWarningMinutes: st.waitWarning ?? 0,
+        waitLateMinutes: st.waitLate ?? 0,
+        execWarningMinutes: st.execWarning ?? 0,
+        execLateMinutes: st.execLate ?? 0,
+      }));
+
+      // Call API PUT /api/production/flows/{flowId}/sla-config
+      await updateFlowSlaConfig.mutate({
         flowId: selectedFlowId,
-        defaults: payloadDefaults,
+        stages: payloadStages,
       });
+
+      // Also attempt legacy endpoint call as fallback / sync if needed
+      try {
+        const payloadWorkerDefaults = currentStages
+          .filter((st) => st.stageCode !== "BINH_BAI" && st.stageCode !== "DISPATCH")
+          .map((st) => ({
+            stageCode: toCanonicalBeStageCode(st.stageCode),
+            defaultWorkerCount: st.defaultWorkerCount == null ? null : Number(st.defaultWorkerCount),
+          }));
+        if (payloadWorkerDefaults.length > 0) {
+          await updateWorkerDefaults.mutate({
+            flowId: selectedFlowId,
+            defaults: payloadWorkerDefaults,
+          });
+        }
+      } catch (legacyErr) {
+        console.warn("Legacy worker defaults update omitted or failed:", legacyErr);
+      }
 
       const now = new Date().toISOString().replace("T", " ").substring(0, 16);
       const newLog = {
@@ -492,21 +597,21 @@ export default function ProductionSlaConfigPage() {
         flowId: currentFlow.id,
         flowName: currentFlow.name,
         action: "Cập nhật SLA & Số công",
-        details: `Đã lưu số công mặc định trực tiếp vào CSDL cho ${currentFlow.id} (${payloadDefaults.length} công đoạn)`,
+        details: `Đã lưu cấu hình SLA & Số công mặc định vào CSDL cho ${currentFlow.id} (${payloadStages.length} khâu)`,
         status: "Thành công",
       };
       setHistoryLogs((prev) => [newLog, ...prev]);
 
-      toast.success(`Đã lưu cấu hình SLA & Số công mặc định vào CSDL cho ${currentFlow.id}!`, {
-        description: `Cấu hình SLA & số công cho ${currentFlow.id} - ${currentFlow.name} đã được cập nhật trực tiếp vào DB.`,
-      });
+      // Persist current SLA map to localStorage so edited timing values are retained
+      try {
+        localStorage.setItem("sla_config_flow_map", JSON.stringify(flowSlaMap));
+      } catch {}
 
-      // Reload page after save so fresh data loads from server
-      setTimeout(() => {
-        window.location.reload();
-      }, 700);
+      toast.success(`Đã lưu cấu hình SLA & Số công mặc định cho ${currentFlow.id}!`, {
+        description: `Cấu hình SLA & số công cho ${currentFlow.id} - ${currentFlow.name} đã được lưu thành công.`,
+      });
     } catch (e: any) {
-      console.error("Lỗi khi lưu số công mặc định:", e);
+      console.error("Lỗi khi lưu cấu hình SLA & số công:", e);
       const is404 = e?.response?.status === 404 || e?.status === 404 || String(e?.message).includes("404");
       const errorMsg =
         e?.response?.data?.error ||
@@ -515,11 +620,11 @@ export default function ProductionSlaConfigPage() {
         e?.message;
 
       if (is404) {
-        toast.error(`Backend chưa publish API endpoint /api/production/flows/${selectedFlowId}/worker-defaults (404)`, {
-          description: "Vui lòng thông báo Backend team rebuild/restart API server để cập nhật endpoint lưu số công mặc định.",
+        toast.error(`Backend chưa publish API endpoint /api/production/flows/${selectedFlowId}/sla-config (404)`, {
+          description: "Vui lòng thông báo Backend team rebuild/restart API server để cập nhật endpoint cấu hình SLA.",
         });
       } else {
-        toast.error(`Không thể lưu cấu hình số công vào CSDL`, {
+        toast.error(`Không thể lưu cấu hình SLA vào CSDL`, {
           description: errorMsg || "Thông tin gửi lên không đúng định dạng hoặc chứa mã khâu không hợp lệ (400 Bad Request)",
         });
       }
@@ -866,6 +971,7 @@ export default function ProductionSlaConfigPage() {
                               placeholder="—"
                               value={st.defaultWorkerCount ?? ""}
                               onChange={(e) => handleStageValueChange(idx, "defaultWorkerCount", e.target.value)}
+                              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSaveSla(); } }}
                               className="h-7 w-16 text-center text-xs font-mono font-extrabold border-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/50 text-emerald-950 dark:text-emerald-100 focus:ring-2 focus:ring-emerald-500 mx-auto"
                             />
                           </TableCell>
@@ -877,6 +983,7 @@ export default function ProductionSlaConfigPage() {
                               placeholder="—"
                               value={st.waitWarning ?? ""}
                               onChange={(e) => handleStageValueChange(idx, "waitWarning", e.target.value)}
+                              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSaveSla(); } }}
                               className="h-7 w-16 text-center text-xs font-mono font-extrabold border-amber-300 bg-amber-100/70 dark:bg-amber-950/50 text-amber-950 dark:text-amber-100 focus:ring-2 focus:ring-amber-500 mx-auto"
                             />
                           </TableCell>
@@ -888,6 +995,7 @@ export default function ProductionSlaConfigPage() {
                               placeholder="—"
                               value={st.waitLate ?? ""}
                               onChange={(e) => handleStageValueChange(idx, "waitLate", e.target.value)}
+                              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSaveSla(); } }}
                               className="h-7 w-16 text-center text-xs font-mono font-extrabold border-red-300 bg-red-100/70 dark:bg-red-950/50 text-red-950 dark:text-red-100 focus:ring-2 focus:ring-red-500 mx-auto"
                             />
                           </TableCell>
@@ -899,6 +1007,7 @@ export default function ProductionSlaConfigPage() {
                               placeholder="—"
                               value={st.execWarning ?? ""}
                               onChange={(e) => handleStageValueChange(idx, "execWarning", e.target.value)}
+                              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSaveSla(); } }}
                               className="h-7 w-16 text-center text-xs font-mono font-extrabold border-amber-300 bg-amber-100/70 dark:bg-amber-950/50 text-amber-950 dark:text-amber-100 focus:ring-2 focus:ring-amber-500 mx-auto"
                             />
                           </TableCell>
@@ -910,6 +1019,7 @@ export default function ProductionSlaConfigPage() {
                               placeholder="—"
                               value={st.execLate ?? ""}
                               onChange={(e) => handleStageValueChange(idx, "execLate", e.target.value)}
+                              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSaveSla(); } }}
                               className="h-7 w-16 text-center text-xs font-mono font-extrabold border-red-300 bg-red-100/70 dark:bg-red-950/50 text-red-950 dark:text-red-100 focus:ring-2 focus:ring-red-500 mx-auto"
                             />
                           </TableCell>

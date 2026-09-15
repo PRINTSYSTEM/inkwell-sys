@@ -39,10 +39,10 @@ export const useNotifications = (params?: NotificationsParams) => {
       );
       return res.data;
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    staleTime: 10 * 1000, // 10 seconds
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 };
 
