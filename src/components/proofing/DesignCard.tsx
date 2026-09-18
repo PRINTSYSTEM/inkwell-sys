@@ -69,6 +69,7 @@ export function DesignCard({
         <img
           src={design.thumbnailUrl}
           alt={design.name}
+          loading="lazy"
           className="w-full h-full object-cover"
         />
       </div>

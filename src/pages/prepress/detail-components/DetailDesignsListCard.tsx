@@ -44,6 +44,9 @@ import {
   processClassificationLabels,
   sidesClassificationLabels,
   laminationTypeLabels,
+  getSpecificationBadges,
+  getFlowCode,
+  getSpecBadgeStyle,
 } from "@/lib/status-utils";
 import { formatDesignDimensions } from "@/utils/format-die-size";
 import { downloadFile } from "@/lib/download-utils";
@@ -228,36 +231,36 @@ export function DetailDesignsListCard({
               <TableRow className="h-10">
                 <TableHead className="w-8 text-center">STT</TableHead>
 
-                <TableHead className="w-20 text-center">
+                <TableHead className="w-14 text-center">
                   Ảnh
                 </TableHead>
 
-                <TableHead className="w-40">
+                <TableHead className="w-36">
                   Mã hàng
                 </TableHead>
 
-                <TableHead className="w-36">
+                <TableHead className="w-28">
                   Kích thước (mm)
                 </TableHead>
 
-                <TableHead className="w-20 text-center">
+                <TableHead className="w-16 text-center">
                   SL
                 </TableHead>
 
-                <TableHead className="w-28 whitespace-nowrap">
+                <TableHead className="w-24 whitespace-nowrap">
                   Ngày TK
                 </TableHead>
 
-                <TableHead className="w-24 text-center">
+                <TableHead className="w-20 text-center">
                   {isDecal ? "Loại SP" : "Số mặt"}
                 </TableHead>
 
-                <TableHead>
+                <TableHead className="min-w-[220px]">
                   Quy cách đầy đủ
                 </TableHead>
 
                 {isProofer && (
-                  <TableHead className="w-36 text-right">
+                  <TableHead className="w-32 text-right">
                     Thao tác
                   </TableHead>
                 )}
@@ -448,44 +451,51 @@ export function DetailDesignsListCard({
                           {pod.design?.latestOrderCode || "—"}
                         </span>
                       </div>
+                      <div className="flex justify-between items-center gap-4">
+                        <span className="text-muted-foreground">Luồng sản xuất:</span>
+                        <span className="font-bold text-blue-600 dark:text-blue-400 font-mono">
+                          {(() => {
+                            const rawCode =
+                              pod.flowCode ||
+                              pod.productionFlowCode ||
+                              pod.flow ||
+                              pod.productionFlow?.code ||
+                              pod.design?.flowCode ||
+                              pod.design?.productionFlowCode ||
+                              pod.design?.flow ||
+                              pod.design?.productionFlow?.code ||
+                              (order as any)?.flowCode ||
+                              (order as any)?.productionFlowCode ||
+                              (order as any)?.productionFlow?.code;
+                            const codeUpper = typeof rawCode === "string" ? rawCode.trim().toUpperCase() : null;
+                            const name =
+                              pod.flowName ||
+                              pod.productionFlowName ||
+                              pod.productionFlow?.name ||
+                              pod.design?.flowName ||
+                              pod.design?.productionFlowName ||
+                              pod.design?.productionFlow?.name ||
+                              (order as any)?.flowName ||
+                              (order as any)?.productionFlowName ||
+                              (order as any)?.productionFlow?.name;
+                            return codeUpper ? `${codeUpper}${name ? ` (${name})` : ""}` : "—";
+                          })()}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Full Specifications */}
                     {(() => {
-                      const rawSpec =
-                        (pod.design as any)?.specification ||
-                        (pod.design as any)?.specifications ||
-                        (pod as any).specification ||
-                        (pod as any).specifications ||
-                        (pod as any).orderDetail?.specification ||
-                        (pod as any).orderDetail?.specifications;
-
-                      let specs: string[] = [];
-                      if (Array.isArray(rawSpec)) {
-                        specs = rawSpec.filter(
-                          (s) => typeof s === "string" && s.trim(),
-                        );
-                      } else if (typeof rawSpec === "string" && rawSpec.trim()) {
-                        const trimmed = rawSpec.trim();
-                        if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
-                          try {
-                            const parsed = JSON.parse(trimmed);
-                            if (Array.isArray(parsed)) {
-                              specs = parsed.filter(
-                                (s) => typeof s === "string" && s.trim(),
-                              );
-                            }
-                          } catch (e) {
-                            // Không phải JSON hợp lệ — fallback sang tách theo dấu phẩy bên dưới
-                          }
-                        }
-                        if (specs.length === 0) {
-                          specs = trimmed
-                            .split(",")
-                            .map((s) => s.trim())
-                            .filter(Boolean);
-                        }
-                      }
+                      const specs = getSpecificationBadges({
+                        ...(pod.design || {}),
+                        ...pod,
+                        specification:
+                          (pod.design as any)?.specification ||
+                          (pod.design as any)?.specifications ||
+                          (pod as any).specification ||
+                          (pod as any).specifications ||
+                          (pod as any).orderDetail?.specification,
+                      });
 
                       if (specs.length > 0) {
                         return (
@@ -498,7 +508,10 @@ export function DetailDesignsListCard({
                                 <Badge
                                   key={i}
                                   variant="outline"
-                                  className="text-[10px] bg-blue-50 text-blue-700 border-blue-200 py-0 h-5"
+                                  className={cn(
+                                    "text-[10px] py-0 h-5 whitespace-nowrap border px-1.5 rounded",
+                                    getSpecBadgeStyle(spec)
+                                  )}
                                 >
                                   {spec}
                                 </Badge>
@@ -527,7 +540,7 @@ export function DetailDesignsListCard({
                     <HoverCardTrigger asChild>
                       <TableRow
                         ref={isHighlighted ? rowRef : undefined}
-                        className={`h-14 transition-all duration-300 ${isHighlighted ? "bg-emerald-100/90 dark:bg-emerald-950/40 ring-2 ring-emerald-400/60 shadow-[inset_4px_0_0_0_#10b981] animate-pulse" : ""}`}
+                        className={`min-h-[44px] transition-all duration-300 ${isHighlighted ? "bg-emerald-100/90 dark:bg-emerald-950/40 ring-2 ring-emerald-400/60 shadow-[inset_4px_0_0_0_#10b981] animate-pulse" : ""}`}
                       >
                          <TableCell className="px-1 py-1 text-center w-8">
                            <p className="text-xs text-muted-foreground font-medium">
@@ -714,60 +727,41 @@ export function DetailDesignsListCard({
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="px-2 py-1">
-                          <div className="flex flex-wrap gap-1">
+                        <TableCell className="px-2 py-1 min-w-[220px]">
+                          <div className="flex flex-wrap gap-1 items-center">
                             {(() => {
-                              const rawSpec =
-                                (pod.design as any)?.specification ||
-                                (pod.design as any)?.specifications ||
-                                (pod as any).specification ||
-                                (pod as any).specifications ||
-                                (pod as any).orderDetail?.specification ||
-                                (pod as any).orderDetail?.specifications;
+                              const flowCode = getFlowCode(pod.design || pod);
+                              const specs = getSpecificationBadges({
+                                ...(pod.design || {}),
+                                ...pod,
+                              });
 
-                              let specs: string[] = [];
-                              if (Array.isArray(rawSpec)) {
-                                specs = rawSpec.filter(
-                                  (s) => typeof s === "string" && s.trim(),
+                              if (specs.length > 0 || flowCode) {
+                                return (
+                                  <>
+                                    {flowCode && (
+                                      <Badge
+                                        variant="default"
+                                        className="text-[10px] font-bold bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 border-none px-1.5 py-0.5 rounded whitespace-nowrap"
+                                        title={`Luồng sản xuất: ${flowCode}`}
+                                      >
+                                        {flowCode}
+                                      </Badge>
+                                    )}
+                                    {specs.map((spec, i) => (
+                                      <Badge
+                                        key={i}
+                                        variant="secondary"
+                                        className={cn(
+                                          "text-[10px] whitespace-nowrap border px-1.5 py-0.5 rounded",
+                                          getSpecBadgeStyle(spec)
+                                        )}
+                                      >
+                                        {spec}
+                                      </Badge>
+                                    ))}
+                                  </>
                                 );
-                              } else if (
-                                typeof rawSpec === "string" &&
-                                rawSpec.trim()
-                              ) {
-                                const trimmed = rawSpec.trim();
-                                if (
-                                  trimmed.startsWith("[") &&
-                                  trimmed.endsWith("]")
-                                ) {
-                                  try {
-                                    const parsed = JSON.parse(trimmed);
-                                    if (Array.isArray(parsed)) {
-                                      specs = parsed.filter(
-                                        (s) => typeof s === "string" && s.trim(),
-                                      );
-                                    }
-                                  } catch (e) {
-                                    // Not valid JSON
-                                  }
-                                }
-                                if (specs.length === 0) {
-                                  specs = trimmed
-                                    .split(",")
-                                    .map((s) => s.trim())
-                                    .filter(Boolean);
-                                }
-                              }
-
-                              if (specs.length > 0) {
-                                return specs.map((spec, i) => (
-                                  <Badge
-                                    key={i}
-                                    variant="secondary"
-                                    className="text-[10px] bg-blue-50 text-blue-700 border-blue-100 whitespace-nowrap"
-                                  >
-                                    {spec}
-                                  </Badge>
-                                ));
                               }
                               return (
                                 <span className="text-xs text-muted-foreground">

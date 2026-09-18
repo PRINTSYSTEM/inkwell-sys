@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from "axios";
 import type { UserInfo } from "../Schema";
+import { compressImageFile } from "./utils";
 
 const parseParams = (params: Record<string, unknown>) => {
   const keys = Object.keys(params);
@@ -191,9 +192,19 @@ export const http = {
     return response.data;
   },
 
-  // Upload file (multipart/form-data)
+  // Upload file (multipart/form-data) with automatic client-side image compression
   upload: async <T>(url: string, formData: FormData): Promise<T> => {
-    const response = await apiRequest.post<T>(url, formData, {
+    const compressedFormData = new FormData();
+    for (const [key, value] of formData.entries()) {
+      if (value instanceof File && value.type.startsWith("image/")) {
+        const compressed = await compressImageFile(value);
+        compressedFormData.append(key, compressed);
+      } else {
+        compressedFormData.append(key, value);
+      }
+    }
+
+    const response = await apiRequest.post<T>(url, compressedFormData, {
       headers: {
         "Content-Type": "multipart/form-data",
       },

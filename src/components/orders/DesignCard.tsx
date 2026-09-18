@@ -56,6 +56,7 @@ export type CreateDesignRequestUI = {
   laminationType?: string | null;
   sharedAddressId?: number | null;
   gusseted?: boolean;
+  isZipper?: boolean;
   basisWeight?: number;
 };
 
@@ -177,6 +178,11 @@ export const DesignCard: React.FC<DesignCardProps> = ({
                 >
                   {design.isFromExisting ? "Có sẵn" : "Mới"}
                 </Badge>
+                {design.isZipper && (
+                  <Badge variant="secondary" className="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 shrink-0">
+                    Zipper
+                  </Badge>
+                )}
               </div>
 
               {/* Code preview */}

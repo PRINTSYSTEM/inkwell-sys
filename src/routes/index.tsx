@@ -85,6 +85,15 @@ const ProductionConfigPage = lazy(
 const ProductionDelayReportPage = lazy(
   () => import("@/pages/production/ProductionDelayReportPage")
 );
+const ProductionCapacityPage = lazy(
+  () => import("@/pages/production/ProductionCapacityPage")
+);
+const ProductionDashboardPage = lazy(
+  () => import("@/pages/production/ProductionDashboardPage")
+);
+const ProductionSlaConfigPage = lazy(
+  () => import("@/pages/production/ProductionSlaConfigPage")
+);
 
 
 // Inventory / Materials
@@ -567,7 +576,7 @@ export const router = createBrowserRouter([
 
       // ===== PRODUCTION =====
       {
-        path: lastSegment(ROUTE_PATHS.PRODUCTION.ROOT), // "production"
+        path: "production",
         children: [
           {
             index: true,
@@ -619,11 +628,7 @@ export const router = createBrowserRouter([
           },
           {
             path: "config",
-            element: (
-              <Suspense fallback={<PageLoadingFallback />}>
-                <ProductionConfigPage />
-              </Suspense>
-            ),
+            element: <Navigate to={ROUTE_PATHS.PRODUCTION.SLA_CONFIG} replace />,
           },
           {
             path: "delay-report",
@@ -634,7 +639,39 @@ export const router = createBrowserRouter([
             ),
           },
           {
-            path: lastSegment(ROUTE_PATHS.PRODUCTION.DETAIL), // "detail"
+            path: "capacity",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <ProductionCapacityPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "dashboard",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <ProductionDashboardPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "sla-config",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <ProductionSlaConfigPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "defect-records",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <DefectRecordListPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: ":id",
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
                 <ProductionDetailPage />
@@ -643,45 +680,111 @@ export const router = createBrowserRouter([
           },
         ],
       },
+      // ===== PRODUCTIONS (ALIAS) =====
       {
-        path: "production/print-orders",
-        element: (
-          <Suspense fallback={<PageLoadingFallback />}>
-            <PrintOrdersPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: "production/post-print",
-        element: (
-          <Suspense fallback={<PageLoadingFallback />}>
-            <PostPrintProductionPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: "production/defect-records",
-        element: (
-          <Suspense fallback={<PageLoadingFallback />}>
-            <DefectRecordListPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: "production/config",
-        element: (
-          <Suspense fallback={<PageLoadingFallback />}>
-            <ProductionConfigPage />
-          </Suspense>
-        ),
-      },
-      {
-        path: "production/delay-report",
-        element: (
-          <Suspense fallback={<PageLoadingFallback />}>
-            <ProductionDelayReportPage />
-          </Suspense>
-        ),
+        path: "productions",
+        children: [
+          {
+            index: true,
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <Production />
+              </Suspense>
+            ),
+          },
+          {
+            path: "proofing",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <ProofingList />
+              </Suspense>
+            ),
+          },
+          {
+            path: "dispatch",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <ProductionDispatch />
+              </Suspense>
+            ),
+          },
+          {
+            path: "print-orders",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <PrintOrdersPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "post-print",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <PostPrintProductionPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "kcs",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <KCSPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "config",
+            element: <Navigate to={ROUTE_PATHS.PRODUCTION.SLA_CONFIG} replace />,
+          },
+          {
+            path: "delay-report",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <ProductionDelayReportPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "capacity",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <ProductionCapacityPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "dashboard",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <ProductionDashboardPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "sla-config",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <ProductionSlaConfigPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "defect-records",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <DefectRecordListPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: ":id",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <ProductionDetailPage />
+              </Suspense>
+            ),
+          },
+        ],
       },
 
 

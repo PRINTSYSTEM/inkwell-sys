@@ -27,7 +27,10 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  useNotifications,
   useDeleteNotification,
+  useMarkNotificationAsRead,
+  useMarkAllNotificationsAsRead,
 } from "@/hooks/use-notifications";
 import {
   useDebtNotifications,
@@ -94,44 +97,20 @@ function NotificationCenter() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
 
-  // Convert mock notifications to match schema structure
-  const mockNotificationsData = useMemo(() => {
-    return mockNotifications.map((notif: MockNotification) => ({
-      id: parseInt(notif.id.replace("n", "")) || 0,
-      type: mapMockTypeToSchemaType(notif.type),
-      title: notif.title,
-      message: notif.message,
-      summary: undefined,
-      recipientId: 0,
-      recipientType: "user" as const,
-      relatedEntityType: notif.relatedType,
-      relatedEntityId: notif.relatedId ? parseInt(notif.relatedId.replace("o", "")) : undefined,
-      status: notif.read ? ("read" as const) : ("delivered" as const),
-      isRead: notif.read,
-      readAt: notif.read ? new Date(notif.createdAt).toISOString() : undefined,
-      createdAt: new Date(notif.createdAt).toISOString(),
-      updatedAt: new Date(notif.createdAt).toISOString(),
-      channels: ["in_app" as const],
-      actions: [],
-      data: {},
-      tags: [],
-    }));
-  }, []);
-
-  // Use real debt notifications
-  const { data: debtData, isLoading: isLoadingDebt, refetch } = useDebtNotifications({
+  // General system notifications (production delays, order updates, etc.)
+  const { data: generalData, isLoading: isLoadingGeneral, refetch: refetchGeneral } = useNotifications({
     pageNumber: currentPage,
     pageSize,
-    isRead: activeTab === "unread" ? false : activeTab === "read" ? true : undefined,
   });
 
-  const { data: unreadCountData, refetch: refetchUnreadCount } = useDebtNotifications({
-    pageSize: 1,
-    isRead: false,
+  // Real debt notifications
+  const { data: debtData, isLoading: isLoadingDebt, refetch: refetchDebt } = useDebtNotifications({
+    pageNumber: currentPage,
+    pageSize,
   });
 
-  const markAsRead = useMarkDebtNotificationRead();
-  const markAllAsRead = useMarkAllDebtNotificationsRead();
+  const markAsRead = useMarkNotificationAsRead();
+  const markAllAsRead = useMarkAllNotificationsAsRead();
   const deleteNotification = useDeleteNotification();
 
   // Reset page when tab changes
@@ -147,23 +126,41 @@ function NotificationCenter() {
 
     const handleNewNotification = () => {
       // Refetch notifications when a new one arrives
-      refetch();
-      refetchUnreadCount();
+      refetchGeneral();
+      refetchDebt();
     };
 
-    // Listen for new notifications
     connection.on("ReceiveNotification", handleNewNotification);
 
     return () => {
       connection.off("ReceiveNotification", handleNewNotification);
     };
-  }, [connection, refetch, refetchUnreadCount]);
+  }, [connection, refetchGeneral, refetchDebt]);
 
-  // Filter and format notifications
+  // Filter and format notifications by combining both general and debt notifications
   const filteredNotifications = useMemo(() => {
-    if (!debtData?.items) return [];
+    const generalList = (generalData?.items || []).map((item) => ({
+      id: item.id,
+      type: (item.type || "alert") as NotificationType,
+      title: item.title,
+      message: item.message,
+      summary: undefined,
+      recipientId: item.recipientId || 0,
+      recipientType: "user" as const,
+      relatedEntityType: item.relatedEntityType || "general",
+      relatedEntityId: item.relatedEntityId,
+      status: "delivered" as const,
+      isRead: !!item.isRead,
+      readAt: item.readAt,
+      createdAt: item.createdAt || new Date().toISOString(),
+      updatedAt: item.updatedAt || new Date().toISOString(),
+      channels: ["in_app" as const],
+      actions: [],
+      data: item.data || {},
+      tags: [],
+    }));
 
-    let filtered = debtData.items.map(item => ({
+    const debtList = (debtData?.items || []).map((item) => ({
       id: item.id,
       type: (item.type || "alert") as NotificationType,
       title: item.subject || "Thông báo công nợ",
@@ -180,9 +177,24 @@ function NotificationCenter() {
       updatedAt: item.createdAt || new Date().toISOString(),
       channels: ["in_app" as const],
       actions: [],
-      data: {},
+      data: { customerId: (item as { customerId?: number }).customerId },
       tags: [],
     }));
+
+    // Deduplicate by title+createdAt and combine
+    const map = new Map();
+    [...generalList, ...debtList].forEach((n) => {
+      const key = `${n.title}-${n.message}`;
+      if (!map.has(key)) map.set(key, n);
+    });
+    let filtered = Array.from(map.values());
+
+    // Filter by tab
+    if (activeTab === "unread") {
+      filtered = filtered.filter((n) => !n.isRead);
+    } else if (activeTab === "read") {
+      filtered = filtered.filter((n) => n.isRead);
+    }
 
     // Filter by type
     if (selectedType !== "all") {
@@ -199,17 +211,24 @@ function NotificationCenter() {
       );
     }
 
-    return filtered;
-  }, [debtData, selectedType, searchQuery]);
+    // Sort by createdAt descending
+    return filtered.sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  }, [generalData, debtData, activeTab, selectedType, searchQuery]);
 
-  const unreadCount = unreadCountData?.total ?? 0;
+  const unreadCount = useMemo(() => {
+    const generalUnread = (generalData?.items || []).filter((n) => !n.isRead).length;
+    const debtUnread = (debtData?.items || []).filter((n) => !n.isRead).length;
+    return generalUnread + debtUnread;
+  }, [generalData, debtData]);
 
   const handleMarkAsRead = async (id: number) => {
     try {
       await markAsRead.mutateAsync(id);
       toast.success("Đã đánh dấu đã đọc");
-      refetch();
-      refetchUnreadCount();
+      refetchGeneral();
+      refetchDebt();
     } catch (error) {
       toast.error("Có lỗi xảy ra");
     }
@@ -219,8 +238,8 @@ function NotificationCenter() {
     try {
       await markAllAsRead.mutateAsync();
       toast.success("Đã đánh dấu tất cả đã đọc");
-      refetch();
-      refetchUnreadCount();
+      refetchGeneral();
+      refetchDebt();
     } catch (error) {
       toast.error("Có lỗi xảy ra");
     }
@@ -230,7 +249,8 @@ function NotificationCenter() {
     try {
       await deleteNotification.mutateAsync(id);
       toast.success("Đã xóa thông báo");
-      refetch();
+      refetchGeneral();
+      refetchDebt();
     } catch (error) {
       toast.error("Có lỗi xảy ra");
     }

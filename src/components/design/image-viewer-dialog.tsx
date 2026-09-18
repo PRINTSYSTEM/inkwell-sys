@@ -16,6 +16,7 @@ interface ImageViewerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   imageUrl: string;
+  fallbackUrl?: string;
   title?: string;
 }
 
@@ -23,9 +24,16 @@ export function ImageViewerDialog({
   open,
   onOpenChange,
   imageUrl,
+  fallbackUrl,
   title,
 }: ImageViewerDialogProps) {
-  const formattedUrl = formatImageUrl(imageUrl) || "/placeholder.svg";
+  const formattedMainUrl = formatImageUrl(imageUrl) || "/placeholder.svg";
+  const formattedFallback = formatImageUrl(fallbackUrl);
+
+  const [currentSrc, setCurrentSrc] = useState<string>(formattedMainUrl);
+  const [isFallback, setIsFallback] = useState<boolean>(false);
+  const [hasError, setHasError] = useState<boolean>(false);
+
   const [scale, setScale] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -33,14 +41,39 @@ export function ImageViewerDialog({
   const dragStart = useRef({ x: 0, y: 0 });
   const [containerNode, setContainerNode] = useState<HTMLDivElement | null>(null);
 
-  // Reset image view state when dialog closes or image changes
+  // Reset state when modal opens or target URL changes
   useEffect(() => {
+    const initialUrl = formatImageUrl(imageUrl) || "/placeholder.svg";
+    setCurrentSrc(initialUrl);
+    setIsFallback(false);
+    setHasError(false);
+
     if (!open) {
       setScale(1);
       setRotation(0);
       setPosition({ x: 0, y: 0 });
     }
-  }, [open, imageUrl]);
+  }, [open, imageUrl, fallbackUrl]);
+
+  // Image load failure fallback handler
+  const handleImageError = () => {
+    if (!isFallback) {
+      // 1. Try explicit fallbackUrl if provided
+      if (formattedFallback && formattedFallback !== currentSrc) {
+        setCurrentSrc(formattedFallback);
+        setIsFallback(true);
+        return;
+      }
+      // 2. Try auto-derived thumbnail URL (/images/ -> /images/thumbs/)
+      if (currentSrc.includes("/images/") && !currentSrc.includes("/images/thumbs/")) {
+        const derivedThumb = currentSrc.replace("/images/", "/images/thumbs/");
+        setCurrentSrc(derivedThumb);
+        setIsFallback(true);
+        return;
+      }
+    }
+    setHasError(true);
+  };
 
   // Handle wheel zoom using native DOM event to bypass React passive event listener limitations.
   // Using callback ref node ensures listener is registered as soon as portal element mounts.
@@ -102,13 +135,27 @@ export function ImageViewerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl w-full p-0 overflow-hidden bg-background border border-border [&>button]:hidden">
-        <div className="relative h-[80vh] flex flex-col justify-between">
+      <DialogContent className="max-w-[95vw] w-[1300px] p-0 overflow-hidden bg-background border border-border [&>button]:hidden shadow-2xl rounded-2xl">
+        <div className="relative h-[85vh] max-h-[900px] flex flex-col justify-between">
           
+          {/* Top-left image title badge & fallback notice */}
+          <div className="absolute top-4 left-4 z-50 flex flex-col gap-1.5 max-w-[60%] pointer-events-none select-none">
+            {title && (
+              <div className="bg-background/95 text-foreground px-3 py-1.5 rounded-xl text-xs font-bold shadow-md border border-border/85 backdrop-blur-sm truncate">
+                🖼️ {title}
+              </div>
+            )}
+            {isFallback && (
+              <div className="bg-amber-500/90 text-white px-3 py-1.5 rounded-xl text-xs font-medium shadow backdrop-blur-sm">
+                ⚠️ Ảnh gốc không tồn tại - Đang hiển thị ảnh thu nhỏ (Thumb)
+              </div>
+            )}
+          </div>
+
           {/* Interactive Image Container */}
           <div
             ref={setContainerNode}
-            className={`flex-1 w-full h-full flex items-center justify-center overflow-hidden select-none bg-stone-50 dark:bg-stone-950/60 cursor-grab ${
+            className={`flex-1 w-full h-full flex items-center justify-center overflow-hidden select-none bg-stone-100 dark:bg-stone-950/80 cursor-grab ${
               isDragging ? "cursor-grabbing" : ""
             }`}
             onMouseDown={handleMouseDown}
@@ -123,13 +170,21 @@ export function ImageViewerDialog({
                 transition: isDragging ? "none" : "transform 0.15s ease-out",
                 transformOrigin: "center center",
               }}
-              className="flex items-center justify-center"
+              className="flex items-center justify-center max-w-full max-h-full p-4"
             >
-              <img
-                src={formattedUrl}
-                alt={title || "Image"}
-                className="max-w-[90vw] max-h-[75vh] object-contain pointer-events-none"
-              />
+              {hasError ? (
+                <div className="text-center p-6 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-xl border border-rose-200 dark:border-rose-900/50">
+                  <p className="font-semibold text-sm">Không thể tải hình ảnh</p>
+                  <p className="text-xs mt-1 text-muted-foreground">Ảnh gốc và ảnh thu nhỏ đều không tồn tại trên máy chủ.</p>
+                </div>
+              ) : (
+                <img
+                  src={currentSrc}
+                  alt={title || "Image"}
+                  onError={handleImageError}
+                  className="max-w-full max-h-[calc(85vh-40px)] w-auto h-auto object-contain pointer-events-none select-none drop-shadow-md rounded"
+                />
+              )}
             </div>
           </div>
 
@@ -187,7 +242,7 @@ export function ImageViewerDialog({
               asChild
               title="Tải về"
             >
-              <a href={formattedUrl} download target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-full h-full">
+              <a href={currentSrc} download target="_blank" rel="noopener noreferrer" className="flex items-center justify-center w-full h-full">
                 <Download className="h-4 w-4" />
               </a>
             </Button>

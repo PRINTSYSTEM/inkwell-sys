@@ -440,7 +440,7 @@ export function CreateProofingOrderModal({
                             className={cn(
                               "h-9 flex-1 text-right font-mono text-base font-semibold",
                               isExceeded &&
-                                "border-destructive focus-visible:ring-destructive"
+                              "border-destructive focus-visible:ring-destructive"
                             )}
                             value={currentQty || ""}
                             onChange={(e) =>
@@ -559,7 +559,7 @@ export function CreateProofingOrderModal({
                         searchPlaceholder="Tìm khổ giấy..."
                         popoverWidth="w-[300px]"
                         options={[
-                          { value: "custom", label: "-- Nhập thủ công --" },
+                          { value: "custom", label: "Nhập thủ công" },
                           ...(paperSizes || []).map((ps) => ({
                             value: ps.id.toString(),
                             label: `${ps.name}${ps.width && ps.height ? ` (${ps.width}×${ps.height})` : ""} cm`
@@ -593,9 +593,9 @@ export function CreateProofingOrderModal({
                         </Label>
                         <div className="h-10 flex items-center px-3 rounded-md border bg-background text-sm text-muted-foreground">
                           {paperSizeId !== "none" &&
-                          paperSizes?.find(
-                            (ps) => ps.id.toString() === paperSizeId
-                          ) ? (
+                            paperSizes?.find(
+                              (ps) => ps.id.toString() === paperSizeId
+                            ) ? (
                             <span>
                               {
                                 paperSizes.find(

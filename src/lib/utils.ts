@@ -141,3 +141,93 @@ export function getDebtAlert(customer: Customer): React.ReactNode | null {
   }
   return null;
 }
+
+/**
+ * Automatically compresses an image file before upload.
+ * - Resizes max dimensions to 1920px
+ * - Converts high-res JPEG/PNG files to compressed JPEG (quality 0.8)
+ * - Retains original file if compression fails or isn't needed.
+ */
+export async function compressImageFile(
+  file: File,
+  options: { maxWidth?: number; maxHeight?: number; quality?: number } = {}
+): Promise<File> {
+  const { maxWidth = 1920, maxHeight = 1920, quality = 0.8 } = options;
+
+  // Skip non-images or SVGs/GIFs
+  if (
+    !file ||
+    !file.type.startsWith("image/") ||
+    file.type.includes("svg") ||
+    file.type.includes("gif")
+  ) {
+    return file;
+  }
+
+  // Skip small files (< 200KB)
+  if (file.size < 200 * 1024) {
+    return file;
+  }
+
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (e) => {
+      const img = new Image();
+      img.src = e.target?.result as string;
+
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        // Calculate aspect-ratio bounds
+        if (width > maxWidth || height > maxHeight) {
+          if (width / height > maxWidth / maxHeight) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          } else {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(file);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const mimeType = file.type === "image/png" && quality > 0.9 ? "image/png" : "image/jpeg";
+        canvas.toBlob(
+          (blob) => {
+            if (!blob || blob.size >= file.size) {
+              resolve(file);
+              return;
+            }
+            const extension = mimeType === "image/jpeg" ? ".jpg" : ".png";
+            const baseName = file.name.substring(0, file.name.lastIndexOf(".")) || file.name;
+            const newFileName = `${baseName}${extension}`;
+            const compressedFile = new File([blob], newFileName, {
+              type: mimeType,
+              lastModified: Date.now(),
+            });
+            resolve(compressedFile);
+          },
+          mimeType,
+          quality
+        );
+      };
+
+      img.onerror = () => resolve(file);
+    };
+
+    reader.onerror = () => resolve(file);
+  });
+}
+

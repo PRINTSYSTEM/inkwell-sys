@@ -117,7 +117,6 @@ export const usePrintOrderCounts = () => {
       );
       return res.data;
     },
-    refetchInterval: 15000, // Auto refresh counts every 15s
   });
 };
 

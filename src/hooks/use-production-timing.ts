@@ -8,6 +8,8 @@ import type {
   ProductionConfigItem,
   ProductionDelayReportPaginate,
   ProductionDelaySummaryResponse,
+  ProductionDeliveryReportPaginate,
+  ProductionDeliverySummaryResponse,
 } from "@/Schema";
 
 // Error type for API responses
@@ -115,3 +117,38 @@ export const useProductionDelaySummary = (params: Record<string, any> = {}) => {
     },
   });
 };
+
+/**
+ * Hook to fetch paginated production delivery SLA reports
+ */
+export const useProductionDeliveryReport = (params: Record<string, any> = {}) => {
+  const normalized = normalizeParams(params);
+  return useQuery<ProductionDeliveryReportPaginate>({
+    queryKey: ["production-orders", "delivery-report", normalized],
+    queryFn: async () => {
+      const resp = await apiRequest.get<ProductionDeliveryReportPaginate>(
+        API_SUFFIX.PRODUCTION_DELIVERY_REPORT,
+        { params: normalized }
+      );
+      return resp.data;
+    },
+  });
+};
+
+/**
+ * Hook to fetch production delivery SLA summary stats
+ */
+export const useProductionDeliverySummary = (params: Record<string, any> = {}) => {
+  const normalized = normalizeParams(params);
+  return useQuery<ProductionDeliverySummaryResponse>({
+    queryKey: ["production-orders", "delivery-summary", normalized],
+    queryFn: async () => {
+      const resp = await apiRequest.get<ProductionDeliverySummaryResponse>(
+        API_SUFFIX.PRODUCTION_DELIVERY_SUMMARY,
+        { params: normalized }
+      );
+      return resp.data;
+    },
+  });
+};
+

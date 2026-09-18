@@ -37,6 +37,10 @@ export interface DesignItem {
   designId?: number; // from design.id (for fetching available quantity)
   designerName?: string; // from design.designer?.name
   accountantName?: string; // from design.accountant?.name
+  productionFlowCode?: string;
+  productionFlowName?: string;
+  flowCode?: string;
+  flowName?: string;
   specification?: string[]; // from design.specification
   queueItemId?: string; // from BE queueItemId ("RD_xxx" or "OD_xxx")
   readyDesignId?: number; // from BE readyDesignId

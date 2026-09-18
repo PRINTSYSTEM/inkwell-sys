@@ -30,6 +30,7 @@ export const ProductionStepResponseSchema = GenProductionStepResponseSchema.exte
   elapsedHours: z.number().nullish(),
   remainingHours: z.number().nullish(),
   lateHours: z.number().nullish(),
+  workerCount: z.number().nullish(),
 }).passthrough();
 export type ProductionStepResponse = z.infer<
   typeof ProductionStepResponseSchema
@@ -40,6 +41,7 @@ export const ProductionOrderResponseSchema = GenProductionOrderResponseSchema.ex
   isUrgent: z.boolean().nullish(),
   timingStatus: z.string().nullish(),
   mostLateStepType: z.string().nullish(),
+  totalWorkerCount: z.number().nullish(),
   steps: z.array(ProductionStepResponseSchema).nullish(),
   proofingOrder: z.object({
     id: z.number(),
@@ -142,10 +144,55 @@ export const ProductionOrderResponseSchema = GenProductionOrderResponseSchema.ex
   totalQuantity: z.number().nullish(),
   impositionCompletedAt: z.string().nullish(),
   printOrderCompletedAt: z.string().nullish(),
+  deliveryReferenceAt: z.string().nullish(),
+  plannedDeliveryAt: z.string().nullish(),
+  deliveryDesignTypeIdSnapshot: z.number().nullish(),
+  deliverySlaDays: z.number().nullish(),
+  deliveryWarningBeforeHours: z.number().nullish(),
+  kcsCompletedAt: z.string().nullish(),
+  deliverySlaStatus: z.enum(["NORMAL", "WARNING", "OVERDUE", "ON_TIME", "COMPLETED_LATE"]).nullish(),
+  deliveryRemainingHours: z.number().nullish(),
+  deliveryLateHours: z.number().nullish(),
+  deliverySlaUnavailableReason: z.enum(["NOT_APPLIED", "MISSING_CONFIG", "MISSING_COMPLETION_DATA", "CANCELLED"]).nullish(),
+  deliverySlaEvaluatedAt: z.string().nullish(),
 }).passthrough();
 export type ProductionOrderResponse = z.infer<
   typeof ProductionOrderResponseSchema
 >;
+
+// ===== ProductionDeliverySla Status & Types =====
+export const ProductionDeliverySlaStatusEnum = z.enum([
+  "NORMAL",
+  "WARNING",
+  "OVERDUE",
+  "ON_TIME",
+  "COMPLETED_LATE",
+]);
+export type ProductionDeliverySlaStatus = z.infer<typeof ProductionDeliverySlaStatusEnum>;
+export type DeliverySlaFilter = "ALL" | ProductionDeliverySlaStatus;
+
+export const ProductionDeliverySlaUnavailableReasonEnum = z.enum([
+  "NOT_APPLIED",
+  "MISSING_CONFIG",
+  "MISSING_COMPLETION_DATA",
+  "CANCELLED",
+]);
+export type ProductionDeliverySlaUnavailableReason = z.infer<typeof ProductionDeliverySlaUnavailableReasonEnum>;
+
+export const ProductionDeliverySlaSchema = z.object({
+  deliveryReferenceAt: z.string().nullish(),
+  plannedDeliveryAt: z.string().nullish(),
+  deliveryDesignTypeIdSnapshot: z.number().nullish(),
+  deliverySlaDays: z.number().nullish(),
+  deliveryWarningBeforeHours: z.number().nullish(),
+  kcsCompletedAt: z.string().nullish(),
+  deliverySlaStatus: ProductionDeliverySlaStatusEnum.nullish(),
+  deliveryRemainingHours: z.number().nullish(),
+  deliveryLateHours: z.number().nullish(),
+  deliverySlaUnavailableReason: ProductionDeliverySlaUnavailableReasonEnum.nullish(),
+  deliverySlaEvaluatedAt: z.string().nullish(),
+}).passthrough();
+export type ProductionDeliverySlaResponse = z.infer<typeof ProductionDeliverySlaSchema>;
 
 // ===== ProductionOrderResponsePaginate =====
 export const ProductionOrderResponsePaginateSchema = createPagedResponseSchema(
@@ -296,4 +343,39 @@ export const ProductionResponsePagedResponseSchema = createPagedResponseSchema(
 export type ProductionResponsePagedResponse = z.infer<
   typeof ProductionResponsePagedResponseSchema
 >;
+
+// ===== ProductionDeliveryReportRowResponse =====
+export const ProductionDeliveryReportRowSchema = ProductionDeliverySlaSchema.extend({
+  productionOrderId: z.number(),
+  proofingOrderCode: z.string().nullish(),
+  designTypeName: z.string().nullish(),
+  productionStatus: z.string().nullish(),
+}).passthrough();
+export type ProductionDeliveryReportRowResponse = z.infer<
+  typeof ProductionDeliveryReportRowSchema
+>;
+
+export const ProductionDeliveryReportPaginateSchema = createPagedResponseSchema(
+  ProductionDeliveryReportRowSchema
+);
+export type ProductionDeliveryReportPaginate = z.infer<
+  typeof ProductionDeliveryReportPaginateSchema
+>;
+
+// ===== ProductionDeliverySummaryResponse =====
+export const ProductionDeliverySummaryResponseSchema = z.object({
+  total: z.number().default(0),
+  normalCount: z.number().default(0),
+  warningCount: z.number().default(0),
+  overdueCount: z.number().default(0),
+  onTimeCount: z.number().default(0),
+  completedLateCount: z.number().default(0),
+  unavailableCount: z.number().default(0),
+  totalViolated: z.number().default(0),
+  evaluatedAt: z.string().nullish(),
+}).passthrough();
+export type ProductionDeliverySummaryResponse = z.infer<
+  typeof ProductionDeliverySummaryResponseSchema
+>;
+
 

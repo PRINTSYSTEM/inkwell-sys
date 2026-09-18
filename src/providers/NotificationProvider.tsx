@@ -7,6 +7,8 @@ import { NotificationContext } from "@/context/notification-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { debtNotificationKeys } from "@/hooks/use-debt-notification";
 import { orderKeys } from "@/hooks/use-order";
+import { printOrderKeys } from "@/hooks/use-print-order";
+import { productionOrderKeys } from "@/hooks/use-production";
 
 interface NotificationMessage {
   id?: number | string;
@@ -54,8 +56,10 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     const newConnection = new signalR.HubConnectionBuilder()
       .withUrl(hubUrl, {
         accessTokenFactory: () => accessToken,
-        // Use LongPolling on localhost to avoid SSL/WebSocket issues
-        transport: signalR.HttpTransportType.LongPolling,
+        // Prefer WebSockets, fallback to LongPolling if WebSockets is unavailable
+        transport:
+          signalR.HttpTransportType.WebSockets |
+          signalR.HttpTransportType.LongPolling,
       })
       .withAutomaticReconnect()
       .configureLogging(signalR.LogLevel.Warning)
@@ -63,12 +67,17 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
 
     // Handler function để xử lý thông báo real-time
     const handleNotification = (message: NotificationMessage) => {
+      // ⚠️ Tín hiệu push-only không hiện toast / không làm tăng unread count
+      const isPushOnlySync =
+        message.type === "PrintOrderStatusChanged" ||
+        message.type === "ProductionOrderStatusChanged";
+
       // Tránh hiển thị trùng lặp với thông báo tạo lệnh sản xuất từ frontend
       const isDuplicateProductionToast =
         message.title === "Đã tạo lệnh sản xuất thành công" ||
         message.message === "Theo dõi và quản lý tiến độ sản xuất";
 
-      if (!isDuplicateProductionToast) {
+      if (!isPushOnlySync && !isDuplicateProductionToast) {
         // 1. Hiển thị Toast thông báo cho người dùng với cơ chế chống tràn (deduplication)
         toast(message.title, {
           id: message.id ? `${message.type}-${message.id}` : `${message.type}-${message.title}`,
@@ -85,6 +94,27 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       switch (message.type) {
+        case "PrintOrderStatusChanged": {
+          // Invalidate các query liên quan màn điều lệnh + màn lệnh in
+          queryClient.invalidateQueries({ queryKey: ["print-orders"] });
+          queryClient.invalidateQueries({ queryKey: printOrderKeys.all });
+          break;
+        }
+
+        case "ProductionOrderStatusChanged": {
+          const prodId = message.data?.ProductionOrderId || message.data?.productionOrderId;
+          if (prodId) {
+            queryClient.invalidateQueries({ queryKey: ["production-order", Number(prodId)] });
+            queryClient.invalidateQueries({ queryKey: productionOrderKeys.detail(Number(prodId)) });
+          }
+          queryClient.invalidateQueries({ queryKey: ["production-orders"] });
+          queryClient.invalidateQueries({ queryKey: ["productions"] });
+          queryClient.invalidateQueries({ queryKey: productionOrderKeys.all });
+          queryClient.invalidateQueries({ queryKey: ["post-print-orders"] });
+          queryClient.invalidateQueries({ queryKey: ["post-print-counts"] });
+          break;
+        }
+
         case "CustomerDebtWarning":
           // Làm mới danh sách thông báo công nợ, thông báo chung và số lượng trên chuông
           queryClient.invalidateQueries({ queryKey: debtNotificationKeys.all });
@@ -104,11 +134,13 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
         case "ProductionCompleted":
         case "ProductionStarted":
           queryClient.invalidateQueries({ queryKey: ["productions"] });
+          queryClient.invalidateQueries({ queryKey: ["production-orders"] });
           break;
 
         default:
-          // Mặc định làm mới thông báo chung
-          queryClient.invalidateQueries({ queryKey: ["notifications"] });
+          if (!isPushOnlySync) {
+            queryClient.invalidateQueries({ queryKey: ["notifications"] });
+          }
           break;
       }
     };

@@ -446,6 +446,7 @@ export default function DesignTypesPage() {
               <TableRow className="bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-700 dark:text-slate-300">
                 <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 w-[200px]">Mã / Tên loại thiết kế</TableHead>
                 <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 text-center w-[80px]">Thứ tự</TableHead>
+                <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 text-center w-[140px]">SLA Giao hàng</TableHead>
                 <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 text-center w-[120px]">Trạng thái</TableHead>
                 <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 w-[180px]">Người tạo</TableHead>
                 <TableHead className="h-9 font-bold text-slate-700 dark:text-slate-300 text-right w-[180px] pr-4">Thao tác</TableHead>
@@ -477,6 +478,21 @@ export default function DesignTypesPage() {
                     </TableCell>
                     <TableCell className="py-2 text-center font-mono font-medium text-slate-600">
                       {designType.displayOrder}
+                    </TableCell>
+
+                    <TableCell className="py-2 text-center">
+                      {designType.deliverySlaDays ? (
+                        <div className="flex flex-col items-center">
+                          <span className="font-bold text-slate-800 dark:text-slate-200">
+                            {designType.deliverySlaDays} ngày
+                          </span>
+                          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                            (Báo trước {designType.deliveryWarningBeforeHours ?? 0}h)
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 text-[11px]">—</span>
+                      )}
                     </TableCell>
 
                     <TableCell className="py-2 text-center">

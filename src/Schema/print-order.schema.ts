@@ -43,6 +43,10 @@ export interface PrintOrderResponse {
   fluteMaterialName?: string | null;
   isPaperReady?: boolean | null;
   isFluteReady?: boolean | null;
+  isPendingMaterials?: boolean;
+  expectedPaperDate?: string | null;
+  expectedMaterialAt?: string | null;
+  scheduledPrintDate?: string | null;
   productionOrder?: ProductionOrderResponse;
 }
 
@@ -73,6 +77,9 @@ export interface PostPrintCountsResponse {
 
 export interface DispatchPrintOrdersRequest {
   printOrderIds: number[];
+  isPendingMaterials?: boolean;
+  expectedPaperDate?: string;
+  scheduledPrintDate?: string;
 }
 
 export interface EnqueuePrintOrdersRequest {

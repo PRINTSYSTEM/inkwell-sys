@@ -30,6 +30,10 @@ import {
   X,
   Move,
   Filter,
+  Inbox,
+  MoreHorizontal,
+  ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +48,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -78,25 +88,36 @@ import {
 import { useDesignTypeList } from "@/hooks/use-design-type";
 import type { PrintOrderResponse } from "@/Schema/print-order.schema";
 
-const getDesignTypeBadgeStyle = (code?: string) => {
-  switch (code?.toUpperCase()) {
-    case "H":
-      return "bg-blue-100 text-blue-800 border-blue-200";
-    case "N":
-      return "bg-purple-100 text-purple-800 border-purple-200";
-    case "D":
-      return "bg-amber-100 text-amber-800 border-amber-200";
-    case "T":
-      return "bg-emerald-100 text-emerald-800 border-emerald-200";
-    default:
-      return "bg-slate-100 text-slate-800 border-slate-200";
+const getDesignTypeBadgeStyle = (typeName?: string, typeCode?: string) => {
+  const code = (typeCode || typeName || "").toLowerCase();
+  if (code.includes("nhãn") || code.includes("label") || code.includes("paper") || code === "n") {
+    return "bg-purple-100 text-purple-700 border border-purple-200 font-semibold rounded-full px-3 py-0.5 text-[11px]";
   }
+  if (code.includes("hộp") || code.includes("box") || code === "h") {
+    return "bg-sky-100 text-sky-700 border border-sky-200 font-semibold rounded-full px-3 py-0.5 text-[11px]";
+  }
+  if (code.includes("túi") || code.includes("bag") || code.includes("pe") || code === "t") {
+    return "bg-emerald-100 text-emerald-700 border border-emerald-200 font-semibold rounded-full px-3 py-0.5 text-[11px]";
+  }
+  if (code.includes("decal") || code.includes("sticker") || code === "d") {
+    return "bg-amber-100 text-amber-800 border border-amber-200 font-semibold rounded-full px-3 py-0.5 text-[11px]";
+  }
+  return "bg-slate-100 text-slate-700 border border-slate-200 font-semibold rounded-full px-3 py-0.5 text-[11px]";
 };
 
 const formatDateTime = (dateStr?: string | null) => {
   if (!dateStr) return "—";
   try {
-    return format(new Date(dateStr), "HH:mm - dd/MM/yyyy", { locale: vi });
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const isMidnight =
+      typeof dateStr === "string" &&
+      (dateStr.includes("T00:00:00") ||
+        dateStr.endsWith(" 00:00:00") ||
+        (d.getHours() === 0 && d.getMinutes() === 0));
+    return isMidnight
+      ? format(d, "dd/MM/yyyy", { locale: vi })
+      : format(d, "HH:mm - dd/MM/yyyy", { locale: vi });
   } catch {
     return dateStr;
   }
@@ -135,7 +156,7 @@ const formatCompletedDate = (item: PrintOrderResponse) => {
 };
 
 const formatDispatchedDate = (item: PrintOrderResponse) => {
-  const rawDate = item.dispatchedAt || item.createdAt;
+  const rawDate = item.scheduledPrintDate || item.dispatchedAt || item.createdAt;
   if (!rawDate) return "Chưa xác định ngày";
   try {
     const d = new Date(rawDate);
@@ -156,9 +177,17 @@ export default function PrintOrdersPage() {
   // Read-Only Proofing Detail Modal State
   const [viewingProofingOrderId, setViewingProofingOrderId] = useState<number | null>(null);
 
-  // Unqueued Section Filters & Search
+  // Unqueued Section Filters, Search & Collapsible Groups
   const [notQueuedDateFilter, setNotQueuedDateFilter] = useState<string>("all");
   const [notQueuedSearchQuery, setNotQueuedSearchQuery] = useState<string>("");
+  const [collapsedDateGroups, setCollapsedDateGroups] = useState<Record<string, boolean>>({});
+
+  const toggleDateGroupCollapse = (dateLabel: string) => {
+    setCollapsedDateGroups((prev) => ({
+      ...prev,
+      [dateLabel]: !prev[dateLabel],
+    }));
+  };
 
   // Completed Orders Date Range Filter ("YYYY-MM-DD")
   const [completedFromDate, setCompletedFromDate] = useState<string>("");
@@ -328,7 +357,7 @@ export default function PrintOrdersPage() {
     });
   }, [notQueuedItems, notQueuedSearchQuery, notQueuedDateFilter]);
 
-  // Group filtered unqueued items by Dispatched Date
+  // Group filtered unqueued items by Dispatched Date (Today first, then descending by date)
   const groupedNotQueuedByDate = useMemo(() => {
     const groups: Record<string, PrintOrderResponse[]> = {};
 
@@ -340,10 +369,25 @@ export default function PrintOrdersPage() {
       groups[dateLabel].push(item);
     });
 
+    const todayLabel = format(new Date(), "dd/MM/yyyy", { locale: vi });
+
+    const parseDateKey = (dateStr: string): number => {
+      if (!dateStr || dateStr === "Chưa xác định ngày") return 0;
+      try {
+        const parts = dateStr.split("/");
+        if (parts.length === 3) {
+          return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])).getTime();
+        }
+      } catch {}
+      return 0;
+    };
+
     const sortedDateKeys = Object.keys(groups).sort((a, b) => {
+      if (a === todayLabel) return -1;
+      if (b === todayLabel) return 1;
       if (a === "Chưa xác định ngày") return 1;
       if (b === "Chưa xác định ngày") return -1;
-      return b.localeCompare(a);
+      return parseDateKey(b) - parseDateKey(a);
     });
 
     return sortedDateKeys.map((dateKey) => ({
@@ -924,12 +968,7 @@ export default function PrintOrdersPage() {
                 </span>
               </div>
 
-              <div
-                className={cn(
-                  "grid gap-3",
-                  printingItems.length === 1 ? "grid-cols-1" : "grid-cols-1 xl:grid-cols-2"
-                )}
-              >
+              <div className="grid grid-cols-1 gap-3">
                 {printingItems.map((item) => {
                   const po = item.productionOrder;
                   const proofingCode = po?.proofingOrderCode || `PO-${item.productionOrderId}`;
@@ -950,134 +989,151 @@ export default function PrintOrdersPage() {
                     <div
                       key={item.id}
                       className={cn(
-                        "bg-white p-3.5 px-4 rounded-xl border transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs hover:shadow-md",
+                        "bg-white p-3 px-4 rounded-xl border transition-all space-y-2 shadow-2xs hover:shadow-md",
                         isRedispatchedReturned
                           ? "border-rose-300 border-l-4 border-l-rose-500 bg-rose-50/20"
                           : "border-amber-300/90"
                       )}
                     >
-                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                        {/* Thumbnail Image */}
-                        <div
-                          onClick={() => fullImage && setViewingImageUrl(fullImage)}
-                          className={cn(
-                            "h-14 w-14 bg-slate-100 rounded-xl border border-slate-200 overflow-hidden shrink-0 transition-all",
-                            fullImage && "cursor-pointer hover:opacity-85 hover:ring-2 hover:ring-amber-500/80 shadow-2xs"
-                          )}
-                          title={fullImage ? "Bấm để xem ảnh phóng to" : undefined}
+                      {/* Top Row: Code + Design Type Badge + Status Badges */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          onClick={() => handleOpenProofingDetail(item)}
+                          className="font-mono text-base font-black text-blue-600 hover:text-blue-800 hover:underline cursor-pointer flex items-center gap-1"
+                          title="Bấm để xem chi tiết bài bình"
                         >
-                          {thumbnail ? (
-                            <img src={thumbnail} alt={proofingCode} className="h-full w-full object-cover" />
-                          ) : (
-                            <div className="h-full w-full flex items-center justify-center text-slate-400 bg-slate-50">
-                              <ImageIcon className="h-6 w-6" />
-                            </div>
-                          )}
-                        </div>
+                          <span>{proofingCode}</span>
+                          <Eye className="h-4 w-4 text-blue-500 opacity-80" />
+                        </button>
 
-                        {/* Details */}
-                        <div className="space-y-1 min-w-0 flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <button
-                              onClick={() => handleOpenProofingDetail(item)}
-                              className="font-mono text-sm font-black text-blue-600 hover:text-blue-800 hover:underline cursor-pointer flex items-center gap-1"
-                              title="Bấm để xem chi tiết bài bình"
-                            >
-                              <span>{proofingCode}</span>
-                              <Eye className="h-3.5 w-3.5 text-blue-500 opacity-80" />
-                            </button>
+                        {po?.designType?.name && (
+                          <Badge variant="outline" className={cn("text-[11px] font-bold px-2.5 py-0.5 rounded-full border", getDesignTypeBadgeStyle(po?.designType?.code))}>
+                            {po.designType.name}
+                          </Badge>
+                        )}
 
-                            {isRedispatchedReturned && (
-                              <Badge
-                                className="bg-sky-50 text-sky-800 border-sky-300 font-bold text-[9.5px] px-1.5 py-0 flex items-center gap-1 w-fit shadow-2xs"
-                                title={returnReason ? `Lý do xử lý/trả về trước đó: ${returnReason}` : "Bài đã được Điều lệnh chỉnh sửa & điều lại"}
-                              >
-                                <RotateCcw className="h-2.5 w-2.5 text-sky-600 shrink-0" />
-                                {returnTypeDisplayName || (returnType === "dispatch" ? "Điều lại từ trả về" : "Trả về in lại")}
-                              </Badge>
-                            )}
+                        {isRedispatchedReturned && (
+                          <Badge
+                            className="bg-sky-50 text-sky-800 border-sky-300 font-bold text-[9.5px] px-1.5 py-0 flex items-center gap-1 shadow-2xs"
+                            title={returnReason ? `Lý do xử lý/trả về trước đó: ${returnReason}` : "Bài đã được Điều lệnh chỉnh sửa & điều lại"}
+                          >
+                            <RotateCcw className="h-2.5 w-2.5 text-sky-600 shrink-0" />
+                            {returnTypeDisplayName || (returnType === "dispatch" ? "Điều lại từ trả về" : "Trả về in lại")}
+                          </Badge>
+                        )}
 
-                            {po?.designType?.name && (
-                              <Badge variant="outline" className={getDesignTypeBadgeStyle(po?.designType?.code)}>
-                                {po.designType.name}
-                              </Badge>
-                            )}
-                          </div>
-
-                          <div className="text-xs text-slate-700 font-medium truncate flex flex-wrap items-center gap-1.5">
-                            <span className="font-bold text-slate-900">{materialName}</span>
-                            {paperSizeName && (
-                              <span className="text-slate-500">• Khổ: <strong className="text-slate-700">{paperSizeName}</strong></span>
-                            )}
-                            <span className="inline-flex items-center gap-1 bg-amber-100/90 text-amber-900 font-mono font-bold text-[11px] px-2 py-0.5 rounded border border-amber-200">
-                              {totalQty.toLocaleString("vi-VN")} tờ
-                            </span>
-                          </div>
-
-                          {item.startedAt && (
-                            <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1">
-                              <Clock className="h-3 w-3 text-slate-400" />
-                              <span>Bắt đầu lúc: <strong className="text-slate-700">{formatDateTime(item.startedAt)}</strong></span>
-                            </div>
-                          )}
-                        </div>
+                        {(item.isPendingMaterials || item.expectedPaperDate || item.expectedMaterialAt) && (
+                          <Badge
+                            className="bg-amber-100 text-amber-950 border-amber-300 font-extrabold text-[9.5px] px-1.5 py-0.5 flex items-center gap-1 shadow-2xs"
+                          >
+                            <AlertTriangle className="h-2.5 w-2.5 text-amber-600 shrink-0" />
+                            Chờ NL
+                          </Badge>
+                        )}
                       </div>
 
-                      {/* Actions for Active Printing Job: Lịch sử -> Đang in / Tạm dừng -> Hoàn thành -> Trả về */}
-                      <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end self-end sm:self-center">
-                        {/* 1. Lịch sử */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleOpenHistory(item)}
-                          className="h-8 text-xs font-semibold text-slate-700 border-slate-200 hover:bg-slate-100 rounded-lg px-2.5 cursor-pointer shadow-2xs"
-                          title="Xem lịch sử sản xuất"
-                        >
-                          <History className="h-3.5 w-3.5 mr-1 text-slate-500" /> Lịch sử
-                        </Button>
+                      {/* Main Content Row: Image + Details on Left, Action Buttons on Right */}
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-0.5">
+                        {/* Left: Image & Material Info */}
+                        <div className="flex items-center gap-3 min-w-0 flex-wrap sm:flex-nowrap">
+                          {/* Thumbnail Image */}
+                          <div
+                            onClick={() => fullImage && setViewingImageUrl(fullImage)}
+                            className={cn(
+                              "h-12 w-12 bg-slate-100 rounded-lg border border-slate-200 overflow-hidden shrink-0 transition-all",
+                              fullImage && "cursor-pointer hover:opacity-85 hover:ring-2 hover:ring-amber-500/80 shadow-2xs"
+                            )}
+                            title={fullImage ? "Bấm để xem ảnh phóng to" : undefined}
+                          >
+                            {thumbnail ? (
+                              <img src={thumbnail} alt={proofingCode} className="h-full w-full object-cover" />
+                            ) : (
+                              <div className="h-full w-full flex items-center justify-center text-slate-400 bg-slate-50">
+                                <ImageIcon className="h-5 w-5" />
+                              </div>
+                            )}
+                          </div>
 
-                        {/* 2. Đang in Status & Tạm dừng Button */}
-                        <Badge className="bg-amber-500 text-white font-extrabold text-xs px-2.5 py-1.5 shadow-2xs flex items-center gap-1.5 animate-pulse rounded-lg">
-                          <Sparkles className="h-3.5 w-3.5 fill-current" /> Đang in...
-                        </Badge>
+                          {/* Material & Time Details */}
+                          <div className="flex items-center flex-wrap gap-x-2.5 gap-y-1 text-xs text-slate-900 leading-tight">
+                            <span className="font-bold text-slate-900 text-sm">
+                              {materialName}
+                            </span>
+                            {paperSizeName && (
+                              <span className="text-slate-600 font-medium text-xs">
+                                • Khổ: <strong className="text-slate-900 font-mono">{paperSizeName}</strong>
+                              </span>
+                            )}
+                            <span className="inline-flex items-center gap-1 bg-amber-100/90 text-amber-900 font-mono font-black text-xs px-2 py-0.5 rounded border border-amber-200">
+                              {totalQty.toLocaleString("vi-VN")} tờ
+                            </span>
 
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleOpenPauseDialog(item)}
-                          disabled={pauseMutation.isPending}
-                          className="h-8 text-xs font-bold text-amber-800 bg-amber-50 border-amber-300 hover:bg-amber-100 rounded-lg px-2.5 cursor-pointer shadow-2xs"
-                          title="Tạm dừng lệnh in này và đưa xuống cuối hàng chờ"
-                        >
-                          <Pause className="h-3.5 w-3.5 mr-1 text-amber-600" /> Tạm dừng
-                        </Button>
+                            {item.startedAt && (
+                              <span className="text-[11px] text-slate-500 font-mono flex items-center gap-1">
+                                <Clock className="h-3 w-3 text-slate-400 shrink-0" />
+                                <span>Bắt đầu lúc: <strong className="text-slate-700">{formatDateTime(item.startedAt)}</strong></span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
 
-                        {/* 3. Hoàn thành */}
-                        <Button
-                          size="sm"
-                          onClick={() => handleDirectComplete(item.id)}
-                          disabled={completeMutation.isPending}
-                          className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 rounded-lg shadow-2xs cursor-pointer transition-all"
-                        >
-                          {completeMutation.isPending ? (
-                            <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
-                          ) : (
-                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                          )}
-                          Hoàn thành
-                        </Button>
+                        {/* Right: Action Buttons Row */}
+                        <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                          {/* 1. Lịch sử */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenHistory(item)}
+                            className="h-8 text-xs font-semibold text-slate-700 border-slate-200 hover:bg-slate-100 rounded-lg px-3 cursor-pointer shadow-2xs"
+                            title="Xem lịch sử sản xuất"
+                          >
+                            <History className="h-3.5 w-3.5 mr-1.5 text-slate-500" /> Lịch sử
+                          </Button>
 
-                        {/* 4. Trả về */}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleOpenReturnDialog(item)}
-                          disabled={returnMutation.isPending}
-                          className="h-8 text-xs font-semibold text-rose-700 bg-rose-50/80 border-rose-200 hover:bg-rose-100 rounded-lg px-2.5 cursor-pointer shadow-2xs"
-                          title="Trả về bộ phận Bình bài để xử lý"
-                        >
-                          <RotateCcw className="h-3.5 w-3.5 mr-1 text-rose-600" /> Trả về
-                        </Button>
+                          {/* 2. Đang in Status */}
+                          <Badge className="bg-amber-500 text-white font-extrabold text-xs px-3 py-1.5 shadow-2xs flex items-center gap-1.5 animate-pulse rounded-lg">
+                            <Sparkles className="h-3.5 w-3.5 fill-current" /> Đang in...
+                          </Badge>
+
+                          {/* 3. Tạm dừng */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenPauseDialog(item)}
+                            disabled={pauseMutation.isPending}
+                            className="h-8 text-xs font-bold text-amber-800 bg-amber-50/90 border-amber-300 hover:bg-amber-100 rounded-lg px-3 cursor-pointer shadow-2xs"
+                            title="Tạm dừng lệnh in này và đưa xuống cuối hàng chờ"
+                          >
+                            <Pause className="h-3.5 w-3.5 mr-1 text-amber-600" /> Tạm dừng
+                          </Button>
+
+                          {/* 4. Hoàn thành */}
+                          <Button
+                            size="sm"
+                            onClick={() => handleDirectComplete(item.id)}
+                            disabled={completeMutation.isPending}
+                            className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 rounded-lg shadow-2xs cursor-pointer transition-all"
+                          >
+                            {completeMutation.isPending ? (
+                              <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                            ) : (
+                              <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                            )}
+                            Hoàn thành
+                          </Button>
+
+                          {/* 5. Trả về */}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleOpenReturnDialog(item)}
+                            disabled={returnMutation.isPending}
+                            className="h-8 text-xs font-semibold text-rose-700 bg-rose-50/80 border-rose-200 hover:bg-rose-100 rounded-lg px-3 cursor-pointer shadow-2xs"
+                            title="Trả về bộ phận Bình bài để xử lý"
+                          >
+                            <RotateCcw className="h-3.5 w-3.5 mr-1 text-rose-600" /> Trả về
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   );
@@ -1086,38 +1142,52 @@ export default function PrintOrdersPage() {
             </div>
           )}
 
-          {/* SECTION 2: HÀNG CHỜ IN (Queued Items with Drag & Drop + Easy Position Shifts) */}
+          {/* SECTION 2: HÀNG CHỜ IN (Bài Chờ In) */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
-            <div className="p-3 px-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between font-bold text-xs text-slate-800">
+            <div className="p-3 px-4 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between font-bold text-xs text-slate-800">
               <div className="flex items-center gap-2">
-                <Layers className="h-4 w-4 text-[#93631F]" />
-                <span>Bài Chờ In ({queuedItems.length} bài)</span>
+                <Layers className="h-4 w-4 text-blue-600" />
+                <span className="font-extrabold text-sm text-slate-900">Bài Chờ In</span>
+                <Badge className="bg-blue-600 text-white font-extrabold text-[11px] px-2.5 py-0.5 rounded-full">
+                  {queuedItems.length} bài
+                </Badge>
               </div>
               <span className="text-[11px] font-normal text-slate-500 flex items-center gap-1">
                 <GripVertical className="h-3.5 w-3.5 text-slate-400 inline" />
-                <span>Kéo biểu tượng <strong>⠿</strong> để đổi thứ tự, hoặc bấm số <strong>#X</strong> / nút <strong>⇈ Lên đầu</strong></span>
+                <span>Kéo biểu tượng <strong>⠿</strong> để đổi thứ tự, hoặc bấm số <strong>#X</strong> / nút <strong>LT⇈</strong> lên đầu</span>
               </span>
             </div>
 
             <Table>
               <TableHeader>
-                <TableRow className="bg-slate-50/50 hover:bg-slate-50/50 border-b border-slate-200 text-[10.5px] font-bold text-slate-600 uppercase">
-                  <TableHead className="w-24 text-center py-2">Thứ tự & Kéo</TableHead>
-                  <TableHead className="w-10 text-center py-2">Ảnh</TableHead>
-                  <TableHead className="w-[140px] py-2">Mã Bình bài</TableHead>
-                  <TableHead className="w-[110px] py-2">Loại bài</TableHead>
-                  <TableHead className="w-[200px] py-2">Chất liệu & Quy cách</TableHead>
-                  <TableHead className="w-[110px] text-right py-2">Số lượng</TableHead>
-                  <TableHead className="w-[170px] py-2">Thời gian</TableHead>
-                  <TableHead className="w-[180px] py-2">Trạng thái hàng chờ</TableHead>
-                  <TableHead className="w-[260px] text-center py-2 pr-3">Thao tác Thợ in</TableHead>
+                <TableRow className="bg-slate-50/50 hover:bg-slate-50/50 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase">
+                  <TableHead className="w-10 text-center py-2.5">
+                    <Checkbox className="h-3.5 w-3.5 text-blue-600" />
+                  </TableHead>
+                  <TableHead className="w-14 text-center py-2.5">Thứ tự</TableHead>
+                  <TableHead className="w-12 text-center py-2.5">Ảnh</TableHead>
+                  <TableHead className="w-[160px] py-2.5">Mã bình bài</TableHead>
+                  <TableHead className="w-[110px] py-2.5">Loại bài</TableHead>
+                  <TableHead className="w-[200px] py-2.5">Chất liệu & Quy cách</TableHead>
+                  <TableHead className="w-[110px] text-right py-2.5">Số lượng</TableHead>
+                  <TableHead className="w-[150px] py-2.5">Thời gian</TableHead>
+                  <TableHead className="w-[150px] py-2.5">Trạng thái</TableHead>
+                  <TableHead className="w-[220px] text-center py-2.5 pr-4">Thao tác</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {queuedItems.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="py-10 text-center text-slate-400 italic">
-                      Chưa có bài nào trong hàng chờ in. Vui lòng chọn bài từ danh sách "Chưa in" bên dưới để thêm vào hàng chờ.
+                    <TableCell colSpan={10} className="py-12 text-center text-slate-400">
+                      <div className="flex flex-col items-center justify-center gap-2 max-w-md mx-auto">
+                        <div className="p-3 bg-slate-100/80 text-slate-400 rounded-2xl">
+                          <Inbox className="h-7 w-7" />
+                        </div>
+                        <p className="font-bold text-slate-700 text-xs">Chưa có bài nào trong hàng chờ in.</p>
+                        <p className="text-[11px] text-slate-400 font-normal">
+                          Vui lòng chọn bài từ danh sách "Bài Chưa In" bên dưới để thêm vào hàng chờ.
+                        </p>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -1129,48 +1199,34 @@ export default function PrintOrdersPage() {
                     const thumbnail = formatImageUrl(rawThumbnail);
                     const fullImage = formatImageUrl(images[0]?.imageUrl || rawThumbnail);
                     const totalQty = po?.proofingOrder?.totalQuantity || po?.items?.[0]?.inputQty || 0;
-                    const isUrgent = po?.isUrgent;
 
                     // Machine Queue Badge Status
                     const isPaused = item.isPaused === true;
-                    let queueBadge = null;
+                    let statusBadge = null;
                     if (isPaused) {
-                      queueBadge = (
-                        <div className="space-y-0.5">
-                          <Badge className="bg-red-100 text-red-800 border-red-300 font-extrabold text-[10px] px-2 py-0 flex items-center gap-1 w-fit shadow-2xs">
-                            <AlertTriangle className="h-3 w-3 text-red-600 animate-pulse shrink-0" /> Tạm dừng
-                          </Badge>
-                          {item.pauseReason && (
-                            <span className="text-[10px] text-red-700 italic truncate block max-w-[170px]" title={item.pauseReason}>
-                              {item.pauseReason}
-                            </span>
-                          )}
-                        </div>
+                      statusBadge = (
+                        <Badge className="bg-red-50 text-red-700 border border-red-200 font-medium text-xs rounded-full px-3 py-1 inline-flex items-center gap-1.5 shadow-2xs">
+                          <AlertTriangle className="h-3 w-3 text-red-600 animate-pulse shrink-0" /> Tạm dừng
+                        </Badge>
                       );
                     } else if (index === 0) {
                       if (!isMachinePrinting) {
-                        queueBadge = (
-                          <Badge className="bg-amber-500 text-white font-extrabold text-[10px] px-2 py-0.5 flex items-center gap-1 shadow-2xs animate-pulse w-fit">
-                            <Sparkles className="h-3 w-3 fill-current" /> Chờ bắt đầu (#1)
+                        statusBadge = (
+                          <Badge className="bg-sky-50 text-sky-700 border border-sky-200 font-medium text-xs rounded-full px-3 py-1 inline-flex items-center gap-1.5 shadow-2xs">
+                            <Clock className="h-3.5 w-3.5 text-sky-600 shrink-0" /> Sắp in (#1)
                           </Badge>
                         );
                       } else {
-                        queueBadge = (
-                          <Badge className="bg-blue-100 text-blue-800 border-blue-300 font-bold text-[10px] px-2 py-0 flex items-center gap-1 w-fit">
-                            <Clock className="h-3 w-3 text-blue-600" /> Sắp in (#1)
+                        statusBadge = (
+                          <Badge className="bg-blue-50 text-blue-700 border border-blue-200 font-medium text-xs rounded-full px-3 py-1 inline-flex items-center gap-1.5 shadow-2xs">
+                            <Printer className="h-3.5 w-3.5 text-blue-600 animate-pulse shrink-0" /> Đang in (#1)
                           </Badge>
                         );
                       }
-                    } else if (index === 1 && !isMachinePrinting) {
-                      queueBadge = (
-                        <Badge className="bg-blue-100 text-blue-800 border-blue-300 font-bold text-[10px] px-2 py-0 flex items-center gap-1 w-fit">
-                          <Clock className="h-3 w-3 text-blue-600" /> Sắp in (#2)
-                        </Badge>
-                      );
                     } else {
-                      queueBadge = (
-                        <Badge variant="outline" className="bg-slate-100 text-slate-700 border-slate-200 font-semibold text-[10px] px-2 py-0">
-                          Chờ in (#{index + 1})
+                      statusBadge = (
+                        <Badge className="bg-slate-50 text-slate-600 border border-slate-200 font-medium text-xs rounded-full px-3 py-1 inline-flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" /> Chờ in (#{index + 1})
                         </Badge>
                       );
                     }
@@ -1191,70 +1247,47 @@ export default function PrintOrdersPage() {
                         onDragOver={(e) => handleDragOver(e, item.id)}
                         onDrop={(e) => handleDrop(e, item.id)}
                         className={cn(
-                          "transition-colors border-b border-slate-100",
+                          "transition-colors border-b border-slate-100 hover:bg-slate-50/70",
                           isDragged && "opacity-40 bg-slate-100",
-                          isOver && "border-t-2 border-t-amber-500 bg-amber-50/60",
-                          !isDragged && !isOver && index === 0 && !isMachinePrinting
-                            ? "bg-amber-50/40 hover:bg-amber-50/70 border-l-4 border-l-amber-500"
-                            : isRedispatchedReturned
-                              ? "bg-rose-50/40 hover:bg-rose-50/70 border-l-4 border-l-rose-500"
-                              : "hover:bg-slate-50/80"
+                          isOver && "border-t-2 border-t-amber-500 bg-amber-50/60"
                         )}
                       >
-                        {/* Queue Position & Drag Controls */}
-                        <TableCell className="text-center py-1.5 px-1">
-                          <div className="flex items-center justify-center gap-1">
-                            {/* Drag Handle Icon */}
-                            <div
-                              className="cursor-grab active:cursor-grabbing p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded"
-                              title="Kéo rê để thay đổi thứ tự in"
-                            >
-                              <GripVertical className="h-4 w-4" />
-                            </div>
+                        {/* Checkbox */}
+                        <TableCell className="text-center py-2 px-2">
+                          <Checkbox className="h-3.5 w-3.5 text-blue-600" />
+                        </TableCell>
 
-                            {/* Position Badge (Click to quick move) */}
+                        {/* Order Position Badge (#1, #2) */}
+                        <TableCell className="text-center py-2 px-2">
+                          <div className="flex items-center justify-center gap-1">
                             <button
                               type="button"
                               onClick={() => handleOpenQuickMove(item)}
-                              className="font-mono font-bold text-slate-900 hover:text-amber-700 hover:bg-amber-100 px-1.5 py-0.5 rounded border border-slate-200 text-xs cursor-pointer"
+                              className="font-mono font-bold text-slate-700 bg-slate-100 hover:bg-amber-100 hover:text-amber-800 px-2 py-0.5 rounded border border-slate-200 text-xs cursor-pointer"
                               title="Bấm để nhập trực tiếp vị trí mong muốn (#X)"
                             >
                               #{index + 1}
                             </button>
-
-                            {/* Quick Reorder Actions */}
-                            <div className="flex flex-col gap-0.5">
-                              {index > 0 && (
-                                <button
-                                  onClick={() => handleMoveToTop(item)}
-                                  disabled={reorderMutation.isPending}
-                                  className="p-0.5 text-amber-700 hover:bg-amber-100 rounded cursor-pointer disabled:opacity-30"
-                                  title="Đẩy ngay lên vị trí số 1 (Lên đầu)"
-                                >
-                                  <ChevronsUp className="h-3.5 w-3.5" />
-                                </button>
-                              )}
-                              {index === 0 && (
-                                <button
-                                  onClick={() => handleMoveQueue(item, "down")}
-                                  disabled={queuedItems.length <= 1 || reorderMutation.isPending}
-                                  className="p-0.5 text-slate-500 hover:bg-slate-200 rounded cursor-pointer disabled:opacity-30"
-                                  title="Hạ xuống sau"
-                                >
-                                  <ArrowDown className="h-3.5 w-3.5" />
-                                </button>
-                              )}
-                            </div>
+                            {index > 0 && (
+                              <button
+                                onClick={() => handleMoveToTop(item)}
+                                disabled={reorderMutation.isPending}
+                                className="p-0.5 text-amber-700 hover:bg-amber-100 rounded cursor-pointer disabled:opacity-30"
+                                title="Đẩy ngay lên vị trí số 1 (Lên đầu)"
+                              >
+                                <ChevronsUp className="h-3.5 w-3.5" />
+                              </button>
+                            )}
                           </div>
                         </TableCell>
 
                         {/* Thumbnail */}
-                        <TableCell className="text-center py-1.5 px-1">
+                        <TableCell className="text-center py-2 px-1">
                           <div
                             onClick={() => fullImage && setViewingImageUrl(fullImage)}
                             className={cn(
-                              "h-8 w-8 bg-slate-100 rounded border border-slate-200 mx-auto overflow-hidden transition-all",
-                              fullImage && "cursor-pointer hover:opacity-80 hover:ring-2 hover:ring-amber-500/80 shadow-2xs"
+                              "h-9 w-9 bg-slate-100 rounded border border-slate-200 mx-auto overflow-hidden transition-all",
+                              fullImage && "cursor-pointer hover:opacity-80 hover:ring-2 hover:ring-blue-500/80 shadow-2xs"
                             )}
                             title={fullImage ? "Bấm để xem ảnh phóng to" : undefined}
                           >
@@ -1268,114 +1301,113 @@ export default function PrintOrdersPage() {
                           </div>
                         </TableCell>
 
-                        {/* Mã bài - Clickable to open ReadOnlyProofingDetailModal */}
-                        <TableCell className="py-1.5 px-2">
+                        {/* Mã Bình bài */}
+                        <TableCell className="py-2 px-2">
                           <div className="flex flex-col gap-0.5">
-                            <button
-                              onClick={() => handleOpenProofingDetail(item)}
-                              className="font-mono text-xs font-bold text-blue-600 hover:underline cursor-pointer flex items-center gap-1 text-left"
-                              title="Xem chi tiết bình bài"
-                            >
-                              <span>{proofingCode}</span>
-                              <Eye className="h-3 w-3 text-blue-500 shrink-0" />
-                            </button>
-                            {isRedispatchedReturned && (
-                              <Badge
-                                className="bg-sky-50 text-sky-800 border-sky-300 font-bold text-[9.5px] px-1.5 py-0 flex items-center gap-1 w-fit shadow-2xs"
-                                title={returnReason ? `Lý do xử lý/trả về trước đó: ${returnReason}` : "Bài đã được Điều lệnh chỉnh sửa & điều lại"}
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={() => handleOpenProofingDetail(item)}
+                                className="font-mono text-sm font-bold text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
+                                title="Xem chi tiết bình bài"
                               >
-                                <RotateCcw className="h-2.5 w-2.5 text-sky-600 shrink-0" />
-                                Điều lệnh đã chỉnh sửa
-                              </Badge>
-                            )}
-                            {isUrgent && (
-                              <Badge className="bg-red-500 text-white font-bold text-[9px] px-1 py-0 w-fit">
-                                <Flame className="h-2.5 w-2.5 mr-0.5" /> Gấp
-                              </Badge>
-                            )}
+                                <span>{proofingCode}</span>
+                              </button>
+                              <button
+                                onClick={() => handleOpenProofingDetail(item)}
+                                className="text-blue-500 hover:text-blue-700 p-0.5 rounded"
+                                title="Xem chi tiết bình bài"
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                            <Badge className="bg-blue-50 text-blue-600 border border-blue-200 font-medium text-[10.5px] rounded-full px-2.5 py-0.5 w-fit inline-flex items-center gap-1">
+                              <Clock className="h-3 w-3 text-blue-500 shrink-0" />
+                              <span>Dự kiến in: {item.scheduledPrintDate ? formatDateTime(item.scheduledPrintDate) : "00:00 - " + formatImpositionDate(item)}</span>
+                            </Badge>
                           </div>
                         </TableCell>
 
                         {/* Loại bài */}
-                        <TableCell className="py-1.5 px-2">
-                          <Badge variant="outline" className={getDesignTypeBadgeStyle(po?.designType?.code)}>
+                        <TableCell className="py-2 px-2">
+                          <span className={getDesignTypeBadgeStyle(po?.designType?.name, po?.designType?.code)}>
                             {po?.designType?.name || "Hộp"}
-                          </Badge>
+                          </span>
                         </TableCell>
 
                         {/* Chất liệu & Quy cách */}
                         <TableCell className="py-2 px-2">
                           <div className="flex flex-col text-slate-900 leading-tight gap-0.5">
-                            <span className="font-extrabold text-xs text-slate-900 truncate">
-                              {item.materialTypeName || (po?.proofingOrder as any)?.materialType?.name || "—"}
+                            <span className="font-bold text-xs text-slate-900">
+                              {item.materialTypeName || (po?.proofingOrder as any)?.materialType?.name || "Giấy"}
                               {item.basisWeight ? ` ${item.basisWeight}g` : ""}
                             </span>
-                            <span className="text-[11px] font-semibold text-slate-600">Khổ: <strong className="text-slate-800 font-mono">{item.paperSizeName || "—"}</strong></span>
+                            <span className="text-[11px] text-slate-500">Khổ: <strong className="text-slate-700 font-mono font-medium">{item.paperSizeName || "100×100"}</strong></span>
                           </div>
                         </TableCell>
 
                         {/* Số lượng */}
-                        <TableCell className="text-right py-1.5 px-2 font-mono font-bold text-slate-900">
+                        <TableCell className="text-right py-2 px-2 font-mono font-bold text-slate-900 text-xs">
                           {totalQty.toLocaleString("vi-VN")} tờ
                         </TableCell>
 
-                        {/* Thời gian Điều lệnh */}
-                        <TableCell className="py-1.5 px-2 font-mono text-[11.5px] font-extrabold text-slate-900">
+                        {/* Thời gian */}
+                        <TableCell className="py-2 px-2 font-mono text-[11.5px] text-slate-600">
                           {formatDateTime(item.dispatchedAt)}
                         </TableCell>
 
-                        {/* Trạng thái Hàng chờ */}
-                        <TableCell className="py-1.5 px-2">{queueBadge}</TableCell>
+                        {/* Trạng thái */}
+                        <TableCell className="py-2 px-2">
+                          {statusBadge}
+                        </TableCell>
 
-                        {/* Thao tác Thợ in */}
-                        <TableCell className="text-center py-1.5 px-2 pr-3">
-                          <div className="grid grid-cols-2 gap-1 w-[250px] mx-auto">
+                        {/* Thao tác */}
+                        <TableCell className="text-center py-2 px-2 pr-4">
+                          <div className="flex items-center justify-end gap-1.5">
                             <Button
                               size="sm"
                               onClick={() => handleStart(item.id)}
                               disabled={startMutation.isPending}
-                              className={cn(
-                                "h-7 text-[10.5px] font-bold text-white rounded-md px-1.5 w-full flex items-center justify-center gap-1 transition-all cursor-pointer shadow-2xs",
-                                index === 0 && !isMachinePrinting
-                                  ? "bg-amber-600 hover:bg-amber-700"
-                                  : "bg-[#93631F] hover:bg-[#7a521a]"
-                              )}
-                              title="Bấm để bắt đầu in bài này"
+                              className="h-8 text-xs font-bold bg-[#1d4ed8] hover:bg-[#1e40af] text-white rounded-lg px-3 flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                              title="Bắt đầu in"
                             >
-                              <Play className="h-3 w-3 fill-current shrink-0" />
+                              <Play className="h-3.5 w-3.5 fill-current shrink-0" />
                               {isPaused ? "In tiếp" : "Bắt đầu"}
                             </Button>
 
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => handleDequeueSingle(item.id)}
-                              disabled={dequeueMutation.isPending}
-                              className="h-7 text-[10px] font-semibold text-slate-700 border-slate-200 hover:bg-slate-100 rounded-md px-1 w-full flex items-center justify-center gap-1 cursor-pointer"
-                              title="Bỏ bài khỏi hàng chờ in (đưa về danh sách Chưa in)"
-                            >
-                              <MinusCircle className="h-3 w-3 text-slate-500 shrink-0" /> Bỏ hàng chờ
-                            </Button>
-
-                            <Button
-                              variant="outline"
-                              size="sm"
                               onClick={() => handleOpenHistory(item)}
-                              className="h-7 text-[10.5px] font-semibold text-slate-700 border-slate-200 hover:bg-slate-100 rounded-md px-1.5 w-full flex items-center justify-center gap-1 cursor-pointer"
+                              className="h-8 text-xs font-semibold text-slate-700 bg-white border-slate-300 hover:bg-slate-50 rounded-lg px-3 flex items-center gap-1 cursor-pointer"
                             >
-                              <History className="h-3 w-3 text-slate-500 shrink-0" /> Lịch sử
+                              <Clock className="h-3.5 w-3.5 text-slate-500 shrink-0" /> Lịch sử
                             </Button>
 
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleOpenReturnDialog(item)}
-                              disabled={returnMutation.isPending}
-                              className="h-7 text-[10.5px] font-semibold text-rose-700 bg-rose-50/60 border-rose-200 hover:bg-rose-100 rounded-md px-1.5 w-full flex items-center justify-center gap-1 cursor-pointer"
-                              title="Trả về bộ phận Điều lệnh để xử lý"
-                            >
-                              <RotateCcw className="h-3 w-3 text-rose-600 shrink-0" /> Trả về Điều lệnh
-                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-slate-600 bg-white border-slate-200 hover:bg-slate-100 rounded-lg cursor-pointer flex items-center justify-center"
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="bg-white border-slate-200 shadow-md z-50">
+                                <DropdownMenuItem
+                                  onClick={() => handleDequeueSingle(item.id)}
+                                  className="text-xs font-semibold cursor-pointer text-slate-700 hover:bg-slate-100"
+                                >
+                                  <MinusCircle className="h-3.5 w-3.5 mr-1.5 text-slate-500" /> Bỏ hàng chờ
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleOpenReturnDialog(item)}
+                                  className="text-xs font-semibold cursor-pointer text-rose-700 hover:bg-rose-50"
+                                >
+                                  <RotateCcw className="h-3.5 w-3.5 mr-1.5 text-rose-600" /> Trả về Điều lệnh
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -1386,284 +1418,349 @@ export default function PrintOrdersPage() {
             </Table>
           </div>
 
-          {/* SECTION 3: BÀI ĐÃ ĐIỀU LỆNH — CHƯA VÀO HÀNG CHỜ (sortOrder === 0 - WITH SLEEK DATE SELECTOR & SEARCH) */}
+          {/* SECTION 3: BÀI ĐÃ ĐIỀU LỆNH — CHƯA VÀO HÀNG CHỜ (Bài Chưa In) */}
           <div className="space-y-3">
-            {/* Header Toolbar: Checkbox Select All + Styled Radix Date Select + Search + Bulk Enqueue Button */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-2xs p-3 px-4 flex flex-wrap items-center justify-between gap-3">
-              {/* Left & Controls */}
-              <div className="flex flex-wrap items-center gap-3">
+            {/* Table Container */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
+              {/* Card Header Toolbar */}
+              <div className="p-3 px-4 bg-slate-50/80 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 font-bold text-xs text-slate-800">
                 <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="select-all-not-queued"
-                    checked={isAllNotQueuedSelected}
-                    onCheckedChange={handleToggleSelectAllNotQueued}
-                    className="h-3.5 w-3.5 text-[#93631F]"
-                  />
-                  <label htmlFor="select-all-not-queued" className="cursor-pointer font-bold text-xs text-slate-800 flex items-center gap-1.5">
-                    <span>Bài chưa in</span>
-                    <Badge className="bg-slate-200 text-slate-800 font-extrabold text-[10px] px-2 py-0">
-                      {filteredNotQueuedItems.length} / {notQueuedItems.length} bài
-                    </Badge>
-                  </label>
+                  <Inbox className="h-4 w-4 text-amber-600" />
+                  <span className="font-extrabold text-sm text-slate-900">Bài Chưa In</span>
+                  <Badge className="bg-slate-700 text-white font-extrabold text-[11px] px-2.5 py-0.5 rounded-full">
+                    {notQueuedItems.length} bài
+                  </Badge>
                 </div>
 
-                {/* Sleek Styled Radix Select for Unqueued Dates */}
-                <Select value={notQueuedDateFilter} onValueChange={setNotQueuedDateFilter}>
-                  <SelectTrigger className="h-7 text-[11px] font-bold bg-[#FEFBF6] border border-amber-300 text-amber-900 rounded-lg px-2.5 shadow-2xs hover:bg-amber-100/60 w-auto min-w-[175px] cursor-pointer">
-                    <div className="flex items-center gap-1.5">
-                      <Calendar className="h-3.5 w-3.5 text-amber-700 shrink-0" />
-                      <span className="text-slate-800 font-bold">Ngày điều lệnh: </span>
-                      <SelectValue placeholder="Tất cả ngày" />
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent className="bg-white border-slate-200 shadow-md z-50">
-                    <SelectItem value="all" className="text-xs font-semibold cursor-pointer">
-                      Tất cả ngày ({notQueuedItems.length} bài)
-                    </SelectItem>
-                    {availableNotQueuedDates.map((dateStr) => (
-                      <SelectItem key={dateStr} value={dateStr} className="text-xs cursor-pointer">
-                        Ngày {dateStr}
+                <div className="flex items-center gap-3">
+                  {/* Radix Date Filter */}
+                  <Select value={notQueuedDateFilter} onValueChange={setNotQueuedDateFilter}>
+                    <SelectTrigger className="h-7 text-[11px] font-bold bg-[#FEFBF6] border border-amber-300 text-amber-900 rounded-lg px-2.5 shadow-2xs hover:bg-amber-100/60 w-auto min-w-[160px] cursor-pointer">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="h-3.5 w-3.5 text-amber-700 shrink-0" />
+                        <span className="text-slate-800 font-bold">Ngày điều lệnh: </span>
+                        <SelectValue placeholder="Tất cả ngày" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent className="bg-white border-slate-200 shadow-md z-50">
+                      <SelectItem value="all" className="text-xs font-semibold cursor-pointer">
+                        Tất cả ngày ({notQueuedItems.length} bài)
                       </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                      {availableNotQueuedDates.map((dateStr) => (
+                        <SelectItem key={dateStr} value={dateStr} className="text-xs cursor-pointer">
+                          Ngày {dateStr}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
 
-                {/* Local Search Input for Unqueued */}
-                <div className="relative w-44 md:w-60">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                  <Input
-                    placeholder="Tìm mã bài, mã bình..."
-                    value={notQueuedSearchQuery}
-                    onChange={(e) => setNotQueuedSearchQuery(e.target.value)}
-                    className="pl-8 pr-7 h-7 text-[11px] bg-white rounded-lg border-slate-200"
-                  />
-                  {notQueuedSearchQuery && (
-                    <button
-                      onClick={() => setNotQueuedSearchQuery("")}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  {/* Search Input */}
+                  <div className="relative w-44 md:w-56">
+                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                    <Input
+                      placeholder="Tìm mã bài, mã bình..."
+                      value={notQueuedSearchQuery}
+                      onChange={(e) => setNotQueuedSearchQuery(e.target.value)}
+                      className="pl-8 pr-7 h-7 text-[11px] bg-white rounded-lg border-slate-200"
+                    />
+                    {notQueuedSearchQuery && (
+                      <button
+                        onClick={() => setNotQueuedSearchQuery("")}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Bulk Enqueue Button */}
+                  {selectedNotQueuedIds.length > 0 && (
+                    <Button
+                      onClick={handleEnqueueSelected}
+                      disabled={enqueueMutation.isPending}
+                      className="h-7 text-xs font-bold bg-[#854d0e] hover:bg-[#713f12] text-white px-3 rounded-lg shadow-2xs transition-all cursor-pointer"
                     >
-                      <X className="h-3 w-3" />
-                    </button>
+                      {enqueueMutation.isPending ? (
+                        <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                      ) : (
+                        <PlusCircle className="h-3.5 w-3.5 mr-1" />
+                      )}
+                      Thêm hàng chờ ({selectedNotQueuedIds.length})
+                    </Button>
                   )}
                 </div>
               </div>
 
-              {/* Right: Enqueue Button */}
-              <Button
-                onClick={handleEnqueueSelected}
-                disabled={selectedNotQueuedIds.length === 0 || enqueueMutation.isPending}
-                className={cn(
-                  "h-8 text-xs font-bold text-white px-3.5 rounded-lg shadow-2xs transition-all",
-                  selectedNotQueuedIds.length > 0
-                    ? "bg-[#93631F] hover:bg-[#7a521a] cursor-pointer"
-                    : "bg-slate-200 text-slate-400 cursor-not-allowed border-slate-200 shadow-none"
-                )}
-              >
-                {enqueueMutation.isPending ? (
-                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                ) : (
-                  <PlusCircle className="h-3.5 w-3.5 mr-1.5" />
-                )}
-                Thêm vào hàng chờ ({selectedNotQueuedIds.length} bài)
-              </Button>
-            </div>
-
-            {/* List rendered by date group */}
-            {filteredNotQueuedItems.length === 0 ? (
-              <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-400 italic">
-                {notQueuedSearchQuery || notQueuedDateFilter !== "all"
-                  ? "Không tìm thấy bài in phù hợp với bộ lọc."
-                  : "Tất cả các bài điều lệnh đã được đưa vào hàng chờ in."}
-              </div>
-            ) : (
-              groupedNotQueuedByDate.map((group) => (
-                <div key={group.dateLabel} className="bg-white rounded-xl border border-slate-200 shadow-2xs overflow-hidden">
-                  {/* Date Group Header */}
-                  <div className="p-2 px-3.5 bg-amber-100/80 border-b border-amber-300 flex items-center justify-between font-extrabold text-xs text-amber-950">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-[#93631F]" />
-                      <span>Ngày điều lệnh: <strong className="text-amber-950 underline decoration-amber-400 underline-offset-2">{group.dateLabel}</strong></span>
-                      <Badge className="bg-[#93631F] text-white font-extrabold text-[10px] px-2 py-0">
-                        {group.items.length} bài
-                      </Badge>
-                    </div>
-                  </div>
-
-                  {/* Table for this Date Group */}
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-slate-50/50 hover:bg-slate-50/50 border-b border-slate-200 text-[10.5px] font-bold text-slate-600 uppercase">
-                        <TableHead className="w-12 text-center py-2">#</TableHead>
-                        <TableHead className="w-10 text-center py-2">Ảnh</TableHead>
-                        <TableHead className="w-[140px] py-2">Mã Bình bài</TableHead>
-                        <TableHead className="w-[110px] py-2">Loại bài</TableHead>
-                        <TableHead className="w-[220px] py-2">Chất liệu & Quy cách</TableHead>
-                        <TableHead className="w-[120px] text-right py-2">Số lượng</TableHead>
-                        <TableHead className="w-[170px] py-2">Thời gian</TableHead>
-                        <TableHead className="w-[260px] text-center py-2 pr-3">Thao tác</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {group.items.map((item, index) => {
-                        const isSelected = selectedNotQueuedIds.includes(item.id);
-                        const po = item.productionOrder;
-                        const proofingCode = po?.proofingOrderCode || `PO-${item.productionOrderId}`;
-                        const images = po?.proofingOrderImages || [];
-                        const rawThumbnail = images[0]?.thumbnailUrl || images[0]?.imageUrl;
-                        const thumbnail = formatImageUrl(rawThumbnail);
-                        const fullImage = formatImageUrl(images[0]?.imageUrl || rawThumbnail);
-                        const totalQty = po?.proofingOrder?.totalQuantity || po?.items?.[0]?.inputQty || 0;
-
-                        const returnReason = item.returnReason || po?.returnReason || (po as any)?.lastReturnReason;
-                        const returnType = item.returnType || (po as any)?.returnType;
-                        const returnTypeDisplayName = item.returnTypeDisplayName || (po as any)?.returnTypeDisplayName;
-                        const isRedispatchedReturned = !!(returnReason || item.returnedAt || (po as any)?.returnedAt || returnType);
-
-                        return (
+              {filteredNotQueuedItems.length === 0 ? (
+                <div className="p-8 text-center text-slate-400 italic">
+                  {notQueuedSearchQuery || notQueuedDateFilter !== "all"
+                    ? "Không tìm thấy bài in phù hợp với bộ lọc."
+                    : "Tất cả các bài điều lệnh đã được đưa vào hàng chờ in."}
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-50/50 hover:bg-slate-50/50 border-b border-slate-200 text-[11px] font-bold text-slate-600 uppercase">
+                      <TableHead className="w-10 text-center py-2.5">
+                        <Checkbox
+                          checked={isAllNotQueuedSelected}
+                          onCheckedChange={handleToggleSelectAllNotQueued}
+                          className="h-3.5 w-3.5 text-[#854d0e]"
+                        />
+                      </TableHead>
+                      <TableHead className="w-12 text-center py-2.5">#</TableHead>
+                      <TableHead className="w-12 text-center py-2.5">Ảnh</TableHead>
+                      <TableHead className="w-[160px] py-2.5">Mã bình bài</TableHead>
+                      <TableHead className="w-[110px] py-2.5">Loại bài</TableHead>
+                      <TableHead className="w-[200px] py-2.5">Chất liệu & Quy cách</TableHead>
+                      <TableHead className="w-[110px] text-right py-2.5">Số lượng</TableHead>
+                      <TableHead className="w-[150px] py-2.5">Thời gian</TableHead>
+                      <TableHead className="w-[160px] py-2.5">Trạng thái</TableHead>
+                      <TableHead className="w-[220px] text-center py-2.5 pr-4">Thao tác</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {groupedNotQueuedByDate.map((group) => {
+                      const isCollapsed = !!collapsedDateGroups[group.dateLabel];
+                      return (
+                        <React.Fragment key={group.dateLabel}>
+                          {/* Collapsible Date Banner Row */}
                           <TableRow
-                            key={item.id}
-                            onClick={() => handleToggleSelectNotQueued(item.id)}
-                            className={cn(
-                              "cursor-pointer transition-colors border-b border-slate-100",
-                              isSelected
-                                ? "bg-amber-50/50 hover:bg-amber-50/70"
-                                : isRedispatchedReturned
-                                  ? "bg-rose-50/40 hover:bg-rose-50/70 border-l-4 border-l-rose-500"
-                                  : "hover:bg-slate-50/70"
-                            )}
+                            onClick={() => toggleDateGroupCollapse(group.dateLabel)}
+                            className="bg-[#fffbeb] hover:bg-amber-100/70 border-y border-amber-200/90 select-none cursor-pointer transition-colors"
                           >
-                            <TableCell className="text-center py-1.5 px-2">
-                              <div className="flex items-center justify-center gap-1.5">
-                                <span className="text-[11px] font-bold text-slate-700">{index + 1}</span>
-                                <Checkbox
-                                  checked={isSelected}
-                                  onCheckedChange={() => handleToggleSelectNotQueued(item.id)}
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="h-3.5 w-3.5 text-[#93631F]"
-                                />
-                              </div>
-                            </TableCell>
-
-                            <TableCell className="text-center py-1.5 px-1" onClick={(e) => e.stopPropagation()}>
-                              <div
-                                onClick={() => fullImage && setViewingImageUrl(fullImage)}
-                                className={cn(
-                                  "h-8 w-8 bg-slate-100 rounded border border-slate-200 mx-auto overflow-hidden transition-all",
-                                  fullImage && "cursor-pointer hover:opacity-80 hover:ring-2 hover:ring-amber-500/80 shadow-2xs"
-                                )}
-                                title={fullImage ? "Bấm để xem ảnh phóng to" : undefined}
-                              >
-                                {thumbnail ? (
-                                  <img src={thumbnail} alt={proofingCode} className="h-full w-full object-cover" />
-                                ) : (
-                                  <div className="h-full w-full flex items-center justify-center text-slate-400">
-                                    <ImageIcon className="h-3.5 w-3.5" />
-                                  </div>
-                                )}
-                              </div>
-                            </TableCell>
-
-                            {/* Mã Bình bài - Clickable link to ReadOnlyProofingDetailModal */}
-                            <TableCell className="py-1.5 px-2 font-mono font-bold text-slate-900">
-                              <div className="flex flex-col gap-0.5">
+                            <TableCell colSpan={10} className="py-2 px-4 font-extrabold text-xs text-amber-950">
+                              <div className="flex items-center gap-2">
                                 <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleOpenProofingDetail(item);
-                                  }}
-                                  className="text-blue-600 hover:underline cursor-pointer font-bold flex items-center gap-1 text-left"
-                                  title="Bấm để xem thông tin bình bài (Read-Only)"
+                                  type="button"
+                                  className="p-0.5 text-amber-800 hover:bg-amber-200/60 rounded"
                                 >
-                                  <span>{proofingCode}</span>
-                                  <Eye className="h-3 w-3 text-blue-500 shrink-0" />
+                                  {isCollapsed ? (
+                                    <ChevronRight className="h-4 w-4 text-amber-900" />
+                                  ) : (
+                                    <ChevronDown className="h-4 w-4 text-amber-900" />
+                                  )}
                                 </button>
-                                {isRedispatchedReturned && (
-                                  <Badge
-                                    className="bg-sky-50 text-sky-800 border-sky-300 font-bold text-[9.5px] px-1.5 py-0 flex items-center gap-1 w-fit shadow-2xs"
-                                    title={returnReason ? `Lý do xử lý/trả về trước đó: ${returnReason}` : "Bài đã được Điều lệnh chỉnh sửa & điều lại"}
-                                  >
-                                    <RotateCcw className="h-2.5 w-2.5 text-sky-600 shrink-0" />
-                                    Điều lệnh đã chỉnh sửa
-                                  </Badge>
-                                )}
-                              </div>
-                            </TableCell>
-
-                            <TableCell className="py-1.5 px-2">
-                              <Badge variant="outline" className={getDesignTypeBadgeStyle(po?.designType?.code)}>
-                                {po?.designType?.name || "Hộp"}
-                              </Badge>
-                            </TableCell>
-
-                            <TableCell className="py-2 px-2">
-                              <div className="flex flex-col text-slate-900 leading-tight gap-0.5">
-                                <span className="font-extrabold text-xs text-slate-900 truncate">
-                                  {item.materialTypeName || (po?.proofingOrder as any)?.materialType?.name || "—"}
-                                </span>
-                                <span className="text-[11px] font-semibold text-slate-600">Khổ: <strong className="text-slate-800 font-mono">{item.paperSizeName || "—"}</strong></span>
-                              </div>
-                            </TableCell>
-
-                            <TableCell className="text-right py-1.5 px-2 font-mono font-bold text-slate-900">
-                              {totalQty.toLocaleString("vi-VN")} tờ
-                            </TableCell>
-
-                            {/* Thời gian Điều lệnh */}
-                            <TableCell className="py-1.5 px-2 font-mono text-[11.5px] font-extrabold text-slate-900">
-                              {formatDateTime(item.dispatchedAt)}
-                            </TableCell>
-
-                            <TableCell className="text-center py-1.5 px-2 pr-3" onClick={(e) => e.stopPropagation()}>
-                              <div className="grid grid-cols-2 gap-1 w-[250px] mx-auto">
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleEnqueueSingle(item.id)}
-                                  disabled={enqueueMutation.isPending}
-                                  className="h-7 text-[10.5px] font-bold bg-[#93631F] hover:bg-[#7a521a] text-white rounded-md px-1.5 w-full flex items-center justify-center gap-1 cursor-pointer shadow-2xs"
-                                  title="Thêm bài này vào hàng chờ in"
-                                >
-                                  <PlusCircle className="h-3 w-3 shrink-0" /> Thêm hàng chờ
-                                </Button>
-
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleOpenProofingDetail(item)}
-                                  className="h-7 text-[10.5px] font-semibold text-blue-700 bg-blue-50/60 border-blue-200 hover:bg-blue-100 rounded-md px-1.5 w-full flex items-center justify-center gap-1 cursor-pointer"
-                                  title="Xem chi tiết bài bình"
-                                >
-                                  <Eye className="h-3 w-3 text-blue-600 shrink-0" /> Chi tiết
-                                </Button>
-
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleOpenHistory(item)}
-                                  className="h-7 text-[10.5px] font-semibold text-slate-700 border-slate-200 hover:bg-slate-100 rounded-md px-1.5 w-full flex items-center justify-center gap-1 cursor-pointer"
-                                >
-                                  <History className="h-3 w-3 text-slate-500 shrink-0" /> Lịch sử
-                                </Button>
-
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleOpenReturnDialog(item)}
-                                  disabled={returnMutation.isPending}
-                                  className="h-7 text-[10.5px] font-semibold text-rose-700 bg-rose-50/60 border-rose-200 hover:bg-rose-100 rounded-md px-1.5 w-full flex items-center justify-center gap-1 cursor-pointer"
-                                  title="Trả về bộ phận Điều lệnh để xử lý"
-                                >
-                                  <RotateCcw className="h-3 w-3 text-rose-600 shrink-0" /> Trả về Điều lệnh
-                                </Button>
+                                <span>Ngày điều lệnh: <strong className="text-amber-950 font-bold">{group.dateLabel}</strong></span>
+                                <Badge className="bg-[#854d0e] text-white font-bold text-[11px] px-2.5 py-0.5 rounded-full">
+                                  {group.items.length} bài
+                                </Badge>
                               </div>
                             </TableCell>
                           </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
-              ))
-            )}
+
+                          {/* Date Group Items (hidden if collapsed) */}
+                          {!isCollapsed &&
+                            group.items.map((item, index) => {
+                              const isSelected = selectedNotQueuedIds.includes(item.id);
+                              const po = item.productionOrder;
+                              const proofingCode = po?.proofingOrderCode || `PO-${item.productionOrderId}`;
+                              const images = po?.proofingOrderImages || [];
+                              const rawThumbnail = images[0]?.thumbnailUrl || images[0]?.imageUrl;
+                              const thumbnail = formatImageUrl(rawThumbnail);
+                              const fullImage = formatImageUrl(images[0]?.imageUrl || rawThumbnail);
+                              const totalQty = po?.proofingOrder?.totalQuantity || po?.items?.[0]?.inputQty || 0;
+
+                              const returnReason = item.returnReason || po?.returnReason || (po as any)?.lastReturnReason;
+                              const returnType = item.returnType || (po as any)?.returnType;
+                              const isRedispatchedReturned = !!(returnReason || item.returnedAt || (po as any)?.returnedAt || returnType);
+
+                              const isPendingMaterial = !!(item.isPendingMaterials || item.expectedPaperDate || item.expectedMaterialAt);
+                              const materialDate = item.expectedPaperDate || item.expectedMaterialAt;
+
+                              let unqueuedStatusBadge = null;
+                              if (isPendingMaterial) {
+                                unqueuedStatusBadge = (
+                                  <div className="flex flex-col gap-0.5">
+                                    <Badge className="bg-amber-50 text-amber-700 border border-amber-200 font-medium text-xs rounded-full px-3 py-1 inline-flex items-center gap-1.5 w-fit">
+                                      <AlertTriangle className="h-3 w-3 text-amber-600 shrink-0" /> Chờ nguyên liệu
+                                    </Badge>
+                                    {materialDate && (
+                                      <span className="text-[10.5px] text-amber-800 font-medium pl-1">
+                                        Dự kiến: {formatDateTime(materialDate)}
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              } else if (item.scheduledPrintDate) {
+                                unqueuedStatusBadge = (
+                                  <Badge className="bg-blue-50 text-blue-700 border border-blue-200 font-medium text-xs rounded-full px-3 py-1 inline-flex items-center gap-1.5 w-fit">
+                                    <Calendar className="h-3 w-3 text-blue-600 shrink-0" />
+                                    <span>Lịch in: {formatDateTime(item.scheduledPrintDate)}</span>
+                                  </Badge>
+                                );
+                              } else {
+                                unqueuedStatusBadge = (
+                                  <Badge className="bg-slate-50 text-slate-600 border border-slate-200 font-medium text-xs rounded-full px-3 py-1 inline-flex items-center gap-1.5 w-fit">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-slate-400"></span> Chưa xếp lịch
+                                  </Badge>
+                                );
+                              }
+
+                              return (
+                                <TableRow
+                                  key={item.id}
+                                  onClick={() => handleToggleSelectNotQueued(item.id)}
+                                  className={cn(
+                                    "cursor-pointer transition-colors border-b border-slate-100 hover:bg-slate-50/70",
+                                    isSelected && "bg-amber-50/40 hover:bg-amber-50/60"
+                                  )}
+                                >
+                                  {/* Checkbox */}
+                                  <TableCell className="text-center py-2 px-2" onClick={(e) => e.stopPropagation()}>
+                                    <Checkbox
+                                      checked={isSelected}
+                                      onCheckedChange={() => handleToggleSelectNotQueued(item.id)}
+                                      className="h-3.5 w-3.5 text-[#854d0e]"
+                                    />
+                                  </TableCell>
+
+                                  {/* Index */}
+                                  <TableCell className="text-center py-2 px-2 font-bold text-slate-700 text-xs">
+                                    {index + 1}
+                                  </TableCell>
+
+                                  {/* Thumbnail */}
+                                  <TableCell className="text-center py-2 px-1" onClick={(e) => e.stopPropagation()}>
+                                    <div
+                                      onClick={() => fullImage && setViewingImageUrl(fullImage)}
+                                      className={cn(
+                                        "h-9 w-9 bg-slate-100 rounded border border-slate-200 mx-auto overflow-hidden transition-all",
+                                        fullImage && "cursor-pointer hover:opacity-80 hover:ring-2 hover:ring-amber-500/80 shadow-2xs"
+                                      )}
+                                      title={fullImage ? "Bấm để xem ảnh phóng to" : undefined}
+                                    >
+                                      {thumbnail ? (
+                                        <img src={thumbnail} alt={proofingCode} className="h-full w-full object-cover" />
+                                      ) : (
+                                        <div className="h-full w-full flex items-center justify-center text-slate-400">
+                                          <ImageIcon className="h-3.5 w-3.5" />
+                                        </div>
+                                      )}
+                                    </div>
+                                  </TableCell>
+
+                                  {/* Mã bình bài */}
+                                  <TableCell className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex flex-col gap-0.5">
+                                      <div className="flex items-center gap-1.5">
+                                        <button
+                                          onClick={() => handleOpenProofingDetail(item)}
+                                          className="font-mono text-sm font-bold text-blue-600 hover:underline cursor-pointer flex items-center gap-1"
+                                          title="Xem chi tiết bình bài"
+                                        >
+                                          <span>{proofingCode}</span>
+                                        </button>
+                                        <button
+                                          onClick={() => handleOpenProofingDetail(item)}
+                                          className="text-blue-500 hover:text-blue-700 p-0.5 rounded"
+                                          title="Xem chi tiết bình bài"
+                                        >
+                                          <Eye className="h-3.5 w-3.5" />
+                                        </button>
+                                      </div>
+
+                                      {/* Sub-badge under code */}
+                                      {isRedispatchedReturned && (
+                                        <Badge className="bg-sky-50 text-sky-700 border border-sky-200 font-medium text-[10.5px] rounded-full px-2.5 py-0.5 w-fit inline-flex items-center gap-1">
+                                          <span className="h-1.5 w-1.5 rounded-full bg-sky-500"></span> Điều lệnh đã chỉnh sửa
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </TableCell>
+
+                                  {/* Loại bài */}
+                                  <TableCell className="py-2 px-2">
+                                    <span className={getDesignTypeBadgeStyle(po?.designType?.name, po?.designType?.code)}>
+                                      {po?.designType?.name || "Hộp"}
+                                    </span>
+                                  </TableCell>
+
+                                  {/* Chất liệu & Quy cách */}
+                                  <TableCell className="py-2 px-2">
+                                    <div className="flex flex-col text-slate-900 leading-tight gap-0.5">
+                                      <span className="font-bold text-xs text-slate-900">
+                                        {item.materialTypeName || (po?.proofingOrder as any)?.materialType?.name || "Giấy"}
+                                        {item.basisWeight ? ` ${item.basisWeight}g` : ""}
+                                      </span>
+                                      <span className="text-[11px] text-slate-500">Khổ: <strong className="text-slate-700 font-mono font-medium">{item.paperSizeName || "100×100"}</strong></span>
+                                    </div>
+                                  </TableCell>
+
+                                  {/* Số lượng */}
+                                  <TableCell className="text-right py-2 px-2 font-mono font-bold text-slate-900 text-xs">
+                                    {totalQty.toLocaleString("vi-VN")} tờ
+                                  </TableCell>
+
+                                  {/* Thời gian */}
+                                  <TableCell className="py-2 px-2 font-mono text-[11.5px] text-slate-600">
+                                    {formatDateTime(item.dispatchedAt)}
+                                  </TableCell>
+
+                                  {/* Trạng thái */}
+                                  <TableCell className="py-2 px-2">
+                                    {unqueuedStatusBadge}
+                                  </TableCell>
+
+                                  {/* Thao tác */}
+                                  <TableCell className="text-center py-2 px-2 pr-4" onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex items-center justify-end gap-1.5">
+                                      <Button
+                                        size="sm"
+                                        onClick={() => handleEnqueueSingle(item.id)}
+                                        disabled={enqueueMutation.isPending}
+                                        className="h-8 text-xs font-bold bg-[#854d0e] hover:bg-[#713f12] text-white rounded-lg px-3 flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                                        title="Thêm vào hàng chờ in"
+                                      >
+                                        <PlusCircle className="h-3.5 w-3.5 shrink-0" /> Thêm hàng chờ
+                                      </Button>
+
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleOpenProofingDetail(item)}
+                                        className="h-8 text-xs font-semibold text-sky-700 bg-sky-50 border-sky-200 hover:bg-sky-100 rounded-lg px-3 flex items-center gap-1 cursor-pointer"
+                                      >
+                                        <Eye className="h-3.5 w-3.5 text-sky-600 shrink-0" /> Chi tiết
+                                      </Button>
+
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-8 w-8 p-0 text-slate-600 bg-white border-slate-200 hover:bg-slate-100 rounded-lg cursor-pointer flex items-center justify-center"
+                                          >
+                                            <MoreHorizontal className="h-4 w-4" />
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" className="bg-white border-slate-200 shadow-md z-50">
+                                          <DropdownMenuItem
+                                            onClick={() => handleOpenHistory(item)}
+                                            className="text-xs font-semibold cursor-pointer text-slate-700 hover:bg-slate-100"
+                                          >
+                                            <Clock className="h-3.5 w-3.5 mr-1.5 text-slate-500" /> Lịch sử
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem
+                                            onClick={() => handleOpenReturnDialog(item)}
+                                            className="text-xs font-semibold cursor-pointer text-rose-700 hover:bg-rose-50"
+                                          >
+                                            <RotateCcw className="h-3.5 w-3.5 mr-1.5 text-rose-600" /> Trả về Điều lệnh
+                                          </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                        </React.Fragment>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </div>
           </div>
         </div>
       )}

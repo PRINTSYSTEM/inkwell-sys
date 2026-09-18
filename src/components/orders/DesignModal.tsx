@@ -199,6 +199,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
         processClassification: undefined,
         sharedAddressId: undefined,
         gusseted: false,
+        isZipper: false,
         basisWeight: undefined,
       });
       setCurrentStep(1);
@@ -227,6 +228,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
         processClassification: undefined,
         minQuantity: undefined,
         gusseted: false,
+        isZipper: false,
       };
     });
     // Notify parent to load materials for this design type
@@ -378,6 +380,12 @@ export const DesignModal: React.FC<DesignModalProps> = ({
   const designTypeName = selectedDesignType?.name || "";
   const materialName = selectedMaterial?.name || "";
 
+  const matNameLower = materialName.toLowerCase();
+  const isGiay = matNameLower.includes("giấy") || matNameLower.includes("giay");
+  const isMetaline = matNameLower.includes("metaline") || matNameLower.includes("metalize");
+  const isPEorPA = (matNameLower.includes("pe") || matNameLower.includes("pa")) && !isMetaline && !isGiay;
+  const isCuonThuong = (matNameLower.includes("thường") || matNameLower.includes("thuong")) && !isMetaline && !isGiay;
+
   const isDecal = isDecalDesignType(designTypeName);
   const isTui = isTuiDesignType(designTypeName);
   const isHop = isHopDesignType(designTypeName);
@@ -389,6 +397,27 @@ export const DesignModal: React.FC<DesignModalProps> = ({
     isTuiXepHongMaterial(materialName);
   const isDecalCuon = isDecalCuonDesignType(designTypeName);
   const isTuiCuon = isTuiCuonDesignType(designTypeName);
+
+  const shouldShowZipper = Boolean(
+    formData.materialTypeId > 0 && selectedMaterial && (
+      (isTui && !isTuiCuon && isPEorPA) ||
+      (isTuiCuon && isCuonThuong)
+    )
+  );
+
+  const shouldShowGusseted = Boolean(isTui && !isTuiCuon && !isGiay);
+
+  useEffect(() => {
+    if (!shouldShowZipper && formData.isZipper) {
+      updateField("isZipper", false);
+    }
+  }, [shouldShowZipper, formData.isZipper]);
+
+  useEffect(() => {
+    if (!shouldShowGusseted && formData.gusseted) {
+      updateField("gusseted", false);
+    }
+  }, [shouldShowGusseted, formData.gusseted]);
 
   // Determine which classifications to show and auto-set values based on rules:
   // - Hộp: Bế, 1 mặt, Cán bóng hoặc cán mờ
@@ -600,7 +629,7 @@ export const DesignModal: React.FC<DesignModalProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-2xl w-[95vw] sm:w-full max-h-[92vh] sm:max-h-[90vh] overflow-hidden flex flex-col p-4 sm:p-6">
         <DialogHeader className="pb-2">
           <DialogTitle className="text-lg">
             {isNew ? "Thêm thiết kế mới" : "Chỉnh sửa thiết kế"}
@@ -822,54 +851,130 @@ export const DesignModal: React.FC<DesignModalProps> = ({
                 )}
               </div>
 
-              {/* Tùy chọn cho Túi: Túi xếp hông */}
-              {isTui && !isTuiCuon && (
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">Túi xếp hông</Label>
-                  <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFormData(prev => ({
-                          ...prev,
-                          gusseted: true,
-                          width: prev.width,
-                          processClassification: "die_cut"
-                        }));
-                      }}
-                      disabled={!!isExistingDesign}
-                      className={`
-                        px-4 py-2 rounded-lg border-2 text-sm font-bold transition-all
-                        ${formData.gusseted 
-                          ? "border-primary bg-primary text-primary-foreground" 
-                          : "border-border bg-background hover:border-primary/50 text-muted-foreground"}
-                        ${isExistingDesign ? "opacity-50 cursor-not-allowed" : ""}
-                      `}
-                    >
-                      Có
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFormData(prev => ({
-                          ...prev,
-                          gusseted: false,
-                          width: 0,
-                          processClassification: "cut"
-                        }));
-                      }}
-                      disabled={!!isExistingDesign}
-                      className={`
-                        px-4 py-2 rounded-lg border-2 text-sm font-bold transition-all
-                        ${!formData.gusseted 
-                          ? "border-primary bg-primary text-primary-foreground" 
-                          : "border-border bg-background hover:border-primary/50 text-muted-foreground"}
-                        ${isExistingDesign ? "opacity-50 cursor-not-allowed" : ""}
-                      `}
-                    >
-                      Không
-                    </button>
-                  </div>
+              {/* Tùy chọn cho Túi & Túi cuộn: Túi Zipper & Túi xếp hông */}
+              {(shouldShowZipper || shouldShowGusseted) && (
+                <div className={`grid grid-cols-1 ${shouldShowZipper && shouldShowGusseted ? "sm:grid-cols-2" : ""} gap-4`}>
+                  {shouldShowZipper && (
+                    <div className="space-y-3">
+                      <Label className="text-sm font-medium">Túi Zipper</Label>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              isZipper: true,
+                              gusseted: false,
+                              width: 0,
+                              processClassification: "cut",
+                            }));
+                          }}
+                          disabled={!!isExistingDesign}
+                          className={`
+                            px-4 py-2 rounded-lg border-2 text-sm font-bold transition-all
+                            ${
+                              formData.isZipper
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border bg-background hover:border-primary/50 text-muted-foreground"
+                            }
+                            ${isExistingDesign ? "opacity-50 cursor-not-allowed" : ""}
+                          `}
+                        >
+                          Có
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              isZipper: false,
+                            }));
+                          }}
+                          disabled={!!isExistingDesign}
+                          className={`
+                            px-4 py-2 rounded-lg border-2 text-sm font-bold transition-all
+                            ${
+                              !formData.isZipper
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border bg-background hover:border-primary/50 text-muted-foreground"
+                            }
+                            ${isExistingDesign ? "opacity-50 cursor-not-allowed" : ""}
+                          `}
+                        >
+                          Không
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {shouldShowGusseted && (
+                    <div className="space-y-3">
+                      <Label
+                        className={`text-sm font-medium ${
+                          formData.isZipper ? "opacity-50" : ""
+                        }`}
+                      >
+                        Túi xếp hông
+                      </Label>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              gusseted: true,
+                              isZipper: false,
+                              width: prev.width,
+                              processClassification: "die_cut",
+                            }));
+                          }}
+                          disabled={!!isExistingDesign || formData.isZipper}
+                          className={`
+                            px-4 py-2 rounded-lg border-2 text-sm font-bold transition-all
+                            ${
+                              formData.gusseted
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border bg-background hover:border-primary/50 text-muted-foreground"
+                            }
+                            ${
+                              isExistingDesign || formData.isZipper
+                                ? "opacity-50 cursor-not-allowed"
+                                : ""
+                            }
+                          `}
+                        >
+                          Có
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              gusseted: false,
+                              width: 0,
+                              processClassification: "cut",
+                            }));
+                          }}
+                          disabled={!!isExistingDesign || formData.isZipper}
+                          className={`
+                            px-4 py-2 rounded-lg border-2 text-sm font-bold transition-all
+                            ${
+                              !formData.gusseted
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-border bg-background hover:border-primary/50 text-muted-foreground"
+                            }
+                            ${
+                              isExistingDesign || formData.isZipper
+                                ? "opacity-50 cursor-not-allowed"
+                                : ""
+                            }
+                          `}
+                        >
+                          Không
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

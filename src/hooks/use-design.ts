@@ -21,7 +21,7 @@ import type {
   UpdateReadyDesignRequest,
 } from "@/Schema";
 import { createCrudHooks, getErrorMessage } from "./use-base";
-import { API_SUFFIX } from "@/apis";
+import { API_SUFFIX, normalizeParams } from "@/apis";
 import { useAsyncCallback } from "@/hooks/use-async"; // <== hook async bạn đã có
 
 // ================== CRUD BASE (createCrudHooks) ==================
@@ -66,12 +66,13 @@ export const useUpdateDesign = () => useUpdateDesignBase();
 
 // GET /api/designs/my
 export const useMyDesigns = (params?: MyDesignListParams) => {
+  const cleanParams = normalizeParams((params ?? {}) as Record<string, unknown>);
   return useQuery({
-    queryKey: [designKeys.all[0], "my", params ?? {}],
+    queryKey: [designKeys.all[0], "my", cleanParams],
     queryFn: async () => {
       const res = await apiRequest.get<DesignResponsePaginate>(
         API_SUFFIX.MY_DESIGNS,
-        { params }
+        { params: cleanParams }
       );
       return res.data;
     },
@@ -85,13 +86,14 @@ export const useDesignsByUser = (
   params?: DesignUserParams,
   enabled = true
 ) => {
+  const cleanParams = normalizeParams((params ?? {}) as Record<string, unknown>);
   return useQuery({
-    queryKey: [designKeys.all[0], "user", userId, params ?? {}],
+    queryKey: [designKeys.all[0], "user", userId, cleanParams],
     enabled: enabled && !!userId,
     queryFn: async () => {
       const res = await apiRequest.get<DesignResponsePaginate>(
         API_SUFFIX.DESIGN_BY_USER(userId as number),
-        { params }
+        { params: cleanParams }
       );
       return res.data;
     },

@@ -12,6 +12,7 @@ import {
   Printer,
   Send,
   Loader2,
+  RefreshCw,
 } from "lucide-react";
 import {
   Dialog,

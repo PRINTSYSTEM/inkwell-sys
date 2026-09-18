@@ -298,7 +298,7 @@ function ProofingCodeWithProductions({ code, query, onOpenDetail }: ProofingCode
                   <div className="flex justify-between items-center">
                     <span className="font-semibold text-stone-500">Mã lệnh:</span>
                     <Link
-                      to={`/productions/${prod.id}`}
+                      to={`/production/${prod.id}`}
                       className="font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-0.5"
                     >
                       PO{String(prod.id).padStart(4, '0')}

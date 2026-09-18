@@ -298,6 +298,7 @@ export default function DesignDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isDraggingOverPreview, setIsDraggingOverPreview] = useState(false);
   const [gusseted, setGusseted] = useState<boolean>(false);
+  const [isZipper, setIsZipper] = useState<boolean>(false);
   const [editFormData, setEditFormData] = useState({
     designName: "",
     length: 0,
@@ -727,7 +728,14 @@ export default function DesignDetailPage() {
   // ==== HANDLERS - EDIT DESIGN ====
   const handleStartEdit = () => {
     if (!design) return;
-    setGusseted(design.width ? design.width > 0 : false);
+    const initialIsZipper =
+      Boolean((design as any).isZipper) ||
+      Boolean((design as any).hasZipper) ||
+      Boolean((design as any).hasZip) ||
+      Boolean((design as any).isZip) ||
+      (design.notes?.toLowerCase().includes("zipper") ?? false);
+    setIsZipper(initialIsZipper);
+    setGusseted(initialIsZipper ? false : (design.width ? design.width > 0 : false));
     setEditFormData({
       designName: design.designName || "",
       length: design.length || 0,
@@ -800,6 +808,8 @@ export default function DesignDetailPage() {
       }
     }
 
+    const finalNotes = editFormData.additionalNotes || "";
+
     try {
       await updateDesign.mutateAsync({
         id: designId,
@@ -816,7 +826,7 @@ export default function DesignDetailPage() {
               ? editFormData.requestedQuantity
               : null,
           requirements: editFormData.requirements || null,
-          additionalNotes: editFormData.additionalNotes || null,
+          additionalNotes: finalNotes || null,
           materialTypeId: editFormData.materialTypeId || null,
           sidesClassificationOptionId:
             editFormData.sidesClassificationOptionId || null,
@@ -826,7 +836,11 @@ export default function DesignDetailPage() {
           processClassification: editFormData.processClassification || null,
           laminationType: editFormData.laminationType || null,
           basisWeight: editFormData.basisWeight ?? null,
-        },
+          isZipper: isZipper,
+          hasZip: isZipper,
+          hasZipper: isZipper,
+          isZip: isZipper,
+        } as any,
       });
       toast.success("Thành công", {
         description: "Đã cập nhật thông tin thiết kế",
@@ -945,6 +959,13 @@ export default function DesignDetailPage() {
 
   const d = design as DesignResponse;
 
+  // Material categorization for zipper & gusseted rules
+  const matNameLower = (selectedMaterialName || d.materialType?.name || "").toLowerCase();
+  const isGiay = matNameLower.includes("giấy") || matNameLower.includes("giay");
+  const isMetaline = matNameLower.includes("metaline") || matNameLower.includes("metalize");
+  const isPEorPA = (matNameLower.includes("pe") || matNameLower.includes("pa")) && !isMetaline && !isGiay;
+  const isCuonThuong = (matNameLower.includes("thường") || matNameLower.includes("thuong")) && !isMetaline && !isGiay;
+
   // Check design type for conditional editing
   const isNhan = isNhanDesignType(designTypeName);
   const isHop = isHopDesignType(designTypeName);
@@ -957,16 +978,23 @@ export default function DesignDetailPage() {
   const canEditAdhesiveOffset = isNhan; // Only label can edit adhesive offset
   const showBasisWeight = !!(isEditing ? hasSpecs : (d.basisWeight && d.basisWeight > 0 && !isDecalPaper));
 
+  const shouldShowZipper = Boolean(
+    (isTui && !isTuiCuon && isPEorPA) ||
+    (isTuiCuon && isCuonThuong)
+  );
+
+  const shouldShowGusseted = Boolean(isTui && !isTuiCuon && !isGiay);
+
   // ==== MAIN LAYOUT ====
   return (
     <ErrorBoundary>
-      <div className="h-full flex flex-col bg-background overflow-hidden">
+      <div className="h-full flex flex-col bg-background overflow-y-auto lg:overflow-hidden">
 
 
-        {/* ===== BODY: 2 COLUMNS ===== */}
-        <div className="flex-1 flex min-h-0">
+        {/* ===== BODY: 2 COLUMNS ON DESKTOP, STACKED ON MOBILE ===== */}
+        <div className="flex-1 flex flex-col lg:flex-row min-h-0">
           {/* ===== LEFT: INFO & SPECS ===== */}
-          <div className="flex-[6.5] min-w-0 border-r flex flex-col min-h-0 bg-card/30">
+          <div className="w-full lg:flex-[6.5] min-w-0 border-b lg:border-b-0 lg:border-r flex flex-col min-h-0 bg-card/30">
             <ScrollArea className="flex-1">
               <div className="p-3 space-y-3">
                 {/* Design summary */}
@@ -1548,140 +1576,94 @@ export default function DesignDetailPage() {
                       </CardContent>
                     </Card>
 
-                    {/* Số mặt in */}
-                    {(d.sidesClassification || d.sidesClassificationOption) && (
-                      <Card className="col-span-12 md:col-span-3 border-slate-200 dark:border-slate-800">
-                        <CardContent className="p-2.5">
-                          <p className="text-xs text-muted-foreground uppercase mb-1 font-bold">
-                            {d.designType?.name?.toLowerCase().includes("decal") ? "Loại sản phẩm" : "Số mặt in"}
-                          </p>
-                          {isEditing && canEditDesign ? (
-                            <div className="flex flex-wrap gap-2 mt-1">
-                              {Object.entries(sidesClassificationLabels).map(
-                                ([value, label]) => {
-                                  const displayLabel =
-                                    d.designType?.name?.toLowerCase().includes("decal")
-                                      ? value === "one_side"
-                                        ? "Decal lẻ"
-                                        : value === "two_side"
-                                          ? "Decal bộ"
-                                          : label
-                                      : label;
-                                  return (
-                                    <Button
-                                      key={value}
-                                      size="sm"
-                                      variant={
-                                        editFormData.sidesClassification ===
-                                          value
-                                          ? "default"
-                                          : "outline"
-                                      }
-                                      className="h-7 px-2 text-xs rounded-full"
-                                      onClick={() =>
-                                        setEditFormData((prev) => ({
-                                          ...prev,
-                                          sidesClassification: value,
-                                        }))
-                                      }
-                                    >
-                                      {displayLabel}
-                                    </Button>
-                                  );
-                                }
-                              )}
-                            </div>
-                          ) : (
-                            <p className="text-sm font-bold">
-                              {d.sidesClassification
-                                ? d.designType?.name?.toLowerCase().includes("decal")
-                                  ? d.sidesClassification === "one_side"
-                                    ? "Decal lẻ"
-                                    : d.sidesClassification === "two_side"
-                                      ? "Decal bộ"
-                                      : sidesClassificationLabels[
-                                      d.sidesClassification
-                                      ] || d.sidesClassification
-                                  : sidesClassificationLabels[
-                                  d.sidesClassification
-                                  ] || d.sidesClassification
-                                : (
-                                  d.sidesClassificationOption as
-                                  | { value?: string }
-                                  | undefined
-                                )?.value || "—"}
+                    {/* Specifications Cards Grid */}
+                    <div className="col-span-12 flex flex-wrap gap-2">
+                      {/* Số mặt in */}
+                      {(d.sidesClassification || d.sidesClassificationOption) && (
+                        <Card className="flex-1 min-w-[140px] border-slate-200 dark:border-slate-800">
+                          <CardContent className="p-2.5">
+                            <p className="text-xs text-muted-foreground uppercase mb-1 font-bold">
+                              {d.designType?.name?.toLowerCase().includes("decal") ? "Loại sản phẩm" : "Số mặt in"}
                             </p>
-                          )}
-                        </CardContent>
-                      </Card>
-                    )}
+                            {isEditing && canEditDesign ? (
+                              <div className="flex flex-wrap gap-2 mt-1">
+                                {Object.entries(sidesClassificationLabels).map(
+                                  ([value, label]) => {
+                                    const displayLabel =
+                                      d.designType?.name?.toLowerCase().includes("decal")
+                                        ? value === "one_side"
+                                          ? "Decal lẻ"
+                                          : value === "two_side"
+                                            ? "Decal bộ"
+                                            : label
+                                        : label;
+                                    return (
+                                      <Button
+                                        key={value}
+                                        size="sm"
+                                        variant={
+                                          editFormData.sidesClassification ===
+                                            value
+                                            ? "default"
+                                            : "outline"
+                                        }
+                                        className="h-7 px-2 text-xs rounded-full"
+                                        onClick={() =>
+                                          setEditFormData((prev) => ({
+                                            ...prev,
+                                            sidesClassification: value,
+                                          }))
+                                        }
+                                      >
+                                        {displayLabel}
+                                      </Button>
+                                    );
+                                  }
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-sm font-bold">
+                                {d.sidesClassification
+                                  ? d.designType?.name?.toLowerCase().includes("decal")
+                                    ? d.sidesClassification === "one_side"
+                                      ? "Decal lẻ"
+                                      : d.sidesClassification === "two_side"
+                                        ? "Decal bộ"
+                                        : sidesClassificationLabels[
+                                        d.sidesClassification
+                                        ] || d.sidesClassification
+                                    : sidesClassificationLabels[
+                                    d.sidesClassification
+                                    ] || d.sidesClassification
+                                  : (
+                                    d.sidesClassificationOption as
+                                    | { value?: string }
+                                    | undefined
+                                  )?.value || "—"}
+                              </p>
+                            )}
+                          </CardContent>
+                        </Card>
+                      )}
 
-                    {/* Quy cách sản xuất */}
-                    {(d.processClassification || d.processClassificationOption) && (
-                      <Card className="col-span-12 md:col-span-3 border-slate-200 dark:border-slate-800">
-                        <CardContent className="p-2.5">
-                          <p className="text-xs text-muted-foreground uppercase mb-1 font-bold">
-                            Quy cách sản xuất
-                          </p>
-                          {isEditing && canEditDesign ? (
-                            <div className="flex flex-wrap gap-2 mt-1">
-                              {Object.entries(
-                                processClassificationLabels
-                              ).map(([value, label]) => (
-                                <Button
-                                  key={value}
-                                  size="sm"
-                                  variant={
-                                    editFormData.processClassification ===
-                                      value
-                                      ? "default"
-                                      : "outline"
-                                  }
-                                  className="h-7 px-2 text-xs rounded-full"
-                                  onClick={() =>
-                                    setEditFormData((prev) => ({
-                                      ...prev,
-                                      processClassification: value,
-                                    }))
-                                  }
-                                >
-                                  {label}
-                                </Button>
-                              ))}
-                            </div>
-                          ) : (
-                            <p className="text-sm font-bold">
-                              {d.processClassification
-                                ? processClassificationLabels[
-                                d.processClassification
-                                ] || d.processClassification
-                                : (
-                                  d.processClassificationOption as
-                                  | { value?: string }
-                                  | undefined
-                                )?.value || "—"}
+                      {/* Quy cách sản xuất */}
+                      {(d.processClassification || d.processClassificationOption) && (
+                        <Card className="flex-1 min-w-[140px] border-slate-200 dark:border-slate-800">
+                          <CardContent className="p-2.5">
+                            <p className="text-xs text-muted-foreground uppercase mb-1 font-bold">
+                              Quy cách sản xuất
                             </p>
-                          )}
-                        </CardContent>
-                      </Card>
-                    )}
-
-                    {/* Cán màng */}
-                    {(d.laminationType || orderDetails?.[0]?.laminationType) && (
-                      <Card className="col-span-12 md:col-span-3 border-slate-200 dark:border-slate-800">
-                        <CardContent className="p-2.5">
-                          <p className="text-xs text-muted-foreground uppercase mb-1 font-bold">
-                            Cán màng
-                          </p>
-                          {isEditing && canEditDesign ? (
-                            <div className="flex flex-wrap gap-2 mt-1">
-                              {Object.entries(laminationTypeLabels).map(
-                                ([value, label]) => (
+                            {isEditing && canEditDesign ? (
+                              <div className="flex flex-wrap gap-2 mt-1">
+                                {Object.entries(
+                                  processClassificationLabels
+                                ).map(([value, label]) => (
                                   <Button
                                     key={value}
                                     size="sm"
                                     variant={
-                                      editFormData.laminationType === value
+                                      editFormData.processClassification ===
+                                        value
                                         ? "default"
                                         : "outline"
                                     }
@@ -1689,76 +1671,178 @@ export default function DesignDetailPage() {
                                     onClick={() =>
                                       setEditFormData((prev) => ({
                                         ...prev,
-                                        laminationType: value,
+                                        processClassification: value,
                                       }))
                                     }
                                   >
                                     {label}
                                   </Button>
-                                )
-                              )}
-                            </div>
-                          ) : (
-                            <p className="text-sm font-bold">
-                              {laminationTypeLabels[
-                                (d.laminationType ||
-                                  orderDetails?.[0]?.laminationType) as string
-                              ] || "—"}
-                            </p>
-                          )}
-                        </CardContent>
-                      </Card>
-                    )}
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm font-bold">
+                                {d.processClassification
+                                  ? processClassificationLabels[
+                                  d.processClassification
+                                  ] || d.processClassification
+                                  : (
+                                    d.processClassificationOption as
+                                    | { value?: string }
+                                    | undefined
+                                  )?.value || "—"}
+                              </p>
+                            )}
+                          </CardContent>
+                        </Card>
+                      )}
 
-                    {/* Túi xếp hông */}
-                    {isTui && !isTuiCuon && (
-                      <Card className="col-span-12 md:col-span-3 border-slate-200 dark:border-slate-800">
-                        <CardContent className="p-2.5 space-y-1.5">
-                          <p className="text-xs text-muted-foreground uppercase mb-1.5 font-bold">
-                            Túi xếp hông
-                          </p>
-                          {isEditing && canEditDesign ? (
-                            <div className="flex gap-2">
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant={gusseted ? "default" : "outline"}
-                                onClick={() => {
-                                  setGusseted(true);
-                                  setEditFormData((prev) => ({
-                                    ...prev,
-                                    processClassification: "die_cut",
-                                  }));
-                                }}
-                                className="h-8 px-3 text-xs"
-                              >
-                                Có
-                              </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant={!gusseted ? "default" : "outline"}
-                                onClick={() => {
-                                  setGusseted(false);
-                                  setEditFormData((prev) => ({
-                                    ...prev,
-                                    width: 0,
-                                    processClassification: "cut",
-                                  }));
-                                }}
-                                className="h-8 px-3 text-xs"
-                              >
-                                Không
-                              </Button>
-                            </div>
-                          ) : (
-                            <p className="font-bold text-sm text-slate-900 dark:text-slate-100">
-                              {(d.width ?? 0) > 0 ? "Có" : "Không"}
+                      {/* Cán màng */}
+                      {(d.laminationType || orderDetails?.[0]?.laminationType) && (
+                        <Card className="flex-1 min-w-[140px] border-slate-200 dark:border-slate-800">
+                          <CardContent className="p-2.5">
+                            <p className="text-xs text-muted-foreground uppercase mb-1 font-bold">
+                              Cán màng
                             </p>
+                            {isEditing && canEditDesign ? (
+                              <div className="flex flex-wrap gap-2 mt-1">
+                                {Object.entries(laminationTypeLabels).map(
+                                  ([value, label]) => (
+                                    <Button
+                                      key={value}
+                                      size="sm"
+                                      variant={
+                                        editFormData.laminationType === value
+                                          ? "default"
+                                          : "outline"
+                                      }
+                                      className="h-7 px-2 text-xs rounded-full"
+                                      onClick={() =>
+                                        setEditFormData((prev) => ({
+                                          ...prev,
+                                          laminationType: value,
+                                        }))
+                                      }
+                                    >
+                                      {label}
+                                    </Button>
+                                  )
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-sm font-bold">
+                                {laminationTypeLabels[
+                                  (d.laminationType ||
+                                    orderDetails?.[0]?.laminationType) as string
+                                ] || "—"}
+                              </p>
+                            )}
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {/* Túi Zipper & Túi xếp hông */}
+                      {(shouldShowZipper || shouldShowGusseted) && (
+                        <>
+                          {shouldShowZipper && (
+                            <Card className="flex-1 min-w-[140px] border-slate-200 dark:border-slate-800">
+                              <CardContent className="p-2.5 space-y-1.5">
+                                <p className="text-xs text-muted-foreground uppercase mb-1.5 font-bold">
+                                  Túi Zipper
+                                </p>
+                                {isEditing && canEditDesign ? (
+                                  <div className="flex gap-2">
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant={isZipper ? "default" : "outline"}
+                                      onClick={() => {
+                                        setIsZipper(true);
+                                        setGusseted(false);
+                                        setEditFormData((prev) => ({
+                                          ...prev,
+                                          width: 0,
+                                          processClassification: "cut",
+                                        }));
+                                      }}
+                                      className="h-8 px-3 text-xs"
+                                    >
+                                      Có
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant={!isZipper ? "default" : "outline"}
+                                      onClick={() => {
+                                        setIsZipper(false);
+                                      }}
+                                      className="h-8 px-3 text-xs"
+                                    >
+                                      Không
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <p className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                                    {(d as any)?.isZipper || (d as any)?.hasZipper || (d as any)?.hasZip || (d as any)?.isZip || (d.notes && (d.notes.toLowerCase().includes("zipper") || d.notes.toLowerCase().includes("zip"))) ? "Có" : "Không"}
+                                  </p>
+                                )}
+                              </CardContent>
+                            </Card>
                           )}
-                        </CardContent>
-                      </Card>
-                    )}
+
+                          {shouldShowGusseted && (
+                            <Card className={`flex-1 min-w-[140px] border-slate-200 dark:border-slate-800 ${isZipper ? "opacity-60" : ""}`}>
+                              <CardContent className="p-2.5 space-y-1.5">
+                                <p className="text-xs text-muted-foreground uppercase mb-1.5 font-bold">
+                                  Túi xếp hông
+                                </p>
+                                {isEditing && canEditDesign ? (
+                                  <div className="flex gap-2">
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      disabled={isZipper}
+                                      variant={gusseted ? "default" : "outline"}
+                                      onClick={() => {
+                                        setIsZipper(false);
+                                        setGusseted(true);
+                                        setEditFormData((prev) => ({
+                                          ...prev,
+                                          processClassification: "die_cut",
+                                        }));
+                                      }}
+                                      className={`h-8 px-3 text-xs ${isZipper ? "cursor-not-allowed" : ""}`}
+                                    >
+                                      Có
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      disabled={isZipper}
+                                      variant={!gusseted ? "default" : "outline"}
+                                      onClick={() => {
+                                        setGusseted(false);
+                                        setEditFormData((prev) => ({
+                                          ...prev,
+                                          width: 0,
+                                          processClassification: "cut",
+                                        }));
+                                      }}
+                                      className={`h-8 px-3 text-xs ${isZipper ? "cursor-not-allowed" : ""}`}
+                                    >
+                                      Không
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <p className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                                    {(d.width ?? 0) > 0 ? "Có" : "Không"}
+                                  </p>
+                                )}
+                              </CardContent>
+                            </Card>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -1819,7 +1903,7 @@ export default function DesignDetailPage() {
           </div>
 
           {/* ===== RIGHT: FILE & TIMELINE ===== */}
-          <div className="flex-[3.5] flex flex-col min-h-0 min-w-0">
+          <div className="w-full lg:flex-[3.5] flex flex-col min-h-0 min-w-0 border-t lg:border-t-0">
             {/* Header actions */}
             <div className="shrink-0 px-5 py-3 border-b bg-card/50 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">

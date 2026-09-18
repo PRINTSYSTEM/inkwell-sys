@@ -328,13 +328,26 @@ export const API_SUFFIX = {
   MATERIAL_CUT_COMPLETE: (id: number) => `/material-cuts/${id}/complete`,
   MATERIAL_CUT_CANCEL: (id: number) => `/material-cuts/${id}/cancel`,
 
-  // ========== PRODUCTIONS ==========
+  // ========== PRODUCTIONS & CAPACITY ==========
+  CAPACITY_KPI_SUMMARY: "/capacity/kpi-summary",
+  CAPACITY_SUMMARY: "/capacity/summary",
+  CAPACITY_WEEKLY_HEATMAP: "/capacity/weekly-heatmap",
+  CAPACITY_STAGE_REALLOCATION: (stageId: number) =>
+    `/capacity/stages/${stageId}/reallocation-suggestions`,
+  CAPACITY_SIMULATE: "/capacity/simulate",
+
   PRODUCTION_ORDERS: "/production-orders",
   PRODUCTION_ORDER_BY_ID: (id: number) => `/production-orders/${id}`,
   PRODUCTION_ORDER_SCHEDULE: (id: number) => `/production-orders/${id}/schedule`,
+  PRODUCTION_ORDER_HISTORY: (id: number) => `/production-orders/${id}/history`,
   PRODUCTION_CONFIG: "/system-settings/production-config",
+  PRODUCTION_FLOWS: "/production/flows",
   PRODUCTION_DELAY_REPORT: "/production-orders/delay-report",
+  PRODUCTION_DELAY_REPORT_EXCEL: "/production-orders/delay-report/excel",
   PRODUCTION_DELAY_SUMMARY: "/production-orders/delay-summary",
+  PRODUCTION_DELIVERY_REPORT: "/production-orders/delivery-report",
+  PRODUCTION_DELIVERY_REPORT_EXCEL: "/production-orders/delivery-report/excel",
+  PRODUCTION_DELIVERY_SUMMARY: "/production-orders/delivery-summary",
   PRODUCTION_ORDERS_BY_ORDER: (orderId: number) =>
     `/production-orders/by-order/${orderId}`,
   PRODUCTION_STEP_ASSIGN: (id: number) =>
@@ -349,6 +362,24 @@ export const API_SUFFIX = {
   PRODUCTION_POST_PRINT: "/production-orders/post-print",
   PRODUCTION_POST_PRINT_COMPLETED: "/production-orders/post-print/completed",
   PRODUCTION_POST_PRINT_COUNTS: "/production-orders/post-print/counts",
+  PRODUCTION_STEP_WORKER_COUNT: (orderId: number, stepId: number) =>
+    `/production-orders/${orderId}/steps/${stepId}/worker-count`,
+  PRODUCTION_FLOW_WORKER_DEFAULTS: (flowId: string | number) => {
+    let cleanId = flowId;
+    if (typeof flowId === "string") {
+      const parsed = parseInt(flowId.replace(/\D/g, ""), 10);
+      if (!isNaN(parsed) && parsed > 0) {
+        cleanId = parsed;
+      }
+    }
+    return `/production/flows/${cleanId}/worker-defaults`;
+  },
+  PRODUCTION_FLOW_SLA_CONFIG: (flowId: string | number) =>
+    `/production/flows/${flowId}/sla-config`,
+  PRODUCTION_STAGE_WORKER_REPORT: "/production/stage-worker-report",
+  PRODUCTION_STAGE_WORKER_REPORT_ORDERS: (stageCode: string) =>
+    `/production/stage-worker-report/${stageCode}/orders`,
+  PRODUCTION_STAGE_WORKER_REPORT_EXCEL: "/production/stage-worker-report/excel",
 
   // ========== PRINT ORDERS ==========
   PRINT_ORDERS: "/print-orders",

@@ -644,7 +644,7 @@ export default function ProductionDetailPage() {
             <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
             <p className="text-lg font-medium">Không tìm thấy đơn sản xuất</p>
             <Button
-              onClick={() => navigate("/productions")}
+              onClick={() => navigate("/production")}
               className="mt-4"
               variant="outline"
             >
@@ -667,7 +667,7 @@ export default function ProductionDetailPage() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => navigate("/productions")}
+                onClick={() => navigate("/production")}
                 className="mt-0.5"
               >
                 <ArrowLeft className="h-5 w-5" />
