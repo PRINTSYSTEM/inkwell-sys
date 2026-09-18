@@ -87,6 +87,9 @@ export const useProofingOrder = (id: number | string | null, enabled = true) => 
     queryFn: async () => {
       if (!id && id !== 0) return null;
 
+      const cleanStr = String(id).trim();
+      if (!cleanStr) return null;
+
       // 1. Try direct ID lookup if id is a positive number or numeric string
       const numId = typeof id === "number" ? id : Number(id);
       const isNumeric = !isNaN(numId) && numId > 0;
@@ -100,69 +103,111 @@ export const useProofingOrder = (id: number | string | null, enabled = true) => 
             return directRes.data;
           }
         } catch (err: any) {
-          // Direct ID lookup failed (e.g. 404 because numId is a code), fallback to code lookup
+          // Direct ID lookup failed (e.g. 404 because numId is a code or archived), fallback to code & search lookup
         }
       }
 
-      // 2. Lookup by code parameter
-      const cleanStr = String(id).trim();
-      const codePart = cleanStr.replace(/^bài\s*/i, "").trim();
+      // Generate search terms and code variations
+      const rawDigits = cleanStr.replace(/\D/g, "");
+      const searchTerms = new Set<string>();
+      searchTerms.add(cleanStr);
 
-      if (!codePart) return null;
+      const stripped = cleanStr
+        .replace(/^bài\s*/i, "")
+        .replace(/^bb-?\s*/i, "")
+        .trim();
+      if (stripped) searchTerms.add(stripped);
 
-      try {
-        const listRes = await apiRequest.get<ProofingOrderResponsePaginate>(
-          API_SUFFIX.PROOFING_ORDERS,
-          { params: { code: codePart, pageSize: 20 } }
-        );
-        const items = listRes?.data?.items ?? [];
-        let found = items.find(
-          (item) =>
-            item.code?.toUpperCase() === codePart.toUpperCase() ||
-            item.code?.toUpperCase() === cleanStr.toUpperCase() ||
-            item.code?.toUpperCase() === `BÀI ${codePart}`.toUpperCase()
-        );
-
-        if (!found && items.length > 0) {
-          found = items[0];
-        }
-
-        if (found?.id) {
-          const detailRes = await apiRequest.get<ProofingOrderResponse>(
-            `${API_SUFFIX.PROOFING_ORDERS}/${found.id}`
-          );
-          return detailRes.data;
-        }
-      } catch (err: any) {
-        // Fallback to search
+      if (rawDigits) {
+        searchTerms.add(rawDigits);
+        searchTerms.add(`BB${rawDigits}`);
+        searchTerms.add(`BB-${rawDigits}`);
+        searchTerms.add(`BB${rawDigits.padStart(4, "0")}`);
+        searchTerms.add(`BB${rawDigits.padStart(5, "0")}`);
+        searchTerms.add(`BB${rawDigits.padStart(6, "0")}`);
       }
 
-      // 3. Fallback search by string query
-      try {
-        const searchRes = await apiRequest.get<ProofingOrderResponsePaginate>(
-          API_SUFFIX.PROOFING_ORDERS,
-          { params: { search: codePart, pageSize: 20 } }
-        );
-        const searchItems = searchRes?.data?.items ?? [];
-        let searchFound = searchItems.find(
-          (item) =>
-            item.code?.toUpperCase() === codePart.toUpperCase() ||
-            item.code?.toUpperCase() === cleanStr.toUpperCase() ||
-            item.code?.toUpperCase().includes(codePart.toUpperCase())
-        );
+      const checkMatch = (item: any) => {
+        if (!item) return false;
+        const itemCode = String(item.code || "").toUpperCase().trim();
+        const itemCodeDigits = itemCode.replace(/\D/g, "");
+        const itemId = String(item.id || "");
 
-        if (!searchFound && searchItems.length > 0) {
-          searchFound = searchItems[0];
+        if (itemId === cleanStr || (rawDigits && itemId === rawDigits)) return true;
+
+        for (const term of Array.from(searchTerms)) {
+          const uTerm = term.toUpperCase();
+          if (itemCode === uTerm) return true;
+          if (uTerm.startsWith("BB") && itemCode.endsWith(uTerm.substring(2))) return true;
+          if (rawDigits && itemCodeDigits === rawDigits) return true;
         }
+        return false;
+      };
 
-        if (searchFound?.id) {
+      const fetchDetailById = async (foundId: number) => {
+        try {
           const detailRes = await apiRequest.get<ProofingOrderResponse>(
-            `${API_SUFFIX.PROOFING_ORDERS}/${searchFound.id}`
+            `${API_SUFFIX.PROOFING_ORDERS}/${foundId}`
           );
           return detailRes.data;
+        } catch {
+          return null;
         }
-      } catch (err: any) {
-        // Ignore
+      };
+
+      // 2. Lookup in standard proofing orders API using code / search
+      for (const term of Array.from(searchTerms)) {
+        try {
+          const listRes = await apiRequest.get<ProofingOrderResponsePaginate>(
+            API_SUFFIX.PROOFING_ORDERS,
+            { params: { code: term, pageSize: 20 } }
+          );
+          const items = listRes?.data?.items ?? [];
+          const matched = items.find(checkMatch) || (items.length > 0 ? items[0] : null);
+          if (matched?.id) {
+            const detail = await fetchDetailById(matched.id);
+            if (detail) return detail;
+            return matched as any;
+          }
+        } catch {}
+
+        try {
+          const listRes = await apiRequest.get<ProofingOrderResponsePaginate>(
+            API_SUFFIX.PROOFING_ORDERS,
+            { params: { search: term, pageSize: 20 } }
+          );
+          const items = listRes?.data?.items ?? [];
+          const matched = items.find(checkMatch) || (items.length > 0 ? items[0] : null);
+          if (matched?.id) {
+            const detail = await fetchDetailById(matched.id);
+            if (detail) return detail;
+            return matched as any;
+          }
+        } catch {}
+      }
+
+      // 3. Fallback: Search in completed or for-production proofing orders endpoints
+      const fallbackEndpoints = [
+        "/proofing-orders/completed",
+        "/proofing-orders/for-production",
+      ];
+
+      for (const endpoint of fallbackEndpoints) {
+        for (const term of Array.from(searchTerms).slice(0, 3)) {
+          try {
+            const listRes = await apiRequest.get<ProofingOrderResponsePaginate>(
+              endpoint,
+              { params: { search: term, pageSize: 20 } }
+            );
+            const items = listRes?.data?.items ?? [];
+            const matched = items.find(checkMatch) || (items.length > 0 ? items[0] : null);
+            if (matched?.id) {
+              const detail = await fetchDetailById(matched.id);
+              if (detail) return detail;
+              return matched as any;
+            }
+          } catch {}
+        }
       }
 
       return null;
@@ -170,6 +215,7 @@ export const useProofingOrder = (id: number | string | null, enabled = true) => 
     enabled: Boolean(enabled && id !== null && id !== undefined && id !== ""),
   });
 };
+
 
 export const useCreateProofingOrder = () => useCreateProofingOrderBase();
 export const useUpdateProofingOrder = () => useUpdateProofingOrderBase();
