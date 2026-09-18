@@ -55,6 +55,7 @@ import {
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { ReadOnlyProofingDetailModal } from "@/components/proofing/ReadOnlyProofingDetailModal";
 import { PrintOrderHistoryModal } from "@/components/production/PrintOrderHistoryModal";
+import { LazyImage } from "@/components/ui/lazy-image";
 import { formatImageUrl, cn } from "@/lib/utils";
 import { dieLocationLabels } from "@/lib/status-utils";
 import {
@@ -1369,8 +1370,9 @@ export default function ProductionDispatch() {
                               }}
                             >
                               {thumbnail ? (
-                                <img
+                                <LazyImage
                                   src={thumbnail}
+                                  fallbackSrc={fullImage}
                                   alt={proofingCode}
                                   className="h-full w-full object-cover"
                                 />
@@ -1540,7 +1542,7 @@ export default function ProductionDispatch() {
                                                 onClick={() => setViewingImageUrl(dieImg)}
                                                 title="Bấm để phóng to hình khuôn"
                                               >
-                                                <img src={dieImg} alt={d.code || "Hình khuôn"} loading="lazy" className="h-full w-full object-cover" />
+                                                <LazyImage src={dieImg} alt={d.code || "Hình khuôn"} className="h-full w-full object-cover" />
                                               </div>
                                             ) : (
                                               <div className="h-12 w-12 bg-slate-100 rounded border border-slate-200 shrink-0 flex items-center justify-center text-slate-400">

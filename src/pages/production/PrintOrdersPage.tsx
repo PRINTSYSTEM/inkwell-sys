@@ -73,6 +73,7 @@ import {
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { PrintOrderHistoryModal } from "@/components/production/PrintOrderHistoryModal";
 import { ReadOnlyProofingDetailModal } from "@/components/proofing/ReadOnlyProofingDetailModal";
+import { LazyImage } from "@/components/ui/lazy-image";
 import { formatImageUrl, cn } from "@/lib/utils";
 import {
   usePrintOrders,
@@ -896,7 +897,7 @@ export default function PrintOrdersPage() {
                               title={fullImage ? "Bấm để xem ảnh phóng to" : undefined}
                             >
                               {thumbnail ? (
-                                <img src={thumbnail} alt={proofingCode} className="h-full w-full object-cover" />
+                                <LazyImage src={thumbnail} fallbackSrc={fullImage} alt={proofingCode} className="h-full w-full object-cover" />
                               ) : (
                                 <div className="h-full w-full flex items-center justify-center text-slate-400">
                                   <ImageIcon className="h-3.5 w-3.5" />
@@ -1046,7 +1047,7 @@ export default function PrintOrdersPage() {
                             title={fullImage ? "Bấm để xem ảnh phóng to" : undefined}
                           >
                             {thumbnail ? (
-                              <img src={thumbnail} alt={proofingCode} className="h-full w-full object-cover" />
+                              <LazyImage src={thumbnail} fallbackSrc={fullImage} alt={proofingCode} className="h-full w-full object-cover" />
                             ) : (
                               <div className="h-full w-full flex items-center justify-center text-slate-400 bg-slate-50">
                                 <ImageIcon className="h-5 w-5" />
@@ -1292,7 +1293,7 @@ export default function PrintOrdersPage() {
                             title={fullImage ? "Bấm để xem ảnh phóng to" : undefined}
                           >
                             {thumbnail ? (
-                              <img src={thumbnail} alt={proofingCode} className="h-full w-full object-cover" />
+                              <LazyImage src={thumbnail} fallbackSrc={fullImage} alt={proofingCode} className="h-full w-full object-cover" />
                             ) : (
                               <div className="h-full w-full flex items-center justify-center text-slate-400">
                                 <ImageIcon className="h-3.5 w-3.5" />
@@ -1631,7 +1632,7 @@ export default function PrintOrdersPage() {
                                       title={fullImage ? "Bấm để xem ảnh phóng to" : undefined}
                                     >
                                       {thumbnail ? (
-                                        <img src={thumbnail} alt={proofingCode} className="h-full w-full object-cover" />
+                                        <LazyImage src={thumbnail} fallbackSrc={fullImage} alt={proofingCode} className="h-full w-full object-cover" />
                                       ) : (
                                         <div className="h-full w-full flex items-center justify-center text-slate-400">
                                           <ImageIcon className="h-3.5 w-3.5" />

@@ -408,7 +408,15 @@ export function sortSpecificationSteps(steps: string[], flowCode?: string): stri
   const flowCodeUpper = typeof flowCode === "string" ? flowCode.trim().toUpperCase() : "";
   const flowSteps = flowCodeUpper ? FLOW_SPEC_STEPS_MAP[flowCodeUpper] : null;
 
-  const result = Array.from(new Set(steps)).filter((s) => s && s !== "—");
+  let result = Array.from(new Set(steps)).filter((s) => s && s !== "—");
+
+  // Deduplicate generic "Cán" if a specific lamination badge like "Cán bóng" / "Cán mờ" is present
+  const hasSpecificLamination = result.some(
+    (s) => s.trim().toLowerCase() !== "cán" && (s.trim().toLowerCase().startsWith("cán") || s.trim().toLowerCase().includes("cán bóng") || s.trim().toLowerCase().includes("cán mờ"))
+  );
+  if (hasSpecificLamination) {
+    result = result.filter((s) => s.trim().toLowerCase() !== "cán");
+  }
 
   return result.sort((a, b) => {
     const normA = a.trim().toLowerCase();
@@ -436,7 +444,7 @@ export const FLOW_SPEC_STEPS_MAP: Record<string, string[]> = {
   F05: ["In", "Cán", "Cắt"],
   F06: ["In", "Cán", "Cắt", "Bế", "Gỡ", "Dán"],
   F07: ["In", "Cán", "Cắt"],
-  F08: ["In", "Cán", "Cắt", "Bế", "Gỡ"],
+  F08: ["In", "Cán", "Bế", "Gỡ"],
   F09: ["In", "Cán", "Cắt", "Bế", "Gỡ"],
   F10: ["In", "Cán", "Ép biên", "Xả cuộn", "Cắt", "Ép miệng"],
   F11: ["In", "Cán", "Ép biên", "Xả cuộn", "Cắt", "Ép miệng"],
@@ -450,9 +458,52 @@ export const FLOW_SPEC_STEPS_MAP: Record<string, string[]> = {
   F19: ["In", "Cán", "Cắt", "Bế", "Gỡ", "Dán"],
 };
 
+export function extractProcessClassification(target: any): string {
+  if (!target) return "";
+  const d = target.design || target;
+
+  const rawPc =
+    d.processClassification ??
+    d.processClassificationOptionName ??
+    d.processClassificationOption ??
+    d.process_classification ??
+    target.processClassification ??
+    target.processClassificationOptionName ??
+    target.processClassificationOption ??
+    target.process_classification;
+
+  if (typeof rawPc === "string") {
+    return rawPc.trim().toLowerCase();
+  }
+
+  if (rawPc && typeof rawPc === "object") {
+    const val = (rawPc as any).value || (rawPc as any).name || (rawPc as any).code || (rawPc as any).label || "";
+    if (typeof val === "string") return val.trim().toLowerCase();
+  }
+
+  return "";
+}
+
 export function getFlowCode(item: any): string {
   if (!item) return "F01";
   const target = item.design ? { ...item.design, ...item } : item;
+
+  const dtName = (target.designTypeName || target.designType?.name || item.design?.designType?.name || "").toLowerCase();
+  const matName = (target.materialTypeName || target.materialType?.name || item.design?.materialType?.name || "").toLowerCase();
+  const notes = (target.notes || target.additionalNotes || item.design?.notes || "").toLowerCase();
+  const pc = extractProcessClassification(item);
+
+  const isDecal = dtName.includes("decal") || matName.includes("decal") || dtName.includes("nhãn") || matName.includes("nhãn");
+
+  // For Decal items, prioritize specific design processClassification (cut vs die_cut)
+  if (isDecal) {
+    if (pc === "die_cut" || pc.includes("bế") || target.hasDieCut || target.hasDie || !!target.dieId) {
+      return "F08";
+    }
+    if (pc === "cut" || pc === "straight_cut" || pc.includes("cắt")) {
+      return "F07";
+    }
+  }
 
   const rawFlowCode =
     target.flowCode ||
@@ -465,11 +516,6 @@ export function getFlowCode(item: any): string {
     const upper = rawFlowCode.trim().toUpperCase();
     if (FLOW_SPEC_STEPS_MAP[upper]) return upper;
   }
-
-  const dtName = (target.designTypeName || target.designType?.name || "").toLowerCase();
-  const matName = (target.materialTypeName || target.materialType?.name || "").toLowerCase();
-  const notes = (target.notes || target.additionalNotes || "").toLowerCase();
-  const pc = (target.processClassification || target.processClassificationOptionName || "").toLowerCase();
 
   const isZipper =
     target.isZipper ||
@@ -486,14 +532,13 @@ export function getFlowCode(item: any): string {
     notes.includes("xếp hông");
 
   const isRoll = dtName.includes("cuộn") || matName.includes("cuộn");
-  const isDecal = dtName.includes("decal") || matName.includes("decal") || dtName.includes("nhãn") || matName.includes("nhãn");
   const isBox = dtName.includes("hộp") || dtName.includes("hop");
   const isBag = dtName.includes("túi") || dtName.includes("tui");
 
   const isFlute = matName.includes("sóng") || matName.includes("song") || matName.includes("bồi") || matName.includes("boi") || matName.includes("carton");
   const isFilm = matName.includes("pe") || matName.includes("pp") || matName.includes("pet") || matName.includes("màng") || matName.includes("mang");
 
-  const dtCode = (target.designTypeCode || target.designType?.code || "").toLowerCase();
+  const dtCode = (target.designTypeCode || target.designType?.code || item.design?.designType?.code || "").toLowerCase();
   const isPaperBag =
     dtCode.includes("tui-giay") ||
     dtCode.includes("tui_giay") ||
@@ -588,17 +633,17 @@ export function getSpecificationBadges(item: any): string[] {
   }
 
   // 3. Complement missing steps if set is empty or missing gluing/stripping for bags/boxes
-  const dtName = (target.designTypeName || target.designType?.name || "").toLowerCase();
-  const matName = (target.materialTypeName || target.materialType?.name || "").toLowerCase();
-  const notes = (target.notes || target.additionalNotes || "").toLowerCase();
+  const dtName = (target.designTypeName || target.designType?.name || item.design?.designType?.name || "").toLowerCase();
+  const matName = (target.materialTypeName || target.materialType?.name || item.design?.materialType?.name || "").toLowerCase();
+  const notes = (target.notes || target.additionalNotes || item.design?.notes || "").toLowerCase();
   const isBox = dtName.includes("hộp") || dtName.includes("hop");
   const isBag = (dtName.includes("túi") || dtName.includes("tui")) && !dtName.includes("cuộn") && !dtName.includes("cuon");
-  const pc = target.processClassification || target.processClassificationOptionName;
+  const pc = extractProcessClassification(item);
 
   if (set.size === 0) {
     set.add("In");
 
-    const lamType = target.laminationType || target.laminationTypeName;
+    const lamType = target.laminationType || target.laminationTypeName || item.design?.laminationType;
     if (lamType && lamType !== "none" && lamType !== "Không cán") {
       set.add(laminationTypeLabels[lamType] || lamType);
     }
@@ -607,7 +652,7 @@ export function getSpecificationBadges(item: any): string[] {
       set.add(processClassificationLabels[pc] || pc);
     }
 
-    if (isBox || pc === "die_cut") {
+    if (isBox || pc === "die_cut" || pc.includes("bế")) {
       set.add("Bế");
     }
   } else {
@@ -619,13 +664,31 @@ export function getSpecificationBadges(item: any): string[] {
         set.add(lamLabel);
       }
     }
-    if (target.processClassification && processClassificationLabels[target.processClassification]) {
-      const pcLabel = processClassificationLabels[target.processClassification];
-      if (set.has(target.processClassification)) {
-        set.delete(target.processClassification);
+    if (pc && processClassificationLabels[pc]) {
+      const pcLabel = processClassificationLabels[pc];
+      if (set.has(pc)) {
+        set.delete(pc);
         set.add(pcLabel);
       }
     }
+  }
+
+  // Deduplicate generic "Cán" if a specific lamination badge ("Cán bóng", "Cán mờ") is present or if unlaminated
+  const lamType = target.laminationType || target.laminationTypeName || item.design?.laminationType || item.design?.laminationTypeName;
+  const lamLabel = lamType ? (laminationTypeLabels[lamType] || lamType) : null;
+
+  if (lamLabel && lamLabel !== "none" && lamLabel !== "Không cán") {
+    set.add(lamLabel);
+    set.delete("Cán");
+  } else if (lamType === "none" || lamType === "Không cán" || target.laminationType === "none" || target.laminationType === "Không cán") {
+    set.delete("Cán");
+    set.delete("Không cán");
+    set.delete("none");
+  }
+
+  const hasSpecificLam = Array.from(set).some((s) => s.startsWith("Cán ") && s !== "Cán");
+  if (hasSpecificLam) {
+    set.delete("Cán");
   }
 
   // Rename "Dán thành phẩm" -> "Dán"
@@ -634,14 +697,34 @@ export function getSpecificationBadges(item: any): string[] {
     set.add("Dán");
   }
 
-  // Ensure "Gỡ" and "Dán" steps are present if design involves Bế or Dán or is a Box/Paper Bag with gluing
-  const hasBe = set.has("Bế") || pc === "die_cut";
+  // Ensure correct process steps for Decal vs Box/Bag
+  const isDecal = dtName.includes("decal") || matName.includes("decal") || dtName.includes("nhãn") || matName.includes("nhãn");
+  const hasBe = set.has("Bế") || pc === "die_cut" || pc === "bế" || flowCodeUpper === "F08";
   const hasDan = set.has("Dán") || set.has("Dán thành phẩm");
   const isPaperMat = matName.includes("giấy") || matName.includes("duplex") || matName.includes("couche") || matName.includes("kraft") || matName.includes("ivory") || matName.includes("bristol") || matName.includes("metaline");
 
-  if (hasBe || (hasDan && (isBox || (isBag && isPaperMat)))) {
-    if (!set.has("Gỡ")) set.add("Gỡ");
-    if (!set.has("Dán")) set.add("Dán");
+  if (isDecal) {
+    // Decals NEVER require gluing (Dán)
+    set.delete("Dán");
+
+    const isDieCutDecal = pc === "die_cut" || pc === "bế" || flowCodeUpper === "F08";
+    if (isDieCutDecal) {
+      // Decal Bế (F08): requires Bế & Gỡ, DOES NOT require Cắt
+      set.delete("Cắt");
+      if (!set.has("Bế")) set.add("Bế");
+      if (!set.has("Gỡ")) set.add("Gỡ");
+    } else {
+      // Decal Cắt (F07): requires Cắt, DOES NOT require Bế & Gỡ
+      set.delete("Bế");
+      set.delete("Gỡ");
+      if (!set.has("Cắt")) set.add("Cắt");
+    }
+  } else {
+    // Boxes and Bags gluing & stripping rules
+    if (hasBe || (hasDan && (isBox || (isBag && isPaperMat)))) {
+      if (!set.has("Gỡ")) set.add("Gỡ");
+      if (!set.has("Dán")) set.add("Dán");
+    }
   }
 
   // 4. Add explicit Zipper / Gusseted / Ép Kim flags or notes
