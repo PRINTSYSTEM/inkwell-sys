@@ -345,6 +345,9 @@ export const API_SUFFIX = {
   PRODUCTION_DELAY_REPORT: "/production-orders/delay-report",
   PRODUCTION_DELAY_REPORT_EXCEL: "/production-orders/delay-report/excel",
   PRODUCTION_DELAY_SUMMARY: "/production-orders/delay-summary",
+  PRODUCTION_DELIVERY_REPORT: "/production-orders/delivery-report",
+  PRODUCTION_DELIVERY_REPORT_EXCEL: "/production-orders/delivery-report/excel",
+  PRODUCTION_DELIVERY_SUMMARY: "/production-orders/delivery-summary",
   PRODUCTION_ORDERS_BY_ORDER: (orderId: number) =>
     `/production-orders/by-order/${orderId}`,
   PRODUCTION_STEP_ASSIGN: (id: number) =>

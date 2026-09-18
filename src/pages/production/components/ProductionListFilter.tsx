@@ -31,6 +31,8 @@ interface ProductionListFilterProps {
   selectedDesignTypeId?: string | number | null;
   onDesignTypeChange?: (value: string) => void;
   designTypes?: any[];
+  deliverySlaFilter?: string;
+  onDeliverySlaFilterChange?: (value: string) => void;
   productMaterialFilter?: string;
   onProductMaterialChange?: (value: string) => void;
   assigneeFilter?: string;
@@ -75,6 +77,8 @@ export function ProductionListFilter({
   selectedDesignTypeId = "all",
   onDesignTypeChange,
   designTypes = [],
+  deliverySlaFilter = "ALL",
+  onDeliverySlaFilterChange,
   onResetFilters,
   onOpenDelayReport,
 }: ProductionListFilterProps) {
@@ -128,7 +132,7 @@ export function ProductionListFilter({
         )}
       </div>
 
-      {/* 2. Trạng thái */}
+      {/* 2. Trạng thái sản xuất */}
       <div className="w-[140px]">
         <Select value={selectedStatus} onValueChange={onStatusChange}>
           <SelectTrigger className="h-8 text-xs bg-card border-slate-200 font-medium">
@@ -141,6 +145,23 @@ export function ProductionListFilter({
             <SelectItem value="warning" className="text-xs">🟡 Sắp quá hạn</SelectItem>
             <SelectItem value="overdue" className="text-xs">🔴 Quá hạn</SelectItem>
             <SelectItem value="completed" className="text-xs">🟢 Hoàn thành</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* 2b. Tình trạng giao hàng (Delivery SLA Status) */}
+      <div className="w-[150px]">
+        <Select value={deliverySlaFilter} onValueChange={onDeliverySlaFilterChange}>
+          <SelectTrigger className="h-8 text-xs bg-card border-slate-200 font-medium">
+            <SelectValue placeholder="Tình trạng giao hàng" />
+          </SelectTrigger>
+          <SelectContent className="z-[100]">
+            <SelectItem value="ALL" className="text-xs font-semibold">Tất cả SLA</SelectItem>
+            <SelectItem value="NORMAL" className="text-xs">🟢 Kịp tiến độ</SelectItem>
+            <SelectItem value="WARNING" className="text-xs">🟡 Sắp đến hạn</SelectItem>
+            <SelectItem value="OVERDUE" className="text-xs">🔴 Quá hạn</SelectItem>
+            <SelectItem value="ON_TIME" className="text-xs">✅ Đúng hạn</SelectItem>
+            <SelectItem value="COMPLETED_LATE" className="text-xs">🔴 Trễ hạn</SelectItem>
           </SelectContent>
         </Select>
       </div>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -743,15 +743,9 @@ export default function ProductionSlaConfigPage() {
       {/* Main Top Navigation Tabs */}
       <Tabs defaultValue="sla_by_flow" className="w-full flex-1 flex flex-col min-h-0 overflow-hidden">
         <TabsList className="h-8 bg-card border shrink-0 hidden">
-          <TabsTrigger value="sla_by_flow" className="text-xs font-bold px-4">
-            Thời gian sản xuất theo Flow (F01 – F19)
-          </TabsTrigger>
-          <TabsTrigger value="sla_default" className="text-xs font-bold px-4">
-            Thời gian sản xuất mặc định theo công đoạn
-          </TabsTrigger>
-          <TabsTrigger value="history" className="text-xs font-bold px-4">
-            Lịch sử thay đổi ({historyLogs.length})
-          </TabsTrigger>
+          <TabsTrigger value="sla_by_flow">⚙️ Công đoạn theo Flow (F01 – F19)</TabsTrigger>
+          <TabsTrigger value="sla_default">⏱️ Mặc định theo công đoạn</TabsTrigger>
+          <TabsTrigger value="history">📜 Lịch sử thay đổi ({historyLogs.length})</TabsTrigger>
         </TabsList>
 
         {/* TAB 1: SLA Theo Flow (F01 - F19) */}
@@ -865,8 +859,8 @@ export default function ProductionSlaConfigPage() {
                   </div>
                 </div>
 
-                {/* Horizontal Compact Step Flowchart */}
-                <div className="flex items-center gap-1.5 overflow-x-auto py-1 text-xs">
+                {/* Horizontal Auto-Fitting Step Flowchart */}
+                <div className="w-full flex items-center justify-between gap-1 py-1 text-xs min-w-0">
                   {currentStages.map((st, idx) => {
                     const fmtM = (m: number | null) => {
                       if (!m) return "—";
@@ -878,27 +872,37 @@ export default function ProductionSlaConfigPage() {
 
                     return (
                       <React.Fragment key={st.stepIndex}>
-                        <div className="px-2.5 py-1.5 rounded-lg border bg-card text-center min-w-[105px] space-y-1 shadow-2xs shrink-0 border-slate-200 dark:border-slate-800">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <span className="w-4 h-4 rounded-full bg-amber-900 text-white text-[10px] font-extrabold inline-flex items-center justify-center shrink-0">
+                        <div className="flex-1 min-w-0 px-1.5 py-1 rounded-lg border bg-card text-center space-y-1 shadow-2xs border-slate-200 dark:border-slate-800">
+                          <div className="flex items-center justify-center gap-1 min-w-0">
+                            <span className="w-3.5 h-3.5 rounded-full bg-amber-900 text-white text-[9px] font-extrabold inline-flex items-center justify-center shrink-0">
                               {st.stepIndex}
                             </span>
-                            <span className="font-bold text-[11px] text-foreground truncate">{st.stepName}</span>
+                            <span className="font-bold text-[10px] text-foreground truncate" title={st.stepName}>
+                              {st.stepName}
+                            </span>
                             {st.defaultWorkerCount !== undefined && st.defaultWorkerCount !== null && (
-                              <span className="text-[9px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/50 px-1 rounded shrink-0">
-                                👥 {st.defaultWorkerCount}
+                              <span className="text-[8px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/50 px-0.5 rounded shrink-0">
+                                👥{st.defaultWorkerCount}
                               </span>
                             )}
                           </div>
-                          {st.execWarning ? (
-                            <p className="text-[10px] text-blue-700 dark:text-blue-300 font-mono font-bold leading-none bg-blue-50 dark:bg-blue-950/40 px-1 py-0.5 rounded">
-                              Làm: {fmtM(st.execWarning)} → {fmtM(st.execLate)}
-                            </p>
-                          ) : (
-                            <p className="text-[10px] text-muted-foreground italic leading-none">—</p>
-                          )}
+                          <div className="space-y-0.5">
+                            {st.waitWarning ? (
+                              <p className="text-[9px] text-amber-800 dark:text-amber-300 font-mono font-bold leading-tight bg-amber-50 dark:bg-amber-950/40 px-1 py-0.5 rounded truncate" title={`Chờ: ${fmtM(st.waitWarning)} → ${fmtM(st.waitLate)}`}>
+                                Chờ: {fmtM(st.waitWarning)}→{fmtM(st.waitLate)}
+                              </p>
+                            ) : null}
+                            {st.execWarning ? (
+                              <p className="text-[9px] text-blue-700 dark:text-blue-300 font-mono font-bold leading-tight bg-blue-50 dark:bg-blue-950/40 px-1 py-0.5 rounded truncate" title={`Làm: ${fmtM(st.execWarning)} → ${fmtM(st.execLate)}`}>
+                                Làm: {fmtM(st.execWarning)}→{fmtM(st.execLate)}
+                              </p>
+                            ) : null}
+                            {!st.waitWarning && !st.execWarning && (
+                              <p className="text-[9px] text-muted-foreground italic leading-none">—</p>
+                            )}
+                          </div>
                         </div>
-                        {idx < currentStages.length - 1 && <ArrowRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
+                        {idx < currentStages.length - 1 && <ArrowRight className="w-3 h-3 text-muted-foreground shrink-0 mx-0.5" />}
                       </React.Fragment>
                     );
                   })}
@@ -972,7 +976,7 @@ export default function ProductionSlaConfigPage() {
                               value={st.defaultWorkerCount ?? ""}
                               onChange={(e) => handleStageValueChange(idx, "defaultWorkerCount", e.target.value)}
                               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSaveSla(); } }}
-                              className="h-7 w-16 text-center text-xs font-mono font-extrabold border-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/50 text-emerald-950 dark:text-emerald-100 focus:ring-2 focus:ring-emerald-500 mx-auto"
+                              className="h-7 w-[84px] text-center text-xs font-mono font-extrabold border-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/50 text-emerald-950 dark:text-emerald-100 focus:ring-2 focus:ring-emerald-500 mx-auto px-1 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
                             />
                           </TableCell>
 
@@ -984,7 +988,7 @@ export default function ProductionSlaConfigPage() {
                               value={st.waitWarning ?? ""}
                               onChange={(e) => handleStageValueChange(idx, "waitWarning", e.target.value)}
                               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSaveSla(); } }}
-                              className="h-7 w-16 text-center text-xs font-mono font-extrabold border-amber-300 bg-amber-100/70 dark:bg-amber-950/50 text-amber-950 dark:text-amber-100 focus:ring-2 focus:ring-amber-500 mx-auto"
+                              className="h-7 w-[84px] text-center text-xs font-mono font-extrabold border-amber-300 bg-amber-100/70 dark:bg-amber-950/50 text-amber-950 dark:text-amber-100 focus:ring-2 focus:ring-amber-500 mx-auto px-1 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
                             />
                           </TableCell>
 
@@ -996,7 +1000,7 @@ export default function ProductionSlaConfigPage() {
                               value={st.waitLate ?? ""}
                               onChange={(e) => handleStageValueChange(idx, "waitLate", e.target.value)}
                               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSaveSla(); } }}
-                              className="h-7 w-16 text-center text-xs font-mono font-extrabold border-red-300 bg-red-100/70 dark:bg-red-950/50 text-red-950 dark:text-red-100 focus:ring-2 focus:ring-red-500 mx-auto"
+                              className="h-7 w-[84px] text-center text-xs font-mono font-extrabold border-red-300 bg-red-100/70 dark:bg-red-950/50 text-red-950 dark:text-red-100 focus:ring-2 focus:ring-red-500 mx-auto px-1 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
                             />
                           </TableCell>
 
@@ -1008,7 +1012,7 @@ export default function ProductionSlaConfigPage() {
                               value={st.execWarning ?? ""}
                               onChange={(e) => handleStageValueChange(idx, "execWarning", e.target.value)}
                               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSaveSla(); } }}
-                              className="h-7 w-16 text-center text-xs font-mono font-extrabold border-amber-300 bg-amber-100/70 dark:bg-amber-950/50 text-amber-950 dark:text-amber-100 focus:ring-2 focus:ring-amber-500 mx-auto"
+                              className="h-7 w-[84px] text-center text-xs font-mono font-extrabold border-amber-300 bg-amber-100/70 dark:bg-amber-950/50 text-amber-950 dark:text-amber-100 focus:ring-2 focus:ring-amber-500 mx-auto px-1 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
                             />
                           </TableCell>
 
@@ -1020,7 +1024,7 @@ export default function ProductionSlaConfigPage() {
                               value={st.execLate ?? ""}
                               onChange={(e) => handleStageValueChange(idx, "execLate", e.target.value)}
                               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSaveSla(); } }}
-                              className="h-7 w-16 text-center text-xs font-mono font-extrabold border-red-300 bg-red-100/70 dark:bg-red-950/50 text-red-950 dark:text-red-100 focus:ring-2 focus:ring-red-500 mx-auto"
+                              className="h-7 w-[84px] text-center text-xs font-mono font-extrabold border-red-300 bg-red-100/70 dark:bg-red-950/50 text-red-950 dark:text-red-100 focus:ring-2 focus:ring-red-500 mx-auto px-1 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
                             />
                           </TableCell>
                         </TableRow>

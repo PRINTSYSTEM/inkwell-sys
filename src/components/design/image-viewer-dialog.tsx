@@ -135,20 +135,27 @@ export function ImageViewerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl w-full p-0 overflow-hidden bg-background border border-border [&>button]:hidden">
-        <div className="relative h-[80vh] flex flex-col justify-between">
+      <DialogContent className="max-w-[95vw] w-[1300px] p-0 overflow-hidden bg-background border border-border [&>button]:hidden shadow-2xl rounded-2xl">
+        <div className="relative h-[85vh] max-h-[900px] flex flex-col justify-between">
           
-          {/* Top-left fallback notice badge */}
-          {isFallback && (
-            <div className="absolute top-4 left-4 z-50 bg-amber-500/90 text-white px-3 py-1.5 rounded-xl text-xs font-medium shadow backdrop-blur-sm">
-              ⚠️ Ảnh gốc không tồn tại - Đang hiển thị ảnh thu nhỏ (Thumb)
-            </div>
-          )}
+          {/* Top-left image title badge & fallback notice */}
+          <div className="absolute top-4 left-4 z-50 flex flex-col gap-1.5 max-w-[60%] pointer-events-none select-none">
+            {title && (
+              <div className="bg-background/95 text-foreground px-3 py-1.5 rounded-xl text-xs font-bold shadow-md border border-border/85 backdrop-blur-sm truncate">
+                🖼️ {title}
+              </div>
+            )}
+            {isFallback && (
+              <div className="bg-amber-500/90 text-white px-3 py-1.5 rounded-xl text-xs font-medium shadow backdrop-blur-sm">
+                ⚠️ Ảnh gốc không tồn tại - Đang hiển thị ảnh thu nhỏ (Thumb)
+              </div>
+            )}
+          </div>
 
           {/* Interactive Image Container */}
           <div
             ref={setContainerNode}
-            className={`flex-1 w-full h-full flex items-center justify-center overflow-hidden select-none bg-stone-50 dark:bg-stone-950/60 cursor-grab ${
+            className={`flex-1 w-full h-full flex items-center justify-center overflow-hidden select-none bg-stone-100 dark:bg-stone-950/80 cursor-grab ${
               isDragging ? "cursor-grabbing" : ""
             }`}
             onMouseDown={handleMouseDown}
@@ -163,7 +170,7 @@ export function ImageViewerDialog({
                 transition: isDragging ? "none" : "transform 0.15s ease-out",
                 transformOrigin: "center center",
               }}
-              className="flex items-center justify-center"
+              className="flex items-center justify-center max-w-full max-h-full p-4"
             >
               {hasError ? (
                 <div className="text-center p-6 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-xl border border-rose-200 dark:border-rose-900/50">
@@ -175,7 +182,7 @@ export function ImageViewerDialog({
                   src={currentSrc}
                   alt={title || "Image"}
                   onError={handleImageError}
-                  className="max-w-[90vw] max-h-[75vh] object-contain pointer-events-none"
+                  className="max-w-full max-h-[calc(85vh-40px)] w-auto h-auto object-contain pointer-events-none select-none drop-shadow-md rounded"
                 />
               )}
             </div>

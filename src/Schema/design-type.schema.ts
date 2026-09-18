@@ -10,8 +10,10 @@ import {
 } from "./generated";
 
 // ===== DesignTypeResponse =====
-export const DesignTypeResponseSchema =
-  GenDesignTypeResponseSchema.passthrough();
+export const DesignTypeResponseSchema = GenDesignTypeResponseSchema.extend({
+  deliverySlaDays: z.number().nullish(),
+  deliveryWarningBeforeHours: z.number().nullish(),
+}).passthrough();
 export type DesignTypeResponse = z.infer<typeof DesignTypeResponseSchema>;
 
 // ===== PagedResponse =====
@@ -31,15 +33,19 @@ export type DesignTypeResponsePaginate = z.infer<
 >;
 
 // ===== CreateDesignTypeRequest =====
-export const CreateDesignTypeRequestSchema =
-  GenCreateDesignTypeRequestSchema.passthrough();
+export const CreateDesignTypeRequestSchema = GenCreateDesignTypeRequestSchema.extend({
+  deliverySlaDays: z.number().nullish(),
+  deliveryWarningBeforeHours: z.number().nullish(),
+}).passthrough();
 export type CreateDesignTypeRequest = z.infer<
   typeof CreateDesignTypeRequestSchema
 >;
 
 // ===== UpdateDesignTypeRequest =====
-export const UpdateDesignTypeRequestSchema =
-  GenUpdateDesignTypeRequestSchema.passthrough();
+export const UpdateDesignTypeRequestSchema = GenUpdateDesignTypeRequestSchema.extend({
+  deliverySlaDays: z.number().nullish(),
+  deliveryWarningBeforeHours: z.number().nullish(),
+}).passthrough();
 export type UpdateDesignTypeRequest = z.infer<
   typeof UpdateDesignTypeRequestSchema
 >;

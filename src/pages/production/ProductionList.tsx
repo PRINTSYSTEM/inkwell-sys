@@ -64,6 +64,7 @@ export default function ProductionListPage() {
 
   // Design Type Filter State & Data Fetching
   const [selectedDesignTypeId, setSelectedDesignTypeId] = useState<number | null>(null);
+  const [deliverySlaFilter, setDeliverySlaFilter] = useState<string>("ALL");
   const { data: designTypesData } = useDesignTypeList({ status: "active" });
   const designTypes = useMemo(() => {
     return Array.isArray(designTypesData)
@@ -74,7 +75,7 @@ export default function ProductionListPage() {
   // Reset selectedDesignTypeId when date filter, view tab, or status changes
   useEffect(() => {
     setSelectedDesignTypeId(null);
-  }, [dateFilterType, viewTab, selectedStatus]);
+  }, [dateFilterType, viewTab, selectedStatus, deliverySlaFilter]);
 
   // Stats queries (All-time & Today)
   const todayStart = useMemo(() => {
@@ -185,7 +186,7 @@ export default function ProductionListPage() {
 
   // Fetch summary stats using a single optimized endpoint
   const { data: statsData } = useQuery({
-    queryKey: ["production-orders", "summary-stats", todayStart, todayEnd, dateParams.fromDate, dateParams.toDate],
+    queryKey: ["production-orders", "summary-stats", todayStart, todayEnd, dateParams.fromDate, dateParams.toDate, deliverySlaFilter],
     queryFn: async () => {
       try {
         const res = await apiRequest.get<any>(
@@ -196,6 +197,7 @@ export default function ProductionListPage() {
               toDate: dateParams.toDate,
               todayStart,
               todayEnd,
+              deliverySlaStatus: deliverySlaFilter !== "ALL" ? deliverySlaFilter : undefined,
             }),
           }
         );
@@ -235,6 +237,9 @@ export default function ProductionListPage() {
     if (selectedStatus !== "all") {
       params.status = selectedStatus;
     }
+    if (deliverySlaFilter !== "ALL") {
+      params.deliverySlaStatus = deliverySlaFilter;
+    }
     if (sortColumn.trim()) {
       params.sortColumn = sortColumn.trim();
       params.sortOrder = sortOrder;
@@ -257,7 +262,7 @@ export default function ProductionListPage() {
       params.toDate = dateParams.toDate;
     }
     return params;
-  }, [currentPage, itemsPerPage, selectedStatus, selectedDesignTypeId, sortColumn, sortOrder, viewTab, debouncedSearch, dateParams]);
+  }, [currentPage, itemsPerPage, selectedStatus, deliverySlaFilter, selectedDesignTypeId, sortColumn, sortOrder, viewTab, debouncedSearch, dateParams]);
 
   const { data: designTypeSummaryData } = useProductionDesignTypeSummary({
     search: debouncedSearch.trim() || undefined,
@@ -265,6 +270,7 @@ export default function ProductionListPage() {
     toDate: dateParams.toDate,
     tab: viewTab !== "all" ? viewTab : undefined,
     status: selectedStatus !== "all" ? selectedStatus : undefined,
+    deliverySlaStatus: deliverySlaFilter !== "ALL" ? deliverySlaFilter : undefined,
   });
 
   const {
@@ -531,6 +537,8 @@ export default function ProductionListPage() {
                 onSearchChange={setSearchTerm}
                 selectedStatus={selectedStatus}
                 onStatusChange={setSelectedStatus}
+                deliverySlaFilter={deliverySlaFilter}
+                onDeliverySlaFilterChange={setDeliverySlaFilter}
                 dateFilterType={dateFilterType}
                 onDateFilterTypeChange={setDateFilterType}
                 customFromDate={customFromDate}
@@ -559,6 +567,7 @@ export default function ProductionListPage() {
                 onResetFilters={() => {
                   setSearchTerm("");
                   setSelectedStatus("all");
+                  setDeliverySlaFilter("ALL");
                   setDateFilterType("all");
                   setSelectedDesignTypeId(null);
                   setCustomFromDate("");

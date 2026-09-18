@@ -42,6 +42,9 @@ import { apiRequest } from "@/lib/http";
 import { API_SUFFIX, normalizeParams } from "@/apis/util.api";
 import { toast } from "sonner";
 
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ProductionDeliveryReportTab } from "./components/ProductionDeliveryReportTab";
+
 const STEP_OPTIONS = [
   { value: "ALL", label: "Tất cả khâu" },
   { value: "dispatch", label: "Điều lệnh" },
@@ -66,6 +69,7 @@ const safeFormatDate = (dateStr?: string | null) => {
 };
 
 export default function ProductionDelayReportPage() {
+  const [activeReportTab, setActiveReportTab] = useState<"step_delay" | "delivery_sla">("delivery_sla");
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize] = useState(10);
   const [fromDate, setFromDate] = useState("");
@@ -137,42 +141,71 @@ export default function ProductionDelayReportPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-3.5 max-w-7xl mx-auto flex flex-col h-full">
-      {/* Title */}
+      {/* Title & Tabs Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-3 shrink-0">
         <div>
-          <h1 className="text-xl font-black tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-red-600" />
-            <span>Báo cáo LSX trễ tiến độ</span>
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Nhật ký ghi nhận tự động và thống kê trễ các công đoạn sản xuất.
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl font-black tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-red-600" />
+              <span>Báo cáo LSX Trễ & SLA</span>
+            </h1>
+            <Tabs
+              value={activeReportTab}
+              onValueChange={(val) => setActiveReportTab(val as "step_delay" | "delivery_sla")}
+            >
+              <TabsList className="h-8 p-0.5 bg-slate-100 dark:bg-slate-800 rounded-lg">
+                <TabsTrigger
+                  value="delivery_sla"
+                  className="h-7 text-xs font-bold px-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-amber-900 dark:data-[state=active]:text-amber-200 cursor-pointer"
+                >
+                  🚚 SLA Giao hàng
+                </TabsTrigger>
+                <TabsTrigger
+                  value="step_delay"
+                  className="h-7 text-xs font-bold px-3 rounded-md data-[state=active]:bg-white dark:data-[state=active]:bg-slate-950 data-[state=active]:text-red-900 dark:data-[state=active]:text-red-200 cursor-pointer"
+                >
+                  ⚙️ Trễ công đoạn
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+          <p className="text-xs text-slate-500 mt-1">
+            {activeReportTab === "delivery_sla"
+              ? "Báo cáo theo dõi cam kết hạn giao hàng (Delivery SLA) và tỉ lệ hoàn thành đúng hạn."
+              : "Nhật ký ghi nhận tự động và thống kê trễ từng khâu sản xuất."}
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 text-xs font-bold border-emerald-600 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-700 cursor-pointer"
-            onClick={handleExportExcel}
-            disabled={isExportingExcel}
-          >
-            {isExportingExcel ? (
-              <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
-            ) : (
-              <Download className="w-3.5 h-3.5 mr-1 text-emerald-600" />
-            )}
-            Xuất Excel
-          </Button>
+        {activeReportTab === "step_delay" && (
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs font-bold border-emerald-600 text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:border-emerald-700 cursor-pointer"
+              onClick={handleExportExcel}
+              disabled={isExportingExcel}
+            >
+              {isExportingExcel ? (
+                <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+              ) : (
+                <Download className="w-3.5 h-3.5 mr-1 text-emerald-600" />
+              )}
+              Xuất Excel
+            </Button>
 
-          <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleRefresh}>
-            <RefreshCw className="w-3.5 h-3.5 mr-1" />
-            Làm mới
-          </Button>
-        </div>
+            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={handleRefresh}>
+              <RefreshCw className="w-3.5 h-3.5 mr-1" />
+              Làm mới
+            </Button>
+          </div>
+        )}
       </div>
 
-      {/* Metric Stat Cards */}
+      {activeReportTab === "delivery_sla" ? (
+        <ProductionDeliveryReportTab />
+      ) : (
+        <>
+          {/* Metric Stat Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 shrink-0">
         <Card className="bg-amber-500/10 border-amber-300/50 shadow-2xs">
           <CardContent className="p-3 flex items-center justify-between">
@@ -462,6 +495,8 @@ export default function ProductionDelayReportPage() {
           </div>
         </div>
       </Card>
+        </>
+      )}
     </div>
   );
 }

@@ -273,6 +273,7 @@ export function ProductionListTable({
                 <TableHead className="w-44 py-1.5">Sản phẩm / Chất liệu</TableHead>
                 <TableHead className="w-36 py-1.5">Thời gian</TableHead>
                 <TableHead className="w-28 text-center py-1.5">Trạng thái</TableHead>
+                <TableHead className="w-32 text-center py-1.5 font-bold text-amber-900 dark:text-amber-200">Ngày giao hàng</TableHead>
                 <TableHead className="w-[440px] text-center py-1.5">Tiến độ sản xuất</TableHead>
                 <TableHead className="w-36 text-center py-1.5">Báo động</TableHead>
                 <TableHead className="w-16 text-right py-1.5 pr-4">Thao tác</TableHead>
@@ -564,6 +565,150 @@ export function ProductionListTable({
                           <Badge className="text-[10px] font-bold border-none px-2 py-0.5 whitespace-nowrap bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300">
                             {isLate ? "🔴 Quá hạn" : isWarn ? "🟡 Sắp quá hạn" : `🔵 ${statusLabel}`}
                           </Badge>
+                        );
+                      })()}
+                    </TableCell>
+
+                    {/* NGÀY GIAO HÀNG (Delivery SLA) */}
+                    <TableCell className="text-center py-1.5">
+                      {(() => {
+                        const status = item.deliverySlaStatus;
+                        const plannedAt = item.plannedDeliveryAt;
+                        const remainingHours = item.deliveryRemainingHours;
+                        const lateHours = item.deliveryLateHours;
+                        const kcsCompletedAt = item.kcsCompletedAt;
+                        const refAt = item.deliveryReferenceAt;
+                        const slaDays = item.deliverySlaDays;
+                        const warnHours = item.deliveryWarningBeforeHours;
+
+                        const dateStr = plannedAt ? format(new Date(plannedAt), "dd/MM") : "—";
+                        const refStr = refAt ? format(new Date(refAt), "dd/MM HH:mm") : "chưa";
+                        const kcsStr = kcsCompletedAt ? format(new Date(kcsCompletedAt), "dd/MM") : "chưa";
+
+                        const fullTooltip = `Bình bài: ${refStr} | SLA: ${slaDays ?? 0} ngày | Cảnh báo: ${warnHours ?? 0} giờ | KCS: ${kcsStr}`;
+
+                        if (!status || status === "NOT_APPLIED" || item.deliverySlaUnavailableReason === "NOT_APPLIED") {
+                          const flow = getFlowCode(item);
+                          const defaultSlaDays =
+                            slaDays && slaDays > 0
+                              ? slaDays
+                              : flow.includes("F05") || flow.includes("F06") || flow.includes("F07") || flow.includes("F08") || flow.includes("F09")
+                                ? 2
+                                : 3;
+
+                          const effectiveRefDateStr = refAt || item.proofingCompletedAt || item.createdAt || new Date().toISOString();
+                          let refDateObj = new Date(effectiveRefDateStr);
+                          if (isNaN(refDateObj.getTime())) refDateObj = new Date();
+
+                          const fallbackPlannedDate = plannedAt
+                            ? new Date(plannedAt)
+                            : new Date(refDateObj.getTime() + defaultSlaDays * 86400000);
+
+                          const fbDateStr = format(fallbackPlannedDate, "dd/MM");
+                          const diffMs = fallbackPlannedDate.getTime() - Date.now();
+                          const fbRemainingHours = diffMs / 3600000;
+
+                          if (fbRemainingHours <= 0) {
+                            const fbLateHours = Math.abs(fbRemainingHours);
+                            return (
+                              <div
+                                className="flex flex-col items-center justify-center cursor-help"
+                                title={`Dự kiến giao ${fbDateStr} (SLA ${defaultSlaDays} ngày từ ${format(refDateObj, "dd/MM HH:mm")}) — Trễ ${fbLateHours.toFixed(1)}h | ${fullTooltip}`}
+                              >
+                                <Badge className="text-[10px] font-bold border-none px-2 py-0.5 whitespace-nowrap bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300">
+                                  🔴 {fbDateStr}
+                                </Badge>
+                                <span className="text-[9.5px] text-rose-600 font-mono mt-0.5">Trễ {fbLateHours.toFixed(1)}h</span>
+                              </div>
+                            );
+                          }
+
+                          if (fbRemainingHours <= 12) {
+                            return (
+                              <div
+                                className="flex flex-col items-center justify-center cursor-help"
+                                title={`Dự kiến giao ${fbDateStr} (SLA ${defaultSlaDays} ngày từ ${format(refDateObj, "dd/MM HH:mm")}) — Còn ${fbRemainingHours.toFixed(1)}h | ${fullTooltip}`}
+                              >
+                                <Badge className="text-[10px] font-bold border-none px-2 py-0.5 whitespace-nowrap bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                                  🟡 {fbDateStr}
+                                </Badge>
+                                <span className="text-[9.5px] text-amber-600 font-mono mt-0.5">Còn {fbRemainingHours.toFixed(1)}h</span>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <div
+                              className="flex flex-col items-center justify-center cursor-help"
+                              title={`Dự kiến giao ${fbDateStr} (SLA ${defaultSlaDays} ngày từ ${format(refDateObj, "dd/MM HH:mm")}) — Còn ${fbRemainingHours.toFixed(1)}h | ${fullTooltip}`}
+                            >
+                              <Badge className="text-[10px] font-bold border-none px-2 py-0.5 whitespace-nowrap bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                                🟢 {fbDateStr}
+                              </Badge>
+                              <span className="text-[9.5px] text-emerald-600 font-mono mt-0.5">Còn {fbRemainingHours.toFixed(1)}h</span>
+                            </div>
+                          );
+                        }
+
+                        if (status === "NORMAL") {
+                          return (
+                            <div className="flex flex-col items-center justify-center cursor-help" title={`Kịp tiến độ — còn ${remainingHours?.toFixed(1) ?? 0} giờ | ${fullTooltip}`}>
+                              <Badge className="text-[10px] font-bold border-none px-2 py-0.5 whitespace-nowrap bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                                🟢 {dateStr}
+                              </Badge>
+                              <span className="text-[9.5px] text-emerald-600 font-mono mt-0.5">Còn {remainingHours?.toFixed(1) ?? 0}h</span>
+                            </div>
+                          );
+                        }
+
+                        if (status === "WARNING") {
+                          return (
+                            <div className="flex flex-col items-center justify-center cursor-help" title={`Sắp đến hạn — còn ${remainingHours?.toFixed(1) ?? 0} giờ | ${fullTooltip}`}>
+                              <Badge className="text-[10px] font-bold border-none px-2 py-0.5 whitespace-nowrap bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                                🟡 {dateStr}
+                              </Badge>
+                              <span className="text-[9.5px] text-amber-600 font-mono mt-0.5">Còn {remainingHours?.toFixed(1) ?? 0}h</span>
+                            </div>
+                          );
+                        }
+
+                        if (status === "OVERDUE") {
+                          return (
+                            <div className="flex flex-col items-center justify-center cursor-help" title={`Quá hạn — trễ ${lateHours?.toFixed(1) ?? 0} giờ | ${fullTooltip}`}>
+                              <Badge className="text-[10px] font-bold border-none px-2 py-0.5 whitespace-nowrap bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300">
+                                🔴 {dateStr}
+                              </Badge>
+                              <span className="text-[9.5px] text-rose-600 font-mono mt-0.5">Trễ {lateHours?.toFixed(1) ?? 0}h</span>
+                            </div>
+                          );
+                        }
+
+                        if (status === "ON_TIME") {
+                          return (
+                            <div className="flex flex-col items-center justify-center cursor-help" title={`Đúng hạn — KCS ${kcsStr} | ${fullTooltip}`}>
+                              <Badge className="text-[10px] font-bold border-none px-2 py-0.5 whitespace-nowrap bg-emerald-700 text-white dark:bg-emerald-800">
+                                ✅ {dateStr}
+                              </Badge>
+                              <span className="text-[9.5px] text-emerald-700 dark:text-emerald-400 font-mono mt-0.5">✓ KCS {kcsStr}</span>
+                            </div>
+                          );
+                        }
+
+                        if (status === "COMPLETED_LATE") {
+                          return (
+                            <div className="flex flex-col items-center justify-center cursor-help" title={`Trễ ${lateHours?.toFixed(1) ?? 0} giờ — KCS ${kcsStr} | ${fullTooltip}`}>
+                              <Badge className="text-[10px] font-bold border-none px-2 py-0.5 whitespace-nowrap bg-rose-700 text-white dark:bg-rose-800">
+                                🔴 {dateStr}
+                              </Badge>
+                              <span className="text-[9.5px] text-rose-700 dark:text-rose-400 font-mono mt-0.5">Trễ {lateHours?.toFixed(1) ?? 0}h</span>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div className="text-center font-mono text-xs text-slate-500" title={fullTooltip}>
+                            {dateStr}
+                          </div>
                         );
                       })()}
                     </TableCell>

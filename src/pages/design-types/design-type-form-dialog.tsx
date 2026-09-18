@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toast } from "sonner";
 import type { CreateDesignTypeRequest, DesignTypeResponse } from "@/Schema";
 
 interface DesignTypeFormDialogProps {
@@ -49,6 +50,8 @@ export function DesignTypeFormDialog({
         displayOrder: designType.displayOrder,
         description: designType.description,
         status: designType.status as "active" | "inactive",
+        deliverySlaDays: designType.deliverySlaDays ?? undefined,
+        deliveryWarningBeforeHours: designType.deliveryWarningBeforeHours ?? undefined,
       });
     } else {
       setFormData({
@@ -57,12 +60,38 @@ export function DesignTypeFormDialog({
         displayOrder: 1,
         description: "",
         status: "active",
+        deliverySlaDays: 3,
+        deliveryWarningBeforeHours: 12,
       });
     }
   }, [designType]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    const slaDays = formData.deliverySlaDays;
+    const warningHours = formData.deliveryWarningBeforeHours;
+
+    if ((slaDays != null && warningHours == null) || (slaDays == null && warningHours != null)) {
+      toast.error("Vui lòng nhập đầy đủ cả SLA giao hàng và Cảnh báo trước giờ");
+      return;
+    }
+
+    if (slaDays != null && warningHours != null) {
+      if (slaDays < 1 || slaDays > 365) {
+        toast.error("SLA giao hàng phải từ 1 đến 365 ngày");
+        return;
+      }
+      if (warningHours <= 0) {
+        toast.error("Thời gian cảnh báo trước phải lớn hơn 0 giờ");
+        return;
+      }
+      if (warningHours >= slaDays * 24) {
+        toast.error(`Thời gian cảnh báo (${warningHours}h) phải nhỏ hơn SLA giao hàng (${slaDays * 24}h)`);
+        return;
+      }
+    }
+
     onSubmit(formData);
     onOpenChange(false);
   };
@@ -150,6 +179,42 @@ export function DesignTypeFormDialog({
                   <SelectItem value="inactive">Tạm dừng</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="deliverySlaDays">SLA giao hàng (ngày)</Label>
+              <Input
+                id="deliverySlaDays"
+                type="number"
+                min={1}
+                max={365}
+                value={formData.deliverySlaDays ?? ""}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    deliverySlaDays: e.target.value === "" ? undefined : Number(e.target.value),
+                  })
+                }
+                placeholder="Ví dụ: 3"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="deliveryWarningBeforeHours">Cảnh báo trước (giờ)</Label>
+              <Input
+                id="deliveryWarningBeforeHours"
+                type="number"
+                min={1}
+                value={formData.deliveryWarningBeforeHours ?? ""}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    deliveryWarningBeforeHours: e.target.value === "" ? undefined : Number(e.target.value),
+                  })
+                }
+                placeholder="Ví dụ: 12"
+              />
             </div>
           </div>
 

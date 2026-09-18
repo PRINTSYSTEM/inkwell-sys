@@ -177,7 +177,7 @@ function NotificationCenter() {
       updatedAt: item.createdAt || new Date().toISOString(),
       channels: ["in_app" as const],
       actions: [],
-      data: { customerId: item.customerId },
+      data: { customerId: (item as { customerId?: number }).customerId },
       tags: [],
     }));
 
