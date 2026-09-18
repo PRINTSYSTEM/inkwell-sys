@@ -55,55 +55,54 @@ import { toCanonicalBeStageCode } from "@/lib/status-utils";
 import { StageWorkerReportModal } from "./components/StageWorkerReportModal";
 
 // 19 Flows grouped into 7 Product Categories
-// 19 Flows grouped into 7 Product Categories
 const FLOW_GROUPS = [
   {
     category: "HỘP GIẤY",
     flows: [
-      { id: "F01", name: "Hộp thường", code: "HOP-THUONG" },
-      { id: "F02", name: "Hộp Metalize", code: "HOP-METALIZE" },
-      { id: "F03", name: "Hộp Duplex bồi sóng", code: "HOP-DUPLEX-BOI-SONG" },
-      { id: "F04", name: "Hộp Metalize bồi sóng", code: "HOP-METALIZE-BOI-SONG" },
+      { id: "F01", name: "Hộp thường", code: "HOP-THUONG", material: "Giấy Ivory / Duplex / Couche" },
+      { id: "F02", name: "Hộp Metalize", code: "HOP-METALIZE", material: "Giấy ghép màng Metalize" },
+      { id: "F03", name: "Hộp Duplex bồi sóng", code: "HOP-DUPLEX-BOI-SONG", material: "Giấy Duplex bồi sóng Carton" },
+      { id: "F04", name: "Hộp Metalize bồi sóng", code: "HOP-METALIZE-BOI-SONG", material: "Màng Metalize bồi sóng Carton" },
     ],
   },
   {
     category: "NHÃN",
     flows: [
-      { id: "F05", name: "Nhãn giấy C / Tờ rơi", code: "NHAN-GIAY" },
-      { id: "F06", name: "Folder / Bao thư / Thẻ treo", code: "FOLDER" },
-      { id: "F07", name: "Nhãn Metalize", code: "NHAN-METALIZE" },
+      { id: "F05", name: "Nhãn giấy C / Tờ rơi", code: "NHAN-GIAY", material: "Giấy Couche / Ivory / Ford" },
+      { id: "F06", name: "Folder / Bao thư / Thẻ treo", code: "FOLDER", material: "Giấy Couche / Briston / Duplex" },
+      { id: "F07", name: "Nhãn Metalize", code: "NHAN-METALIZE", material: "Giấy ghép màng Metalize" },
     ],
   },
   {
     category: "DECAL TỜ",
     flows: [
-      { id: "F08", name: "Decal giấy", code: "DECAL-GIAY" },
-      { id: "F09", name: "Decal khác", code: "DECAL-METALIZE" },
+      { id: "F08", name: "Decal giấy", code: "DECAL-GIAY", material: "Decal giấy (Đế vàng/Đế trắng)" },
+      { id: "F09", name: "Decal khác", code: "DECAL-METALIZE", material: "Decal nhựa / Metalize / Trong" },
     ],
   },
   {
     category: "TÚI PE/PA",
     flows: [
-      { id: "F10", name: "Túi PE/PA", code: "TUI-PE-PA" },
-      { id: "F11", name: "Túi Metalize", code: "TUI-METALIZE" },
-      { id: "F12", name: "Túi PE/PA xếp hông", code: "TUI-PE-PA-XEP-HONG" },
-      { id: "F13", name: "Túi Metalize xếp hông", code: "TUI-METALIZE-XEP-HONG" },
-      { id: "F14", name: "Túi PE/PA Zipper", code: "TUI-PE-PA-ZIPPER" },
-      { id: "F19", name: "Túi giấy", code: "TUI-GIAY" },
+      { id: "F10", name: "Túi PE/PA", code: "TUI-PE-PA", material: "Màng ghép PE / PA / PET" },
+      { id: "F11", name: "Túi Metalize", code: "TUI-METALIZE", material: "Màng ghép Metalize (MPET/AL)" },
+      { id: "F12", name: "Túi PE/PA xếp hông", code: "TUI-PE-PA-XEP-HONG", material: "Màng ghép PE / PA (Xếp hông)" },
+      { id: "F13", name: "Túi Metalize xếp hông", code: "TUI-METALIZE-XEP-HONG", material: "Màng ghép Metalize (Xếp hông)" },
+      { id: "F14", name: "Túi PE/PA Zipper", code: "TUI-PE-PA-ZIPPER", material: "Màng ghép PE / PA + Zipper" },
+      { id: "F19", name: "Túi giấy", code: "TUI-GIAY", material: "Giấy Kraft / Couche / Duplex" },
     ],
   },
   {
     category: "TÚI CUỘN",
     flows: [
-      { id: "F15", name: "Túi cuộn PE/PA/Metaline", code: "TUI-CUON-METLINE" },
-      { id: "F16", name: "Túi cuộn Zipper", code: "TUI-CUON-ZIPPER" },
+      { id: "F15", name: "Túi cuộn PE/PA/Metaline", code: "TUI-CUON-METLINE", material: "Màng cuộn PE / PA / Metaline" },
+      { id: "F16", name: "Túi cuộn Zipper", code: "TUI-CUON-ZIPPER", material: "Màng cuộn Zipper" },
     ],
   },
   {
     category: "DECAL CUỘN",
     flows: [
-      { id: "F17", name: "Decal cuộn thường", code: "DECAL-CUON-THUONG" },
-      { id: "F18", name: "Decal cuộn Metalize", code: "DECAL-CUON-METALIZE" },
+      { id: "F17", name: "Decal cuộn thường", code: "DECAL-CUON-THUONG", material: "Decal cuộn Giấy / Nhựa" },
+      { id: "F18", name: "Decal cuộn Metalize", code: "DECAL-CUON-METALIZE", material: "Decal cuộn Metalize" },
     ],
   },
 ];
@@ -117,6 +116,7 @@ interface StageSlaConfig {
   execWarning: number | null;
   execLate: number | null;
   defaultWorkerCount?: number | null;
+  targetSheetsPerWorker?: number | null;
   condition: string;
   note: string;
   isCustom: boolean;
@@ -457,7 +457,7 @@ export default function ProductionSlaConfigPage() {
       const found = group.flows.find((f) => f.id === selectedFlowId);
       if (found) return { ...found, category: group.category };
     }
-    return { id: "F01", name: "Hộp thường", code: "HOP-THUONG", category: "HỘP GIẤY" };
+    return { id: "F01", name: "Hộp thường", code: "HOP-THUONG", category: "HỘP GIẤY", material: "Giấy Ivory / Duplex / Couche" };
   }, [selectedFlowId]);
 
   // Active stages list specifically for the selected flow
@@ -478,7 +478,7 @@ export default function ProductionSlaConfigPage() {
 
   const handleStageValueChange = (
     index: number,
-    field: "waitWarning" | "waitLate" | "execWarning" | "execLate" | "defaultWorkerCount" | "note",
+    field: "waitWarning" | "waitLate" | "execWarning" | "execLate" | "defaultWorkerCount" | "targetSheetsPerWorker" | "note",
     val: string
   ) => {
     setFlowSlaMap((prevMap) => {
@@ -515,6 +515,7 @@ export default function ProductionSlaConfigPage() {
       for (const st of currentStages) {
         const checkItems = [
           { label: "Số công mặc định", val: st.defaultWorkerCount },
+          { label: "KPI tờ/công/ngày", val: st.targetSheetsPerWorker },
           { label: "Thời gian chờ Cảnh báo (Vàng)", val: st.waitWarning },
           { label: "Thời gian chờ Quá hạn (Đỏ)", val: st.waitLate },
           { label: "Thời gian làm Cảnh báo (Vàng)", val: st.execWarning },
@@ -559,6 +560,7 @@ export default function ProductionSlaConfigPage() {
       const payloadStages = currentStages.map((st) => ({
         stageCode: st.stageCode.toUpperCase(),
         defaultWorkerCount: st.defaultWorkerCount ?? 0,
+        targetSheetsPerWorker: st.targetSheetsPerWorker ?? null,
         waitWarningMinutes: st.waitWarning ?? 0,
         waitLateMinutes: st.waitLate ?? 0,
         execWarningMinutes: st.execWarning ?? 0,
@@ -838,10 +840,10 @@ export default function ProductionSlaConfigPage() {
                       <h2 className="text-sm font-bold text-foreground uppercase tracking-wide">
                         {currentFlow.name}
                       </h2>
-                      <Badge variant="outline" className="text-[9px] font-bold border-amber-800 text-amber-900 dark:text-amber-300 px-1.5 py-0">
-                        {currentFlow.category}
+                      <Badge variant="secondary" className="text-[10px] font-semibold bg-amber-100/90 text-amber-950 dark:bg-amber-950/60 dark:text-amber-200 border border-amber-300 dark:border-amber-800 px-2 py-0.5 flex items-center gap-1">
+                        <Layers className="w-3 h-3 text-amber-800 dark:text-amber-400" />
+                        Chất liệu: {currentFlow.material}
                       </Badge>
-                      <span className="text-[11px] font-mono text-muted-foreground">({currentFlow.code})</span>
                     </div>
                   </div>
 
@@ -918,9 +920,9 @@ export default function ProductionSlaConfigPage() {
                         <TableHead className="w-10 text-center font-bold">#</TableHead>
                         <TableHead className="font-bold min-w-[120px]">Công đoạn</TableHead>
 
-                        {/* Distinct Header: SỐ CÔNG MẶC ĐỊNH */}
-                        <TableHead className="font-extrabold text-center bg-emerald-100/90 dark:bg-emerald-950/60 text-emerald-950 dark:text-emerald-200 border-x border-emerald-300/80 uppercase tracking-wider py-2 min-w-[110px]">
-                          👥 Số công mặc định
+                        {/* Distinct Header: SỐ CÔNG & KPI MẶC ĐỊNH */}
+                        <TableHead className="font-extrabold text-center bg-emerald-100/90 dark:bg-emerald-950/60 text-emerald-950 dark:text-emerald-200 border-x border-emerald-300/80 uppercase tracking-wider py-2 min-w-[200px]" colSpan={2}>
+                          👥 Số công & Định mức KPI
                         </TableHead>
 
                         {/* Distinct Header: THỜI GIAN CHỜ */}
@@ -936,8 +938,11 @@ export default function ProductionSlaConfigPage() {
 
                       <TableRow className="text-[10px] border-b">
                         <TableHead colSpan={2}></TableHead>
-                        <TableHead className="text-center font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50/90 dark:bg-emerald-950/40 border-x border-emerald-300/70">
+                        <TableHead className="text-center font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50/90 dark:bg-emerald-950/40 border-l border-emerald-300/70">
                           Nhân sự (Công)
+                        </TableHead>
+                        <TableHead className="text-center font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50/90 dark:bg-emerald-950/40 border-r border-emerald-300/70">
+                          KPI (Tờ/Công/Ngày)
                         </TableHead>
                         <TableHead className="text-center font-bold text-amber-800 dark:text-amber-300 bg-amber-50/90 dark:bg-amber-950/40 border-l border-amber-300/70">
                           Cảnh báo (Vàng)
@@ -968,7 +973,7 @@ export default function ProductionSlaConfigPage() {
                           </TableCell>
 
                           {/* WORKER DEFAULT COUNT COLUMN */}
-                          <TableCell className="p-1 text-center bg-emerald-50/30 dark:bg-emerald-950/10 border-x border-emerald-200/50">
+                          <TableCell className="p-1 text-center bg-emerald-50/30 dark:bg-emerald-950/10 border-l border-emerald-200/50">
                             <Input
                               type="number"
                               min={0}
@@ -976,7 +981,20 @@ export default function ProductionSlaConfigPage() {
                               value={st.defaultWorkerCount ?? ""}
                               onChange={(e) => handleStageValueChange(idx, "defaultWorkerCount", e.target.value)}
                               onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSaveSla(); } }}
-                              className="h-7 w-[84px] text-center text-xs font-mono font-extrabold border-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/50 text-emerald-950 dark:text-emerald-100 focus:ring-2 focus:ring-emerald-500 mx-auto px-1 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+                              className="h-7 w-[74px] text-center text-xs font-mono font-extrabold border-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/50 text-emerald-950 dark:text-emerald-100 focus:ring-2 focus:ring-emerald-500 mx-auto px-1 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
+                            />
+                          </TableCell>
+
+                          {/* TARGET SHEETS PER WORKER (KPI) COLUMN */}
+                          <TableCell className="p-1 text-center bg-emerald-50/30 dark:bg-emerald-950/10 border-r border-emerald-200/50">
+                            <Input
+                              type="number"
+                              min={0}
+                              placeholder="Mặc định khâu"
+                              value={st.targetSheetsPerWorker ?? ""}
+                              onChange={(e) => handleStageValueChange(idx, "targetSheetsPerWorker", e.target.value)}
+                              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleSaveSla(); } }}
+                              className="h-7 w-[96px] text-center text-[11px] font-mono font-bold border-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/50 text-emerald-950 dark:text-emerald-100 focus:ring-2 focus:ring-emerald-500 mx-auto px-1 [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
                             />
                           </TableCell>
 
