@@ -493,8 +493,10 @@ export default function ProofingOrderDetailPage() {
   const [rejectTarget, setRejectTarget] = useState<any>(null);
   const [rejectReason, setRejectReason] = useState("");
 
-  const idValue = params.id ? Number(params.id) : Number.NaN;
-  const idValid = IdSchema.safeParse(idValue).success;
+  const rawIdParam = params.id ? String(params.id).trim() : "";
+  const numId = Number(rawIdParam);
+  const idValue = !isNaN(numId) && numId > 0 ? numId : rawIdParam;
+  const idValid = !!rawIdParam;
 
   const {
     data: orderResp,
@@ -504,9 +506,11 @@ export default function ProofingOrderDetailPage() {
   } = useProofingOrder(idValid ? idValue : null, idValid);
 
   // Check for production orders for cancellation logic
+  const targetProofingId = orderResp?.id ?? (typeof idValue === "number" ? idValue : undefined);
+
   const { data: productionOrdersData, isLoading: isLoadingProductions } =
     useProductionOrders({
-      proofingOrderId: idValid ? idValue : undefined,
+      proofingOrderId: targetProofingId,
       pageSize: 1,
     });
   const hasExternalProduction = (productionOrdersData?.items?.length ?? 0) > 0;
@@ -517,7 +521,8 @@ export default function ProofingOrderDetailPage() {
   const order = (orderResp as ProofingOrderResponse | undefined) ?? null;
   const orderDesigns = order?.proofingOrderDesigns ?? [];
 
-  const { data: diesByOrder } = useDiesByProofingOrder(idValid ? idValue : null, idValid);
+  const numericOrderId = order?.id ?? (typeof idValue === "number" ? idValue : null);
+  const { data: diesByOrder } = useDiesByProofingOrder(numericOrderId, !!numericOrderId);
 
   // Compute isDieExported from active dies list or fallback to proofingOrderDies array
   const isDieExported = useMemo(() => {
@@ -2150,8 +2155,9 @@ export default function ProofingOrderDetailPage() {
     if (!uploadFile) return;
 
     try {
+      const targetId = order?.id ?? (typeof idValue === "number" ? idValue : 0);
       await updateFileMutate({
-        proofingOrderId: idValue,
+        proofingOrderId: targetId,
         file: uploadFile,
       });
       setIsUpdateFileDialogOpen(false);
