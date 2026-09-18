@@ -349,15 +349,13 @@ export default function DesignCreateDialog({
       return;
     }
 
-    if (!isPE_PA) {
-      if (!length || length <= 0) {
-        toast.error("Vui lòng nhập chiều dài hợp lệ (> 0)");
-        return;
-      }
-      if (!height || height <= 0) {
-        toast.error("Vui lòng nhập chiều cao hợp lệ (> 0)");
-        return;
-      }
+    if (!length || length <= 0) {
+      toast.error("Vui lòng nhập chiều dài hợp lệ (> 0)");
+      return;
+    }
+    if (!height || height <= 0) {
+      toast.error("Vui lòng nhập chiều cao hợp lệ (> 0)");
+      return;
     }
 
     const finalNotes = notes.trim();
@@ -686,70 +684,68 @@ export default function DesignCreateDialog({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* 5. Dimensions */}
-            {!isPE_PA ? (
-              <div className="space-y-2">
-                <Label className="font-semibold text-foreground">
-                  Kích thước ({needsWidth ? "Dài x Rộng x Cao" : "Dài x Cao"}) (mm)
-                </Label>
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Dài *</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      placeholder="Dài"
-                      value={length || ""}
-                      onChange={(e) => setLength(e.target.value === "" ? 0 : Number(e.target.value))}
-                      className="h-11 bg-background"
-                    />
-                  </div>
-                  {needsWidth ? (
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Rộng *</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        placeholder="Rộng"
-                        value={width || ""}
-                        onChange={(e) => setWidth(e.target.value === "" ? 0 : Number(e.target.value))}
-                        className="h-11 bg-background"
-                      />
-                    </div>
-                  ) : null}
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Cao *</Label>
-                    <Input
-                      type="number"
-                      min="0"
-                      placeholder="Cao"
-                      value={height || ""}
-                      onChange={(e) => setHeight(e.target.value === "" ? 0 : Number(e.target.value))}
-                      className="h-11 bg-background"
-                    />
-                  </div>
-                  {!needsWidth && needsAdhesiveOffset ? (
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Mép dán</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        placeholder="Mép dán"
-                        value={adhesiveOffset !== undefined ? adhesiveOffset : ""}
-                        onChange={(e) =>
-                          setAdhesiveOffset(e.target.value === "" ? undefined : Number(e.target.value))
-                        }
-                        className="h-11 bg-background"
-                      />
-                    </div>
-                  ) : !needsWidth ? (
-                    <div className="invisible" />
-                  ) : null}
+            <div className="space-y-2">
+              <Label className="font-semibold text-foreground">
+                Kích thước ({needsWidth ? "Dài x Rộng x Cao" : "Dài x Cao"}) (mm)
+              </Label>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Dài *</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="Dài"
+                    value={length || ""}
+                    onChange={(e) => setLength(e.target.value === "" ? 0 : Number(e.target.value))}
+                    className="h-11 bg-background"
+                  />
                 </div>
+                {needsWidth ? (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Rộng *</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="Rộng"
+                      value={width || ""}
+                      onChange={(e) => setWidth(e.target.value === "" ? 0 : Number(e.target.value))}
+                      className="h-11 bg-background"
+                    />
+                  </div>
+                ) : null}
+                <div>
+                  <Label className="text-xs text-muted-foreground">Cao *</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    placeholder="Cao"
+                    value={height || ""}
+                    onChange={(e) => setHeight(e.target.value === "" ? 0 : Number(e.target.value))}
+                    className="h-11 bg-background"
+                  />
+                </div>
+                {!needsWidth && needsAdhesiveOffset ? (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Mép dán</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      placeholder="Mép dán"
+                      value={adhesiveOffset !== undefined ? adhesiveOffset : ""}
+                      onChange={(e) =>
+                        setAdhesiveOffset(e.target.value === "" ? undefined : Number(e.target.value))
+                      }
+                      className="h-11 bg-background"
+                    />
+                  </div>
+                ) : !needsWidth ? (
+                  <div className="invisible" />
+                ) : null}
               </div>
-            ) : null}
+            </div>
 
             {/* 6. Quantity */}
-            <div className={`space-y-2 flex flex-col justify-between ${isPE_PA ? "md:col-span-2" : ""}`}>
+            <div className="space-y-2 flex flex-col justify-between">
               <Label className="font-semibold text-foreground flex items-center justify-between">
                 <span>Số lượng *</span>
                 {selectedMaterial?.minimumQuantity ? (
