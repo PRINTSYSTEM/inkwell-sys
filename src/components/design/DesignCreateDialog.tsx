@@ -98,7 +98,7 @@ export default function DesignCreateDialog({
   const [adhesiveOffset, setAdhesiveOffset] = useState<number | undefined>(undefined);
   const [sidesClassification, setSidesClassification] = useState<string | undefined>(undefined);
   const [processClassification, setProcessClassification] = useState<string | undefined>(undefined);
-  const [laminationType, setLaminationType] = useState<string | undefined>(undefined);
+  const [laminationType, setLaminationType] = useState<string | undefined>("glossy");
   const [notes, setNotes] = useState<string>("");
   const [basisWeight, setBasisWeight] = useState<number | undefined>(undefined);
   const [gusseted, setGusseted] = useState<boolean>(false);
@@ -138,6 +138,10 @@ export default function DesignCreateDialog({
     return designTypes.find((dt) => dt.id === designTypeId);
   }, [designTypes, designTypeId]);
 
+  const selectedMaterial = useMemo(() => {
+    return materials.find((m) => m.id === materialTypeId);
+  }, [materials, materialTypeId]);
+
   const designTypeName = selectedDesignType?.name || "";
 
   const isDecal = isDecalDesignType(designTypeName);
@@ -148,8 +152,10 @@ export default function DesignCreateDialog({
   const isDecalCuon = isDecalCuonDesignType(designTypeName);
   const isTuiCuon = isTuiCuonDesignType(designTypeName);
   const isPE_PA = useMemo(() => {
-    return designTypeName.toLowerCase().includes("pe") || designTypeName.toLowerCase().includes("pa");
-  }, [designTypeName]);
+    const dName = (selectedDesignType?.name || "").toLowerCase();
+    const mName = (selectedMaterial?.name || "").toLowerCase();
+    return dName.includes("pe") || dName.includes("pa") || mName.includes("pe") || mName.includes("pa");
+  }, [selectedDesignType, selectedMaterial]);
 
   const handleZipperChange = (active: boolean) => {
     setIsZipper(active);
@@ -170,10 +176,6 @@ export default function DesignCreateDialog({
       setProcessClassification("cut");
     }
   };
-
-  const selectedMaterial = useMemo(() => {
-    return materials.find((m) => m.id === materialTypeId);
-  }, [materials, materialTypeId]);
 
   // Load material specifications for selected material type
   const { data: materialSpecs = [], isLoading: isLoadingSpecs } = useMaterialSpecsByMaterialType(
@@ -289,7 +291,7 @@ export default function DesignCreateDialog({
   // Reset material and lamination type if design type changes
   useEffect(() => {
     setMaterialTypeId(null);
-    setLaminationType(undefined);
+    setLaminationType("glossy");
     setBasisWeight(undefined);
     setGusseted(false);
     setIsZipper(false);
@@ -319,8 +321,8 @@ export default function DesignCreateDialog({
     setCustomerSearch("");
   };
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async (e?: React.FormEvent | React.MouseEvent) => {
+    if (e) e.preventDefault();
 
     if (!selectedCustomer) {
       toast.error("Vui lòng chọn khách hàng");
@@ -347,8 +349,6 @@ export default function DesignCreateDialog({
       return;
     }
 
-    const isPE_PA = designTypeName.toLowerCase().includes("pe") || designTypeName.toLowerCase().includes("pa");
-
     if (!isPE_PA) {
       if (!length || length <= 0) {
         toast.error("Vui lòng nhập chiều dài hợp lệ (> 0)");
@@ -363,16 +363,22 @@ export default function DesignCreateDialog({
     const finalNotes = notes.trim();
 
     try {
+      const targetCustomerId = selectedCustomer.id || (selectedCustomer as any).customerId;
+      if (!targetCustomerId) {
+        toast.error("Mã khách hàng không hợp lệ");
+        return;
+      }
+
       await createDesign({
-        customerId: selectedCustomer.id!,
+        customerId: targetCustomerId,
         designTypeId: designTypeId,
         materialTypeId: materialTypeId,
         quantity: quantity,
         designName: designName.trim(),
-        length: isPE_PA ? 0 : (length || 0),
-        width: isPE_PA ? undefined : (needsWidth ? width || 0 : undefined),
-        height: isPE_PA ? 0 : (height || 0),
-        adhesiveOffset: isPE_PA ? undefined : (needsAdhesiveOffset ? adhesiveOffset : undefined),
+        length: length || 0,
+        width: needsWidth ? (width || 0) : undefined,
+        height: height || 0,
+        adhesiveOffset: needsAdhesiveOffset ? adhesiveOffset : undefined,
         sidesClassification: sidesClassification || null,
         processClassification: processClassification || null,
         laminationType: laminationType,
@@ -382,6 +388,8 @@ export default function DesignCreateDialog({
         hasZip: isZipper,
         hasZipper: isZipper,
         isZip: isZipper,
+        isGusset: gusseted || false,
+        is_gusset: gusseted || false,
       } as any);
 
       // Clear state and close
@@ -405,7 +413,7 @@ export default function DesignCreateDialog({
       onOpenChange(false);
       if (onSuccess) onSuccess();
     } catch (err) {
-      // Error handled by mutation hook toast
+      console.error("🚀 ~ handleSave error:", err);
     }
   };
 
@@ -418,7 +426,7 @@ export default function DesignCreateDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSave} className="flex-1 overflow-y-auto py-3 px-1 sm:px-2 space-y-4 sm:space-y-5 text-sm">
+        <form id="design-create-form" onSubmit={handleSave} className="flex-1 overflow-y-auto py-3 px-1 sm:px-2 space-y-4 sm:space-y-5 text-sm">
           {/* 1. Customer Selector */}
           <div className="space-y-2">
             <Label className="font-semibold text-foreground flex items-center gap-1">
@@ -894,7 +902,13 @@ export default function DesignCreateDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isCreating}>
             Hủy bỏ
           </Button>
-          <Button onClick={handleSave} disabled={isCreating} className="font-semibold">
+          <Button
+            type="submit"
+            form="design-create-form"
+            onClick={handleSave}
+            disabled={isCreating}
+            className="font-semibold cursor-pointer"
+          >
             {isCreating ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Đang tạo...

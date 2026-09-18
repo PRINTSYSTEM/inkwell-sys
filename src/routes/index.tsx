@@ -94,6 +94,9 @@ const ProductionDashboardPage = lazy(
 const ProductionSlaConfigPage = lazy(
   () => import("@/pages/production/ProductionSlaConfigPage")
 );
+const ProductionKpiReportPage = lazy(
+  () => import("@/pages/production/ProductionKpiReportPage")
+);
 
 
 // Inventory / Materials
@@ -659,6 +662,14 @@ export const router = createBrowserRouter([
             element: (
               <Suspense fallback={<PageLoadingFallback />}>
                 <ProductionSlaConfigPage />
+              </Suspense>
+            ),
+          },
+          {
+            path: "kpi-report",
+            element: (
+              <Suspense fallback={<PageLoadingFallback />}>
+                <ProductionKpiReportPage />
               </Suspense>
             ),
           },

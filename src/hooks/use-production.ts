@@ -633,6 +633,7 @@ export interface FlowStageSlaItem {
   stageCode: string;
   stageName?: string;
   defaultWorkerCount?: number | null;
+  targetSheetsPerWorker?: number | null;
   waitWarningMinutes?: number | null;
   waitLateMinutes?: number | null;
   execWarningMinutes?: number | null;
@@ -651,11 +652,30 @@ export interface UpdateFlowSlaConfigPayload {
   stages: Array<{
     stageCode: string;
     defaultWorkerCount?: number | null;
+    targetSheetsPerWorker?: number | null;
     waitWarningMinutes?: number | null;
     waitLateMinutes?: number | null;
     execWarningMinutes?: number | null;
     execLateMinutes?: number | null;
   }>;
+}
+
+export interface UpdateWorkerCountV2Payload {
+  stepId: number;
+  actualWorkerCount: number;
+}
+
+export interface WorkerCountV2Response {
+  stepId: number;
+  stageCode: string;
+  stageName: string;
+  defaultWorkerCount?: number | null;
+  requiredByKpi?: number | null;
+  actualWorkerCount: number;
+  isDeviationFromDefault?: boolean;
+  isDeviationFromRequired?: boolean;
+  isZeroWorkerWarning?: boolean;
+  warningMessage?: string | null;
 }
 
 // GET /api/production/flows/:flowId/sla-config
@@ -783,5 +803,34 @@ export async function exportStageWorkerReportExcel(fromDate?: string, toDate?: s
     window.open(`/api/production/stage-worker-report/excel?${query.toString()}`, "_blank");
   }
 }
+
+// PUT /api/v2/production-steps/{stepId}/worker-count
+export const useUpdateStepWorkerCountV2 = () => {
+  const queryClient = useQueryClient();
+
+  const { loading, execute } = useAsyncCallback<
+    WorkerCountV2Response,
+    [UpdateWorkerCountV2Payload]
+  >(async (payload) => {
+    const res = await apiRequest.put<WorkerCountV2Response>(
+      API_SUFFIX.PRODUCTION_STEP_WORKER_COUNT_V2(payload.stepId),
+      { actualWorkerCount: payload.actualWorkerCount }
+    );
+    return res.data;
+  });
+
+  const mutate = async (payload: UpdateWorkerCountV2Payload) => {
+    const result = await execute(payload);
+    queryClient.invalidateQueries({ queryKey: ["production-orders"] });
+    queryClient.invalidateQueries({ queryKey: ["production-order"] });
+    queryClient.invalidateQueries({ queryKey: ["production-post-print"] });
+    return result;
+  };
+
+  return {
+    isPending: loading,
+    mutate,
+  };
+};
 
 export { productionOrderCrudApi, productionOrderKeys };

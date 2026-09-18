@@ -380,6 +380,22 @@ export const API_SUFFIX = {
   PRODUCTION_STAGE_WORKER_REPORT_ORDERS: (stageCode: string) =>
     `/production/stage-worker-report/${stageCode}/orders`,
   PRODUCTION_STAGE_WORKER_REPORT_EXCEL: "/production/stage-worker-report/excel",
+  PRODUCTION_STEP_WORKER_COUNT_V2: (stepId: number) =>
+    `/v2/production-steps/${stepId}/worker-count`,
+
+  // ========== DAILY WORKER CAPACITY PLANNING ==========
+  CAPACITY_WORKER_CONFIG: "/capacity/worker-config",
+  CAPACITY_WORKER_CONFIG_BULK: "/capacity/worker-config/bulk",
+  CAPACITY_WORKER_SUMMARY: "/capacity/worker-summary",
+  CAPACITY_WORKER_SUMMARY_DAILY: "/capacity/worker-summary/daily",
+  CAPACITY_STAGE_WORKER_DETAILS: (stageId: number) =>
+    `/capacity/stages/${stageId}/worker-details`,
+
+  // ========== KPI REPORTS ==========
+  KPI_REPORT: "/kpi/report",
+  KPI_DRILLDOWN: "/kpi/drilldown",
+  KPI_TREND: "/kpi/trend",
+  KPI_LSX_REPORT: (lsxId: number) => `/kpi/lsx/${lsxId}`,
 
   // ========== PRINT ORDERS ==========
   PRINT_ORDERS: "/print-orders",
