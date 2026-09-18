@@ -122,6 +122,7 @@ import {
   dieLocationLabels,
   dieStatusLabels,
   getSpecificationBadges,
+  sortSpecificationSteps,
 } from "@/lib/status-utils";
 import { ImageViewerDialog } from "@/components/design/image-viewer-dialog";
 import { downloadFile } from "@/lib/download-utils";
@@ -573,7 +574,8 @@ export default function ProofingOrderDetailPage() {
       if (pod.design) getSpecificationBadges(pod.design).forEach((s) => specs.add(s));
       getSpecificationBadges(pod).forEach((s) => specs.add(s));
     });
-    return Array.from(specs);
+    const flowCode = order?.flowCode || (order as any)?.productionFlowCode || order?.flow || (order as any)?.productionFlow?.code;
+    return sortSpecificationSteps(Array.from(specs), flowCode);
   }, [order, orderDesigns]);
 
   // ===== Completion readiness (for "Hoàn thành") =====

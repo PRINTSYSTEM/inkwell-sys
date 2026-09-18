@@ -41,6 +41,7 @@ import {
 import { useDiesByProofingOrder } from "@/hooks/use-die";
 import { formatDieSize } from "@/utils/format-die-size";
 import { ReadOnlyProofingDetailModal } from "@/components/proofing/ReadOnlyProofingDetailModal";
+import { LazyImage } from "@/components/ui/lazy-image";
 
 const getLaminationName = (item: ProductionOrderResponse) => {
   const directName =
@@ -938,8 +939,9 @@ export default function PostPrintProductionPage() {
                                   title="Xem ảnh phóng to"
                                 >
                                   {thumbnail ? (
-                                    <img
+                                    <LazyImage
                                       src={thumbnail}
+                                      fallbackSrc={fullImage}
                                       alt={proofingCode}
                                       className="h-full w-full object-cover"
                                     />
